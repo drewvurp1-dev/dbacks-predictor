@@ -24,9 +24,10 @@ app.use('/mlb', (req, res) => {
 app.use('/odds', (req, res) => {
   const apiKey = process.env.ODDS_API_KEY;
   if (!apiKey) { res.status(500).json({ error: 'ODDS_API_KEY not configured' }); return; }
-  const query = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
-  const oddsPath = req.path + query + (query ? '&' : '?') + 'apiKey=' + apiKey;
-  const url = 'https://api.the-odds-api.com' + oddsPath;
+  // req.url includes the full path after /odds, e.g. /v4/sports/...?regions=us
+  const separator = req.url.includes('?') ? '&' : '?';
+  const url = 'https://api.the-odds-api.com' + req.url + separator + 'apiKey=' + apiKey;
+  console.log('Odds API request:', url.replace(apiKey, 'KEY_HIDDEN'));
   https.get(url, (oddsRes) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
