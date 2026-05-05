@@ -717,14 +717,23 @@ function corbetRating(score,direction){
 }
 
 function corbetReasoning(propKey,direction,score,factors){
-  const positiveFactors=factors.filter(f=>f.impact==='positive').map(f=>f.label);
-  const negativeFactors=factors.filter(f=>f.impact==='negative').map(f=>f.label);
+  const pos=factors.filter(f=>f.impact==='positive');
+  const neg=factors.filter(f=>f.impact==='negative');
+  const propContext={
+    'batter_hits':direction==='over'?'Hit props favor high-OBP hitters in good conditions.':'Tough matchup suppresses contact opportunities.',
+    'batter_total_bases':direction==='over'?'Extra-base potential elevated by conditions.':'Power suppressed by pitcher or park conditions.',
+    'batter_home_runs':direction==='over'?'Wind, elevation, or weak pitcher ERA boosts HR odds.':'Elite pitcher or wind-in suppresses HR upside.',
+    'batter_rbis':direction==='over'?'RBI production tied to lineup run-scoring environment.':'Tough conditions limit run-scoring opportunities.',
+    'batter_walks':direction==='over'?'High BB% hitter vs. pitcher with elevated walk rate.':'Pitcher command limits walk opportunities.',
+    'batter_strikeouts':direction==='over'?'Pitcher K% and pitch mix suggest swing-and-miss matchup.':'Low K% pitcher reduces strikeout probability.',
+  };
+  const ctx=propContext[propKey]||'';
   if(direction==='over'){
-    if(positiveFactors.length>0)return`Model score ${score}/100. Positive factors: ${positiveFactors.slice(0,3).join(', ')}.`;
-    return`Neutral conditions with score ${score}/100.`;
+    const topFactors=pos.slice(0,2).map(f=>`${f.label} (${f.value})`).join(', ');
+    return`Score ${score}/100. ${ctx}${topFactors?' Key drivers: '+topFactors+'.':''}`;
   } else {
-    if(negativeFactors.length>0)return`Model score ${score}/100 (below average). Headwinds: ${negativeFactors.slice(0,3).join(', ')}.`;
-    return`Score ${score}/100 suggests limited upside today.`;
+    const topFactors=neg.slice(0,2).map(f=>`${f.label} (${f.value})`).join(', ');
+    return`Score ${score}/100. ${ctx}${topFactors?' Headwinds: '+topFactors+'.':''}`;
   }
 }
 
@@ -736,7 +745,7 @@ function generateCorbetBets(score,factors,props){
     'batter_stolen_bases':'Stolen Bases','batter_hits_runs_rbis':'H+R+RBI',
   };
   // Realistic line limits — filter out absurd props
-  const lineMax={'batter_hits':2.5,'batter_total_bases':3.5,'batter_home_runs':0.5,'batter_rbis':2.5,'batter_walks':1.5,'batter_strikeouts':2.5,'batter_stolen_bases':1.5};
+  const lineMax={'batter_hits':1.5,'batter_total_bases':2.5,'batter_home_runs':0.5,'batter_rbis':1.5,'batter_walks':1.5,'batter_strikeouts':2.5,'batter_stolen_bases':0.5};
   const lookForOvers=score>=55;
   const lookForUnders=score<=48;
   props.forEach(prop=>{
