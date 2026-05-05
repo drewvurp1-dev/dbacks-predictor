@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐍 D-backs Player Predictor</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding-bottom: 60px; }
+.header { background: linear-gradient(135deg, #0a0000 0%, #8b0000 35%, #A71930 65%, #5c0010 100%); padding: 22px 24px 18px; position: relative; overflow: hidden; }
+.header::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(ellipse at 80% 50%, rgba(167,25,48,0.3) 0%, transparent 60%), repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.015) 20px, rgba(255,255,255,0.015) 21px); pointer-events: none; }
+.header > div { position: relative; }
+.header h1 { font-size: 26px; font-weight: 900; letter-spacing: -1px; }
+.header p { font-size: 11px; color: rgba(255,255,255,0.4); font-family: monospace; margin-top: 4px; }
+.header small { font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: rgba(255,255,255,0.35); font-family: monospace; }
+.tabs { display: flex; background: #0a0917; border-bottom: 1px solid #111; overflow-x: auto; }
+.tab { padding: 11px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: #444; font-family: monospace; font-size: 10px; font-weight: 400; cursor: pointer; letter-spacing: 1.5px; text-transform: uppercase; transition: color 0.12s; white-space: nowrap; }
+.tab.active { color: #fff; border-bottom-color: #A71930; font-weight: 700; }
+.content { padding: 18px 18px 20px; }
+.card { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+.card-header { padding: 11px 18px; border-bottom: 1px solid #1a1730; background: #0e0c22; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #A71930; font-family: monospace; display: flex; align-items: center; justify-content: space-between; }
+.card-body { padding: 16px 18px; }
+.row { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 12px; margin-bottom: 12px; }
+.row label { font-size: 10px; color: #555; font-family: monospace; letter-spacing: 0.5px; text-transform: uppercase; }
+input, select, textarea { background: #07060f; border: 1px solid #1e1b3a; border-radius: 6px; color: #ddd; padding: 7px 10px; font-size: 12px; font-family: monospace; width: 100%; outline: none; }
+input:focus, select:focus { border-color: #A71930; }
+textarea { resize: vertical; }
+.toggle { display: flex; gap: 6px; }
+.toggle-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid #1e1b3a; background: transparent; color: #444; font-size: 10px; font-family: monospace; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.12s; }
+.toggle-btn.active { background: #A71930; border-color: #A71930; color: #fff; }
+.pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.pill { background: #12102a; border: 1px solid #1e1b3a; border-radius: 8px; padding: 6px 12px; text-align: center; min-width: 68px; }
+.pill .pill-label { font-size: 9px; color: #444; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.pill .pill-val { font-size: 14px; font-weight: 800; font-family: monospace; }
+.pill .pill-sub { font-size: 8px; color: #2a2a3a; font-family: monospace; }
+.btn-primary { width: 100%; padding: 15px; background: linear-gradient(135deg, #A71930, #8b0000); border: none; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 700; font-family: monospace; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; margin-top: 4px; }
+.btn-primary:hover { opacity: 0.82; }
+.btn-secondary { width: 100%; padding: 12px; background: transparent; border: 1px solid #1e1b3a; border-radius: 10px; color: #444; font-size: 11px; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-top: 8px; }
+.gauge-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 18px; }
+.gauge-label { margin-top: 8px; font-size: 15px; font-weight: 800; letter-spacing: 1px; font-family: monospace; }
+.gauge-desc { font-size: 11px; color: #555; margin-top: 4px; text-align: center; max-width: 220px; line-height: 1.5; }
+.factor-row { display: grid; grid-template-columns: 14px 110px 90px 1fr; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid #0e0c22; }
+.factor-icon { font-size: 10px; padding-top: 1px; }
+.factor-label { font-size: 10px; color: #666; font-family: monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+.factor-value { font-size: 12px; color: #ccc; font-family: monospace; font-weight: 700; }
+.factor-note { font-size: 11px; color: #444; line-height: 1.4; }
+.split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.split-box { background: #0e0c22; border: 1px solid #1a1730; border-radius: 10px; padding: 13px 15px; }
+.split-box .split-label { font-size: 9px; color: #444; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.split-box .split-ops { font-size: 26px; font-weight: 900; font-family: monospace; }
+.split-box .split-sub { font-size: 9px; color: #2a2a3a; font-family: monospace; margin-top: 1px; }
+.split-box .split-avg { font-size: 11px; color: #444; font-family: monospace; margin-top: 6px; }
+.season-bar { margin-bottom: 16px; padding: 12px 14px; background: #07060f; border-radius: 8px; border: 1px solid #1a1730; font-family: monospace; display: flex; gap: 20px; flex-wrap: wrap; }
+.season-bar .s-label { font-size: 9px; color: #444; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.season-bar .s-val { font-size: 16px; font-weight: 800; color: #fff; }
+.season-bar .s-val.green { color: #2ecc71; }
+.pitch-row { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+.pitch-label { font-size: 10px; color: #666; font-family: monospace; min-width: 90px; }
+.pitch-bar-wrap { flex: 1; background: #1a1730; border-radius: 4px; height: 5px; overflow: hidden; }
+.pitch-bar { height: 100%; border-radius: 4px; transition: width 0.6s; }
+.pitch-pct { font-size: 11px; color: #aaa; font-family: monospace; min-width: 28px; }
+.status { font-size: 12px; font-family: monospace; padding: 8px 0; }
+.status.error { color: #e74c3c; }
+.status.success { color: #2ecc71; }
+.spinner { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 0; }
+.spinner-circle { width: 26px; height: 26px; border: 2.5px solid #1e1b3a; border-top-color: #A71930; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.hidden { display: none; }
+.panel { display: none; }
+.panel.active { display: block; }
+input[type=range] { accent-color: #A71930; padding: 0; }
+.range-row { display: flex; align-items: center; gap: 10px; }
+.pitch-mix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.pitch-mix-item { display: flex; align-items: center; gap: 8px; }
+.pitch-mix-label { font-size: 10px; color: #555; font-family: monospace; min-width: 80px; }
+.prediction-header { text-align: center; margin-bottom: 6px; font-size: 12px; color: #444; font-family: monospace; }
+.stats-section-title { font-size: 10px; font-weight: 700; color: #A71930; letter-spacing: 3px; text-transform: uppercase; font-family: monospace; margin: 18px 0 10px; }
+.stats-section-title:first-child { margin-top: 0; }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+.stat-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 10px 12px; }
+.stat-box .stat-label { font-size: 9px; color: #444; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.stat-box .stat-val { font-size: 20px; font-weight: 900; font-family: monospace; color: #fff; }
+.stat-box .stat-val.good { color: #2ecc71; }
+.stat-box .stat-val.bad { color: #e74c3c; }
+.stat-box .stat-context { font-size: 9px; color: #333; font-family: monospace; margin-top: 3px; }
+.risp-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.risp-box .risp-main { font-size: 28px; font-weight: 900; font-family: monospace; }
+.risp-box .risp-detail { font-size: 11px; color: #444; font-family: monospace; line-height: 1.8; }
+
+/* Pitcher search */
+.search-wrap { position: relative; }
+.search-results { position: absolute; top: 100%; left: 0; right: 0; background: #0e0c22; border: 1px solid #1e1b3a; border-radius: 8px; z-index: 100; max-height: 200px; overflow-y: auto; margin-top: 4px; }
+.search-result-item { padding: 9px 14px; cursor: pointer; font-family: monospace; font-size: 12px; color: #ccc; border-bottom: 1px solid #1a1730; display: flex; justify-content: space-between; align-items: center; }
+.search-result-item:hover { background: #1a1730; color: #fff; }
+.search-result-item .sr-pos { font-size: 10px; color: #555; }
+.pitcher-loaded { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; margin-top: 8px; }
+.pitcher-loaded .pl-name { font-size: 15px; font-weight: 800; color: #fff; font-family: monospace; margin-bottom: 6px; }
+.pitcher-loaded .pl-stats { display: flex; gap: 14px; flex-wrap: wrap; font-family: monospace; font-size: 11px; color: #555; }
+.pitcher-loaded .pl-stats span { }
+.pitcher-loaded .pl-stats strong { color: #ccc; }
+.pitcher-loaded .pl-hand { font-size: 10px; color: #A71930; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+
+/* Weather panel */
+.weather-auto { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; }
+.weather-auto .wa-title { font-size: 9px; color: #444; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+.weather-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+.weather-cell { text-align: center; }
+.weather-cell .wc-label { font-size: 9px; color: #444; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.weather-cell .wc-val { font-size: 16px; font-weight: 800; font-family: monospace; color: #fff; }
+.weather-cell .wc-sub { font-size: 9px; color: #333; font-family: monospace; }
+.roof-recommendation { font-size: 11px; font-family: monospace; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
+.roof-recommendation.likely-closed { background: #1a1730; color: #f39c12; }
+.roof-recommendation.likely-open { background: #0a1a10; color: #2ecc71; }
+
+/* Umpire panel */
+.ump-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; }
+.ump-box .ump-name { font-size: 16px; font-weight: 800; color: #fff; font-family: monospace; margin-bottom: 4px; }
+.ump-box .ump-sub { font-size: 10px; color: #555; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+.ump-stats { display: flex; gap: 14px; flex-wrap: wrap; font-family: monospace; font-size: 11px; color: #555; }
+.ump-stats strong { color: #ccc; }
+.ump-tendency { display: inline-block; margin-top: 8px; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.ump-tendency.pitcher { background: #1a0a10; color: #e74c3c; }
+.ump-tendency.hitter { background: #0a1a10; color: #2ecc71; }
+.ump-tendency.neutral { background: #1a1730; color: #f39c12; }
+.game-time-row { display: flex; gap: 8px; align-items: center; }
+.game-time-row input[type=time] { width: auto; flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <small>Arizona Diamondbacks · 2026</small>
+    <h1>🐍 Player Predictor</h1>
+    <p>Pre-game performance analysis · MLB Stats API · Live weather · Umpire data</p>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('setup')">Setup</button>
+  <button class="tab" onclick="switchTab('result')">Prediction</button>
+  <button class="tab" onclick="switchTab('splits')">Splits</button>
+  <button class="tab" onclick="switchTab('stats')">Advanced Stats</button>
+  <button class="tab" onclick="switchTab('pitcher')">Pitcher</button>
+</div>
+
+<div class="content">
+
+  <!-- ═══════════════════════════════ SETUP ═══════════════════════════════ -->
+  <div id="panel-setup" class="panel active">
+
+    <!-- Player -->
+    <div class="card">
+      <div class="card-header">👤 Player</div>
+      <div class="card-body">
+        <div class="row">
+          <label>Select Player</label>
+          <select id="player-select" onchange="loadPlayer()">
+            <option value="682998" data-pos="CF" data-bats="L">Corbin Carroll · CF · Bats L</option>
+            <option value="660162" data-pos="2B" data-bats="S">Ketel Marte · 2B · Bats S</option>
+            <option value="666971" data-pos="CF" data-bats="L">Alek Thomas · CF · Bats L</option>
+            <option value="668804" data-pos="C"  data-bats="R">Gabriel Moreno · C · Bats R</option>
+            <option value="673357" data-pos="3B" data-bats="R">Eugenio Suárez · 3B · Bats R</option>
+            <option value="669015" data-pos="LF" data-bats="R">Lourdes Gurriel · LF · Bats R</option>
+            <option value="680776" data-pos="3B" data-bats="R">Nolan Arenado · 3B · Bats R</option>
+          </select>
+        </div>
+        <div id="player-spinner" class="spinner hidden"><div class="spinner-circle"></div></div>
+        <div id="player-error" class="status error hidden"></div>
+        <div id="splits-pills" class="pill-row hidden"></div>
+      </div>
+    </div>
+
+    <!-- Opposing Pitcher Search -->
+    <div class="card">
+      <div class="card-header">
+        <span>⚾ Opposing Pitcher</span>
+        <span id="pitcher-hand-badge" style="font-size:10px;color:#555;font-weight:400;letter-spacing:1px;"></span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <label>Search</label>
+          <div class="search-wrap">
+            <input type="text" id="pitcher-search" placeholder="Type pitcher name..." oninput="onPitcherSearch(this.value)" autocomplete="off">
+            <div id="pitcher-search-results" class="search-results hidden"></div>
+          </div>
+        </div>
+        <div id="pitcher-spinner" class="spinner hidden"><div class="spinner-circle"></div><span style="font-size:11px;color:#444;font-family:monospace;">Loading pitcher stats...</span></div>
+        <div id="pitcher-error" class="status error hidden"></div>
+        <div id="pitcher-loaded" class="hidden"></div>
+        <div id="pitcher-pitch-mix" class="hidden">
+          <div style="font-size:9px;color:#444;font-family:monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix — adjust if needed</div>
+          <div class="pitch-mix-grid" id="pitch-mix-grid"></div>
+        </div>
+        <!-- Manual fallback -->
+        <div id="pitcher-manual-toggle" style="margin-top:10px;">
+          <button onclick="toggleManual()" style="background:none;border:none;color:#333;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Enter manually instead</button>
+        </div>
+        <div id="pitcher-manual" class="hidden" style="margin-top:12px;">
+          <div class="row"><label>Name</label><input type="text" id="m-pitcher-name" placeholder="Pitcher name"></div>
+          <div class="row">
+            <label>Throws</label>
+            <div class="toggle">
+              <button class="toggle-btn active" id="throws-R" onclick="setThrows('R')">Right</button>
+              <button class="toggle-btn" id="throws-L" onclick="setThrows('L')">Left</button>
+            </div>
+          </div>
+          <div class="row"><label>ERA</label><input type="number" id="m-pitcher-era" step="0.01" placeholder="e.g. 3.45"></div>
+          <div class="row"><label>WHIP</label><input type="number" id="m-pitcher-whip" step="0.01" placeholder="e.g. 1.15"></div>
+          <div style="font-size:9px;color:#444;font-family:monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix (approx %)</div>
+          <div class="pitch-mix-grid" id="pitch-mix-grid-manual"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Info & Umpire -->
+    <div class="card">
+      <div class="card-header">📅 Game Info</div>
+      <div class="card-body">
+        <div class="row">
+          <label>Game Date</label>
+          <input type="date" id="game-date" onchange="loadUmpireAndWeather()">
+        </div>
+        <div class="row">
+          <label>First Pitch</label>
+          <div class="game-time-row">
+            <input type="time" id="game-time" value="19:10" onchange="updateWeatherForTime()">
+            <div class="toggle">
+              <button class="toggle-btn" id="time-day" onclick="setDay(true)">Day</button>
+              <button class="toggle-btn active" id="time-night" onclick="setDay(false)">Night</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <label>Location</label>
+          <div class="toggle">
+            <button class="toggle-btn active" id="loc-home" onclick="setHome(true)">Home</button>
+            <button class="toggle-btn" id="loc-away" onclick="setHome(false)">Away</button>
+          </div>
+        </div>
+        <div class="row">
+          <label>Travel</label>
+          <select id="travel-select">
+            <option value="none">Well-rested / Home stand</option>
+            <option value="same">Same-day travel</option>
+            <option value="redeye">Red-eye / Cross-timezone</option>
+          </select>
+        </div>
+
+        <!-- Umpire -->
+        <div style="margin-top:16px;">
+          <div class="stats-section-title" style="margin-top:0">Home Plate Umpire</div>
+          <div id="ump-spinner" class="spinner hidden" style="padding:12px 0;"><div class="spinner-circle"></div></div>
+          <div id="ump-empty" style="font-size:11px;color:#333;font-family:monospace;">Enter a game date to look up the umpire.</div>
+          <div id="ump-content" class="hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stadium & Weather -->
+    <div class="card">
+      <div class="card-header">🌤 Stadium & Weather</div>
+      <div class="card-body">
+        <div class="row">
+          <label>Stadium</label>
+          <select id="stadium-select" onchange="onStadiumChange()">
+            <option value="Chase Field (PHX)" data-roof="1" data-elev="1082" data-lat="33.4453" data-lon="-112.0667">Chase Field (PHX)</option>
+            <option value="Dodger Stadium (LAD)" data-roof="0" data-elev="512" data-lat="34.0739" data-lon="-118.2400">Dodger Stadium (LAD)</option>
+            <option value="Coors Field (COL)" data-roof="0" data-elev="5200" data-lat="39.7559" data-lon="-104.9942">Coors Field (COL)</option>
+            <option value="Oracle Park (SF)" data-roof="0" data-elev="0" data-lat="37.7786" data-lon="-122.3893">Oracle Park (SF)</option>
+            <option value="Petco Park (SD)" data-roof="0" data-elev="0" data-lat="32.7073" data-lon="-117.1566">Petco Park (SD)</option>
+            <option value="Wrigley Field (CHC)" data-roof="0" data-elev="595" data-lat="41.9484" data-lon="-87.6553">Wrigley Field (CHC)</option>
+            <option value="Camden Yards (BAL)" data-roof="0" data-elev="20" data-lat="39.2839" data-lon="-76.6218">Camden Yards (BAL)</option>
+            <option value="Busch Stadium (STL)" data-roof="0" data-elev="465" data-lat="38.6226" data-lon="-90.1928">Busch Stadium (STL)</option>
+            <option value="T-Mobile Park (SEA)" data-roof="1" data-elev="0" data-lat="47.5914" data-lon="-122.3325">T-Mobile Park (SEA)</option>
+            <option value="Fenway Park (BOS)" data-roof="0" data-elev="20" data-lat="42.3467" data-lon="-71.0972">Fenway Park (BOS)</option>
+            <option value="Yankee Stadium (NYY)" data-roof="0" data-elev="55" data-lat="40.8296" data-lon="-73.9262">Yankee Stadium (NYY)</option>
+            <option value="Citi Field (NYM)" data-roof="0" data-elev="20" data-lat="40.7571" data-lon="-73.8458">Citi Field (NYM)</option>
+            <option value="Great American (CIN)" data-roof="0" data-elev="490" data-lat="39.0979" data-lon="-84.5082">Great American (CIN)</option>
+            <option value="PNC Park (PIT)" data-roof="0" data-elev="730" data-lat="40.4469" data-lon="-80.0057">PNC Park (PIT)</option>
+            <option value="Other" data-roof="0" data-elev="500" data-lat="33.4453" data-lon="-112.0667">Other</option>
+          </select>
+        </div>
+        <div class="row hidden" id="roof-row">
+          <label>Roof</label>
+          <div class="toggle">
+            <button class="toggle-btn active" id="roof-closed" onclick="setRoof(true)">Closed</button>
+            <button class="toggle-btn" id="roof-open" onclick="setRoof(false)">Open</button>
+          </div>
+        </div>
+
+        <!-- Auto weather -->
+        <div id="weather-auto-section" style="margin-top:12px;">
+          <button onclick="fetchWeather()" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:6px;color:#888;font-family:monospace;font-size:10px;cursor:pointer;padding:6px 14px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">⟳ Auto-fetch Weather</button>
+          <div id="weather-spinner" class="spinner hidden" style="padding:10px 0;"><div class="spinner-circle"></div></div>
+          <div id="weather-content" class="hidden">
+            <div class="weather-auto">
+              <div class="wa-title">Live Conditions at Stadium</div>
+              <div class="weather-grid" id="weather-grid"></div>
+              <div id="roof-rec" class="roof-recommendation hidden"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual weather override -->
+        <div style="margin-top:4px;">
+          <button onclick="toggleWeatherManual()" style="background:none;border:none;color:#333;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Override weather manually</button>
+        </div>
+        <div id="weather-manual" class="hidden" style="margin-top:10px;">
+          <div class="row">
+            <label id="temp-label">Temp: 95°F</label>
+            <input type="range" id="temp-slider" min="30" max="115" value="95" oninput="document.getElementById('temp-label').textContent='Temp: '+this.value+'°F'">
+          </div>
+          <div class="row">
+            <label id="wind-label">Wind: 5 mph</label>
+            <div class="range-row">
+              <input type="range" id="wind-slider" min="0" max="30" value="5" style="flex:1" oninput="document.getElementById('wind-label').textContent='Wind: '+this.value+' mph'">
+              <select id="wind-dir" style="width:130px">
+                <option value="calm">Calm</option>
+                <option value="out">Blowing Out</option>
+                <option value="in">Blowing In</option>
+                <option value="cross">Crosswind</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <label id="humid-label">Humidity: 30%</label>
+            <input type="range" id="humid-slider" min="0" max="100" value="30" oninput="document.getElementById('humid-label').textContent='Humidity: '+this.value+'%'">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="runPrediction()">Run Prediction →</button>
+  </div>
+
+  <!-- ═══════════════════════════════ RESULT ═══════════════════════════════ -->
+  <div id="panel-result" class="panel">
+    <div id="no-prediction" style="text-align:center;padding:40px;color:#333;font-family:monospace;font-size:12px;">
+      Complete the Setup tab and hit Run Prediction first.
+    </div>
+    <div id="prediction-output" class="hidden">
+      <div class="prediction-header" id="pred-header"></div>
+      <div class="card">
+        <div class="card-header">📊 Performance Score</div>
+        <div class="card-body">
+          <div class="gauge-wrap">
+            <div style="position:relative;width:136px;height:136px;">
+              <svg width="136" height="136" style="transform:rotate(-90deg)">
+                <circle cx="68" cy="68" r="52" fill="none" stroke="#1a1730" stroke-width="9"/>
+                <circle id="gauge-circle" cx="68" cy="68" r="52" fill="none" stroke="#2ecc71" stroke-width="9"
+                  stroke-dasharray="326.73" stroke-dashoffset="326.73" stroke-linecap="round"
+                  style="transition:all 0.8s ease"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                <span id="gauge-score" style="font-size:34px;font-weight:900;color:#fff;font-family:monospace;line-height:1;">—</span>
+                <span style="font-size:9px;color:#333;letter-spacing:2px;text-transform:uppercase;font-family:monospace;">/100</span>
+              </div>
+            </div>
+            <div id="gauge-label" class="gauge-label"></div>
+            <div id="gauge-desc" class="gauge-desc"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">🔍 Factor Breakdown</div>
+        <div class="card-body" id="factors-body"></div>
+      </div>
+      <div class="card" id="pitch-card">
+        <div class="card-header">⚾ Pitcher Pitch Mix</div>
+        <div class="card-body" id="pitch-display"></div>
+      </div>
+      <div class="card" id="weather-summary-card" class="hidden">
+        <div class="card-header">🌤 Game Conditions Summary</div>
+        <div class="card-body" id="weather-summary-body"></div>
+      </div>
+      <button class="btn-secondary" onclick="switchTab('setup')">← Adjust Conditions</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ SPLITS ═══════════════════════════════ -->
+  <div id="panel-splits" class="panel">
+    <div class="card">
+      <div class="card-header" id="splits-card-header">📈 2026 Splits</div>
+      <div class="card-body">
+        <div id="splits-spinner" class="spinner hidden"><div class="spinner-circle"></div></div>
+        <div id="splits-error" class="status error hidden"></div>
+        <div id="splits-content" class="hidden">
+          <div class="season-bar" id="season-bar"></div>
+          <div class="split-grid" id="split-grid"></div>
+        </div>
+        <div id="splits-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load splits.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ ADVANCED STATS ═══════════════════════ -->
+  <div id="panel-stats" class="panel">
+    <div class="card">
+      <div class="card-header" id="stats-card-header">📊 Advanced Stats · 2026</div>
+      <div class="card-body">
+        <div id="stats-spinner" class="spinner hidden"><div class="spinner-circle"></div></div>
+        <div id="stats-error" class="status error hidden"></div>
+        <div id="stats-content" class="hidden">
+          <div class="stats-section-title">Slash Line</div>
+          <div class="stats-grid" id="stat-slash"></div>
+          <div class="stats-section-title">Plate Discipline</div>
+          <div class="stats-grid" id="stat-discipline"></div>
+          <div class="stats-section-title">Power & Contact</div>
+          <div class="stats-grid" id="stat-power"></div>
+          <div class="stats-section-title">Runners in Scoring Position</div>
+          <div id="stat-risp"></div>
+        </div>
+        <div id="stats-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load stats.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ PITCHER TAB ═══════════════════════════ -->
+  <div id="panel-pitcher" class="panel">
+    <div class="card">
+      <div class="card-header" id="pitcher-tab-header">📋 Pitcher Analysis</div>
+      <div class="card-body">
+        <div id="pitcher-tab-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Search for a pitcher in Setup to see their full breakdown.</div>
+        <div id="pitcher-tab-content" class="hidden">
+          <div class="stats-section-title" style="margin-top:0">Season Stats</div>
+          <div class="stats-grid" id="pt-season"></div>
+          <div class="stats-section-title">Pitch Mix</div>
+          <div id="pt-pitchmix"></div>
+          <div class="stats-section-title">Recent Form</div>
+          <div id="pt-recent" style="font-size:12px;color:#444;font-family:monospace;line-height:1.8;"></div>
+          <div class="stats-section-title">Workload</div>
+          <div id="pt-workload" style="font-size:12px;color:#444;font-family:monospace;line-height:1.8;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .content -->
+
+<script>
+// ═══════════════════════════ STATE ════════════════════════════════════════════
+const S = {
+  splits: null, seasonStat: null, rispStat: null,
+  playerName: 'Corbin Carroll', playerId: '682998',
+  pitcher: null,
+  pitcherThrows: 'R',
+  pitcherPitches: { '4-Seam FB':40, 'Slider':25, 'Changeup':20, 'Curveball':15, 'Sinker':0, 'Cutter':0, 'Splitter':0 },
+  isHome: true, dayGame: false, roofClosed: true,
+  weather: null, umpire: null,
+  weatherManual: false, pitcherManual: false,
+};
+
+// ═══════════════════════════ TABS ═════════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.getAttribute('onclick') === `switchTab('${id}')`) t.classList.add('active');
+  });
+}
+
+// ═══════════════════════════ TOGGLES ══════════════════════════════════════════
+function setThrows(v) {
+  S.pitcherThrows = v;
+  document.getElementById('throws-R').classList.toggle('active', v==='R');
+  document.getElementById('throws-L').classList.toggle('active', v==='L');
+}
+function setHome(v) {
+  S.isHome = v;
+  document.getElementById('loc-home').classList.toggle('active', v);
+  document.getElementById('loc-away').classList.toggle('active', !v);
+}
+function setDay(v) {
+  S.dayGame = v;
+  document.getElementById('time-day').classList.toggle('active', v);
+  document.getElementById('time-night').classList.toggle('active', !v);
+}
+function setRoof(v) {
+  S.roofClosed = v;
+  document.getElementById('roof-closed').classList.toggle('active', v);
+  document.getElementById('roof-open').classList.toggle('active', !v);
+}
+function onStadiumChange() {
+  const sel = document.getElementById('stadium-select');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('roof-row').classList.toggle('hidden', opt.dataset.roof !== '1');
+  if (S.weather) fetchWeather();
+}
+function toggleManual() {
+  S.pitcherManual = !S.pitcherManual;
+  document.getElementById('pitcher-manual').classList.toggle('hidden', !S.pitcherManual);
+  buildPitchMixManual();
+}
+function toggleWeatherManual() {
+  S.weatherManual = !S.weatherManual;
+  document.getElementById('weather-manual').classList.toggle('hidden', !S.weatherManual);
+}
+
+// ═══════════════════════════ PITCH MIX ════════════════════════════════════════
+const PITCH_TYPES = ['4-Seam FB','Sinker','Cutter','Slider','Curveball','Changeup','Splitter'];
+
+function buildPitchMixGrid(containerId, pitches) {
+  document.getElementById(containerId).innerHTML = PITCH_TYPES.map(pt => `
+    <div class="pitch-mix-item">
+      <span class="pitch-mix-label">${pt}</span>
+      <input type="range" min="0" max="60" value="${pitches[pt]||0}"
+        oninput="S.pitcherPitches['${pt}']=parseInt(this.value);this.nextElementSibling.textContent=this.value+'%'"
+        style="flex:1;accent-color:#A71930">
+      <span style="font-size:11px;color:#ccc;font-family:monospace;min-width:28px;text-align:right">${pitches[pt]||0}%</span>
+    </div>`).join('');
+}
+function buildPitchMixManual() { buildPitchMixGrid('pitch-mix-grid-manual', S.pitcherPitches); }
+
+// ═══════════════════════════ PLAYER LOADING ════════════════════════════════════
+async function loadPlayer() {
+  const sel = document.getElementById('player-select');
+  S.playerId = sel.value;
+  S.playerName = sel.options[sel.selectedIndex].text.split(' · ')[0];
+
+  show('player-spinner'); hide('player-error'); hide('splits-pills');
+  document.getElementById('splits-card-header').textContent = `📈 ${S.playerName} · 2026 Splits`;
+  document.getElementById('stats-card-header').textContent  = `📊 ${S.playerName} · Advanced Stats 2026`;
+  showSplitsLoading(); showStatsLoading();
+
+  try {
+    const [splitRes, seasonRes, rispRes] = await Promise.all([
+      fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=statSplits&group=hitting&season=2026&gameType=R&sitCodes=h,a,vl,vr,d,n`),
+      fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=season&group=hitting&season=2026&gameType=R`),
+      fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=statSplits&group=hitting&season=2026&gameType=R&sitCodes=risp`),
+    ]);
+    const splitData = await splitRes.json();
+    const seasonData = await seasonRes.json();
+    const rispData = await rispRes.json();
+
+    const byCode = {};
+    (splitData?.stats?.[0]?.splits ?? []).forEach(s => {
+      if (s.split?.code) byCode[s.split.code] = {
+        ops: parseFloat(s.stat.ops)||null, avg:s.stat.avg, obp:s.stat.obp,
+        slg:s.stat.slg, gp:s.stat.gamesPlayed, hr:s.stat.homeRuns, rbi:s.stat.rbi,
+      };
+    });
+    S.splits = byCode;
+    S.seasonStat = seasonData?.stats?.[0]?.splits?.[0]?.stat ?? null;
+    S.rispStat   = rispData?.stats?.[0]?.splits?.[0]?.stat ?? null;
+    renderSplitPills(); renderSplitsTab(); renderStatsTab();
+  } catch(e) {
+    setText('player-error', '⚠ Could not load data — is the server running?');
+    show('player-error'); showSplitsError('Could not load.'); showStatsError('Could not load.');
+  } finally { hide('player-spinner'); }
+}
+
+// ═══════════════════════════ PITCHER SEARCH ════════════════════════════════════
+let pitcherSearchTimeout = null;
+let allPlayers = null;
+
+async function getAllPlayers() {
+  if (allPlayers) return allPlayers;
+  const res = await fetch('/mlb/api/v1/people/search?names=a&sportId=1&active=true');
+  const data = await res.json();
+  allPlayers = data.people || [];
+  return allPlayers;
+}
+
+async function onPitcherSearch(val) {
+  clearTimeout(pitcherSearchTimeout);
+  const resultsEl = document.getElementById('pitcher-search-results');
+  if (val.length < 2) { hide('pitcher-search-results'); return; }
+  pitcherSearchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(`/mlb/api/v1/people/search?names=${encodeURIComponent(val)}&sportId=1&active=true`);
+      const data = await res.json();
+      const pitchers = (data.people || []).filter(p => p.primaryPosition?.type === 'Pitcher').slice(0, 8);
+      if (!pitchers.length) { hide('pitcher-search-results'); return; }
+      resultsEl.innerHTML = pitchers.map(p => `
+        <div class="search-result-item" onclick="selectPitcher(${p.id}, '${p.fullName.replace(/'/g,"\\'")}')">
+          <span>${p.fullName}</span>
+          <span class="sr-pos">${p.pitchHand?.code || '?'}HP · ${p.primaryPosition?.abbreviation || ''}</span>
+        </div>`).join('');
+      show('pitcher-search-results');
+    } catch { hide('pitcher-search-results'); }
+  }, 300);
+}
+
+async function selectPitcher(id, name) {
+  hide('pitcher-search-results');
+  document.getElementById('pitcher-search').value = name;
+  hide('pitcher-loaded'); hide('pitcher-pitch-mix');
+  show('pitcher-spinner'); hide('pitcher-error');
+
+  try {
+    const [statsRes, gameLogRes] = await Promise.all([
+      fetch(`/mlb/api/v1/people/${id}/stats?stats=season&group=pitching&season=2026&gameType=R`),
+      fetch(`/mlb/api/v1/people/${id}/stats?stats=gameLog&group=pitching&season=2026&gameType=R`),
+    ]);
+    const statsData   = await statsRes.json();
+    const gameLogData = await gameLogRes.json();
+
+    const st = statsData?.stats?.[0]?.splits?.[0]?.stat ?? {};
+    const gameLogs = gameLogData?.stats?.[0]?.splits ?? [];
+    const last3 = gameLogs.slice(-3).reverse();
+
+    // Detect handedness
+    const peopleRes = await fetch(`/mlb/api/v1/people/${id}`);
+    const peopleData = await peopleRes.json();
+    const person = peopleData?.people?.[0] ?? {};
+    const hand = person.pitchHand?.code ?? 'R';
+    S.pitcherThrows = hand;
+    setThrows(hand);
+
+    // Days rest
+    let daysRest = '—';
+    if (gameLogs.length) {
+      const lastGame = gameLogs[gameLogs.length-1];
+      const lastDate = new Date(lastGame.date);
+      const today = new Date();
+      daysRest = Math.round((today - lastDate) / (1000*60*60*24));
+    }
+
+    // Last outing pitch count
+    const lastOuting = gameLogs.length ? gameLogs[gameLogs.length-1].stat : null;
+
+    S.pitcher = { id, name, hand, st, last3, daysRest, lastOuting };
+
+    // Render pitcher loaded card
+    const era  = parseFloat(st.era)  || null;
+    const whip = parseFloat(st.whip) || null;
+    const ip   = st.inningsPitched || '—';
+    const k9   = st.strikeOuts && st.inningsPitched ? ((st.strikeOuts / parseFloat(st.inningsPitched)) * 9).toFixed(1) : '—';
+    const bb9  = st.baseOnBalls && st.inningsPitched ? ((st.baseOnBalls / parseFloat(st.inningsPitched)) * 9).toFixed(1) : '—';
+    const pa   = st.battersFaced || 1;
+    const kPct = st.strikeOuts ? ((st.strikeOuts/pa)*100).toFixed(1)+'%' : '—';
+    const bbPct= st.baseOnBalls ? ((st.baseOnBalls/pa)*100).toFixed(1)+'%' : '—';
+    const fip  = st.era ? (parseFloat(st.era) * 0.92).toFixed(2) : '—'; // approximation
+
+    document.getElementById('pitcher-hand-badge').textContent = `${hand}HP · ${name}`;
+
+    document.getElementById('pitcher-loaded').innerHTML = `
+      <div class="pitcher-loaded">
+        <div class="pl-hand">Throws ${hand === 'L' ? 'Left' : 'Right'} · ${person.height || ''} ${person.weight ? person.weight+'lbs' : ''}</div>
+        <div class="pl-name">${name}</div>
+        <div class="pl-stats">
+          <span>ERA <strong>${era ? era.toFixed(2) : '—'}</strong></span>
+          <span>FIP <strong>${fip}</strong></span>
+          <span>WHIP <strong>${whip ? whip.toFixed(2) : '—'}</strong></span>
+          <span>K% <strong>${kPct}</strong></span>
+          <span>BB% <strong>${bbPct}</strong></span>
+          <span>K/9 <strong>${k9}</strong></span>
+          <span>BB/9 <strong>${bb9}</strong></span>
+          <span>IP <strong>${ip}</strong></span>
+          <span>Days Rest <strong>${daysRest}</strong></span>
+          ${lastOuting ? `<span>Last PC <strong>${lastOuting.numberOfPitches || '—'}</strong></span>` : ''}
+        </div>
+      </div>`;
+    show('pitcher-loaded');
+
+    // Build pitch mix with defaults (Statcast not available via this API)
+    const defaultMix = getPitcherDefaultMix(hand);
+    Object.assign(S.pitcherPitches, defaultMix);
+    buildPitchMixGrid('pitch-mix-grid', S.pitcherPitches);
+    show('pitcher-pitch-mix');
+
+    // Render pitcher tab
+    renderPitcherTab(st, last3, daysRest, lastOuting, hand, name, fip, k9, bb9, kPct, bbPct, era, whip, ip);
+
+  } catch(e) {
+    setText('pitcher-error', '⚠ Could not load pitcher stats.');
+    show('pitcher-error');
+  } finally { hide('pitcher-spinner'); }
+}
+
+function getPitcherDefaultMix(hand) {
+  // Generic defaults by handedness
+  return hand === 'L'
+    ? { '4-Seam FB':35, 'Sinker':5, 'Cutter':10, 'Slider':20, 'Curveball':10, 'Changeup':15, 'Splitter':5 }
+    : { '4-Seam FB':35, 'Sinker':10, 'Cutter':8, 'Slider':22, 'Curveball':10, 'Changeup':12, 'Splitter':3 };
+}
+
+function renderPitcherTab(st, last3, daysRest, lastOuting, hand, name, fip, k9, bb9, kPct, bbPct, era, whip, ip) {
+  hide('pitcher-tab-empty'); show('pitcher-tab-content');
+  document.getElementById('pitcher-tab-header').textContent = `📋 ${name} · Pitcher Analysis`;
+
+  const eraColor = era < 3.25 ? 'good' : era > 5.0 ? 'bad' : '';
+  const whipColor = whip < 1.1 ? 'good' : whip > 1.4 ? 'bad' : '';
+
+  document.getElementById('pt-season').innerHTML = [
+    ['ERA',    era ? parseFloat(era).toFixed(2) : '—',  eraColor,  'Earned run average'],
+    ['FIP',    fip,  '',       'Fielding independent pitching'],
+    ['WHIP',   whip ? parseFloat(whip).toFixed(2) : '—', whipColor, 'Walks + hits per IP'],
+    ['K%',     kPct, parseFloat(kPct)>=25?'good':'', 'Strikeout rate'],
+    ['BB%',    bbPct, parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'', 'Walk rate'],
+    ['IP',     ip,   '', 'Innings pitched'],
+    ['K/9',    k9,   '', 'Strikeouts per 9 innings'],
+    ['BB/9',   bb9,  '', 'Walks per 9 innings'],
+    ['GS',     st.gamesStarted || '—', '', 'Games started'],
+  ].map(([l,v,c,ctx]) => `<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v}</div><div class="stat-context">${ctx}</div></div>`).join('');
+
+  document.getElementById('pt-pitchmix').innerHTML = PITCH_TYPES.map(pt => {
+    const pct = S.pitcherPitches[pt] || 0;
+    if (!pct) return '';
+    return `<div class="pitch-row">
+      <span class="pitch-label">${pt}</span>
+      <div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div>
+      <span class="pitch-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pt-recent').innerHTML = last3.length
+    ? last3.map(g => `<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">
+        ${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K, ${g.stat.baseOnBalls}BB
+        <span style="color:#555;margin-left:8px;">${g.stat.numberOfPitches || '—'} pitches</span>
+      </div>`).join('')
+    : '<span style="color:#333;">No recent game log available.</span>';
+
+  document.getElementById('pt-workload').innerHTML = `
+    <div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>
+    ${lastOuting ? `<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches || '—'}</strong></div>` : ''}
+    ${daysRest !== '—' && daysRest < 4 ? '<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>' : ''}
+    ${daysRest !== '—' && daysRest >= 5 ? '<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>' : ''}`;
+}
+
+// ═══════════════════════════ UMPIRE ══════════════════════════════════════════
+async function loadUmpireAndWeather() {
+  const dateVal = document.getElementById('game-date').value;
+  if (!dateVal) return;
+  await Promise.all([loadUmpire(dateVal), fetchWeather()]);
+}
+
+async function loadUmpire(dateVal) {
+  show('ump-spinner'); hide('ump-content');
+  setText('ump-empty', '');
+
+  try {
+    const res = await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=officials&date=${dateVal}`);
+    const data = await res.json();
+    const game = data?.dates?.[0]?.games?.[0];
+    if (!game) { setText('ump-empty', 'No D-backs game found on that date.'); hide('ump-spinner'); show('ump-empty'); return; }
+
+    const officials = game.officials || [];
+    const hp = officials.find(o => o.officialType === 'Home Plate');
+    if (!hp) { setText('ump-empty', 'Umpire data not yet available for this game.'); hide('ump-spinner'); show('ump-empty'); return; }
+
+    S.umpire = hp.official;
+
+    // Known umpire tendencies (curated from UmpScorecards research)
+    const UMP_TENDENCIES = {
+      'Doug Eddings':      { tendency: 'pitcher', note: 'Below-average zone, calls extra strikes. Pitcher-friendly.', runsImpact: -0.3 },
+      'Angel Hernandez':   { tendency: 'neutral', note: 'Inconsistent zone. High variance.', runsImpact: 0.0 },
+      'CB Bucknor':        { tendency: 'hitter',  note: 'Tight zone, calls borderline pitches as balls.', runsImpact: +0.4 },
+      'Laz Diaz':          { tendency: 'hitter',  note: 'Below-average called strike rate.', runsImpact: +0.3 },
+      'Bill Miller':       { tendency: 'pitcher', note: 'Expanded zone, pitcher-friendly calls.', runsImpact: -0.2 },
+    };
+
+    const tendency = UMP_TENDENCIES[hp.official.fullName] || { tendency: 'neutral', note: 'No significant zone bias on record.', runsImpact: 0 };
+    const tendencyColors = { pitcher:'pitcher', hitter:'hitter', neutral:'neutral' };
+
+    document.getElementById('ump-content').innerHTML = `
+      <div class="ump-box">
+        <div class="ump-sub">Home Plate Umpire</div>
+        <div class="ump-name">${hp.official.fullName}</div>
+        <div class="ump-tendency ${tendencyColors[tendency.tendency]}">${tendency.tendency === 'pitcher' ? 'Pitcher-Friendly' : tendency.tendency === 'hitter' ? 'Hitter-Friendly' : 'Neutral Zone'}</div>
+        <div class="ump-stats" style="margin-top:8px;">
+          <span>${tendency.note}</span>
+        </div>
+        ${tendency.runsImpact !== 0 ? `<div style="font-size:10px;color:#555;font-family:monospace;margin-top:6px;">Est. run impact: <strong style="color:${tendency.runsImpact > 0 ? '#2ecc71' : '#e74c3c'}">${tendency.runsImpact > 0 ? '+' : ''}${tendency.runsImpact} R/G</strong></div>` : ''}
+      </div>`;
+    show('ump-content');
+  } catch(e) {
+    setText('ump-empty', 'Could not load umpire data.');
+    show('ump-empty');
+  } finally { hide('ump-spinner'); }
+}
+
+// ═══════════════════════════ WEATHER ══════════════════════════════════════════
+async function fetchWeather() {
+  const sel = document.getElementById('stadium-select');
+  const opt = sel.options[sel.selectedIndex];
+  const lat = opt.dataset.lat;
+  const lon = opt.dataset.lon;
+  const stadiumName = opt.value;
+
+  show('weather-spinner'); hide('weather-content');
+
+  try {
+    const res = await fetch(`https://wttr.in/${lat},${lon}?format=j1`);
+    const data = await res.json();
+    const current = data.current_condition?.[0];
+    if (!current) throw new Error('No data');
+
+    const tempF = parseInt(current.temp_F);
+    const windMph = parseInt(current.windspeedMiles);
+    const windDir16 = current.winddir16Point;
+    const humidity = parseInt(current.humidity);
+    const desc = current.weatherDesc?.[0]?.value || '';
+
+    // Try to get game-time forecast
+    const gameTimeHour = parseInt((document.getElementById('game-time').value || '19:10').split(':')[0]);
+    const today = data.weather?.[0];
+    let forecastHour = null;
+    if (today?.hourly) {
+      forecastHour = today.hourly.reduce((prev, curr) => {
+        const h = parseInt(curr.time) / 100;
+        return Math.abs(h - gameTimeHour) < Math.abs(parseInt(prev.time)/100 - gameTimeHour) ? curr : prev;
+      });
+    }
+
+    const useData = forecastHour || current;
+    const useTemp = parseInt(useData.tempF || useData.temp_F || tempF);
+    const useWind = parseInt(useData.windspeedMiles || windMph);
+    const useHumid = parseInt(useData.humidity || humidity);
+    const useWindDir = useData.winddir16Point || windDir16;
+
+    // Translate wind direction for display
+    const windDirMap = {
+      'N':'In (↓ to plate)','NNE':'Cross','NE':'Cross','ENE':'Cross','E':'Cross',
+      'ESE':'Cross','SE':'Out (↑ away)','SSE':'Out (↑ away)','S':'Out (↑ away)',
+      'SSW':'Out','SW':'Out','WSW':'In','W':'In','WNW':'In','NW':'In','NNW':'In (↓ to plate)',
+    };
+
+    S.weather = { tempF: useTemp, windMph: useWind, windDir: useWindDir, humidity: useHumid, desc };
+
+    document.getElementById('weather-grid').innerHTML = `
+      <div class="weather-cell"><div class="wc-label">Temp</div><div class="wc-val" style="color:${useTemp>=90?'#e74c3c':useTemp<=55?'#3498db':'#fff'}">${useTemp}°F</div><div class="wc-sub">${desc}</div></div>
+      <div class="weather-cell"><div class="wc-label">Wind</div><div class="wc-val">${useWind} mph</div><div class="wc-sub">${useWindDir}</div></div>
+      <div class="weather-cell"><div class="wc-label">Humidity</div><div class="wc-val">${useHumid}%</div><div class="wc-sub">relative</div></div>
+      <div class="weather-cell"><div class="wc-label">Conditions</div><div class="wc-val" style="font-size:13px;">${desc.includes('Rain')||desc.includes('Storm')?'🌧':'desc'.includes('Cloud')?'☁️':'☀️'} ${desc.includes('Sunny')||desc.includes('Clear')?'☀️':desc.includes('Cloud')?'☁️':desc.includes('Rain')?'🌧':'—'}</div></div>`;
+
+    // Roof recommendation for Chase Field
+    const hasRoof = opt.dataset.roof === '1';
+    const roofRec = document.getElementById('roof-rec');
+    if (hasRoof) {
+      if (useTemp >= 90) {
+        roofRec.className = 'roof-recommendation likely-closed';
+        roofRec.textContent = `⚠ ${useTemp}°F — Roof likely closed. Check D-backs pregame notes.`;
+        roofRec.classList.remove('hidden');
+      } else if (useTemp < 80) {
+        roofRec.className = 'roof-recommendation likely-open';
+        roofRec.textContent = `✓ ${useTemp}°F — Roof likely open.`;
+        roofRec.classList.remove('hidden');
+      } else { roofRec.classList.add('hidden'); }
+    } else { roofRec.classList.add('hidden'); }
+
+    show('weather-content');
+  } catch(e) {
+    hide('weather-spinner');
+  } finally { hide('weather-spinner'); }
+}
+
+function updateWeatherForTime() {
+  if (S.weather) fetchWeather();
+  const hour = parseInt((document.getElementById('game-time').value || '19:10').split(':')[0]);
+  setDay(hour < 17);
+}
+
+// ═══════════════════════════ SPLITS RENDERING ═════════════════════════════════
+function opsColor(ops) {
+  if (!ops) return '#333';
+  return ops > 0.850 ? '#2ecc71' : ops > 0.720 ? '#fff' : '#e74c3c';
+}
+function renderSplitPills() {
+  const pills = [['vs LHP','vl'],['vs RHP','vr'],['Home','h'],['Away','a'],['Day','d'],['Night','n']];
+  document.getElementById('splits-pills').innerHTML = pills.map(([label,code]) => {
+    const s = S.splits?.[code];
+    return `<div class="pill"><div class="pill-label">${label}</div><div class="pill-val" style="color:${opsColor(s?.ops)}">${s?.ops?s.ops.toFixed(3):'—'}</div><div class="pill-sub">OPS</div></div>`;
+  }).join('');
+  show('splits-pills');
+}
+function showSplitsLoading() { show('splits-spinner'); hide('splits-error'); hide('splits-content'); hide('splits-empty'); }
+function showSplitsError(m) { hide('splits-spinner'); setText('splits-error','⚠ '+m); show('splits-error'); }
+function renderSplitsTab() {
+  hide('splits-spinner'); hide('splits-empty');
+  const ss = S.seasonStat;
+  if (ss) {
+    document.getElementById('season-bar').innerHTML =
+      [['AVG',ss.avg],['OBP',ss.obp],['SLG',ss.slg],['OPS',ss.ops],['HR',ss.homeRuns],['RBI',ss.rbi],['GP',ss.gamesPlayed]]
+      .map(([l,v])=>`<div><div class="s-label">${l}</div><div class="s-val${l==='OPS'?' green':''}">${v??'—'}</div></div>`).join('');
+  }
+  document.getElementById('split-grid').innerHTML =
+    [['vs Left-Handed','vl'],['vs Right-Handed','vr'],['Home Games','h'],['Away Games','a'],['Day Games','d'],['Night Games','n']]
+    .map(([label,code]) => {
+      const s = S.splits?.[code];
+      return `<div class="split-box"><div class="split-label">${label}</div><div class="split-ops" style="color:${opsColor(s?.ops)}">${s?.ops?s.ops.toFixed(3):'—'}</div><div class="split-sub">OPS</div>${s?.avg?`<div class="split-avg">AVG <span style="color:#666">${s.avg}</span></div>`:''}</div>`;
+    }).join('');
+  show('splits-content');
+}
+
+// ═══════════════════════════ ADVANCED STATS ════════════════════════════════════
+function showStatsLoading() { show('stats-spinner'); hide('stats-error'); hide('stats-content'); hide('stats-empty'); }
+function showStatsError(m) { hide('stats-spinner'); setText('stats-error','⚠ '+m); show('stats-error'); }
+function statBox(l,v,ctx,c) { return `<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v??'—'}</div>${ctx?`<div class="stat-context">${ctx}</div>`:''}</div>`; }
+function pct(n,d) { if(!n||!d||d===0) return '—'; return ((n/d)*100).toFixed(1)+'%'; }
+
+function renderStatsTab() {
+  hide('stats-spinner'); hide('stats-empty');
+  const ss = S.seasonStat; const risp = S.rispStat;
+  if (!ss) { showStatsError('No season stats.'); return; }
+  const pa = ss.plateAppearances||1;
+  const bbPct = pct(ss.baseOnBalls,pa), kPct = pct(ss.strikeOuts,pa);
+  const bbColor = parseFloat(bbPct)>=10?'good':parseFloat(bbPct)<=5?'bad':'';
+  const kColor  = parseFloat(kPct)<=16?'good':parseFloat(kPct)>=25?'bad':'';
+  const babipColor = parseFloat(ss.babip)>=0.340?'good':parseFloat(ss.babip)<=0.270?'bad':'';
+  const opsColor2  = parseFloat(ss.ops)>=0.850?'good':parseFloat(ss.ops)<=0.680?'bad':'';
+
+  document.getElementById('stat-slash').innerHTML =
+    statBox('BA',ss.avg,`${ss.hits}H / ${ss.atBats}AB`,'')+
+    statBox('OBP',ss.obp,`${ss.baseOnBalls}BB · ${ss.hitByPitch}HBP`,'')+
+    statBox('SLG',ss.slg,`${ss.totalBases}TB`,'')+
+    statBox('OPS',ss.ops,'OBP + SLG',opsColor2)+
+    statBox('BABIP',ss.babip,'Balls in play avg',babipColor)+
+    statBox('AB/HR',ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—','At-bats per HR','');
+
+  document.getElementById('stat-discipline').innerHTML =
+    statBox('BB%',bbPct,`${ss.baseOnBalls} walks / ${pa} PA`,bbColor)+
+    statBox('K%',kPct,`${ss.strikeOuts} Ks / ${pa} PA`,kColor)+
+    statBox('BB/K',ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts).toFixed(2):'—','Walk to K ratio','')+
+    statBox('IBB',ss.intentionalWalks??'0','Intentional walks','')+
+    statBox('HBP',ss.hitByPitch??'0','Hit by pitch','')+
+    statBox('SAC',(ss.sacBunts??0)+(ss.sacFlies??0),'Sac bunts + flies','');
+
+  document.getElementById('stat-power').innerHTML =
+    statBox('HR',ss.homeRuns,`${ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—'} AB/HR`,'')+
+    statBox('2B',ss.doubles,'Doubles','')+
+    statBox('3B',ss.triples,'Triples','')+
+    statBox('XBH',(ss.homeRuns||0)+(ss.doubles||0)+(ss.triples||0),'Extra base hits','')+
+    statBox('RBI',ss.rbi,`${ss.leftOnBase} LOB`,'')+
+    statBox('SB',`${ss.stolenBases}/${(ss.stolenBases||0)+(ss.caughtStealing||0)}`,'SB success','');
+
+  if (risp) {
+    const rispOps = ((parseFloat(risp.obp)||0)+(parseFloat(risp.slg)||0)).toFixed(3);
+    const rc = parseFloat(risp.avg)>=0.280?'#2ecc71':parseFloat(risp.avg)<=0.200?'#e74c3c':'#fff';
+    document.getElementById('stat-risp').innerHTML = `
+      <div class="risp-box">
+        <div><div class="stat-label" style="margin-bottom:4px">BA w/ RISP</div><div class="risp-main" style="color:${rc}">${risp.avg??'—'}</div></div>
+        <div class="risp-detail">OBP <strong style="color:#fff">${risp.obp??'—'}</strong><br>SLG <strong style="color:#fff">${risp.slg??'—'}</strong><br>OPS <strong style="color:#fff">${rispOps}</strong>${risp.rbi?`<br>RBI <strong style="color:#fff">${risp.rbi}</strong>`:''}</div>
+        <div class="risp-detail">H <strong style="color:#fff">${risp.hits??'—'}</strong><br>AB <strong style="color:#fff">${risp.atBats??'—'}</strong><br>PA <strong style="color:#fff">${risp.plateAppearances??'—'}</strong><br>K <strong style="color:#fff">${risp.strikeOuts??'—'}</strong></div>
+      </div>`;
+  } else {
+    document.getElementById('stat-risp').innerHTML = '<div style="font-size:11px;color:#333;font-family:monospace;">RISP data not available.</div>';
+  }
+  show('stats-content');
+}
+
+// ═══════════════════════════ PREDICTION ENGINE ════════════════════════════════
+function calcPrediction() {
+  let score = 50;
+  const factors = [];
+  const add = (label, value, adj, note) => {
+    score += adj;
+    factors.push({ label, value, impact: adj>2?'positive':adj<-2?'negative':'neutral', note });
+  };
+
+  // Player splits
+  if (S.splits) {
+    const hand = S.pitcher?.hand || S.pitcherThrows;
+    const handSplit = hand==='L' ? S.splits.vl : S.splits.vr;
+    if (handSplit?.ops) {
+      const adj = (handSplit.ops - 0.750)*70;
+      add(`vs ${hand}HP`, handSplit.ops.toFixed(3)+' OPS', adj, `${adj>0?'Hits well':'Struggles'} vs ${hand==='L'?'lefties':'righties'} this season`);
+    }
+    const locSplit = S.isHome ? S.splits.h : S.splits.a;
+    if (locSplit?.ops) {
+      const adj = (locSplit.ops - 0.750)*35;
+      add(S.isHome?'Home':'Away', locSplit.ops.toFixed(3)+' OPS', adj, `OPS ${locSplit.ops.toFixed(3)} ${S.isHome?'at home':'on the road'} this year`);
+    }
+    const timeSplit = S.dayGame ? S.splits.d : S.splits.n;
+    if (timeSplit?.ops) {
+      const adj = (timeSplit.ops - 0.750)*25;
+      add(S.dayGame?'Day Game':'Night Game', timeSplit.ops.toFixed(3)+' OPS', adj, `OPS ${timeSplit.ops.toFixed(3)} in ${S.dayGame?'day':'night'} games`);
+    }
+    if (S.rispStat?.avg) {
+      const ra = parseFloat(S.rispStat.avg);
+      const adj = (ra-0.260)*20;
+      add('RISP', S.rispStat.avg+' BA', adj, ra>=0.300?'Clutch hitter — elevates with runners on':ra<=0.200?'Struggles with runners in scoring position':'Average RISP production');
+    }
+  }
+
+  // Pitcher
+  if (S.pitcher?.st) {
+    const era = parseFloat(S.pitcher.st.era);
+    if (!isNaN(era)) {
+      const adj = (era-4.00)*4;
+      add('Pitcher ERA', era.toFixed(2), adj, era<3.25?'Elite arm — difficult matchup':era<4.00?'Above-average pitcher':era<5.00?'League-average ERA':'Hittable pitcher');
+    }
+    const pa = S.pitcher.st.battersFaced||1;
+    const kPct = S.pitcher.st.strikeOuts ? (S.pitcher.st.strikeOuts/pa)*100 : null;
+    if (kPct && kPct >= 28) add('High K%', kPct.toFixed(1)+'%', -4, 'Elite swing-and-miss stuff — tough at-bats expected');
+    if (kPct && kPct <= 15) add('Low K%',  kPct.toFixed(1)+'%',  3, 'Below-average strikeout rate — more contact opportunities');
+
+    // Days rest
+    if (S.pitcher.daysRest !== '—') {
+      if (S.pitcher.daysRest < 4) add('Short Rest', S.pitcher.daysRest+'d', 3, 'Pitcher on short rest — potential fatigue advantage for hitter');
+      else if (S.pitcher.daysRest >= 6) add('Extra Rest', S.pitcher.daysRest+'d', -2, 'Well-rested pitcher — likely sharper command');
+    }
+    // High pitch count last outing
+    const lastPC = S.pitcher.lastOuting?.numberOfPitches;
+    if (lastPC && lastPC >= 100) add('High Prev PC', lastPC+' pitches', 2, `${lastPC} pitches last outing — possible arm fatigue`);
+  } else if (!S.pitcherManual) {
+    // Manual ERA
+    const mEra = parseFloat(document.getElementById('m-pitcher-era')?.value);
+    if (!isNaN(mEra)) {
+      const adj = (mEra-4.00)*4;
+      add('Pitcher ERA', mEra.toFixed(2), adj, mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher');
+    }
+  }
+
+  // BB%/K% player
+  if (S.seasonStat) {
+    const pa = S.seasonStat.plateAppearances||1;
+    const bbP = (S.seasonStat.baseOnBalls/pa)*100;
+    const kP  = (S.seasonStat.strikeOuts/pa)*100;
+    if (bbP>=12) add('BB%', bbP.toFixed(1)+'%', 3, 'Elite walk rate — works counts well');
+    if (kP>=28)  add('K%',  kP.toFixed(1)+'%', -3, 'High strikeout rate — vulnerability vs swing-and-miss');
+  }
+
+  // Weather
+  const w = S.weather;
+  const weatherManual = document.getElementById('weather-manual') && !document.getElementById('weather-manual').classList.contains('hidden');
+
+  let tempF, windMph, windDirRaw, humidity;
+  if (w && !weatherManual) {
+    tempF = w.tempF; windMph = w.windMph; windDirRaw = w.windDir; humidity = w.humidity;
+  } else {
+    tempF = parseInt(document.getElementById('temp-slider')?.value)||75;
+    windMph = parseInt(document.getElementById('wind-slider')?.value)||0;
+    windDirRaw = document.getElementById('wind-dir')?.value||'calm';
+    humidity = parseInt(document.getElementById('humid-slider')?.value)||40;
+  }
+
+  if (tempF>=90)      add('Heat', tempF+'°F',  4, 'Hot thin air — more carry on contact');
+  else if (tempF<=55) add('Cold', tempF+'°F', -4, 'Dense cold air suppresses ball flight');
+
+  // Translate wind direction
+  const outDirs = ['S','SSE','SE','SSW','SW'];
+  const inDirs  = ['N','NNE','NNW','NE','NW'];
+  const isWindOut = outDirs.some(d => windDirRaw?.startsWith(d));
+  const isWindIn  = inDirs.some(d => windDirRaw?.startsWith(d));
+  const windDir = isWindOut ? 'out' : isWindIn ? 'in' : windDirRaw === 'out' ? 'out' : windDirRaw === 'in' ? 'in' : 'cross';
+
+  if (windDir==='out' && windMph>=8)   add('Wind Out', windMph+' mph', windMph*0.35, 'Blowing out — HR potential elevated');
+  else if (windDir==='in' && windMph>=8) add('Wind In', windMph+' mph', -windMph*0.28, 'Blowing in — suppresses power');
+  else if (windMph>=15) add('Crosswind', windMph+' mph', -2, 'Strong crosswind affects pitch movement');
+
+  if (humidity > 70) add('High Humidity', humidity+'%', -1, 'Heavy humid air slightly suppresses carry');
+
+  // Roof
+  const stadOpt = document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
+  const hasRoof = stadOpt.dataset.roof === '1';
+  const elev = parseInt(stadOpt.dataset.elev);
+  if (hasRoof && S.roofClosed) add('Roof Closed', 'Indoor', -2, 'Controlled environment neutralizes weather edge');
+
+  // Elevation
+  if (elev>4000) add('Altitude', elev.toLocaleString()+'ft', 8, 'Thin mile-high air — significant carry boost');
+  else if (elev>2000) add('Elevation', elev.toLocaleString()+'ft', 3, 'Moderate elevation adds mild carry');
+
+  // Travel
+  const travel = document.getElementById('travel-select').value;
+  if (travel==='redeye') add('Red-Eye', 'Fatigue risk', -6, 'Cross-timezone red-eye suppresses performance');
+  else if (travel==='same') add('Same-Day Travel', 'Mild fatigue', -3, 'Same-day travel, minor rest concern');
+
+  // Umpire
+  if (S.umpire) {
+    const UMP_TENDENCIES = {
+      'Doug Eddings':    { tendency:'pitcher', adj:-2, note:'Pitcher-friendly zone — fewer called ball benefits' },
+      'CB Bucknor':      { tendency:'hitter',  adj: 3, note:'Tight zone — more walks, better OBP environment' },
+      'Laz Diaz':        { tendency:'hitter',  adj: 2, note:'Below-average called strike rate — hitter-friendly' },
+      'Bill Miller':     { tendency:'pitcher', adj:-2, note:'Expanded zone — pitcher advantage' },
+    };
+    const ut = UMP_TENDENCIES[S.umpire.fullName];
+    if (ut) add('Umpire', S.umpire.fullName, ut.adj, ut.note);
+  }
+
+  score = Math.max(4, Math.min(96, Math.round(score)));
+  const tiers = [
+    {min:75,label:'Strong Game',color:'#2ecc71',desc:'Conditions strongly favor a productive day'},
+    {min:60,label:'Favorable',  color:'#a8e063',desc:'More factors lean positive than negative'},
+    {min:42,label:'Neutral',    color:'#f39c12',desc:'Mixed bag — could go either way'},
+    {min:28,label:'Tough Spot', color:'#e67e22',desc:'Multiple headwinds against production'},
+    {min:0, label:'Difficult',  color:'#e74c3c',desc:'Significant factors stacked against a big day'},
+  ];
+  return { score, tier:tiers.find(t=>score>=t.min), factors, tempF, windMph, windDir, humidity };
+}
+
+function runPrediction() {
+  const { score, tier, factors, tempF, windMph, windDir, humidity } = calcPrediction();
+  const C = 2*Math.PI*52;
+  document.getElementById('gauge-circle').style.strokeDashoffset = C-(score/100)*C;
+  document.getElementById('gauge-circle').style.stroke = tier.color;
+  document.getElementById('gauge-score').textContent = score;
+  document.getElementById('gauge-label').textContent = tier.label;
+  document.getElementById('gauge-label').style.color = tier.color;
+  document.getElementById('gauge-desc').textContent = tier.desc;
+
+  const pitcherName = S.pitcher?.name || document.getElementById('m-pitcher-name')?.value || 'Unknown Pitcher';
+  const hand = S.pitcher?.hand || S.pitcherThrows;
+  const era = S.pitcher?.st?.era || document.getElementById('m-pitcher-era')?.value;
+  document.getElementById('pred-header').textContent =
+    `${S.playerName} · ${pitcherName} (${hand}HP)${era?` · ERA ${parseFloat(era).toFixed(2)}`:''}`;
+
+  const colors = {positive:'#2ecc71',negative:'#e74c3c',neutral:'#f39c12'};
+  const icons  = {positive:'▲',negative:'▼',neutral:'●'};
+  document.getElementById('factors-body').innerHTML = factors.length===0
+    ? '<div style="font-size:12px;color:#333;font-family:monospace;">Add more conditions for a richer breakdown.</div>'
+    : factors.map(f=>`<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('');
+
+  document.getElementById('pitch-display').innerHTML =
+    Object.entries(S.pitcherPitches).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a)
+    .map(([type,pct])=>`<div class="pitch-row"><span class="pitch-label">${type}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${pct}%</span></div>`).join('');
+
+  document.getElementById('weather-summary-body').innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-family:monospace;font-size:12px;color:#666;">
+      <span>🌡 <strong style="color:#ccc">${tempF}°F</strong></span>
+      <span>💨 <strong style="color:#ccc">${windMph} mph ${windDir}</strong></span>
+      <span>💧 <strong style="color:#ccc">${humidity}% humidity</strong></span>
+      ${S.umpire ? `<span>⚖️ <strong style="color:#ccc">${S.umpire.fullName}</strong> (HP)</span>` : ''}
+    </div>`;
+
+  hide('no-prediction'); show('prediction-output');
+  switchTab('result');
+}
+
+// ═══════════════════════════ UTILS ════════════════════════════════════════════
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+function setText(id, t) { const el=document.getElementById(id); if(el) el.textContent=t; }
+
+// ═══════════════════════════ INIT ══════════════════════════════════════════════
+// Set default date to today
+document.getElementById('game-date').value = new Date().toISOString().split('T')[0];
+onStadiumChange();
+loadPlayer();
+fetchWeather();
+</script>
+</body>
+</html>
