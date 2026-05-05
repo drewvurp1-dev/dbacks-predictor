@@ -61,5 +61,44 @@ app.use('/weather', (req, res) => {
   });
 });
 
+// Baseball Savant proxy — fetches CSV leaderboards and returns them
+function savantFetch(url, res) {
+  https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'text/csv,*/*' } }, (sRes) => {
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    let data = '';
+    sRes.on('data', chunk => { data += chunk; });
+    sRes.on('end', () => {
+      // If we got HTML instead of CSV, return error
+      if (data.trim().startsWith('<!DOCTYPE') || data.trim().startsWith('<html')) {
+        res.status(502).json({ error: 'Savant returned HTML — endpoint may be blocked' });
+      } else {
+        res.send(data);
+      }
+    });
+    sRes.on('error', e => res.status(500).json({ error: e.message }));
+  }).on('error', e => res.status(500).json({ error: e.message }));
+}
+
+// Statcast leaderboard — Barrel %, Hard-Hit Rate, Exit Velo
+app.get('/savant/statcast', (req, res) => {
+  const year = req.query.year || '2026';
+  const type = req.query.type || 'batter';
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/statcast?type=${type}&year=${year}&position=&team=&min=q&csv=true`, res);
+});
+
+// Expected stats leaderboard — xwOBA, xBA, xSLG
+app.get('/savant/expected', (req, res) => {
+  const year = req.query.year || '2026';
+  const type = req.query.type || 'batter';
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=${type}&year=${year}&position=&team=&min=q&csv=true`, res);
+});
+
+// Bat tracking leaderboard — Whiff Rate, Bat Speed, Swing Length
+app.get('/savant/battracking', (req, res) => {
+  const year = req.query.year || '2026';
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=${year}&min=q&csv=true`, res);
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`D-backs Predictor running on port ${PORT}`));

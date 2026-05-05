@@ -401,6 +401,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
           <div class="stats-section-title">Plate Discipline</div><div class="stats-grid" id="stat-discipline"></div>
           <div class="stats-section-title">Power & Contact</div><div class="stats-grid" id="stat-power"></div>
           <div class="stats-section-title">Runners in Scoring Position</div><div id="stat-risp"></div>
+          <div class="stats-section-title">Statcast / Advanced</div><div class="stats-grid" id="stat-statcast"><div style="font-size:11px;color:#333;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div></div>
         </div>
         <div id="stats-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load stats.</div>
       </div>
@@ -482,6 +483,7 @@ async function loadPlayer(){
     S.seasonStat=ss?.stats?.[0]?.splits?.[0]?.stat??null;
     S.rispStat=rd?.stats?.[0]?.splits?.[0]?.stat??null;
     renderSplitPills();renderSplitsTab();renderStatsTab();
+    loadStatcast(S.playerId);
   } catch(e){setText('player-error','⚠ Could not load data.');show('player-error');showSplitsError('Could not load.');showStatsError('Could not load.');}
   finally{hide('player-spinner');}
 }
@@ -650,6 +652,16 @@ function calcPrediction(){
     const kP=(S.seasonStat.strikeOuts/pa)*100;
     if(bbP>=12)add('BB%',bbP.toFixed(1)+'%',3,'Elite walk rate');
     if(kP>=28)add('K%',kP.toFixed(1)+'%',-3,'High strikeout rate');
+  }
+  // Statcast factors
+  if(S.statcast){
+    if(S.statcast.brl>=12)add('Barrel%',S.statcast.brl.toFixed(1)+'%',4,'Elite barrel rate — hard contact tendency');
+    else if(S.statcast.brl<=4)add('Barrel%',S.statcast.brl.toFixed(1)+'%',-2,'Below-average barrel rate');
+    if(S.statcast.hhRate>=50)add('Hard-Hit%',S.statcast.hhRate.toFixed(1)+'%',3,'Elite hard-hit rate — consistent solid contact');
+    if(S.statcast.whiff<=18)add('Whiff%',S.statcast.whiff.toFixed(1)+'%',3,'Low whiff rate — difficult to strike out');
+    else if(S.statcast.whiff>=30)add('Whiff%',S.statcast.whiff.toFixed(1)+'%',-3,'High whiff rate — vulnerable to swing-and-miss stuff');
+    if(S.statcast.xwoba>=0.380)add('xwOBA',S.statcast.xwoba.toFixed(3),4,'Elite expected production — hitting the ball well');
+    else if(S.statcast.xwoba<=0.290)add('xwOBA',S.statcast.xwoba.toFixed(3),-3,'Below-average expected production');
   }
   const w=S.weather;const wm=document.getElementById('weather-manual')&&!document.getElementById('weather-manual').classList.contains('hidden');
   let tempF,windMph,windDir,humidity;
@@ -967,6 +979,68 @@ function renderStatsTab(){
   if(risp){const ro=((parseFloat(risp.obp)||0)+(parseFloat(risp.slg)||0)).toFixed(3);const rc=parseFloat(risp.avg)>=0.280?'#2ecc71':parseFloat(risp.avg)<=0.200?'#e74c3c':'#fff';document.getElementById('stat-risp').innerHTML=`<div class="risp-box"><div><div class="stat-label" style="margin-bottom:4px">BA w/ RISP</div><div class="risp-main" style="color:${rc}">${risp.avg??'—'}</div></div><div class="risp-detail">OBP <strong style="color:#fff">${risp.obp??'—'}</strong><br>SLG <strong style="color:#fff">${risp.slg??'—'}</strong><br>OPS <strong style="color:#fff">${ro}</strong>${risp.rbi?`<br>RBI <strong style="color:#fff">${risp.rbi}</strong>`:''}</div><div class="risp-detail">H <strong style="color:#fff">${risp.hits??'—'}</strong><br>AB <strong style="color:#fff">${risp.atBats??'—'}</strong><br>PA <strong style="color:#fff">${risp.plateAppearances??'—'}</strong><br>K <strong style="color:#fff">${risp.strikeOuts??'—'}</strong></div></div>`;}
   else document.getElementById('stat-risp').innerHTML='<div style="font-size:11px;color:#333;font-family:monospace;">RISP data not available.</div>';
   show('stats-content');
+}
+
+// ═══════════ STATCAST ════════════════════════════════════════════════════════
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].replace(/"/g, '').split(',');
+  return lines.slice(1).map(line => {
+    const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim()] = (vals[i] || '').replace(/"/g, '').trim(); });
+    return obj;
+  });
+}
+
+async function loadStatcast(playerId) {
+  document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#333;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div>';
+  try {
+    const [statRes, expRes, batRes] = await Promise.all([
+      fetch('/savant/statcast?type=batter&year=2026'),
+      fetch('/savant/expected?type=batter&year=2026'),
+      fetch('/savant/battracking?year=2026'),
+    ]);
+    const [statText, expText, batText] = await Promise.all([statRes.text(), expRes.text(), batRes.text()]);
+
+    const statRows = parseCSV(statText);
+    const expRows  = parseCSV(expText);
+    const batRows  = parseCSV(batText);
+
+    // Find player row by ID
+    const sid = String(playerId);
+    const statRow = statRows.find(r => r.player_id === sid || r['player_id'] === sid);
+    const expRow  = expRows.find(r => r.player_id === sid || r['player_id'] === sid);
+    const batRow  = batRows.find(r => r.id === sid || r['id'] === sid);
+
+    const xwoba   = expRow  ? parseFloat(expRow.est_woba).toFixed(3)       : '—';
+    const brl     = statRow ? parseFloat(statRow.brl_percent).toFixed(1)+'%': '—';
+    const hhRate  = statRow ? parseFloat(statRow.ev95percent).toFixed(1)+'%': '—';
+    const avgEV   = statRow ? parseFloat(statRow.avg_hit_speed).toFixed(1)  : '—';
+    const whiff   = batRow  ? (parseFloat(batRow.whiff_per_swing)*100).toFixed(1)+'%': '—';
+    const batSpd  = batRow  ? parseFloat(batRow.avg_bat_speed).toFixed(1)+' mph': '—';
+
+    const xwobaColor = xwoba!=='—'?(parseFloat(xwoba)>=0.360?'good':parseFloat(xwoba)<=0.300?'bad':''):'';
+    const brlColor   = brl!=='—'?(parseFloat(brl)>=10?'good':parseFloat(brl)<=4?'bad':''):'';
+    const hhColor    = hhRate!=='—'?(parseFloat(hhRate)>=45?'good':parseFloat(hhRate)<=35?'bad':''):'';
+    const whiffColor = whiff!=='—'?(parseFloat(whiff)<=20?'good':parseFloat(whiff)>=30?'bad':''):'';
+
+    document.getElementById('stat-statcast').innerHTML = [
+      statBox('xwOBA',  xwoba,  'Expected weighted OBA', xwobaColor),
+      statBox('Barrel%', brl,   'Barrel rate', brlColor),
+      statBox('HH Rate', hhRate,'Hard-hit rate (95+ mph EV)', hhColor),
+      statBox('Avg EV',  avgEV+'mph', 'Avg exit velocity', ''),
+      statBox('Whiff%',  whiff, 'Whiff rate per swing', whiffColor),
+      statBox('Bat Spd', batSpd,'Avg bat speed', ''),
+    ].join('');
+
+    // Store for prediction use
+    S.statcast = { xwoba: parseFloat(xwoba)||null, brl: parseFloat(brl)||null, hhRate: parseFloat(hhRate)||null, whiff: parseFloat(whiff)||null };
+
+  } catch(e) {
+    document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#333;font-family:monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
+  }
 }
 
 // ═══════════ UTILS ════════════════════════════════════════════════════════════
