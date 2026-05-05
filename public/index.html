@@ -655,13 +655,20 @@ function calcPrediction(){
   }
   // Statcast factors
   if(S.statcast){
-    if(S.statcast.brl>=12)add('Barrel%',S.statcast.brl.toFixed(1)+'%',4,'Elite barrel rate — hard contact tendency');
-    else if(S.statcast.brl<=4)add('Barrel%',S.statcast.brl.toFixed(1)+'%',-2,'Below-average barrel rate');
-    if(S.statcast.hhRate>=50)add('Hard-Hit%',S.statcast.hhRate.toFixed(1)+'%',3,'Elite hard-hit rate — consistent solid contact');
-    if(S.statcast.whiff<=18)add('Whiff%',S.statcast.whiff.toFixed(1)+'%',3,'Low whiff rate — difficult to strike out');
-    else if(S.statcast.whiff>=30)add('Whiff%',S.statcast.whiff.toFixed(1)+'%',-3,'High whiff rate — vulnerable to swing-and-miss stuff');
-    if(S.statcast.xwoba>=0.380)add('xwOBA',S.statcast.xwoba.toFixed(3),4,'Elite expected production — hitting the ball well');
-    else if(S.statcast.xwoba<=0.290)add('xwOBA',S.statcast.xwoba.toFixed(3),-3,'Below-average expected production');
+    const {brl,hhRate,whiff,xwoba}=S.statcast;
+    if(brl!=null&&!isNaN(brl)){
+      if(brl>=12)add('Barrel%',brl.toFixed(1)+'%',4,'Elite barrel rate — hard contact tendency');
+      else if(brl<=4)add('Barrel%',brl.toFixed(1)+'%',-2,'Below-average barrel rate');
+    }
+    if(hhRate!=null&&!isNaN(hhRate)&&hhRate>=50)add('Hard-Hit%',hhRate.toFixed(1)+'%',3,'Elite hard-hit rate — consistent solid contact');
+    if(whiff!=null&&!isNaN(whiff)){
+      if(whiff<=18)add('Whiff%',whiff.toFixed(1)+'%',3,'Low whiff rate — difficult to strike out');
+      else if(whiff>=30)add('Whiff%',whiff.toFixed(1)+'%',-3,'High whiff rate — vulnerable to swing-and-miss stuff');
+    }
+    if(xwoba!=null&&!isNaN(xwoba)){
+      if(xwoba>=0.380)add('xwOBA',xwoba.toFixed(3),4,'Elite expected production — hitting the ball well');
+      else if(xwoba<=0.290)add('xwOBA',xwoba.toFixed(3),-3,'Below-average expected production');
+    }
   }
   const w=S.weather;const wm=document.getElementById('weather-manual')&&!document.getElementById('weather-manual').classList.contains('hidden');
   let tempF,windMph,windDir,humidity;
