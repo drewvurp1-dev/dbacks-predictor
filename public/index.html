@@ -768,12 +768,16 @@ async function loadCorbet(){
     const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
     const eventsText=await r.text();
     let events;
-    try{events=JSON.parse(eventsText);}catch(e){throw new Error('Odds API key may be invalid or missing.');}
+    try{events=JSON.parse(eventsText);}catch(e){throw new Error('Could not parse Odds API response. Try again in a moment.');}
     if(!Array.isArray(events)){throw new Error(events?.message||'Unexpected response from Odds API');}
 
-    // Find D-backs game
+    // Find D-backs game (today or upcoming)
     const dbacksGame=events.find(e=>e.home_team?.includes('Arizona')||e.away_team?.includes('Arizona'));
-    if(!dbacksGame){hide('corbet-loading');show('corbet-no-props');return;}
+    if(!dbacksGame){
+      hide('corbet-loading');
+      document.getElementById('corbet-no-props').textContent='No D-backs game found in upcoming schedule. Props are typically available 1-2 days before game time. Check back closer to the next game.';
+      show('corbet-no-props');return;
+    }
 
     // Step 2: Get player props for this specific event
     const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts';
