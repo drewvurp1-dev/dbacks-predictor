@@ -772,9 +772,21 @@ function generateCorbetBets(score,factors,props){
   // Prioritize best props: hits and total bases first
   const propPriority={'Hits':1,'Total Bases':2,'Home Runs':3,'RBI':4,'Walks':5,'Strikeouts':6,'Stolen Bases':7};
   const order={green:0,yellow:1,red:2};
-  return bets
-    .sort((a,b)=>order[a.rating]-order[b.rating]||(propPriority[a.prop]||9)-(propPriority[b.prop]||9))
-    .slice(0,4);
+  const sorted=bets.sort((a,b)=>order[a.rating]-order[b.rating]||(propPriority[a.prop]||9)-(propPriority[b.prop]||9));
+
+  // Always show: 2 best green, 1 yellow, 1 red (if available)
+  const greens=sorted.filter(b=>b.rating==='green').slice(0,2);
+  const yellows=sorted.filter(b=>b.rating==='yellow').slice(0,1);
+  const reds=sorted.filter(b=>b.rating==='red').slice(0,1);
+
+  // Fill remaining slots with next best if yellow/red don't exist
+  const result=[...greens,...yellows,...reds];
+  if(result.length<4){
+    const used=new Set(result.map(b=>b.prop+b.direction));
+    const remaining=sorted.filter(b=>!used.has(b.prop+b.direction));
+    result.push(...remaining.slice(0,4-result.length));
+  }
+  return result.slice(0,4);
 }
 
 async function loadCorbet(){
