@@ -764,36 +764,46 @@ async function loadCorbet(){
   hide('corbet-no-prediction');hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');
   show('corbet-loading');
   try{
-    // Try to find D-backs game and Carroll props
-    const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&markets=batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts&oddsFormat=american');
-    const events=await r.json();
-    if(!Array.isArray(events)){throw new Error('Invalid response');}
-    // Find game with D-backs
+    // Step 1: Get MLB events list (no markets param)
+    const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
+    const eventsText=await r.text();
+    let events;
+    try{events=JSON.parse(eventsText);}catch(e){throw new Error('Odds API key may be invalid or missing.');}
+    if(!Array.isArray(events)){throw new Error(events?.message||'Unexpected response from Odds API');}
+
+    // Find D-backs game
     const dbacksGame=events.find(e=>e.home_team?.includes('Arizona')||e.away_team?.includes('Arizona'));
-    if(!dbacksGame){
-      hide('corbet-loading');show('corbet-no-props');return;
-    }
-    // Get player props for this event
-    const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?regions=us&markets=batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts&oddsFormat=american&player=${encodeURIComponent(S.playerName)}`);
-    const propData=await pr.json();
-    // Extract Carroll's props across bookmakers
-    const playerProps=[];
+    if(!dbacksGame){hide('corbet-loading');show('corbet-no-props');return;}
+
+    // Step 2: Get player props for this specific event
+    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts';
+    const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?regions=us&markets=${propMarkets}&oddsFormat=american`);
+    const propsText=await pr.text();
+    let propData;
+    try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
+
+    // Extract player props, searching by last name
+    const playerSearch=S.playerName.toLowerCase().split(' ').pop();
     const marketMap={};
     (propData.bookmakers||[]).forEach(book=>{
       (book.markets||[]).forEach(market=>{
         if(!marketMap[market.key])marketMap[market.key]={key:market.key,outcomes:[],books:[]};
-        market.outcomes.filter(o=>o.description?.toLowerCase().includes('carroll')||o.name?.toLowerCase().includes('corbin')).forEach(o=>{
-          // Find or add outcome
-          const existing=marketMap[market.key].outcomes.find(e=>e.name===o.name&&e.point===o.point);
-          if(!existing)marketMap[market.key].outcomes.push({name:o.name,point:o.point,price:o.price});
-          if(!marketMap[market.key].books.includes(book.title))marketMap[market.key].books.push(book.title);
-        });
+        market.outcomes
+          .filter(o=>(o.description||o.name||'').toLowerCase().includes(playerSearch))
+          .forEach(o=>{
+            const existing=marketMap[market.key].outcomes.find(e=>e.name===o.name&&Math.abs((e.point||0)-(o.point||0))<0.1);
+            if(!existing)marketMap[market.key].outcomes.push({name:o.name,point:o.point,price:o.price,description:o.description});
+            if(!marketMap[market.key].books.includes(book.title))marketMap[market.key].books.push(book.title);
+          });
       });
     });
+
     const props=Object.values(marketMap).filter(m=>m.outcomes.length>0);
     if(props.length===0){hide('corbet-loading');show('corbet-no-props');return;}
+
     const bets=generateCorbetBets(S.lastScore,S.lastPrediction.factors,props);
     if(bets.length===0){hide('corbet-loading');show('corbet-no-props');return;}
+
     const ratingLabel={green:'🟢 Strong Value',yellow:'🟡 Moderate Value',red:'🔴 Low Value'};
     document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>`
       <div class="bet-card ${b.rating}">
@@ -809,7 +819,7 @@ async function loadCorbet(){
     show('corbet-bets');
   }catch(e){
     hide('corbet-loading');
-    setText('corbet-error','⚠ Could not load props — '+e.message);
+    setText('corbet-error','⚠ '+e.message);
     show('corbet-error');
   }finally{hide('corbet-loading');}
 }
