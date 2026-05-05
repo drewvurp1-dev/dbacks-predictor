@@ -706,12 +706,12 @@ function runPrediction(){
 // ═══════════ CORBET CARROLL ════════════════════════════════════════════════════
 function corbetRating(score,direction){
   if(direction==='over'){
-    if(score>=70)return'green';
-    if(score>=50)return'yellow';
+    if(score>=65)return'green';
+    if(score>=48)return'yellow';
     return'red';
   } else {
-    if(score<=35)return'green';
-    if(score<=50)return'yellow';
+    if(score<=38)return'green';
+    if(score<=52)return'yellow';
     return'red';
   }
 }
@@ -730,33 +730,42 @@ function corbetReasoning(propKey,direction,score,factors){
 
 function generateCorbetBets(score,factors,props){
   const bets=[];
-  // Map prop keys to readable names
   const propNames={
     'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
     'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
     'batter_stolen_bases':'Stolen Bases','batter_hits_runs_rbis':'H+R+RBI',
   };
-  // Determine what to look for based on score
-  const lookForOvers=score>=60;
-  const lookForUnders=score<=45;
+  // Realistic line limits — filter out absurd props
+  const lineMax={'batter_hits':2.5,'batter_total_bases':3.5,'batter_home_runs':0.5,'batter_rbis':2.5,'batter_walks':1.5,'batter_strikeouts':2.5,'batter_stolen_bases':1.5};
+  const lookForOvers=score>=55;
+  const lookForUnders=score<=48;
   props.forEach(prop=>{
     const name=propNames[prop.key];
     if(!name)return;
+    const maxLine=lineMax[prop.key]||99;
     prop.outcomes?.forEach(outcome=>{
       const dir=outcome.name.toLowerCase();
+      const line=outcome.point||0;
+      // Filter out unrealistic lines
+      if(line>maxLine)return;
+      // For HRs, only show over 0.5
+      if(prop.key==='batter_home_runs'&&line>0.5)return;
       if(dir==='over'&&lookForOvers){
         const rating=corbetRating(score,'over');
-        bets.push({prop:name,direction:'Over',line:outcome.point,odds:outcome.price,rating,reasoning:corbetReasoning(prop.key,'over',score,factors),books:prop.books||[]});
+        bets.push({prop:name,direction:'Over',line,odds:outcome.price,rating,reasoning:corbetReasoning(prop.key,'over',score,factors),books:prop.books||[]});
       }
       if(dir==='under'&&lookForUnders){
         const rating=corbetRating(score,'under');
-        bets.push({prop:name,direction:'Under',line:outcome.point,odds:outcome.price,rating,reasoning:corbetReasoning(prop.key,'under',score,factors),books:prop.books||[]});
+        bets.push({prop:name,direction:'Under',line,odds:outcome.price,rating,reasoning:corbetReasoning(prop.key,'under',score,factors),books:prop.books||[]});
       }
     });
   });
-  // Sort: green first, then yellow, then red. Limit to 4.
+  // Prioritize best props: hits and total bases first
+  const propPriority={'Hits':1,'Total Bases':2,'Home Runs':3,'RBI':4,'Walks':5,'Strikeouts':6,'Stolen Bases':7};
   const order={green:0,yellow:1,red:2};
-  return bets.sort((a,b)=>order[a.rating]-order[b.rating]).slice(0,4);
+  return bets
+    .sort((a,b)=>order[a.rating]-order[b.rating]||(propPriority[a.prop]||9)-(propPriority[b.prop]||9))
+    .slice(0,4);
 }
 
 async function loadCorbet(){
