@@ -24,15 +24,25 @@ app.use('/mlb', (req, res) => {
 app.use('/odds', (req, res) => {
   const apiKey = process.env.ODDS_API_KEY;
   if (!apiKey) { res.status(500).json({ error: 'ODDS_API_KEY not configured' }); return; }
-  // req.url includes the full path after /odds, e.g. /v4/sports/...?regions=us
   const separator = req.url.includes('?') ? '&' : '?';
   const url = 'https://api.the-odds-api.com' + req.url + separator + 'apiKey=' + apiKey;
   console.log('Odds API request:', url.replace(apiKey, 'KEY_HIDDEN'));
   https.get(url, (oddsRes) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    oddsRes.pipe(res);
+    let data = '';
+    oddsRes.on('data', chunk => { data += chunk; });
+    oddsRes.on('end', () => {
+      console.log('Odds API status:', oddsRes.statusCode);
+      console.log('Odds API response preview:', data.substring(0, 200));
+      res.status(oddsRes.statusCode).send(data);
+    });
+    oddsRes.on('error', e => {
+      console.error('Odds response error:', e.message);
+      res.status(500).json({ error: e.message });
+    });
   }).on('error', (e) => {
+    console.error('Odds request error:', e.message);
     res.status(500).json({ error: e.message });
   });
 });
