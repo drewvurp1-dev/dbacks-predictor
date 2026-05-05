@@ -1017,9 +1017,13 @@ async function loadStatcast(playerId) {
 
     // Find player row by ID
     const sid = String(playerId);
-    const statRow = statRows.find(r => r.player_id === sid || r['player_id'] === sid);
-    const expRow  = expRows.find(r => r.player_id === sid || r['player_id'] === sid);
-    const batRow  = batRows.find(r => r.id === sid || r['id'] === sid);
+    // Try multiple possible ID column names and strip any whitespace
+    const statRow = statRows.find(r => String(r.player_id||r['player_id']||'').trim() === sid);
+    const expRow  = expRows.find(r  => String(r.player_id||r['player_id']||'').trim() === sid);
+    const batRow  = batRows.find(r  => String(r.id||r['id']||r.player_id||'').trim() === sid);
+
+    // Debug log to console
+    console.log('Statcast rows found:', statRows.length, 'stat match:', !!statRow, 'exp match:', !!expRow, 'bat match:', !!batRow);
 
     const xwoba   = expRow  ? parseFloat(expRow.est_woba).toFixed(3)       : '—';
     const brl     = statRow ? parseFloat(statRow.brl_percent).toFixed(1)+'%': '—';

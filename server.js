@@ -84,20 +84,20 @@ function savantFetch(url, res) {
 app.get('/savant/statcast', (req, res) => {
   const year = req.query.year || '2026';
   const type = req.query.type || 'batter';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/statcast?type=${type}&year=${year}&position=&team=&min=q&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/statcast?type=${type}&year=${year}&position=&team=&min=50&csv=true`, res);
 });
 
 // Expected stats leaderboard — xwOBA, xBA, xSLG
 app.get('/savant/expected', (req, res) => {
   const year = req.query.year || '2026';
   const type = req.query.type || 'batter';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=${type}&year=${year}&position=&team=&min=q&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=${type}&year=${year}&position=&team=&min=50&csv=true`, res);
 });
 
 // Bat tracking leaderboard — Whiff Rate, Bat Speed, Swing Length
 app.get('/savant/battracking', (req, res) => {
   const year = req.query.year || '2026';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=${year}&min=q&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=${year}&min=50&csv=true`, res);
 });
 
 const PORT = process.env.PORT || 3000;
