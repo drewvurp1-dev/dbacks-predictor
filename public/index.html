@@ -196,13 +196,16 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .record-cell.red .rc-record { color: #e74c3c; }
 .record-cell .rc-pct { font-size: 11px; font-family: monospace; color: #555; margin-top: 2px; }
 .record-cell .rc-roi { font-size: 10px; font-family: monospace; margin-top: 4px; }
-.bet-log-item { display: grid; grid-template-columns: 80px 1fr 60px 60px 50px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; }
+.bet-log-item { display: grid; grid-template-columns: 70px 1fr 50px 54px 96px 22px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; }
+.bet-log-item.bet-pending { opacity: 0.55; }
 .bet-log-item .bli-date { color: #444; }
 .bet-log-item .bli-prop { color: #ccc; }
 .bet-log-item .bli-odds { color: #666; }
 .bet-log-item .bli-rating { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-align: center; }
-.bet-log-item .bli-result { text-align: center; }
-.result-btn { font-size: 9px; font-family: monospace; padding: 3px 8px; border-radius: 4px; border: 1px solid; cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.bet-log-item .bli-result { display: flex; gap: 3px; }
+.del-btn { background: none; border: none; color: #2a2540; font-size: 15px; cursor: pointer; padding: 0; line-height: 1; transition: color 0.12s; }
+.del-btn:hover { color: #e74c3c; }
+.result-btn { font-size: 9px; font-family: monospace; padding: 3px 7px; border-radius: 4px; border: 1px solid; cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 .result-btn.win { background: #061a06; border-color: #1a4a10; color: #2ecc71; }
 .result-btn.loss { background: #1a0606; border-color: #3a1010; color: #e74c3c; }
 .result-btn.push { background: #1a1730; border-color: #2a2550; color: #888; }
@@ -419,7 +422,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
-      <div class="card-header"><span>📈 CorBET Record</span><button onclick="clearRecord()" style="background:none;border:none;color:#333;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="clearRecord()" style="background:none;border:none;color:#333;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
         <div class="record-summary">
           <div class="record-cell green"><div class="rc-label">🟢 Green</div><div class="rc-record" id="rec-green">0-0</div><div class="rc-pct" id="rec-green-pct">—%</div><div class="rc-roi" id="rec-green-roi" style="color:#2ecc71;"></div></div>
@@ -429,8 +432,8 @@ input[type=range] { accent-color: #A71930; padding: 0; }
         <div style="font-size:10px;color:#333;font-family:monospace;text-align:center;margin-bottom:14px;">
           Overall: <span id="rec-overall" style="color:#ccc;">0-0</span> · ROI: <span id="rec-roi-total" style="color:#ccc;">—%</span>
         </div>
-        <div id="bet-log-headers" style="display:grid;grid-template-columns:80px 1fr 60px 60px 50px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#333;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
-          <span>Date</span><span>Prop</span><span>Odds</span><span>Rating</span><span style="text-align:center;">Result</span>
+        <div id="bet-log-headers" style="display:none;grid-template-columns:70px 1fr 50px 54px 96px 22px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#333;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
+          <span>Date</span><span>Prop</span><span>Odds</span><span>Rating</span><span>Result</span><span></span>
         </div>
         <div id="bet-log"></div>
         <div id="bet-log-empty" style="text-align:center;padding:24px;color:#333;font-family:monospace;font-size:12px;">No bets logged yet. Run predictions and save CorBET picks to build your record.</div>
@@ -1124,7 +1127,7 @@ async function loadCorbet(){
       <div class="bet-card ${b.rating}">
         <div class="bet-card-header">
           <span class="bet-rating ${b.rating}">${ratingLabel[b.rating]}</span>
-          <button onclick="saveBet(${i})" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#666;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save to Record</button>
+          <button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#666;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save to Record</button>
         </div>
         <div class="bet-prop ${b.rating}">${S.playerName} ${b.direction} ${b.line} ${b.prop}</div>
         <div class="bet-odds">${b.odds>0?'+':''}${b.odds} · ${b.books.slice(0,3).join(', ')}</div>
@@ -1152,21 +1155,35 @@ function switchTab(id){
 }
 
 // ═══════════ BET RECORD ════════════════════════════════════════════════════════
-function saveBet(idx){
+function saveBet(idx, btn){
   if(!S.corbetBets||!S.corbetBets[idx])return;
   const b=S.corbetBets[idx];
   const p=S.lastPrediction;
-  const bet={id:Date.now(),date:p?.date||new Date().toISOString().split('T')[0],player:S.playerName,prop:`${b.direction} ${b.line} ${b.prop}`,odds:b.odds,rating:b.rating,score:S.lastScore,result:null};
+  const date=p?.date||new Date().toISOString().split('T')[0];
+  const prop=`${b.direction} ${b.line} ${b.prop}`;
+  // Prevent duplicate saves for same date + prop
+  if(S.betLog.some(x=>x.date===date&&x.prop===prop)){
+    if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save to Record';},1800);}
+    return;
+  }
+  const bet={id:Date.now(),date,player:S.playerName,prop,odds:b.odds,rating:b.rating,score:S.lastScore,result:null};
   S.betLog.unshift(bet);
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
   renderRecord();
-  alert(`Saved: ${bet.prop} to your record!`);
+  if(btn){btn.textContent='✓ Saved!';btn.style.color='#2ecc71';setTimeout(()=>{btn.textContent='+ Save to Record';btn.style.color='';},2000);}
 }
 
 function setResult(id,result){
   const bet=S.betLog.find(b=>b.id===id);
   if(!bet)return;
-  bet.result=result;
+  // Toggle off if same result clicked again
+  bet.result=bet.result===result?null:result;
+  localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
+  renderRecord();
+}
+
+function deleteBet(id){
+  S.betLog=S.betLog.filter(b=>b.id!==id);
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
   renderRecord();
 }
@@ -1182,18 +1199,24 @@ function renderRecord(){
   const log=S.betLog;
   const stats={green:{w:0,l:0,profit:0},yellow:{w:0,l:0,profit:0},red:{w:0,l:0,profit:0}};
   log.forEach(b=>{
-    if(!b.result||!stats[b.rating])return;
-    if(b.result==='win'){stats[b.rating].w++;const o=b.odds;const profit=o>0?o/100:100/Math.abs(o);stats[b.rating].profit+=profit;}
-    else if(b.result==='loss'){stats[b.rating].l++;stats[b.rating].profit-=1;}
+    if(!b.result||b.result==='push'||!stats[b.rating])return;
+    if(b.result==='win'){
+      stats[b.rating].w++;
+      const o=b.odds;
+      stats[b.rating].profit+=o>0?o/100:100/Math.abs(o);
+    } else if(b.result==='loss'){
+      stats[b.rating].l++;
+      stats[b.rating].profit-=1;
+    }
   });
   ['green','yellow','red'].forEach(c=>{
     const{w,l,profit}=stats[c];
     const total=w+l;
     const pct=total?Math.round((w/total)*100)+'%':'—%';
-    const roi=total?(profit/total*100).toFixed(1)+'%':'—';
+    const roi=total?(profit/total*100).toFixed(1):'—';
     document.getElementById(`rec-${c}`).textContent=`${w}-${l}`;
     document.getElementById(`rec-${c}-pct`).textContent=pct+' hit rate';
-    document.getElementById(`rec-${c}-roi`).textContent=total?`ROI: ${profit>=0?'+':''}${roi}`:'';
+    document.getElementById(`rec-${c}-roi`).textContent=total?`ROI: ${profit>=0?'+':''}${roi}u`:'';
   });
   const allW=stats.green.w+stats.yellow.w+stats.red.w;
   const allL=stats.green.l+stats.yellow.l+stats.red.l;
@@ -1201,21 +1224,31 @@ function renderRecord(){
   const allTotal=allW+allL;
   document.getElementById('rec-overall').textContent=`${allW}-${allL}`;
   document.getElementById('rec-roi-total').textContent=allTotal?(allProfit>=0?'+':'')+allProfit.toFixed(1)+'u':'—';
+  const pending=log.filter(b=>!b.result).length;
+  setText('rec-pending',pending?` · ${pending} pending result${pending>1?'s':''}  ↓`:'');
   const ratingColors={green:'#2ecc71',yellow:'#f39c12',red:'#e74c3c'};
   const ratingBg={green:'#0d3a0d',yellow:'#2a2000',red:'#2a0808'};
-  if(log.length===0){show('bet-log-empty');document.getElementById('bet-log').innerHTML='';return;}
+  const headers=document.getElementById('bet-log-headers');
+  if(log.length===0){
+    headers.style.display='none';
+    show('bet-log-empty');
+    document.getElementById('bet-log').innerHTML='';
+    return;
+  }
+  headers.style.display='grid';
   hide('bet-log-empty');
   document.getElementById('bet-log').innerHTML=log.map(b=>`
-    <div class="bet-log-item">
+    <div class="bet-log-item${b.result?'':' bet-pending'}">
       <span class="bli-date">${b.date}</span>
       <span class="bli-prop">${b.prop}</span>
-      <span class="bli-odds" style="color:#666;">${b.odds>0?'+':''}${b.odds}</span>
+      <span class="bli-odds">${b.odds>0?'+':''}${b.odds}</span>
       <span class="bli-rating" style="background:${ratingBg[b.rating]};color:${ratingColors[b.rating]}">${b.rating}</span>
-      <span class="bli-result" style="display:flex;gap:3px;justify-content:center;">
+      <span class="bli-result">
         <button class="result-btn win ${b.result==='win'?'active':''}" onclick="setResult(${b.id},'win')">W</button>
         <button class="result-btn loss ${b.result==='loss'?'active':''}" onclick="setResult(${b.id},'loss')">L</button>
         <button class="result-btn push ${b.result==='push'?'active':''}" onclick="setResult(${b.id},'push')">P</button>
       </span>
+      <button class="del-btn" onclick="deleteBet(${b.id})" title="Remove">×</button>
     </div>`).join('');
 }
 
