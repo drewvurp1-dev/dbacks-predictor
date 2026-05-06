@@ -80,7 +80,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .stat-box .stat-val { font-size: 20px; font-weight: 900; font-family: monospace; color: #fff; }
 .stat-box .stat-val.good { color: #2ecc71; }
 .stat-box .stat-val.bad { color: #e74c3c; }
-.stat-box .stat-context { font-size: 9px; color: #333; font-family: monospace; margin-top: 3px; }
+.stat-box .stat-context { font-size: 9px; color: #777; font-family: monospace; margin-top: 3px; }
 .risp-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .risp-box .risp-main { font-size: 28px; font-weight: 900; font-family: monospace; }
 .risp-box .risp-detail { font-size: 11px; color: #444; font-family: monospace; line-height: 1.8; }
@@ -99,7 +99,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .weather-cell { text-align: center; }
 .weather-cell .wc-label { font-size: 9px; color: #444; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
 .weather-cell .wc-val { font-size: 16px; font-weight: 800; font-family: monospace; color: #fff; }
-.weather-cell .wc-sub { font-size: 9px; color: #333; font-family: monospace; }
+.weather-cell .wc-sub { font-size: 9px; color: #777; font-family: monospace; }
 .roof-recommendation { font-size: 11px; font-family: monospace; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
 .roof-recommendation.likely-closed { background: #1a1730; color: #f39c12; }
 .roof-recommendation.likely-open { background: #0a1a10; color: #2ecc71; }
@@ -139,7 +139,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .grade-stat { text-align: center; background: #07060f; border: 1px solid #1a1730; border-radius: 6px; padding: 6px 10px; min-width: 50px; }
 .grade-stat .gs-label { font-size: 9px; color: #444; font-family: monospace; text-transform: uppercase; margin-bottom: 2px; }
 .grade-stat .gs-val { font-size: 16px; font-weight: 800; font-family: monospace; color: #fff; }
-.grade-stat .gs-val.loading { color: #333; animation: pulse 1s infinite; }
+.grade-stat .gs-val.loading { color: #777; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
 .grade-btn { padding: 8px 16px; border-radius: 6px; border: none; font-family: monospace; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: opacity 0.15s; }
 .grade-btn.confirm { background: linear-gradient(135deg, #1a5a10, #0d3a08); color: #2ecc71; }
@@ -176,9 +176,9 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .bet-odds { font-size: 12px; font-family: monospace; color: #888; margin-top: 2px; }
 .bet-reasoning { font-size: 11px; color: #555; margin-top: 6px; line-height: 1.5; }
 .bet-books { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.bet-book { font-size: 9px; font-family: monospace; color: #333; background: #0e0c22; padding: 2px 7px; border-radius: 3px; border: 1px solid #1a1730; }
+.bet-book { font-size: 9px; font-family: monospace; color: #777; background: #0e0c22; padding: 2px 7px; border-radius: 3px; border: 1px solid #1a1730; }
 .corbet-loading { text-align: center; padding: 24px; color: #2a5a20; font-family: monospace; font-size: 12px; }
-.corbet-empty { text-align: center; padding: 24px; color: #333; font-family: monospace; font-size: 12px; }
+.corbet-empty { text-align: center; padding: 24px; color: #777; font-family: monospace; font-size: 12px; }
 
 /* Record tracker */
 .record-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
@@ -281,7 +281,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
           <div style="font-size:9px;color:#444;font-family:monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix — adjust if needed</div>
           <div class="pitch-mix-grid" id="pitch-mix-grid"></div>
         </div>
-        <div style="margin-top:10px;"><button onclick="toggleManual()" style="background:none;border:none;color:#333;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Enter manually instead</button></div>
+        <div style="margin-top:10px;"><button onclick="toggleManual()" style="background:none;border:none;color:#777;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Enter manually instead</button></div>
         <div id="pitcher-manual" class="hidden" style="margin-top:12px;">
           <div class="row"><label>Name</label><input type="text" id="m-pitcher-name" placeholder="Pitcher name"></div>
           <div class="row"><label>Throws</label><div class="toggle"><button class="toggle-btn active" id="throws-R" onclick="setThrows('R')">Right</button><button class="toggle-btn" id="throws-L" onclick="setThrows('L')">Left</button></div></div>
@@ -308,16 +308,16 @@ input[type=range] { accent-color: #A71930; padding: 0; }
         <div style="margin-top:16px;">
           <div class="stats-section-title" style="margin-top:0">Home Plate Umpire</div>
           <div id="ump-spinner" class="spinner hidden" style="padding:12px 0;"><div class="spinner-circle"></div></div>
-          <div id="ump-empty" style="font-size:11px;color:#333;font-family:monospace;">Enter a game date to look up the umpire.</div>
+          <div id="ump-empty" style="font-size:11px;color:#777;font-family:monospace;">Enter a game date to look up the umpire.</div>
           <div id="ump-content" class="hidden"></div>
         </div>
         <div style="margin-top:16px;">
           <div class="stats-section-title" style="margin-top:0">Lineup Protection (3-4-5 Spots)</div>
           <div id="lineup-spinner" class="spinner hidden" style="padding:12px 0;"><div class="spinner-circle"></div></div>
-          <div id="lineup-empty" style="font-size:11px;color:#333;font-family:monospace;">Enter a game date to load lineup context.</div>
+          <div id="lineup-empty" style="font-size:11px;color:#777;font-family:monospace;">Enter a game date to load lineup context.</div>
           <div id="lineup-content" class="hidden"></div>
           <div id="lineup-override" style="margin-top:10px;">
-            <div style="font-size:9px;color:#333;font-family:monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Manual override:</div>
+            <div style="font-size:9px;color:#777;font-family:monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Manual override:</div>
             <div class="toggle">
               <button class="toggle-btn" id="prot-strong" onclick="setProtection('strong')">Strong</button>
               <button class="toggle-btn active" id="prot-average" onclick="setProtection('average')">Average</button>
@@ -359,7 +359,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
             <div class="weather-auto"><div class="wa-title">Live Conditions at Stadium</div><div class="weather-grid" id="weather-grid"></div><div id="roof-rec" class="roof-recommendation hidden"></div></div>
           </div>
         </div>
-        <div style="margin-top:4px;"><button onclick="toggleWeatherManual()" style="background:none;border:none;color:#333;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Override weather manually</button></div>
+        <div style="margin-top:4px;"><button onclick="toggleWeatherManual()" style="background:none;border:none;color:#777;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Override weather manually</button></div>
         <div id="weather-manual" class="hidden" style="margin-top:10px;">
           <div class="row"><label id="temp-label">Temp: 95°F</label><input type="range" id="temp-slider" min="30" max="115" value="95" oninput="document.getElementById('temp-label').textContent='Temp: '+this.value+'°F'"></div>
           <div class="row"><label id="wind-label">Wind: 5 mph</label><div class="range-row"><input type="range" id="wind-slider" min="0" max="30" value="5" style="flex:1" oninput="document.getElementById('wind-label').textContent='Wind: '+this.value+' mph'"><select id="wind-dir" style="width:130px"><option value="calm">Calm</option><option value="out">Blowing Out</option><option value="in">Blowing In</option><option value="cross">Crosswind</option></select></div></div>
@@ -372,7 +372,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 
   <!-- ═══════════════════ RESULT ═══════════════════ -->
   <div id="panel-result" class="panel">
-    <div id="no-prediction" style="text-align:center;padding:40px;color:#333;font-family:monospace;font-size:12px;">Complete the Setup tab and hit Run Prediction first.</div>
+    <div id="no-prediction" style="text-align:center;padding:40px;color:#777;font-family:monospace;font-size:12px;">Complete the Setup tab and hit Run Prediction first.</div>
     <div id="prediction-output" class="hidden">
       <div class="prediction-header" id="pred-header"></div>
       <div class="card">
@@ -386,7 +386,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
                 <span id="gauge-score" style="font-size:34px;font-weight:900;color:#fff;font-family:monospace;line-height:1;">—</span>
-                <span style="font-size:9px;color:#333;letter-spacing:2px;text-transform:uppercase;font-family:monospace;">/100</span>
+                <span style="font-size:9px;color:#777;letter-spacing:2px;text-transform:uppercase;font-family:monospace;">/100</span>
               </div>
             </div>
             <div id="gauge-label" class="gauge-label"></div>
@@ -422,21 +422,21 @@ input[type=range] { accent-color: #A71930; padding: 0; }
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
-      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="clearRecord()" style="background:none;border:none;color:#333;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
         <div class="record-summary">
           <div class="record-cell green"><div class="rc-label">🟢 Green</div><div class="rc-record" id="rec-green">0-0</div><div class="rc-pct" id="rec-green-pct">—%</div><div class="rc-roi" id="rec-green-roi" style="color:#2ecc71;"></div></div>
           <div class="record-cell yellow"><div class="rc-label">🟡 Yellow</div><div class="rc-record" id="rec-yellow">0-0</div><div class="rc-pct" id="rec-yellow-pct">—%</div><div class="rc-roi" id="rec-yellow-roi" style="color:#f39c12;"></div></div>
           <div class="record-cell red"><div class="rc-label">🔴 Red</div><div class="rc-record" id="rec-red">0-0</div><div class="rc-pct" id="rec-red-pct">—%</div><div class="rc-roi" id="rec-red-roi" style="color:#e74c3c;"></div></div>
         </div>
-        <div style="font-size:10px;color:#333;font-family:monospace;text-align:center;margin-bottom:14px;">
+        <div style="font-size:10px;color:#777;font-family:monospace;text-align:center;margin-bottom:14px;">
           Overall: <span id="rec-overall" style="color:#ccc;">0-0</span> · ROI: <span id="rec-roi-total" style="color:#ccc;">—%</span>
         </div>
-        <div id="bet-log-headers" style="display:none;grid-template-columns:70px 1fr 50px 54px 96px 22px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#333;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
+        <div id="bet-log-headers" style="display:none;grid-template-columns:70px 1fr 50px 54px 96px 22px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
           <span>Date</span><span>Prop</span><span>Odds</span><span>Rating</span><span>Result</span><span></span>
         </div>
         <div id="bet-log"></div>
-        <div id="bet-log-empty" style="text-align:center;padding:24px;color:#333;font-family:monospace;font-size:12px;">No bets logged yet. Run predictions and save CorBET picks to build your record.</div>
+        <div id="bet-log-empty" style="text-align:center;padding:24px;color:#777;font-family:monospace;font-size:12px;">No bets logged yet. Run predictions and save CorBET picks to build your record.</div>
       </div>
     </div>
   </div>
@@ -449,7 +449,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
         <div id="splits-spinner" class="spinner hidden"><div class="spinner-circle"></div></div>
         <div id="splits-error" class="status error hidden"></div>
         <div id="splits-content" class="hidden"><div class="season-bar" id="season-bar"></div><div class="split-grid" id="split-grid"></div></div>
-        <div id="splits-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load splits.</div>
+        <div id="splits-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load splits.</div>
       </div>
     </div>
   </div>
@@ -466,9 +466,9 @@ input[type=range] { accent-color: #A71930; padding: 0; }
           <div class="stats-section-title">Plate Discipline</div><div class="stats-grid" id="stat-discipline"></div>
           <div class="stats-section-title">Power & Contact</div><div class="stats-grid" id="stat-power"></div>
           <div class="stats-section-title">Runners in Scoring Position</div><div id="stat-risp"></div>
-          <div class="stats-section-title">Statcast / Advanced</div><div class="stats-grid" id="stat-statcast"><div style="font-size:11px;color:#333;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div></div>
+          <div class="stats-section-title">Statcast / Advanced</div><div class="stats-grid" id="stat-statcast"><div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div></div>
         </div>
-        <div id="stats-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load stats.</div>
+        <div id="stats-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load stats.</div>
       </div>
     </div>
   </div>
@@ -478,7 +478,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
     <div class="card">
       <div class="card-header" id="pitcher-tab-header">📋 Pitcher Analysis</div>
       <div class="card-body">
-        <div id="pitcher-tab-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Search for a pitcher in Setup to see their full breakdown.</div>
+        <div id="pitcher-tab-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Search for a pitcher in Setup to see their full breakdown.</div>
         <div id="pitcher-tab-content" class="hidden">
           <div class="stats-section-title" style="margin-top:0">Season Stats</div><div class="stats-grid" id="pt-season"></div>
           <div class="stats-section-title">Pitch Mix</div><div id="pt-pitchmix"></div>
@@ -496,7 +496,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
     <div class="card" id="grade-pending-card">
       <div class="card-header">⚡ Pending Grades</div>
       <div class="card-body">
-        <div id="grade-pending-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">No predictions waiting to be graded. Run a prediction before a game and come back after to grade it.</div>
+        <div id="grade-pending-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">No predictions waiting to be graded. Run a prediction before a game and come back after to grade it.</div>
         <div id="grade-pending-list"></div>
       </div>
     </div>
@@ -505,7 +505,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
     <div class="card">
       <div class="card-header"><span>🧠 Model Learning</span><span id="grade-confidence" style="font-size:10px;color:#555;font-weight:400;font-family:monospace;"></span></div>
       <div class="card-body">
-        <div id="grade-learning-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Grade at least 5 games to start seeing model insights.</div>
+        <div id="grade-learning-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Grade at least 5 games to start seeing model insights.</div>
         <div id="grade-learning-content" class="hidden">
           <div style="font-size:10px;color:#555;font-family:monospace;margin-bottom:12px;">Each factor's hit rate = % of times Carroll outperformed baseline when that factor fired. Model auto-adjusts weights after 15+ games.</div>
           <div id="factor-performance-list"></div>
@@ -517,7 +517,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
     <div class="card">
       <div class="card-header">📈 Prediction Score vs Actual Performance</div>
       <div class="card-body">
-        <div id="grade-chart-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">Grade games to see prediction accuracy over time.</div>
+        <div id="grade-chart-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Grade games to see prediction accuracy over time.</div>
         <div id="grade-chart" class="hidden">
           <canvas id="perf-canvas" width="760" height="200" style="width:100%;height:200px;"></canvas>
         </div>
@@ -526,10 +526,10 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 
     <!-- Graded game log -->
     <div class="card">
-      <div class="card-header"><span>📋 Graded Game Log</span><button onclick="clearGrades()" style="background:none;border:none;color:#333;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📋 Graded Game Log</span><button onclick="clearGrades()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
-        <div id="grade-log-empty" style="font-size:12px;color:#333;font-family:monospace;text-align:center;padding:20px;">No graded games yet.</div>
-        <div id="grade-log-headers" class="hidden" style="display:grid;grid-template-columns:80px 80px 1fr 60px 80px 60px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#333;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
+        <div id="grade-log-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">No graded games yet.</div>
+        <div id="grade-log-headers" class="hidden" style="display:grid;grid-template-columns:80px 80px 1fr 60px 80px 60px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
           <span>Date</span><span>Score</span><span>Actual Line</span><span>TB</span><span>Outcome</span><span>Model</span>
         </div>
         <div id="grade-log"></div>
@@ -672,7 +672,7 @@ function renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbP
   const whipC=whip<1.1?'good':whip>1.4?'bad':'';
   document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average'],['FIP',fip,'','Fielding independent pitching'],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP'],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate'],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate'],['IP',ip,'','Innings pitched'],['K/9',k9,'','Strikeouts per 9'],['GS',st.gamesStarted||'—','','Games started']].map(([l,v,c,ctx])=>`<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v}</div><div class="stat-context">${ctx}</div></div>`).join('');
   document.getElementById('pt-pitchmix').innerHTML=PITCH_TYPES.map(pt=>{const p=S.pitcherPitches[pt]||0;if(!p)return'';return`<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;}).join('');
-  document.getElementById('pt-recent').innerHTML=last3.length?last3.map(g=>`<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K <span style="color:#555;margin-left:8px;">${g.stat.numberOfPitches||'—'} pitches</span></div>`).join(''):'<span style="color:#333;">No recent game log available.</span>';
+  document.getElementById('pt-recent').innerHTML=last3.length?last3.map(g=>`<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K <span style="color:#555;margin-left:8px;">${g.stat.numberOfPitches||'—'} pitches</span></div>`).join(''):'<span style="color:#777;">No recent game log available.</span>';
   document.getElementById('pt-workload').innerHTML=`<div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>${lastOuting?`<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches||'—'}</strong></div>`:''}${daysRest!=='—'&&daysRest<4?'<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>':''}${daysRest!=='—'&&daysRest>=5?'<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>':''}`;
 }
 
@@ -713,7 +713,7 @@ async function loadMatchupStats(){
     const st=d?.stats?.[0]?.splits?.[0]?.stat;
     const ab=parseInt(st?.atBats)||0;
     if(!st||ab===0){
-      document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#333;font-family:monospace;">No career matchup data — may be first-time opponents.</div>';
+      document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">No career matchup data — may be first-time opponents.</div>';
       show('matchup-content');hide('matchup-spinner');return;
     }
     const ops=parseFloat(st.ops)||0;
@@ -731,10 +731,10 @@ async function loadMatchupStats(){
           ${[['AVG',st.avg],['OBP',st.obp],['SLG',st.slg],['AB',ab],['H',h],['HR',hr],['K',k],['BB',bb]].map(([l,v])=>`<div><div style="font-size:9px;color:#444;font-family:monospace;letter-spacing:1px;text-transform:uppercase;">${l}</div><div style="font-size:13px;font-weight:700;font-family:monospace;color:#ccc;">${v}</div></div>`).join('')}
         </div>
       </div>
-      <div style="font-size:9px;color:#333;font-family:monospace;">${sample} · ${ab} career AB vs ${S.pitcher.name}</div>`;
+      <div style="font-size:9px;color:#777;font-family:monospace;">${sample} · ${ab} career AB vs ${S.pitcher.name}</div>`;
     show('matchup-content');
   }catch(e){
-    document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#333;font-family:monospace;">Could not load matchup data.</div>';
+    document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">Could not load matchup data.</div>';
     show('matchup-content');
   }finally{hide('matchup-spinner');}
 }
@@ -976,7 +976,7 @@ function runPrediction(){
   document.getElementById('pred-header').textContent=`${S.playerName} · ${pn} (${hand}HP)${era?` · ERA ${parseFloat(era).toFixed(2)}`:''}`;
   const colors={positive:'#2ecc71',negative:'#e74c3c',neutral:'#f39c12'};
   const icons={positive:'▲',negative:'▼',neutral:'●'};
-  document.getElementById('factors-body').innerHTML=factors.length===0?'<div style="font-size:12px;color:#333;font-family:monospace;">Add more conditions for a richer breakdown.</div>':factors.map(f=>`<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('');
+  document.getElementById('factors-body').innerHTML=factors.length===0?'<div style="font-size:12px;color:#777;font-family:monospace;">Add more conditions for a richer breakdown.</div>':factors.map(f=>`<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('');
   document.getElementById('pitch-display').innerHTML=Object.entries(S.pitcherPitches).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a).map(([type,pct])=>`<div class="pitch-row"><span class="pitch-label">${type}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${pct}%</span></div>`).join('');
   S.lastScore=score;S.lastPrediction={score,tier,factors,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:document.getElementById('game-date').value||new Date().toISOString().split('T')[0]};
   savePredictionForGrading(S.lastPrediction);
@@ -1253,7 +1253,7 @@ function renderRecord(){
 }
 
 // ═══════════ SPLITS ════════════════════════════════════════════════════════════
-function opsColor(o){if(!o)return'#333';return o>0.850?'#2ecc71':o>0.720?'#fff':'#e74c3c';}
+function opsColor(o){if(!o)return'#777';return o>0.850?'#2ecc71':o>0.720?'#fff':'#e74c3c';}
 function renderSplitPills(){document.getElementById('splits-pills').innerHTML=[['vs LHP','vl'],['vs RHP','vr'],['Home','h'],['Away','a'],['Day','d'],['Night','n']].map(([l,c])=>{const s=S.splits?.[c];return`<div class="pill"><div class="pill-label">${l}</div><div class="pill-val" style="color:${opsColor(s?.ops)}">${s?.ops?s.ops.toFixed(3):'—'}</div><div class="pill-sub">OPS</div></div>`;}).join('');show('splits-pills');}
 function showSplitsLoading(){show('splits-spinner');hide('splits-error');hide('splits-content');hide('splits-empty');}
 function showSplitsError(m){hide('splits-spinner');setText('splits-error','⚠ '+m);show('splits-error');}
@@ -1280,7 +1280,7 @@ function renderStatsTab(){
   document.getElementById('stat-discipline').innerHTML=statBox('BB%',bbPct,`${ss.baseOnBalls} walks / ${pa} PA`,parseFloat(bbPct)>=10?'good':parseFloat(bbPct)<=5?'bad':'')+statBox('K%',kPct,`${ss.strikeOuts} Ks / ${pa} PA`,parseFloat(kPct)<=16?'good':parseFloat(kPct)>=25?'bad':'')+statBox('BB/K',ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts).toFixed(2):'—','Walk to K ratio','')+statBox('IBB',ss.intentionalWalks??'0','Intentional walks','')+statBox('HBP',ss.hitByPitch??'0','Hit by pitch','')+statBox('SAC',(ss.sacBunts??0)+(ss.sacFlies??0),'Sac bunts + flies','');
   document.getElementById('stat-power').innerHTML=statBox('HR',ss.homeRuns,`${ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—'} AB/HR`,'')+statBox('2B',ss.doubles,'Doubles','')+statBox('3B',ss.triples,'Triples','')+statBox('XBH',(ss.homeRuns||0)+(ss.doubles||0)+(ss.triples||0),'Extra base hits','')+statBox('RBI',ss.rbi,`${ss.leftOnBase} LOB`,'')+statBox('SB',`${ss.stolenBases}/${(ss.stolenBases||0)+(ss.caughtStealing||0)}`,'SB success','');
   if(risp){const ro=((parseFloat(risp.obp)||0)+(parseFloat(risp.slg)||0)).toFixed(3);const rc=parseFloat(risp.avg)>=0.280?'#2ecc71':parseFloat(risp.avg)<=0.200?'#e74c3c':'#fff';document.getElementById('stat-risp').innerHTML=`<div class="risp-box"><div><div class="stat-label" style="margin-bottom:4px">BA w/ RISP</div><div class="risp-main" style="color:${rc}">${risp.avg??'—'}</div></div><div class="risp-detail">OBP <strong style="color:#fff">${risp.obp??'—'}</strong><br>SLG <strong style="color:#fff">${risp.slg??'—'}</strong><br>OPS <strong style="color:#fff">${ro}</strong>${risp.rbi?`<br>RBI <strong style="color:#fff">${risp.rbi}</strong>`:''}</div><div class="risp-detail">H <strong style="color:#fff">${risp.hits??'—'}</strong><br>AB <strong style="color:#fff">${risp.atBats??'—'}</strong><br>PA <strong style="color:#fff">${risp.plateAppearances??'—'}</strong><br>K <strong style="color:#fff">${risp.strikeOuts??'—'}</strong></div></div>`;}
-  else document.getElementById('stat-risp').innerHTML='<div style="font-size:11px;color:#333;font-family:monospace;">RISP data not available.</div>';
+  else document.getElementById('stat-risp').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">RISP data not available.</div>';
   show('stats-content');
 }
 
@@ -1491,7 +1491,7 @@ async function renderGradePanel() {
         </div>
         <div style="display:flex;gap:8px;align-items:center;" id="grade-actions-${pred.id}">
           <button class="grade-btn confirm" onclick="autoGrade(${pred.id}, '${pred.playerId}', '${pred.date}')">⟳ Fetch & Grade</button>
-          <span style="font-size:10px;color:#333;font-family:monospace;">Fetches Carroll's actual stats from MLB API</span>
+          <span style="font-size:10px;color:#777;font-family:monospace;">Fetches Carroll's actual stats from MLB API</span>
         </div>`;
       pendingEl.appendChild(div);
     }
@@ -1594,7 +1594,7 @@ function drawPerfChart(log) {
   [0, 25, 50, 75, 100].forEach(v => {
     const y = pad.t + chartH - (v / 100) * chartH;
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
-    ctx.fillStyle = '#333'; ctx.font = '9px monospace'; ctx.fillText(v, 4, y + 3);
+    ctx.fillStyle = '#777'; ctx.font = '9px monospace'; ctx.fillText(v, 4, y + 3);
   });
 
   const xStep = chartW / (recent.length - 1);
@@ -1624,7 +1624,7 @@ function drawPerfChart(log) {
     const py = pad.t + chartH - (g.grade.perfScore / 100) * chartH;
     ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(x, py, 3, 0, Math.PI*2); ctx.fill();
     if (i % 3 === 0) {
-      ctx.fillStyle = '#333'; ctx.font = '8px monospace';
+      ctx.fillStyle = '#777'; ctx.font = '8px monospace';
       ctx.fillText(g.date.slice(5), x - 10, H - 8);
     }
   });
@@ -1664,7 +1664,7 @@ function parseCSV(text) {
 }
 
 async function loadStatcast(playerId) {
-  document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#333;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div>';
+  document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div>';
   try {
     const [statRes, expRes, batRes] = await Promise.all([
       fetch('/savant/statcast?type=batter&year=2026'),
@@ -1712,7 +1712,7 @@ async function loadStatcast(playerId) {
     S.statcast = { xwoba: parseFloat(xwoba)||null, brl: parseFloat(brl)||null, hhRate: parseFloat(hhRate)||null, whiff: parseFloat(whiff)||null };
 
   } catch(e) {
-    document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#333;font-family:monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
+    document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
   }
 }
 
