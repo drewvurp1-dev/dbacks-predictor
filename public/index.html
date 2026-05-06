@@ -988,89 +988,235 @@ function runPrediction(){
 }
 
 // ═══════════ CORBET CARROLL ════════════════════════════════════════════════════
-function corbetRating(score,direction){
-  if(direction==='over'){
-    if(score>=65)return'green';
-    if(score>=48)return'yellow';
-    return'red';
-  } else {
-    if(score<=38)return'green';
-    if(score<=52)return'yellow';
-    return'red';
+
+// Score each prop independently based on its specific key drivers (0–100)
+function scoreIndividualProp(propKey){
+  let score=50;
+  const clamp=(v,mn,mx)=>Math.max(mn,Math.min(mx,v));
+
+  // Batter season stats
+  const ss=S.seasonStat;
+  const pa=ss?.plateAppearances||1;
+  const avg=parseFloat(ss?.avg)||null;
+  const obp=parseFloat(ss?.obp)||null;
+  const slg=parseFloat(ss?.slg)||null;
+  const babip=parseFloat(ss?.babip)||null;
+  const bbPct=ss?(ss.baseOnBalls/pa)*100:null;
+  const kPct=ss?(ss.strikeOuts/pa)*100:null;
+  const abPerHR=parseFloat(ss?.atBatsPerHomeRun)||null;
+
+  // Pitcher stats
+  const pst=S.pitcher?.st;
+  const pitcherPA=pst?.battersFaced||1;
+  const pEra=parseFloat(pst?.era)||null;
+  const pWhip=parseFloat(pst?.whip)||null;
+  const pKPct=pst?.strikeOuts?(pst.strikeOuts/pitcherPA)*100:null;
+  const pBBPct=pst?.baseOnBalls?(pst.baseOnBalls/pitcherPA)*100:null;
+
+  // Statcast
+  const brl=S.statcast?.brl;
+  const hhRate=S.statcast?.hhRate;
+  const whiff=S.statcast?.whiff;
+  const xwoba=S.statcast?.xwoba;
+
+  // Handedness split
+  const hand=S.pitcher?.hand||S.pitcherThrows;
+  const handSplit=hand==='L'?S.splits?.vl:S.splits?.vr;
+  const handOps=handSplit?.ops;
+
+  // Matchup career
+  const mu=S.matchupStats;
+  const muW=!mu||mu.ab<5?0:mu.ab>=20?1:mu.ab>=10?0.6:0.3;
+
+  // Environment
+  const stadOpt=document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
+  const elev=parseInt(stadOpt.dataset.elev)||500;
+  const tempF=S.weather?.tempF||75;
+  const windMph=S.weather?.windMph||5;
+  const windDir=S.weather?.windDir||'calm';
+  const umpAdj=S.umpire?(UMP_DB[S.umpire.fullName]?.adj||0):0;
+  const protTier=S.lineupProtection?.tier;
+  const rispAvg=parseFloat(S.rispStat?.avg)||null;
+
+  if(propKey==='batter_hits'){
+    if(avg!=null)        score+=(avg-0.265)*150;
+    if(babip!=null)      score+=(babip-0.300)*80;
+    if(kPct!=null)       score-=(kPct-20)*0.5;
+    if(handOps)          score+=(handOps-0.750)*35;
+    if(pWhip!=null)      score-=(pWhip-1.25)*20;
+    if(pKPct!=null)      score-=(pKPct-22)*0.4;
+    if(whiff!=null)      score-=(whiff-22)*0.35;
+    if(hhRate!=null)     score+=(hhRate-40)*0.15;
+    if(mu&&muW>0)        score+=(parseFloat(mu.avg||0)-0.265)*80*muW;
   }
+  else if(propKey==='batter_total_bases'){
+    if(slg!=null)        score+=(slg-0.420)*100;
+    if(xwoba!=null)      score+=(xwoba-0.340)*80;
+    if(brl!=null)        score+=(brl-8)*0.7;
+    if(hhRate!=null)     score+=(hhRate-40)*0.2;
+    if(pEra!=null)       score-=(pEra-4.00)*3;
+    if(handOps)          score+=(handOps-0.750)*30;
+    if(mu&&muW>0)        score+=(parseFloat(mu.slg||0)-0.420)*60*muW;
+    if(tempF>=90)        score+=4;
+    if(elev>4000)        score+=8;
+    else if(elev>2000)   score+=3;
+    if(windDir==='out'&&windMph>=8) score+=windMph*0.35;
+    else if(windDir==='in'&&windMph>=8) score-=windMph*0.28;
+  }
+  else if(propKey==='batter_home_runs'){
+    if(brl!=null)        score+=(brl-8)*1.5;
+    if(xwoba!=null)      score+=(xwoba-0.340)*70;
+    if(abPerHR!=null)    score-=(abPerHR-28)*0.5;
+    if(hhRate!=null)     score+=(hhRate-40)*0.3;
+    if(pEra!=null)       score-=(pEra-4.00)*5;
+    if(handOps)          score+=(handOps-0.750)*25;
+    if(mu&&muW>0&&mu.hr!=null) score+=(mu.hr/Math.max(mu.ab,1))*300*muW;
+    if(tempF>=90)        score+=5;
+    if(elev>4000)        score+=12;
+    else if(elev>2000)   score+=5;
+    if(windDir==='out'&&windMph>=8) score+=windMph*0.6;
+    else if(windDir==='in'&&windMph>=8) score-=windMph*0.5;
+  }
+  else if(propKey==='batter_rbis'){
+    if(rispAvg!=null)    score+=(rispAvg-0.255)*120;
+    if(slg!=null)        score+=(slg-0.420)*60;
+    if(protTier==='strong') score+=5;
+    else if(protTier==='weak') score-=5;
+    if(pEra!=null)       score-=(pEra-4.00)*3.5;
+    if(mu&&muW>0)        score+=(mu.ops-0.750)*35*muW;
+    if(tempF>=90||elev>4000) score+=3;
+  }
+  else if(propKey==='batter_walks'){
+    if(bbPct!=null)      score+=(bbPct-9)*3;
+    if(obp!=null)        score+=(obp-0.340)*70;
+    if(pBBPct!=null)     score+=(pBBPct-7)*2.5;
+    if(umpAdj>0)         score+=umpAdj*2.5;
+    else if(umpAdj<0)    score+=umpAdj*2;
+    const dr=parseInt(S.pitcher?.daysRest);
+    if(!isNaN(dr)&&dr<4) score+=4;
+    const lpc=S.pitcher?.lastOuting?.numberOfPitches;
+    if(lpc&&lpc>=100)    score+=3;
+    if(mu&&muW>0&&mu.bb!=null) score+=(mu.bb/Math.max(mu.ab,1))*200*muW;
+  }
+  else if(propKey==='batter_strikeouts'){
+    if(kPct!=null)       score+=(kPct-18)*1.8;
+    if(pKPct!=null)      score+=(pKPct-20)*1.5;
+    if(whiff!=null)      score+=(whiff-22)*1.0;
+    const breakingBall=(S.pitcherPitches?.['Slider']||0)+(S.pitcherPitches?.['Curveball']||0);
+    if(breakingBall>30)  score+=4;
+    if(umpAdj<0)         score+=Math.abs(umpAdj)*2;
+    else if(umpAdj>0)    score-=umpAdj*1.5;
+    if(mu&&muW>0&&mu.k!=null) score+=(mu.k/Math.max(mu.ab,1))*250*muW;
+    if(pEra!=null)       score-=(pEra-4.00)*2;
+  }
+
+  return clamp(Math.round(score),5,95);
 }
 
-function corbetReasoning(propKey,direction,score,factors){
-  const pos=factors.filter(f=>f.impact==='positive');
-  const neg=factors.filter(f=>f.impact==='negative');
-  const propContext={
-    'batter_hits':direction==='over'?'Hit props favor high-OBP hitters in good conditions.':'Tough matchup suppresses contact opportunities.',
-    'batter_total_bases':direction==='over'?'Extra-base potential elevated by conditions.':'Power suppressed by pitcher or park conditions.',
-    'batter_home_runs':direction==='over'?'Wind, elevation, or weak pitcher ERA boosts HR odds.':'Elite pitcher or wind-in suppresses HR upside.',
-    'batter_rbis':direction==='over'?'RBI production tied to lineup run-scoring environment.':'Tough conditions limit run-scoring opportunities.',
-    'batter_walks':direction==='over'?'High BB% hitter vs. pitcher with elevated walk rate.':'Pitcher command limits walk opportunities.',
-    'batter_strikeouts':direction==='over'?'Pitcher K% and pitch mix suggest swing-and-miss matchup.':'Low K% pitcher reduces strikeout probability.',
-  };
-  const ctx=propContext[propKey]||'';
-  if(direction==='over'){
-    const topFactors=pos.slice(0,2).map(f=>`${f.label} (${f.value})`).join(', ');
-    return`Score ${score}/100. ${ctx}${topFactors?' Key drivers: '+topFactors+'.':''}`;
-  } else {
-    const topFactors=neg.slice(0,2).map(f=>`${f.label} (${f.value})`).join(', ');
-    return`Score ${score}/100. ${ctx}${topFactors?' Headwinds: '+topFactors+'.':''}`;
+function corbetReasoning(propKey,direction,propScore){
+  const drivers=[];
+  const ss=S.seasonStat;
+  const pa=ss?.plateAppearances||1;
+  const mu=S.matchupStats;
+  const hand=S.pitcher?.hand||S.pitcherThrows;
+  const handSplit=hand==='L'?S.splits?.vl:S.splits?.vr;
+  const pitcherPA=S.pitcher?.st?.battersFaced||1;
+
+  if(propKey==='batter_hits'){
+    if(ss?.avg)    drivers.push(`${ss.avg} BA`);
+    if(ss?.babip)  drivers.push(`${ss.babip} BABIP`);
+    const kp=ss?((ss.strikeOuts/pa)*100).toFixed(0):null;
+    if(kp)         drivers.push(`${kp}% K rate`);
+    if(handSplit?.ops) drivers.push(`${handSplit.ops} OPS vs ${hand}HP`);
+    if(S.pitcher?.st?.whip) drivers.push(`${parseFloat(S.pitcher.st.whip).toFixed(2)} WHIP`);
+    if(mu?.ab>=5)  drivers.push(`${mu.avg} AVG in ${mu.ab}AB career`);
+  } else if(propKey==='batter_total_bases'){
+    if(ss?.slg)    drivers.push(`${ss.slg} SLG`);
+    if(S.statcast?.xwoba!=null) drivers.push(`${S.statcast.xwoba.toFixed(3)} xwOBA`);
+    if(S.statcast?.brl!=null)   drivers.push(`${S.statcast.brl.toFixed(1)}% Barrel`);
+    if(S.pitcher?.st?.era) drivers.push(`${parseFloat(S.pitcher.st.era).toFixed(2)} ERA`);
+    if(mu?.ab>=5)  drivers.push(`${mu.slg} SLG in ${mu.ab}AB career`);
+  } else if(propKey==='batter_home_runs'){
+    if(S.statcast?.brl!=null)   drivers.push(`${S.statcast.brl.toFixed(1)}% Barrel`);
+    if(S.statcast?.xwoba!=null) drivers.push(`${S.statcast.xwoba.toFixed(3)} xwOBA`);
+    if(ss?.atBatsPerHomeRun)    drivers.push(`${parseFloat(ss.atBatsPerHomeRun).toFixed(0)} AB/HR`);
+    if(S.pitcher?.st?.era) drivers.push(`${parseFloat(S.pitcher.st.era).toFixed(2)} ERA`);
+    const stadOpt=document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
+    const elev=parseInt(stadOpt.dataset.elev)||500;
+    if(elev>2000)  drivers.push(`${elev.toLocaleString()}ft elevation`);
+    if(mu?.ab>=5&&mu.hr) drivers.push(`${mu.hr}HR in ${mu.ab}AB career`);
+  } else if(propKey==='batter_rbis'){
+    if(S.rispStat?.avg) drivers.push(`${S.rispStat.avg} RISP BA`);
+    if(ss?.slg)    drivers.push(`${ss.slg} SLG`);
+    const pt=S.lineupProtection?.tier;
+    if(pt)         drivers.push(`${pt} lineup protection`);
+    if(S.pitcher?.st?.era) drivers.push(`${parseFloat(S.pitcher.st.era).toFixed(2)} ERA`);
+    if(mu?.ab>=5)  drivers.push(`${mu.ops.toFixed(3)} OPS career vs pitcher`);
+  } else if(propKey==='batter_walks'){
+    const bbp=ss?((ss.baseOnBalls/pa)*100).toFixed(1):null;
+    if(bbp)        drivers.push(`${bbp}% BB rate`);
+    if(ss?.obp)    drivers.push(`${ss.obp} OBP`);
+    const pBBPct=S.pitcher?.st?.baseOnBalls?((S.pitcher.st.baseOnBalls/pitcherPA)*100).toFixed(1):null;
+    if(pBBPct)     drivers.push(`pitcher ${pBBPct}% BB rate`);
+    if(S.umpire)   drivers.push(`${S.umpire.fullName} umpire`);
+    if(mu?.ab>=5&&mu.bb) drivers.push(`${mu.bb}BB in ${mu.ab}AB career`);
+  } else if(propKey==='batter_strikeouts'){
+    const kp=ss?((ss.strikeOuts/pa)*100).toFixed(1):null;
+    if(kp)         drivers.push(`${kp}% K rate`);
+    const pKPct=S.pitcher?.st?.strikeOuts?((S.pitcher.st.strikeOuts/pitcherPA)*100).toFixed(1):null;
+    if(pKPct)      drivers.push(`pitcher ${pKPct}% K rate`);
+    if(S.statcast?.whiff!=null) drivers.push(`${S.statcast.whiff.toFixed(1)}% whiff`);
+    const bb=(S.pitcherPitches?.['Slider']||0)+(S.pitcherPitches?.['Curveball']||0);
+    if(bb>25)      drivers.push(`${bb.toFixed(0)}% breaking ball usage`);
+    if(mu?.ab>=5&&mu.k) drivers.push(`${mu.k}K in ${mu.ab}AB career`);
   }
+
+  const signal=direction==='over'?'bullish':'bearish';
+  const prefix=direction==='over'?'Drivers':'Headwinds';
+  return`${prefix}: ${drivers.slice(0,4).join(' · ')||'general conditions'}`;
 }
 
 function generateCorbetBets(score,factors,props){
-  const bets=[];
   const propNames={
     'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
     'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
-    'batter_stolen_bases':'Stolen Bases','batter_hits_runs_rbis':'H+R+RBI',
   };
-  // Realistic line limits — filter out absurd props
-  const lineMax={'batter_hits':1.5,'batter_total_bases':2.5,'batter_home_runs':0.5,'batter_rbis':1.5,'batter_walks':1.5,'batter_strikeouts':2.5,'batter_stolen_bases':0.5};
-  const lookForOvers=score>=55;
-  const lookForUnders=score<=48;
+  const lineMax={'batter_hits':1.5,'batter_total_bases':2.5,'batter_home_runs':0.5,'batter_rbis':1.5,'batter_walks':1.5,'batter_strikeouts':2.5};
+
+  // Score every prop individually, pick the best outcome per prop key
+  const scored=[];
+  const seenKeys=new Set();
   props.forEach(prop=>{
     const name=propNames[prop.key];
-    if(!name)return;
+    if(!name||seenKeys.has(prop.key))return;
     const maxLine=lineMax[prop.key]||99;
+    const propScore=scoreIndividualProp(prop.key);
+    const wantOver=propScore>=50;
+    const wantDir=wantOver?'over':'under';
     prop.outcomes?.forEach(outcome=>{
       const dir=outcome.name.toLowerCase();
       const line=outcome.point||0;
-      // Filter out unrealistic lines
       if(line>maxLine)return;
-      // For HRs, only show over 0.5
       if(prop.key==='batter_home_runs'&&line>0.5)return;
-      if(dir==='over'&&lookForOvers){
-        const rating=corbetRating(score,'over');
-        bets.push({prop:name,direction:'Over',line,odds:outcome.price,rating,reasoning:corbetReasoning(prop.key,'over',score,factors),books:prop.books||[]});
-      }
-      if(dir==='under'&&lookForUnders){
-        const rating=corbetRating(score,'under');
-        bets.push({prop:name,direction:'Under',line,odds:outcome.price,rating,reasoning:corbetReasoning(prop.key,'under',score,factors),books:prop.books||[]});
+      if(dir!==wantDir)return;
+      // Keep only one outcome per prop key (closest line to 0.5 for HRs, first otherwise)
+      if(!seenKeys.has(prop.key)){
+        seenKeys.add(prop.key);
+        scored.push({prop:name,propKey:prop.key,direction:wantOver?'Over':'Under',line,odds:outcome.price,propScore,books:prop.books||[]});
       }
     });
   });
-  // Prioritize best props: hits and total bases first
-  const propPriority={'Hits':1,'Total Bases':2,'Home Runs':3,'RBI':4,'Walks':5,'Strikeouts':6,'Stolen Bases':7};
-  const order={green:0,yellow:1,red:2};
-  const sorted=bets.sort((a,b)=>order[a.rating]-order[b.rating]||(propPriority[a.prop]||9)-(propPriority[b.prop]||9));
 
-  // Always show: 2 best green, 1 yellow, 1 red (if available)
-  const greens=sorted.filter(b=>b.rating==='green').slice(0,2);
-  const yellows=sorted.filter(b=>b.rating==='yellow').slice(0,1);
-  const reds=sorted.filter(b=>b.rating==='red').slice(0,1);
+  if(scored.length===0)return[];
 
-  // Fill remaining slots with next best if yellow/red don't exist
-  const result=[...greens,...yellows,...reds];
-  if(result.length<4){
-    const used=new Set(result.map(b=>b.prop+b.direction));
-    const remaining=sorted.filter(b=>!used.has(b.prop+b.direction));
-    result.push(...remaining.slice(0,4-result.length));
-  }
-  return result.slice(0,4);
+  // Sort by signal strength (distance from 50), strongest first
+  scored.sort((a,b)=>Math.abs(b.propScore-50)-Math.abs(a.propScore-50));
+
+  // Pick top 3 and hard-assign Green / Yellow / Red by rank
+  return scored.slice(0,3).map((b,i)=>{
+    const rating=['green','yellow','red'][i];
+    return{...b,rating,reasoning:corbetReasoning(b.propKey,b.direction.toLowerCase(),b.propScore)};
+  });
 }
 
 async function loadCorbet(){
@@ -1122,12 +1268,17 @@ async function loadCorbet(){
     const bets=generateCorbetBets(S.lastScore,S.lastPrediction.factors,props);
     if(bets.length===0){hide('corbet-loading');show('corbet-no-props');return;}
 
-    const ratingLabel={green:'🟢 Strong Value',yellow:'🟡 Moderate Value',red:'🔴 Low Value'};
+    const ratingLabel={green:'🟢 Best Bet',yellow:'🟡 Moderate',red:'🔴 Long Shot'};
+    const ratingColor={green:'#2ecc71',yellow:'#f39c12',red:'#e74c3c'};
     document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>`
       <div class="bet-card ${b.rating}">
         <div class="bet-card-header">
           <span class="bet-rating ${b.rating}">${ratingLabel[b.rating]}</span>
-          <button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#666;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save to Record</button>
+          <button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save to Record</button>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
+          <span style="font-size:32px;font-weight:900;font-family:monospace;line-height:1;color:${ratingColor[b.rating]}">${b.propScore}</span>
+          <span style="font-size:11px;color:#888;font-family:monospace;">/100 prop score</span>
         </div>
         <div class="bet-prop ${b.rating}">${S.playerName} ${b.direction} ${b.line} ${b.prop}</div>
         <div class="bet-odds">${b.odds>0?'+':''}${b.odds} · ${b.books.slice(0,3).join(', ')}</div>
