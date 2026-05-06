@@ -269,6 +269,11 @@ input[type=range] { accent-color: #A71930; padding: 0; }
         <div id="pitcher-spinner" class="spinner hidden"><div class="spinner-circle"></div><span style="font-size:11px;color:#444;font-family:monospace;">Loading pitcher stats...</span></div>
         <div id="pitcher-error" class="status error hidden"></div>
         <div id="pitcher-loaded" class="hidden"></div>
+        <div id="matchup-section" class="hidden" style="margin-top:12px;">
+          <div style="font-size:9px;color:#A71930;font-family:monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">Career vs This Pitcher</div>
+          <div id="matchup-spinner" class="spinner hidden" style="padding:8px 0;"><div class="spinner-circle"></div></div>
+          <div id="matchup-content" class="hidden"></div>
+        </div>
         <div id="pitcher-pitch-mix" class="hidden">
           <div style="font-size:9px;color:#444;font-family:monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix — adjust if needed</div>
           <div class="pitch-mix-grid" id="pitch-mix-grid"></div>
@@ -541,6 +546,7 @@ const S = {
   pitcherPitches:{'4-Seam FB':40,'Slider':25,'Changeup':20,'Curveball':15,'Sinker':0,'Cutter':0,'Splitter':0},
   isHome:true, dayGame:false, roofClosed:true,
   weather:null, umpire:null, weatherManual:false, pitcherManual:false,
+  matchupStats:null,
   lineupProtection:{tier:'average',avgOps:null,spots:[],manual:true},
   lastScore:null, lastPrediction:null,
   betLog: JSON.parse(localStorage.getItem('corbetRecord') || '[]'),
@@ -591,6 +597,7 @@ async function loadPlayer(){
     S.rispStat=rd?.stats?.[0]?.splits?.[0]?.stat??null;
     renderSplitPills();renderSplitsTab();renderStatsTab();
     loadStatcast(S.playerId);
+    if(S.pitcher?.id) loadMatchupStats();
   } catch(e){setText('player-error','⚠ Could not load data.');show('player-error');showSplitsError('Could not load.');showStatsError('Could not load.');}
   finally{hide('player-spinner');}
 }
@@ -650,6 +657,7 @@ async function selectPitcher(id,name){
     buildPitchMixGrid('pitch-mix-grid',S.pitcherPitches);
     show('pitcher-pitch-mix');
     renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip);
+    loadMatchupStats();
   }catch(e){setText('pitcher-error','⚠ Could not load pitcher stats.');show('pitcher-error');}
   finally{hide('pitcher-spinner');}
 }
@@ -689,6 +697,83 @@ async function loadUmpire(dv){
     show('ump-content');
   }catch{setText('ump-empty','Could not load umpire data.');show('ump-empty');}
   finally{hide('ump-spinner');}
+}
+
+// ═══════════ BATTER VS PITCHER MATCHUP ════════════════════════════════════════
+async function loadMatchupStats(){
+  if(!S.playerId||!S.pitcher?.id){hide('matchup-section');return;}
+  show('matchup-section');show('matchup-spinner');hide('matchup-content');
+  S.matchupStats=null;
+  try{
+    const r=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${S.pitcher.id}&gameType=R`);
+    const d=await r.json();
+    const st=d?.stats?.[0]?.splits?.[0]?.stat;
+    const ab=parseInt(st?.atBats)||0;
+    if(!st||ab===0){
+      document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#333;font-family:monospace;">No career matchup data — may be first-time opponents.</div>';
+      show('matchup-content');hide('matchup-spinner');return;
+    }
+    const ops=parseFloat(st.ops)||0;
+    const h=parseInt(st.hits)||0;
+    const hr=parseInt(st.homeRuns)||0;
+    const k=parseInt(st.strikeOuts)||0;
+    const bb=parseInt(st.baseOnBalls)||0;
+    S.matchupStats={ab,h,hr,k,bb,ops,avg:st.avg,obp:st.obp,slg:st.slg};
+    const opsColor=ops>=0.900?'#2ecc71':ops>=0.750?'#ccc':ops>=0.600?'#f39c12':'#e74c3c';
+    const sample=ab>=20?'Solid sample':ab>=10?'Moderate sample':'⚠ Small sample';
+    document.getElementById('matchup-content').innerHTML=`
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px;">
+        <div><div style="font-size:9px;color:#444;font-family:monospace;letter-spacing:1px;text-transform:uppercase;">OPS</div><div style="font-size:26px;font-weight:900;font-family:monospace;color:${opsColor}">${st.ops}</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          ${[['AVG',st.avg],['OBP',st.obp],['SLG',st.slg],['AB',ab],['H',h],['HR',hr],['K',k],['BB',bb]].map(([l,v])=>`<div><div style="font-size:9px;color:#444;font-family:monospace;letter-spacing:1px;text-transform:uppercase;">${l}</div><div style="font-size:13px;font-weight:700;font-family:monospace;color:#ccc;">${v}</div></div>`).join('')}
+        </div>
+      </div>
+      <div style="font-size:9px;color:#333;font-family:monospace;">${sample} · ${ab} career AB vs ${S.pitcher.name}</div>`;
+    show('matchup-content');
+  }catch(e){
+    document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#333;font-family:monospace;">Could not load matchup data.</div>';
+    show('matchup-content');
+  }finally{hide('matchup-spinner');}
+}
+
+// ═══════════ AUTO GAME LOADER ══════════════════════════════════════════════════
+const VENUE_MAP={
+  'Chase Field':'Chase Field (PHX)','Dodger Stadium':'Dodger Stadium (LAD)',
+  'Coors Field':'Coors Field (COL)','Oracle Park':'Oracle Park (SF)',
+  'Petco Park':'Petco Park (SD)','Wrigley Field':'Wrigley Field (CHC)',
+  'Oriole Park at Camden Yards':'Camden Yards (BAL)','Busch Stadium':'Busch Stadium (STL)',
+  'T-Mobile Park':'T-Mobile Park (SEA)','Fenway Park':'Fenway Park (BOS)',
+  'Yankee Stadium':'Yankee Stadium (NYY)','Citi Field':'Citi Field (NYM)',
+  'Great American Ball Park':'Great American (CIN)','PNC Park':'PNC Park (PIT)',
+};
+
+async function autoLoadNextGame(){
+  try{
+    const today=new Date().toISOString().split('T')[0];
+    const end=new Date(Date.now()+7*24*60*60*1000).toISOString().split('T')[0];
+    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&startDate=${today}&endDate=${end}`);
+    const d=await r.json();
+    const game=d?.dates?.[0]?.games?.[0];
+    if(!game)return;
+    // Set date
+    document.getElementById('game-date').value=game.officialDate;
+    // Set time — MLB gameDate is UTC; Arizona is UTC-7 year-round (no DST)
+    if(!game.status?.startTimeTBD){
+      const utc=new Date(game.gameDate);
+      const mstH=(utc.getUTCHours()-7+24)%24;
+      const mstM=utc.getUTCMinutes().toString().padStart(2,'0');
+      document.getElementById('game-time').value=`${mstH.toString().padStart(2,'0')}:${mstM}`;
+      setDay(mstH<17);
+    }
+    // Set home/away
+    const isHome=game.teams?.home?.team?.id===109;
+    setHome(isHome);
+    // Set stadium from venue name
+    const stadVal=VENUE_MAP[game.venue?.name];
+    if(stadVal){document.getElementById('stadium-select').value=stadVal;onStadiumChange();}
+    // Load umpire, weather, lineup
+    await loadUmpireAndWeather();
+  }catch(e){console.log('Auto game load failed:',e.message);}
 }
 
 // ═══════════ LINEUP PROTECTION ════════════════════════════════════════════════
@@ -800,6 +885,16 @@ function calcPrediction(){
   } else {
     const mEra=parseFloat(document.getElementById('m-pitcher-era')?.value);
     if(!isNaN(mEra)){const a=(mEra-4.00)*4;add('Pitcher ERA',mEra.toFixed(2),a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher');}
+  }
+  if(S.matchupStats&&S.matchupStats.ab>=5){
+    const{ops,ab}=S.matchupStats;
+    const weight=ab>=20?1.0:ab>=10?0.6:0.3;
+    const adj=Math.max(-6,Math.min(6,Math.round((ops-0.750)*50*weight)));
+    if(adj!==0)add('vs Pitcher (career)',ops.toFixed(3)+' OPS ('+ab+'AB)',adj,
+      ops>=0.950?'Owns this pitcher — dominant career numbers':
+      ops>=0.800?'Strong career numbers vs this arm':
+      ops>=0.650?'Struggles somewhat against this pitcher':
+      'Poor career matchup — this pitcher has had his number');
   }
   if(S.seasonStat){
     const pa=S.seasonStat.plateAppearances||1;
@@ -1594,12 +1689,12 @@ function hide(id){document.getElementById(id)?.classList.add('hidden');}
 function setText(id,t){const el=document.getElementById(id);if(el)el.textContent=t;}
 
 // ═══════════ INIT ══════════════════════════════════════════════════════════════
-document.getElementById('game-date').value=new Date().toISOString().split('T')[0];
+document.getElementById('game-date').value=new Date().toISOString().split('T')[0]; // fallback until API responds
 onStadiumChange();
 loadPlayer();
-fetchWeather();
 renderRecord();
 renderGradePanel();
+autoLoadNextGame(); // overwrites date/time and pulls umpire, weather, lineup
 </script>
 </body>
 </html>
