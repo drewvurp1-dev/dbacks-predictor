@@ -113,6 +113,16 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .game-time-row { display: flex; gap: 8px; align-items: center; }
 .game-time-row input[type=time] { width: auto; flex: 1; }
 
+/* Lineup protection */
+.lineup-spot { display: flex; align-items: center; padding: 5px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; color: #ccc; }
+.lineup-spot .ls-order { color: #444; min-width: 18px; font-size: 10px; }
+.lineup-spot .ls-name { flex: 1; margin: 0 8px; }
+.lineup-spot .ls-ops { font-weight: 700; font-size: 12px; }
+.prot-badge { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-family: monospace; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.prot-badge.strong { background: #0a1a10; color: #2ecc71; }
+.prot-badge.average { background: #1a1730; color: #888; }
+.prot-badge.weak { background: #1a0606; color: #e74c3c; }
+
 /* Grade panel */
 .factor-perf-row { display: grid; grid-template-columns: 140px 80px 1fr 60px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; }
 .factor-perf-name { font-size: 11px; color: #888; font-family: monospace; }
@@ -292,6 +302,20 @@ input[type=range] { accent-color: #A71930; padding: 0; }
           <div id="ump-spinner" class="spinner hidden" style="padding:12px 0;"><div class="spinner-circle"></div></div>
           <div id="ump-empty" style="font-size:11px;color:#333;font-family:monospace;">Enter a game date to look up the umpire.</div>
           <div id="ump-content" class="hidden"></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="stats-section-title" style="margin-top:0">Lineup Protection (3-4-5 Spots)</div>
+          <div id="lineup-spinner" class="spinner hidden" style="padding:12px 0;"><div class="spinner-circle"></div></div>
+          <div id="lineup-empty" style="font-size:11px;color:#333;font-family:monospace;">Enter a game date to load lineup context.</div>
+          <div id="lineup-content" class="hidden"></div>
+          <div id="lineup-override" style="margin-top:10px;">
+            <div style="font-size:9px;color:#333;font-family:monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Manual override:</div>
+            <div class="toggle">
+              <button class="toggle-btn" id="prot-strong" onclick="setProtection('strong')">Strong</button>
+              <button class="toggle-btn active" id="prot-average" onclick="setProtection('average')">Average</button>
+              <button class="toggle-btn" id="prot-weak" onclick="setProtection('weak')">Weak</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -517,6 +541,7 @@ const S = {
   pitcherPitches:{'4-Seam FB':40,'Slider':25,'Changeup':20,'Curveball':15,'Sinker':0,'Cutter':0,'Splitter':0},
   isHome:true, dayGame:false, roofClosed:true,
   weather:null, umpire:null, weatherManual:false, pitcherManual:false,
+  lineupProtection:{tier:'average',avgOps:null,spots:[],manual:true},
   lastScore:null, lastPrediction:null,
   betLog: JSON.parse(localStorage.getItem('corbetRecord') || '[]'),
 };
@@ -646,7 +671,7 @@ const UMP_DB={'Doug Eddings':{tendency:'pitcher',adj:-2,note:'Pitcher-friendly z
 async function loadUmpireAndWeather(){
   const dv=document.getElementById('game-date').value;
   if(!dv)return;
-  await Promise.all([loadUmpire(dv),fetchWeather()]);
+  await Promise.all([loadUmpire(dv),fetchWeather(),loadLineupContext(dv)]);
 }
 
 async function loadUmpire(dv){
@@ -664,6 +689,54 @@ async function loadUmpire(dv){
     show('ump-content');
   }catch{setText('ump-empty','Could not load umpire data.');show('ump-empty');}
   finally{hide('ump-spinner');}
+}
+
+// ═══════════ LINEUP PROTECTION ════════════════════════════════════════════════
+async function loadLineupContext(dv){
+  show('lineup-spinner');hide('lineup-content');setText('lineup-empty','');
+  try{
+    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=lineups&date=${dv}`);
+    const d=await r.json();
+    const game=d?.dates?.[0]?.games?.[0];
+    if(!game){setText('lineup-empty','No D-backs game on this date.');hide('lineup-spinner');show('lineup-empty');return;}
+    const isHome=game.teams?.home?.team?.id===109;
+    const players=isHome?game.lineups?.homePlayers:game.lineups?.awayPlayers;
+    if(!players||players.length===0){setText('lineup-empty','Lineup not yet announced — use manual override below.');hide('lineup-spinner');show('lineup-empty');return;}
+    // battingOrder is "100","200","300"... spot 3=300, 4=400, 5=500
+    const spots345=players
+      .filter(p=>{const o=parseInt(p.battingOrder);return o>=300&&o<=500;})
+      .sort((a,b)=>parseInt(a.battingOrder)-parseInt(b.battingOrder))
+      .slice(0,3);
+    if(spots345.length===0){setText('lineup-empty','Lineup order not yet available.');hide('lineup-spinner');show('lineup-empty');return;}
+    const stats=await Promise.all(spots345.map(p=>
+      fetch(`/mlb/api/v1/people/${p.id}/stats?stats=season&group=hitting&season=2026&gameType=R`)
+        .then(r=>r.json())
+        .then(d=>{const st=d?.stats?.[0]?.splits?.[0]?.stat;return{id:p.id,name:p.fullName,ops:parseFloat(st?.ops)||null,order:Math.round(parseInt(p.battingOrder)/100)};})
+        .catch(()=>({id:p.id,name:p.fullName,ops:null,order:Math.round(parseInt(p.battingOrder)/100)}))
+    ));
+    const validOps=stats.filter(p=>p.ops!=null).map(p=>p.ops);
+    const avgOps=validOps.length?validOps.reduce((a,b)=>a+b,0)/validOps.length:null;
+    const tier=!avgOps?'average':avgOps>=0.780?'strong':avgOps>=0.690?'average':'weak';
+    S.lineupProtection={tier,avgOps,spots:stats,manual:false};
+    const fmtOps=o=>o!=null?o.toFixed(3):'—';
+    const opsColor=o=>!o?'#555':o>=0.780?'#2ecc71':o>=0.690?'#ccc':'#e74c3c';
+    const tierLabel={strong:'Strong Protection',average:'Average Protection',weak:'Weak Protection'};
+    document.getElementById('lineup-content').innerHTML=
+      stats.map(p=>`<div class="lineup-spot"><span class="ls-order">${p.order}.</span><span class="ls-name">${p.name}</span><span class="ls-ops" style="color:${opsColor(p.ops)}">${fmtOps(p.ops)} OPS</span></div>`).join('')+
+      `<div><span class="prot-badge ${tier}">${tierLabel[tier]}</span>${avgOps?`<span style="font-size:9px;color:#444;font-family:monospace;margin-left:8px;">${avgOps.toFixed(3)} avg OPS</span>`:''}</div>`;
+    show('lineup-content');
+    setProtectionButtons(tier);
+  }catch(e){setText('lineup-empty','Could not load lineup data.');show('lineup-empty');}
+  finally{hide('lineup-spinner');}
+}
+
+function setProtection(tier){
+  S.lineupProtection={tier,avgOps:null,spots:[],manual:true};
+  setProtectionButtons(tier);
+}
+
+function setProtectionButtons(tier){
+  ['strong','average','weak'].forEach(t=>document.getElementById('prot-'+t).classList.toggle('active',t===tier));
 }
 
 // ═══════════ WEATHER ════════════════════════════════════════════════════════════
@@ -774,6 +847,17 @@ function calcPrediction(){
   if(travel==='redeye')add('Red-Eye','Fatigue risk',-6,'Cross-timezone red-eye suppresses performance');
   else if(travel==='same')add('Same-Day Travel','Mild fatigue',-3,'Same-day travel, minor rest concern');
   if(S.umpire){const ut=UMP_DB[S.umpire.fullName];if(ut&&ut.adj!==0)add('Umpire',S.umpire.fullName,ut.adj,ut.note);}
+  if(S.lineupProtection&&S.lineupProtection.tier!=='average'){
+    const{tier,avgOps,manual}=S.lineupProtection;
+    const val=avgOps?avgOps.toFixed(3)+' avg OPS':(tier==='strong'?'Manual: Strong':'Manual: Weak');
+    if(tier==='strong'){
+      const adj=avgOps?Math.min(5,Math.round((avgOps-0.730)*35)):3;
+      add('Protection',val,adj,'Elite lineup behind Carroll — pitchers must attack him to avoid a big inning');
+    } else {
+      const adj=avgOps?Math.max(-5,Math.round((avgOps-0.730)*35)):-3;
+      add('Protection',val,adj,'Thin lineup behind Carroll — pitchers can work around him freely');
+    }
+  }
   score=Math.max(4,Math.min(96,Math.round(score)));
   const tiers=[{min:75,label:'Strong Game',color:'#2ecc71',desc:'Conditions strongly favor a productive day'},{min:60,label:'Favorable',color:'#a8e063',desc:'More factors lean positive than negative'},{min:42,label:'Neutral',color:'#f39c12',desc:'Mixed bag — could go either way'},{min:28,label:'Tough Spot',color:'#e67e22',desc:'Multiple headwinds against production'},{min:0,label:'Difficult',color:'#e74c3c',desc:'Significant factors stacked against a big day'}];
   return{score,tier:tiers.find(t=>score>=t.min),factors,tempF,windMph,windDir:wd,humidity};
