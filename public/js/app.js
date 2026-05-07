@@ -401,21 +401,22 @@ async function loadLineupContext(dv){
   try{
     const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=lineups&date=${dv}`);
     const d=await r.json();
+    console.log('[Lineup] raw API response:', d);
     const game=d?.dates?.[0]?.games?.[0];
     if(!game){setText('lineup-empty','No D-backs game on this date.');hide('lineup-spinner');show('lineup-empty');return;}
+    console.log('[Lineup] game found:', game.gamePk, '| lineups:', game.lineups);
     const isHome=game.teams?.home?.team?.id===109;
     const players=(isHome?game.lineups?.homePlayers:game.lineups?.awayPlayers)||[];
+    console.log('[Lineup] players array length:', players.length, '| isHome:', isHome);
     if(!players.length){
       setText('lineup-empty','Lineup not yet posted — check back closer to first pitch.');
       hide('lineup-spinner');show('lineup-empty');return;
     }
-    // Sort all players by batting order
     const ordered=players
       .filter(p=>p.battingOrder)
       .sort((a,b)=>parseInt(a.battingOrder)-parseInt(b.battingOrder));
     if(!ordered.length){setText('lineup-empty','Lineup order not yet available.');hide('lineup-spinner');show('lineup-empty');return;}
 
-    // Fetch season stats (BA, OPS, position) for all players in parallel
     const stats=await Promise.all(ordered.map(p=>
       fetch(`/mlb/api/v1/people/${p.id}/stats?stats=season&group=hitting&season=2026&gameType=R`)
         .then(r=>r.json())
@@ -438,47 +439,40 @@ async function loadLineupContext(dv){
     const avgOps=validOps.length?validOps.reduce((a,b)=>a+b,0)/validOps.length:null;
     const tier=!avgOps?'average':avgOps>=0.780?'strong':avgOps>=0.690?'average':'weak';
     S.lineupProtection={tier,avgOps,spots:spots345,manual:false};
-    setProtectionButtons(tier);
 
-    // Identify Carroll and cleanup hitter
+    // Find Carroll and the batter directly behind him
     const carrollRow=stats.find(p=>String(p.id)===String(S.playerId));
-    const cleanup=stats.find(p=>p.order===4);
-    const weakCleanup=cleanup&&cleanup.avg!==null&&cleanup.avg<0.220;
+    const carrollIdx=stats.findIndex(p=>String(p.id)===String(S.playerId));
+    const nextBatter=carrollIdx>=0&&carrollIdx<stats.length-1?stats[carrollIdx+1]:null;
+    const weakProtection=nextBatter&&nextBatter.avg!==null&&nextBatter.avg<0.220;
     const avgColor=a=>!a?'#888':a>=0.290?'#2ecc71':a>=0.250?'#ccc':a>=0.220?'#f39c12':'#e74c3c';
     const ordSuffix=n=>['st','nd','rd'][n-1]||'th';
 
     document.getElementById('lineup-content').innerHTML=
       stats.map(p=>{
         const isCarroll=String(p.id)===String(S.playerId);
+        const isNext=nextBatter&&String(p.id)===String(nextBatter.id);
         const borderStyle=isCarroll?'border-left:3px solid #A71930;padding-left:6px;background:#0f0806;':
-                          p.order===4&&weakCleanup?'border-left:2px solid #e74c3c44;padding-left:4px;':'';
+                          isNext&&weakProtection?'border-left:2px solid #e74c3c44;padding-left:4px;':'';
         return`<div class="lineup-spot" style="${borderStyle}">
           <span class="ls-order">${p.order}.</span>
           <span class="ls-pos">${p.pos}</span>
           <span class="ls-name">${p.name}${isCarroll?' <span style="color:#A71930;font-size:9px;">← CC</span>':''}</span>
           <span class="ls-ops" style="color:${avgColor(p.avg)}">${p.avg!=null?p.avg.toFixed(3):'—'}</span>
-          ${p.order===4&&weakCleanup?'<span style="font-size:9px;color:#e74c3c;margin-left:4px;">⚠ weak</span>':''}
+          ${isNext&&weakProtection?'<span style="font-size:9px;color:#e74c3c;margin-left:4px;">⚠ weak</span>':''}
         </div>`;
       }).join('')+
       `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #1a1730;">
         <span class="prot-badge ${tier}">${{strong:'Strong Protection',average:'Average Protection',weak:'Weak Protection'}[tier]}</span>
         ${avgOps?`<span style="font-size:9px;color:#888;font-family:monospace;margin-left:8px;">${avgOps.toFixed(3)} OPS (3-4-5)</span>`:''}
         ${carrollRow?`<span style="font-size:9px;color:#999;font-family:monospace;margin-left:12px;">Carroll bats ${carrollRow.order}${ordSuffix(carrollRow.order)}</span>`:''}
-        ${weakCleanup?`<div style="font-size:10px;color:#e74c3c;font-family:monospace;margin-top:6px;">⚠ Cleanup hitter batting ${cleanup.avg.toFixed(3)} — pitchers may work around Carroll</div>`:''}
+        ${weakProtection&&nextBatter?`<div style="font-size:10px;color:#e74c3c;font-family:monospace;margin-top:6px;">⚠ ${nextBatter.name} bats behind Carroll (.${Math.round((nextBatter.avg||0)*1000)}) — pitchers may work around him</div>`:''}
       </div>`;
     show('lineup-content');
   }catch(e){setText('lineup-empty','Could not load lineup data.');show('lineup-empty');console.error('Lineup:',e);}
   finally{hide('lineup-spinner');}
 }
 
-function setProtection(tier){
-  S.lineupProtection={tier,avgOps:null,spots:[],manual:true};
-  setProtectionButtons(tier);
-}
-
-function setProtectionButtons(tier){
-  ['strong','average','weak'].forEach(t=>document.getElementById('prot-'+t).classList.toggle('active',t===tier));
-}
 
 // ═══════════ WEATHER ════════════════════════════════════════════════════════════
 async function fetchWeather(){
@@ -1041,28 +1035,32 @@ function generateCorbetBets(score,factors,rawMarketMap){
   const results=[];
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
     if(!PROP_NAMES[propKey])return;
-    if(!mkt.overPrices?.length||!mkt.underPrices?.length)return;
+    const line=mkt.line||0.5;
+    // Require ≥2 bookmakers with valid (non-outlier, non-excluded) prices
+    if((mkt.calcBooks?.size||0)<2||!mkt.overPrices?.length||!mkt.underPrices?.length){
+      results.push({prop:PROP_NAMES[propKey],propKey,line,insufficient:true,
+        overBest:mkt.overBest,underBest:mkt.underBest,edgeStrength:'none',absDelta:0});
+      return;
+    }
     const dv=devig(mkt.overPrices,mkt.underPrices);
     if(!dv)return;
-    const line=mkt.line||0.5;
     const modelProb=modelProbability(propKey,line,score);
-    if(modelProb===null)return; // e.g. HR at neutral score
+    if(modelProb===null)return;
 
-    // delta > 0 → model thinks Over is underpriced; < 0 → Under is underpriced
     const delta=modelProb-dv.overProb;
     const absDelta=Math.abs(delta);
-    let edgeStrength,rating;
-    if(absDelta>=10){edgeStrength='strong';rating='green';}
-    else if(absDelta>=6){edgeStrength='moderate';rating='yellow';}
-    else if(absDelta>=3){edgeStrength='small';rating='red';}
-    else{edgeStrength='none';rating='none';}
+    let edgeStrength;
+    if(absDelta>=10)edgeStrength='strong';
+    else if(absDelta>=6)edgeStrength='moderate';
+    else if(absDelta>=3)edgeStrength='small';
+    else edgeStrength='none';
 
     const direction=delta>0?'Over':'Under';
     const bestOdds=delta>0?mkt.overBest:mkt.underBest;
 
     results.push({
       prop:PROP_NAMES[propKey],propKey,line,direction,
-      delta,absDelta,edgeStrength,rating,
+      delta,absDelta,edgeStrength,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
       overBest:mkt.overBest,underBest:mkt.underBest,
@@ -1072,7 +1070,14 @@ function generateCorbetBets(score,factors,rawMarketMap){
     });
   });
 
-  // Sort: strong edges first, then moderate, small, none — tie-break by absDelta
+  // Logical consistency: OVER total bases requires hits — flag contradiction
+  const hitsRec=results.find(r=>r.propKey==='batter_hits'&&!r.insufficient);
+  const tbRec=results.find(r=>r.propKey==='batter_total_bases'&&!r.insufficient);
+  if(hitsRec&&tbRec&&hitsRec.direction!==tbRec.direction){
+    hitsRec.conflict=true;
+    hitsRec.edgeStrength='none'; // suppress recommendation on hits — TB is more specific
+  }
+
   const order={strong:0,moderate:1,small:2,none:3};
   results.sort((a,b)=>order[a.edgeStrength]-order[b.edgeStrength]||b.absDelta-a.absDelta);
   return results;
@@ -1102,14 +1107,19 @@ async function loadCorbet(){
     let propData;
     try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
 
-    // Build rawMarketMap: capture Over/Under prices from ALL books separately
+    // Build rawMarketMap: capture Over/Under prices from ALL books separately.
+    // BetOnline.ag is excluded from calc prices (known to post erroneous novelty odds)
+    // but still tracked for best-odds display. Outlier positive odds are also filtered.
+    const EXCLUDED_CALC_BOOKS=new Set(['BetOnline.ag']);
+    const isOutlierPrice=(price,line)=>price>0&&(line<=0.5?price>300:price>400);
     const playerSearch=S.playerName.toLowerCase().split(' ').pop();
     const rawMarketMap={};
     (propData.bookmakers||[]).forEach(book=>{
+      const skipCalc=EXCLUDED_CALC_BOOKS.has(book.title);
       (book.markets||[]).forEach(market=>{
         if(!PROP_NAMES[market.key])return;
         if(!rawMarketMap[market.key])rawMarketMap[market.key]={
-          overPrices:[],underPrices:[],overBest:null,underBest:null,line:null,books:[]
+          overPrices:[],underPrices:[],overBest:null,underBest:null,line:null,books:[],calcBooks:new Set()
         };
         const m=rawMarketMap[market.key];
         if(!m.books.includes(book.title))m.books.push(book.title);
@@ -1119,14 +1129,17 @@ async function loadCorbet(){
             const dir=o.name.toLowerCase();
             const price=o.price;
             const line=o.point||0;
-            if(!m.line||line<m.line)m.line=line; // prefer smallest line
+            if(!m.line||line<m.line)m.line=line;
+            // Best odds from ALL books for display
             if(dir==='over'){
-              m.overPrices.push(price);
               if(!m.overBest||price>m.overBest.price)m.overBest={price,book:book.title};
             }else if(dir==='under'){
-              m.underPrices.push(price);
               if(!m.underBest||price>m.underBest.price)m.underBest={price,book:book.title};
             }
+            // Calc prices: skip excluded books and outlier odds
+            if(skipCalc||isOutlierPrice(price,line||0.5))return;
+            if(dir==='over'){m.overPrices.push(price);m.calcBooks.add(book.title);}
+            else if(dir==='under'){m.underPrices.push(price);m.calcBooks.add(book.title);}
           });
       });
     });
@@ -1137,6 +1150,20 @@ async function loadCorbet(){
     const edgeLabels={strong:'🟢 Strong Edge',moderate:'🟡 Moderate Edge',small:'Small Edge',none:''};
     const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
     document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>{
+      // Insufficient market data card
+      if(b.insufficient)return`<div class="bet-card" style="background:#0c0a1e;border:1px solid #1a1730;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+        <div class="bet-card-header">
+          <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
+        </div>
+        <div style="font-size:10px;color:#666;font-family:monospace;margin:8px 0 10px;">⚠ Insufficient market data — fewer than 2 reliable bookmakers</div>
+        <div style="display:flex;gap:14px;font-family:monospace;font-size:11px;">
+          <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Over</div>
+            <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${b.overBest?.book||''}</span></div></div>
+          <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Under</div>
+            <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${b.underBest?.book||''}</span></div></div>
+        </div>
+      </div>`;
+
       const overW=b.marketOverProb.toFixed(0);
       const underW=b.marketUnderProb.toFixed(0);
       const markerLeft=Math.max(1,Math.min(99,100-b.modelProb)).toFixed(1);
@@ -1154,6 +1181,7 @@ async function loadCorbet(){
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
           ${showSave?`<button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
         </div>
+        ${b.conflict?`<div style="background:#1a0808;border:1px solid #4a1010;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e74c3c;font-family:monospace;letter-spacing:1px;">⚠ CONFLICT — Direction contradicts Total Bases recommendation. No edge shown.</div>`:''}
         ${b.edgeStrength!=='none'
           ?`<div style="background:${dirBg};border:1px solid ${dirBorder};border-radius:8px;padding:10px 14px;margin:8px 0 12px;display:flex;justify-content:space-between;align-items:center;">
               <div>
@@ -1162,7 +1190,7 @@ async function loadCorbet(){
               </div>
               <span class="edge-badge ${b.edgeStrength}">${edgeLabels[b.edgeStrength]}</span>
             </div>`
-          :`<div style="font-size:10px;color:#555;font-family:monospace;margin:6px 0 10px;">Model agrees with market — no edge</div>`}
+          :`<div style="font-size:10px;color:#555;font-family:monospace;margin:6px 0 10px;">${b.conflict?'No recommendation — resolve conflict above':'Model agrees with market — no edge'}</div>`}
         <div style="margin-bottom:22px;">
           <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
             <span>Under ${underW}%</span><span>Over ${overW}%</span>
