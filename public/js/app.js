@@ -853,17 +853,28 @@ function modelProbability(propKey,line,score){
   const gamePAs=4.0;
   let p=null;
 
+  // All base calculations anchored so score=50 → realistic neutral probability.
+  // Floors/ceilings are enforced at the very end, after trend adjustments.
+
   if(propKey==='batter_hits'){
-    const lineAdj=line<=0.5?0:-22;
-    p=Math.max(2,Math.min(97,(score-20)/70*78+lineAdj));
+    // score=50→57%, score=70→70%, score=30→44%. Slope 0.65/pt anchored at 50→57.
+    const lineAdj=line<=0.5?0:-28; // over 1.5H is ~28pts less likely
+    p=0.65*(score-50)+57+lineAdj;
   }
   else if(propKey==='batter_total_bases'){
-    const lineAdj=line<=1.5?0:line<=2.5?-18:-32;
-    p=Math.max(2,Math.min(97,(score-15)/75*80+lineAdj));
+    // score=50→52% (Over 1.5 TB), slope 0.60/pt
+    const lineAdj=line<=1.5?0:line<=2.5?-22:-38;
+    p=0.60*(score-50)+52+lineAdj;
   }
   else if(propKey==='batter_home_runs'){
     if(score>32&&score<72)return null; // high variance — only flag extremes
-    p=score>=72?(score-72)/28*22+10:Math.max(2,10-(32-score)/32*7);
+    if(score>=72){
+      // score=72→15%, score=100→65%
+      p=15+(score-72)/28*50;
+    }else{
+      // score=32→15%, score=0→~7%  (model is bearish but bounded at floor)
+      p=15-(32-score)/32*8;
+    }
   }
   else if(propKey==='batter_walks'){
     const bbF=ss?.baseOnBalls?(ss.baseOnBalls/pa):0.09;
@@ -905,7 +916,7 @@ function modelProbability(propKey,line,score){
       if(avgTB>=2.5)p+=5; else if(avgTB<=0.5)p-=4;
     } else if(propKey==='batter_home_runs'){
       const recentHR=last4.reduce((s,g)=>s+(parseInt(g.stat.homeRuns)||0),0);
-      if(recentHR>=2)p=Math.min(97,p+4);
+      if(recentHR>=2)p+=4;
     } else if(propKey==='batter_strikeouts'){
       const avgK=last4.reduce((s,g)=>s+(parseInt(g.stat.strikeOuts)||0),0)/4;
       if(avgK>1.5)p+=4; else if(avgK<0.5)p-=3;
@@ -930,7 +941,16 @@ function modelProbability(propKey,line,score){
     }
   }
 
-  return Math.max(1,Math.min(99,p));
+  // Prop-specific realistic bounds — applied last so trends can't escape them
+  if(propKey==='batter_hits')          p=Math.max(25,Math.min(85,p));
+  else if(propKey==='batter_total_bases') p=Math.max(30,Math.min(80,p));
+  else if(propKey==='batter_home_runs')   p=Math.max(15,Math.min(65,p));
+  else if(propKey==='batter_walks')       p=Math.max(20,Math.min(70,p));
+  else if(propKey==='batter_strikeouts')  p=Math.max(20,Math.min(75,p));
+  else if(propKey==='batter_rbis')        p=Math.max(15,Math.min(70,p));
+  else p=Math.max(5,Math.min(95,p));
+
+  return p;
 }
 
 function estimateProbability(propKey,direction,line){
@@ -1101,7 +1121,7 @@ async function loadCorbet(){
     document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>{
       const overW=b.marketOverProb.toFixed(0);
       const underW=b.marketUnderProb.toFixed(0);
-      const markerLeft=Math.max(1,Math.min(99,b.modelProb)).toFixed(1);
+      const markerLeft=Math.max(1,Math.min(99,100-b.modelProb)).toFixed(1);
       const deltaLabel=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
       const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
       const dirColor=b.delta>0?'#2ecc71':'#e74c3c';
@@ -1127,12 +1147,12 @@ async function loadCorbet(){
           :`<div style="font-size:10px;color:#555;font-family:monospace;margin:6px 0 10px;">Model agrees with market — no edge</div>`}
         <div style="margin-bottom:22px;">
           <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
-            <span>Over ${overW}%</span><span>Under ${underW}%</span>
+            <span>Under ${underW}%</span><span>Over ${overW}%</span>
           </div>
           <div style="position:relative;">
             <div class="prob-bar-wrap">
-              <div class="prob-bar-over" style="width:${overW}%">${overW}%</div>
               <div class="prob-bar-under" style="width:${underW}%">${underW}%</div>
+              <div class="prob-bar-over" style="width:${overW}%">${overW}%</div>
             </div>
             <div style="position:absolute;top:0;left:${markerLeft}%;width:2px;height:22px;background:rgba(255,255,255,0.9);transform:translateX(-50%);pointer-events:none;border-radius:1px;box-shadow:0 0 4px rgba(255,255,255,0.5);"></div>
           </div>
