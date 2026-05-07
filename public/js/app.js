@@ -1101,8 +1101,12 @@ async function loadCorbet(){
     document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>{
       const overW=b.marketOverProb.toFixed(0);
       const underW=b.marketUnderProb.toFixed(0);
+      const markerLeft=Math.max(1,Math.min(99,b.modelProb)).toFixed(1);
       const deltaLabel=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
       const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
+      const dirColor=b.delta>0?'#2ecc71':'#e74c3c';
+      const dirBg=b.delta>0?'rgba(46,204,113,0.10)':'rgba(231,76,60,0.10)';
+      const dirBorder=b.delta>0?'#1a4a10':'#4a1010';
       const cardBg=b.edgeStrength==='strong'?'background:#061a06;border-color:#1a4a10':
                    b.edgeStrength==='moderate'?'background:#1a1406;border-color:#3a2a00':
                    'background:#0c0a1e;border-color:#1a1730';
@@ -1112,31 +1116,38 @@ async function loadCorbet(){
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
           ${showSave?`<button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
         </div>
-        <div style="margin:10px 0 6px;">
+        ${b.edgeStrength!=='none'
+          ?`<div style="background:${dirBg};border:1px solid ${dirBorder};border-radius:8px;padding:10px 14px;margin:8px 0 12px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Model Recommends</div>
+                <div style="font-size:22px;font-weight:900;font-family:monospace;color:${dirColor};letter-spacing:1px;">${b.delta>0?'▲':'▼'} ${b.direction.toUpperCase()}</div>
+              </div>
+              <span class="edge-badge ${b.edgeStrength}">${edgeLabels[b.edgeStrength]}</span>
+            </div>`
+          :`<div style="font-size:10px;color:#555;font-family:monospace;margin:6px 0 10px;">Model agrees with market — no edge</div>`}
+        <div style="margin-bottom:22px;">
           <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
             <span>Over ${overW}%</span><span>Under ${underW}%</span>
           </div>
-          <div class="prob-bar-wrap">
-            <div class="prob-bar-over" style="width:${overW}%">${overW}%</div>
-            <div class="prob-bar-under" style="width:${underW}%">${underW}%</div>
+          <div style="position:relative;">
+            <div class="prob-bar-wrap">
+              <div class="prob-bar-over" style="width:${overW}%">${overW}%</div>
+              <div class="prob-bar-under" style="width:${underW}%">${underW}%</div>
+            </div>
+            <div style="position:absolute;top:0;left:${markerLeft}%;width:2px;height:22px;background:rgba(255,255,255,0.9);transform:translateX(-50%);pointer-events:none;border-radius:1px;box-shadow:0 0 4px rgba(255,255,255,0.5);"></div>
+          </div>
+          <div style="position:relative;height:18px;margin-top:3px;">
+            <div style="position:absolute;left:${markerLeft}%;transform:translateX(-50%);font-size:8px;color:#ccc;font-family:monospace;white-space:nowrap;text-align:center;">▲ Model ${b.modelProb.toFixed(0)}%</div>
           </div>
         </div>
-        <div style="display:flex;gap:14px;margin:8px 0;flex-wrap:wrap;font-family:monospace;font-size:11px;">
+        <div style="display:flex;gap:14px;margin:0 0 8px;flex-wrap:wrap;font-family:monospace;font-size:11px;">
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Over</div>
             <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${b.overBest?.book||''}</span></div></div>
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Under</div>
             <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${b.underBest?.book||''}</span></div></div>
-          <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Model Prob</div>
-            <div style="color:#ccc;">${b.modelProb.toFixed(1)}% Over</div></div>
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Delta</div>
             <div style="color:${deltaColor};font-weight:700;">${deltaLabel}</div></div>
         </div>
-        ${b.edgeStrength!=='none'
-          ?`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
-              <span class="edge-badge ${b.edgeStrength}">${edgeLabels[b.edgeStrength]}</span>
-              <span style="font-size:11px;color:#888;font-family:monospace;">Bet <strong style="color:${b.delta>0?'#2ecc71':'#e74c3c'}">${b.direction}</strong></span>
-            </div>`
-          :`<div style="font-size:10px;color:#555;font-family:monospace;margin-bottom:6px;">Model agrees with market — no edge</div>`}
         <div class="bet-reasoning">${b.reasoning}</div>
       </div>`;
     }).join('');
