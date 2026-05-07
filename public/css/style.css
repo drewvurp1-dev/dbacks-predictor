@@ -148,6 +148,16 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .model-badge.off      { background: #2a0808; color: #e74c3c; }
 .model-badge.neutral  { background: #1a1730; color: #888; }
 
+/* Probability bar (CorBET) */
+.prob-bar-wrap { background: #1a1730; border-radius: 6px; height: 22px; overflow: hidden; display: flex; }
+.prob-bar-over { background: linear-gradient(90deg,#1a5a10,#2ecc71); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-family: monospace; font-weight: 700; color: rgba(255,255,255,0.9); transition: width 0.6s; min-width: 24px; }
+.prob-bar-under { background: linear-gradient(90deg,#e74c3c,#8b0000); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-family: monospace; font-weight: 700; color: rgba(255,255,255,0.9); transition: width 0.6s; min-width: 24px; }
+.edge-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.edge-badge.strong { background: #0a2a05; color: #2ecc71; border: 1px solid #1a4a10; }
+.edge-badge.moderate { background: #2a2000; color: #f39c12; border: 1px solid #3a2a00; }
+.edge-badge.small { background: #1a1730; color: #888; border: 1px solid #2a2550; }
+.lineup-spot .ls-pos { font-size: 9px; color: #555; font-family: monospace; min-width: 24px; }
+
 /* CorBET Carroll */
 .corbet-header { background: linear-gradient(135deg, #0a1a05, #0d2a08); border: 1px solid #1a3a10; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
 .corbet-logo { font-size: 22px; }
