@@ -205,35 +205,124 @@ async function loadPitcherStatcast(pitcherId){
   const el=document.getElementById('pt-statcast');
   if(!el)return;
   el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading pitcher Statcast...</div>';
-  try{
-    const r=await fetch('/savant/statcast?type=pitcher&year=2026');
-    const text=await r.text();
-    if(!text||text.trim().startsWith('<'))throw new Error('Statcast unavailable');
+  const pid=String(pitcherId);
+
+  const safeRows=(text,label)=>{
+    if(!text||text.trim().startsWith('<')){console.warn(`[PitcherStatcast] ${label} returned HTML or empty`);return[];}
     const rows=parseCSV(text);
-    const pid=String(pitcherId);
+    console.log(`[PitcherStatcast] ${label}: ${rows.length} rows, columns:`,rows[0]?Object.keys(rows[0]).join(', '):'none');
+    return rows;
+  };
+  const findRow=(rows,label)=>{
     const row=rows.find(r=>String(r.player_id||r['player_id']||'').trim()===pid);
-    if(!row){el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">No Statcast data found for this pitcher.</div>';return;}
-    const whiffPct=row.whiff_percent?parseFloat(row.whiff_percent).toFixed(1)+'%':'—';
-    const gbPct=row.groundballs_percent?parseFloat(row.groundballs_percent).toFixed(1)+'%':'—';
-    const fbPct=row.flyballs_percent?parseFloat(row.flyballs_percent).toFixed(1)+'%':'—';
-    const brlAgainst=row.brl_percent?parseFloat(row.brl_percent).toFixed(1)+'%':'—';
-    const hhAgainst=row.ev95percent?parseFloat(row.ev95percent).toFixed(1)+'%':'—';
-    const avgEVAgainst=row.avg_hit_speed?parseFloat(row.avg_hit_speed).toFixed(1)+' mph':'—';
-    const whiffC=whiffPct!=='—'?(parseFloat(whiffPct)>=30?'good':parseFloat(whiffPct)<=20?'bad':''):'';
-    const gbC=gbPct!=='—'?(parseFloat(gbPct)>=50?'good':''):'';
-    const brlC=brlAgainst!=='—'?(parseFloat(brlAgainst)<=5?'good':parseFloat(brlAgainst)>=12?'bad':''):'';
-    const hhC=hhAgainst!=='—'?(parseFloat(hhAgainst)<=35?'good':parseFloat(hhAgainst)>=48?'bad':''):'';
-    // Store for use in probability estimates
+    console.log(`[PitcherStatcast] ${label} match for pid ${pid}:`,row?'found':'not found');
+    return row||null;
+  };
+  const findFgRow=(rows)=>{
+    const row=rows.find(r=>String(r.xMLBAMID||r.MLBAMID||r.mlbamid||'').trim()===pid);
+    console.log(`[PitcherStatcast] FanGraphs match for pid ${pid}:`,row?'found':'not found');
+    return row||null;
+  };
+  // Pick first non-null value from a list of column keys
+  const col=(row,...keys)=>{if(!row)return null;for(const k of keys){const v=row[k];if(v!=null&&v!=='')return v;}return null;};
+  const fmtPct=(v,digits=1)=>{const n=parseFloat(v);return isNaN(n)?'—':n.toFixed(digits)+'%';};
+  const fmtVal=(v,digits=2)=>{const n=parseFloat(v);return isNaN(n)?'—':n.toFixed(digits);};
+
+  try{
+    const [scRes,expRes,cswRes,stuffRes,fgRes]=await Promise.allSettled([
+      fetch('/savant/statcast?type=pitcher&year=2026').then(r=>r.text()),
+      fetch('/savant/expected?type=pitcher&year=2026').then(r=>r.text()),
+      fetch('/savant/csw?year=2026').then(r=>r.text()),
+      fetch('/savant/stuffplus?year=2026').then(r=>r.text()),
+      fetch('/fangraphs/pitchers?year=2026').then(r=>r.text()),
+    ]);
+
+    const scRows  = safeRows(scRes.status==='fulfilled'?scRes.value:'',  'statcast');
+    const expRows = safeRows(expRes.status==='fulfilled'?expRes.value:'', 'expected');
+    const cswRows = safeRows(cswRes.status==='fulfilled'?cswRes.value:'', 'csw');
+    const stuffRows=safeRows(stuffRes.status==='fulfilled'?stuffRes.value:'','stuffplus');
+    const fgRows  = safeRows(fgRes.status==='fulfilled'?fgRes.value:'',   'fangraphs');
+
+    const scRow   = findRow(scRows,  'statcast');
+    const expRow  = findRow(expRows, 'expected');
+    const stuffRow= findRow(stuffRows,'stuffplus');
+    const fgRow   = findFgRow(fgRows);
+
+    // CSW: pitch-arsenal endpoint may have one row per pitcher (overall) or per pitch type
+    // If multiple rows for same pid, average CSW weighted by pitch usage
+    const cswPidRows=cswRows.filter(r=>String(r.player_id||'').trim()===pid);
+    let cswRaw=null;
+    if(cswPidRows.length===1){
+      cswRaw=col(cswPidRows[0],'csw_percent','csw','called_str_plus_whiff_pct','cswp');
+    }else if(cswPidRows.length>1){
+      // Weight by pitch_percent or pa_of_pitches
+      let totalUsage=0,weightedCSW=0;
+      cswPidRows.forEach(r=>{
+        const usage=parseFloat(r.pitch_percent||r.pitch_usage||0)||0;
+        const cswVal=parseFloat(col(r,'csw_percent','csw','called_str_plus_whiff_pct','cswp')||0)||0;
+        weightedCSW+=cswVal*usage; totalUsage+=usage;
+      });
+      if(totalUsage>0)cswRaw=(weightedCSW/totalUsage).toFixed(1);
+    }
+    console.log('[PitcherStatcast] CSW rows for pid:',cswPidRows.length,'raw value:',cswRaw);
+
+    // Extract stats — try multiple column names
+    const whiffRaw = col(scRow,'whiff_percent','whiffs_percent','whiff_pct','whiff');
+    const gbRaw    = col(scRow,'groundballs_percent','gb_percent','gb');
+    const fbRaw    = col(scRow,'flyballs_percent','fb_percent','fbld','fb');
+    const brlRaw   = col(scRow,'brl_percent','brl_pa','brl_pitcher');
+    const hhRaw    = col(scRow,'ev95percent','hard_hit_percent','hard_hit_pct');
+    const evRaw    = col(scRow,'avg_hit_speed','avg_exit_velocity');
+    const xwobaRaw = col(expRow,'est_woba','xwoba','expected_woba');
+    const stuffRaw = col(stuffRow,'stuff_plus','stuff+','Stuff+','stuff','stuffplus');
+    const xeraRaw  = col(stuffRow,'xera','xERA','x_era','est_era');
+    const sieraRaw = col(fgRow,'SIERA','siera','Siera');
+
+    const whiffPct = fmtPct(whiffRaw);
+    const gbPct    = fmtPct(gbRaw);
+    const fbPct    = fmtPct(fbRaw);
+    const brlAgainst = fmtPct(brlRaw);
+    const hhAgainst  = fmtPct(hhRaw);
+    const avgEVAgainst = evRaw?fmtVal(evRaw,1)+' mph':'—';
+    const xwobaPct = fmtVal(xwobaRaw,3);
+    const cswPct   = fmtPct(cswRaw);
+    const stuffPlus= stuffRaw?fmtVal(stuffRaw,0):'—';
+    const xERAVal  = fmtVal(xeraRaw,2);
+    const sieraVal = fmtVal(sieraRaw,2);
+
+    // Color coding
+    const whiffC  = whiffPct!=='—'?(parseFloat(whiffPct)>=28?'good':parseFloat(whiffPct)<=18?'bad':''):'';
+    const gbC     = gbPct!=='—'?(parseFloat(gbPct)>=50?'good':''):'';
+    const brlC    = brlAgainst!=='—'?(parseFloat(brlAgainst)<=5?'good':parseFloat(brlAgainst)>=12?'bad':''):'';
+    const hhC     = hhAgainst!=='—'?(parseFloat(hhAgainst)<=35?'good':parseFloat(hhAgainst)>=48?'bad':''):'';
+    const cswC    = cswPct!=='—'?(parseFloat(cswPct)>=30?'good':parseFloat(cswPct)<=22?'bad':''):'';
+    const stuffC  = stuffPlus!=='—'?(parseFloat(stuffPlus)>=105?'good':parseFloat(stuffPlus)<=95?'bad':''):'';
+    const xeraC   = xERAVal!=='—'?(parseFloat(xERAVal)<=3.50?'good':parseFloat(xERAVal)>=4.50?'bad':''):'';
+    const sieraC  = sieraVal!=='—'?(parseFloat(sieraVal)<=3.50?'good':parseFloat(sieraVal)>=4.50?'bad':''):'';
+
     S.pitcherStatcast={whiff:parseFloat(whiffPct)||null,gbPct:parseFloat(gbPct)||null,fbPct:parseFloat(fbPct)||null,brlAgainst:parseFloat(brlAgainst)||null,hhAgainst:parseFloat(hhAgainst)||null};
-    el.innerHTML=[
+
+    const boxes=[
       statBox('Whiff%',whiffPct,'Whiff rate allowed',whiffC),
       statBox('GB%',gbPct,'Ground ball rate',gbC),
       statBox('FB%',fbPct,'Fly ball rate',''),
+      statBox('CSW%',cswPct,'Called Strike + Whiff%',cswC),
       statBox('Barrel% vs',brlAgainst,'Barrels allowed',brlC),
       statBox('HH% vs',hhAgainst,'Hard contact allowed',hhC),
       statBox('Avg EV vs',avgEVAgainst,'Avg EV against',''),
+      statBox('xwOBA vs',xwobaPct,'Expected wOBA against',''),
+      statBox('Stuff+',stuffPlus,'Pitch quality score',stuffC),
+      statBox('xERA',xERAVal,'Expected ERA',xeraC),
+      statBox('SIERA',sieraVal,'Skill-based ERA (FG)',sieraC),
     ].join('');
+
+    if(!scRow&&!expRow&&cswPidRows.length===0&&!stuffRow&&!fgRow){
+      el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">No Statcast data found for this pitcher.</div>';
+    }else{
+      el.innerHTML=boxes;
+    }
   }catch(e){
+    console.error('[PitcherStatcast] Error:',e);
     el.innerHTML=`<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Pitcher Statcast unavailable.</div>`;
   }
 }
@@ -439,24 +528,25 @@ async function loadLineupContext(dv){
     const tier=!avgOps?'average':avgOps>=0.780?'strong':avgOps>=0.690?'average':'weak';
     S.lineupProtection={tier,avgOps,spots:spots345,manual:false};
 
-    // Find Carroll and the batter directly behind him
-    const carrollRow=stats.find(p=>String(p.id)===String(S.playerId));
-    const carrollIdx=stats.findIndex(p=>String(p.id)===String(S.playerId));
-    const nextBatter=carrollIdx>=0&&carrollIdx<stats.length-1?stats[carrollIdx+1]:null;
+    // Find selected player and the batter directly behind them
+    const selectedRow=stats.find(p=>String(p.id)===String(S.playerId));
+    const selectedIdx=stats.findIndex(p=>String(p.id)===String(S.playerId));
+    const nextBatter=selectedIdx>=0&&selectedIdx<stats.length-1?stats[selectedIdx+1]:null;
     const weakProtection=nextBatter&&nextBatter.avg!==null&&nextBatter.avg<0.220;
     const avgColor=a=>!a?'#888':a>=0.290?'#2ecc71':a>=0.250?'#ccc':a>=0.220?'#f39c12':'#e74c3c';
     const ordSuffix=n=>['st','nd','rd'][n-1]||'th';
+    const playerLastName=S.playerName.split(' ').pop();
 
     document.getElementById('lineup-content').innerHTML=
       stats.map(p=>{
-        const isCarroll=String(p.id)===String(S.playerId);
+        const isSelected=String(p.id)===String(S.playerId);
         const isNext=nextBatter&&String(p.id)===String(nextBatter.id);
-        const borderStyle=isCarroll?'border-left:3px solid #A71930;padding-left:6px;background:#0f0806;':
+        const borderStyle=isSelected?'border-left:3px solid #A71930;padding-left:6px;background:#0f0806;':
                           isNext&&weakProtection?'border-left:2px solid #e74c3c44;padding-left:4px;':'';
         return`<div class="lineup-spot" style="${borderStyle}">
           <span class="ls-order">${p.order}.</span>
           <span class="ls-pos">${p.pos}</span>
-          <span class="ls-name">${p.name}${isCarroll?' <span style="color:#A71930;font-size:9px;">← CC</span>':''}</span>
+          <span class="ls-name">${p.name}${isSelected?` <span style="color:#A71930;font-size:9px;">← ${playerLastName}</span>`:''}</span>
           <span class="ls-ops" style="color:${avgColor(p.avg)}">${p.avg!=null?p.avg.toFixed(3):'—'}</span>
           ${isNext&&weakProtection?'<span style="font-size:9px;color:#e74c3c;margin-left:4px;">⚠ weak</span>':''}
         </div>`;
@@ -464,8 +554,8 @@ async function loadLineupContext(dv){
       `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #1a1730;">
         <span class="prot-badge ${tier}">${{strong:'Strong Protection',average:'Average Protection',weak:'Weak Protection'}[tier]}</span>
         ${avgOps?`<span style="font-size:9px;color:#888;font-family:monospace;margin-left:8px;">${avgOps.toFixed(3)} OPS (3-4-5)</span>`:''}
-        ${carrollRow?`<span style="font-size:9px;color:#999;font-family:monospace;margin-left:12px;">Carroll bats ${carrollRow.order}${ordSuffix(carrollRow.order)}</span>`:''}
-        ${weakProtection&&nextBatter?`<div style="font-size:10px;color:#e74c3c;font-family:monospace;margin-top:6px;">⚠ ${nextBatter.name} bats behind Carroll (.${Math.round((nextBatter.avg||0)*1000)}) — pitchers may work around him</div>`:''}
+        ${selectedRow?`<span style="font-size:9px;color:#999;font-family:monospace;margin-left:12px;">${S.playerName} bats ${selectedRow.order}${ordSuffix(selectedRow.order)}</span>`:`<span style="font-size:9px;color:#e74c3c;font-family:monospace;margin-left:12px;">${S.playerName} is not in today's starting lineup</span>`}
+        ${weakProtection&&nextBatter?`<div style="font-size:10px;color:#e74c3c;font-family:monospace;margin-top:6px;">⚠ ${nextBatter.name} bats behind ${playerLastName} (.${Math.round((nextBatter.avg||0)*1000)}) — pitchers may work around him</div>`:''}
       </div>`;
     show('lineup-content');
   }catch(e){setText('lineup-empty','Could not load lineup data.');show('lineup-empty');console.error('Lineup:',e);}
@@ -573,18 +663,21 @@ function calcPrediction(){
   let tempF,windMph,windDir,humidity;
   if(w&&!wm){tempF=w.tempF;windMph=w.windMph;windDir=w.windDir;humidity=w.humidity;}
   else{tempF=parseInt(document.getElementById('temp-slider')?.value)||75;windMph=parseInt(document.getElementById('wind-slider')?.value)||0;windDir=document.getElementById('wind-dir')?.value||'calm';humidity=parseInt(document.getElementById('humid-slider')?.value)||40;}
-  if(tempF>=90)add('Heat',tempF+'°F',4,'Hot thin air — more carry on contact');
-  else if(tempF<=55)add('Cold',tempF+'°F',-4,'Dense cold air suppresses ball flight');
+  const stadOpt=document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
+  const hasRoof=stadOpt.dataset.roof==='1',elev=parseInt(stadOpt.dataset.elev);
+  const roofClosed=hasRoof&&S.roofClosed;
   const outDirs=['S','SSE','SE','SSW','SW'],inDirs=['N','NNE','NNW','NE','NW'];
   const isOut=outDirs.some(d=>windDir?.startsWith(d)),isIn=inDirs.some(d=>windDir?.startsWith(d));
   const wd=isOut?'out':isIn?'in':windDir==='out'?'out':windDir==='in'?'in':'cross';
-  if(wd==='out'&&windMph>=8)add('Wind Out',windMph+' mph',windMph*0.35,'Blowing out — HR potential elevated');
-  else if(wd==='in'&&windMph>=8)add('Wind In',windMph+' mph',-windMph*0.28,'Blowing in — suppresses power');
-  else if(windMph>=15)add('Crosswind',windMph+' mph',-2,'Strong crosswind affects pitch movement');
+  if(!roofClosed){
+    if(tempF>=90)add('Heat',tempF+'°F',4,'Hot thin air — more carry on contact');
+    else if(tempF<=55)add('Cold',tempF+'°F',-4,'Dense cold air suppresses ball flight');
+    if(wd==='out'&&windMph>=8)add('Wind Out',windMph+' mph',windMph*0.35,'Blowing out — HR potential elevated');
+    else if(wd==='in'&&windMph>=8)add('Wind In',windMph+' mph',-windMph*0.28,'Blowing in — suppresses power');
+    else if(windMph>=15)add('Crosswind',windMph+' mph',-2,'Strong crosswind affects pitch movement');
+  }
   if(humidity>70)add('High Humidity',humidity+'%',-1,'Heavy air slightly suppresses carry');
-  const stadOpt=document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
-  const hasRoof=stadOpt.dataset.roof==='1',elev=parseInt(stadOpt.dataset.elev);
-  if(hasRoof&&S.roofClosed)add('Roof Closed','Indoor',-2,'Controlled environment neutralizes weather edge');
+  if(roofClosed)add('Roof Closed','Indoor',-2,'Controlled environment neutralizes weather edge');
   if(elev>4000)add('Altitude',elev.toLocaleString()+'ft',8,'Thin mile-high air — significant carry boost');
   else if(elev>2000)add('Elevation',elev.toLocaleString()+'ft',3,'Moderate elevation adds mild carry');
   const travel=document.getElementById('travel-select').value;
@@ -594,12 +687,13 @@ function calcPrediction(){
   if(S.lineupProtection&&S.lineupProtection.tier!=='average'){
     const{tier,avgOps,manual}=S.lineupProtection;
     const val=avgOps?avgOps.toFixed(3)+' avg OPS':(tier==='strong'?'Manual: Strong':'Manual: Weak');
+    const lastName=S.playerName.split(' ').pop();
     if(tier==='strong'){
       const adj=avgOps?Math.min(5,Math.round((avgOps-0.730)*35)):3;
-      add('Protection',val,adj,'Elite lineup behind Carroll — pitchers must attack him to avoid a big inning');
+      add('Protection',val,adj,`Elite lineup behind ${lastName} — pitchers must attack him to avoid a big inning`);
     } else {
       const adj=avgOps?Math.max(-5,Math.round((avgOps-0.730)*35)):-3;
-      add('Protection',val,adj,'Thin lineup behind Carroll — pitchers can work around him freely');
+      add('Protection',val,adj,`Thin lineup behind ${lastName} — pitchers can work around him freely`);
     }
   }
   score=Math.max(4,Math.min(96,Math.round(score)));
@@ -1597,7 +1691,7 @@ async function renderGradePanel() {
         </div>
         <div style="display:flex;gap:8px;align-items:center;" id="grade-actions-${pred.id}">
           <button class="grade-btn confirm" onclick="autoGrade(${pred.id}, '${pred.playerId}', '${pred.date}')">⟳ Fetch & Grade</button>
-          <span style="font-size:10px;color:#777;font-family:monospace;">Fetches Carroll's actual stats from MLB API</span>
+          <span style="font-size:10px;color:#777;font-family:monospace;">Fetches actual stats from MLB API</span>
         </div>`;
       pendingEl.appendChild(div);
     }
@@ -1665,7 +1759,7 @@ async function autoGrade(predId, playerId, date) {
     if (!actual) {
       // Game not found — might not have finished yet
       if (btn) { btn.textContent = '⟳ Fetch & Grade'; btn.disabled = false; }
-      alert(`No stats found for ${date}. The game may not have finished yet, or Carroll didn't play.`);
+      alert(`No stats found for ${date}. The game may not have finished yet, or the player didn't play.`);
       return;
     }
     // Show actual stats

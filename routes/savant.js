@@ -39,4 +39,16 @@ router.get('/battracking', (req, res) => {
   savantFetch(`https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=${year}&min=50&csv=true`, res);
 });
 
+// CSW% (Called Strike + Whiff %) by pitch arsenal
+router.get('/csw', (req, res) => {
+  const year = req.query.year || '2026';
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=pitcher&year=${year}&min=50&csv=true`, res);
+});
+
+// Stuff+ and xERA
+router.get('/stuffplus', (req, res) => {
+  const year = req.query.year || '2026';
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitcher-quality?type=pitcher&year=${year}&min=50&csv=true`, res);
+});
+
 module.exports = router;
