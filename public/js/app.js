@@ -117,6 +117,7 @@ async function selectPitcher(id,name){
     buildPitchMixGrid('pitch-mix-grid',S.pitcherPitches);
     show('pitcher-pitch-mix');
     renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip);
+    loadPitcherStatcast(id);
     loadMatchupStats();
   }catch(e){setText('pitcher-error','⚠ Could not load pitcher stats.');show('pitcher-error');}
   finally{hide('pitcher-spinner');}
@@ -133,8 +134,77 @@ function renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbP
   document.getElementById('pt-workload').innerHTML=`<div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>${lastOuting?`<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches||'—'}</strong></div>`:''}${daysRest!=='—'&&daysRest<4?'<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>':''}${daysRest!=='—'&&daysRest>=5?'<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>':''}`;
 }
 
+async function loadPitcherStatcast(pitcherId){
+  const el=document.getElementById('pt-statcast');
+  if(!el)return;
+  el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading pitcher Statcast...</div>';
+  try{
+    const r=await fetch('/savant/statcast?type=pitcher&year=2026');
+    const text=await r.text();
+    if(!text||text.trim().startsWith('<'))throw new Error('Statcast unavailable');
+    const rows=parseCSV(text);
+    const pid=String(pitcherId);
+    const row=rows.find(r=>String(r.player_id||r['player_id']||'').trim()===pid);
+    if(!row){el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">No Statcast data found for this pitcher.</div>';return;}
+    const whiffPct=row.whiff_percent?parseFloat(row.whiff_percent).toFixed(1)+'%':'—';
+    const gbPct=row.groundballs_percent?parseFloat(row.groundballs_percent).toFixed(1)+'%':'—';
+    const fbPct=row.flyballs_percent?parseFloat(row.flyballs_percent).toFixed(1)+'%':'—';
+    const brlAgainst=row.brl_percent?parseFloat(row.brl_percent).toFixed(1)+'%':'—';
+    const hhAgainst=row.ev95percent?parseFloat(row.ev95percent).toFixed(1)+'%':'—';
+    const avgEVAgainst=row.avg_hit_speed?parseFloat(row.avg_hit_speed).toFixed(1)+' mph':'—';
+    const whiffC=whiffPct!=='—'?(parseFloat(whiffPct)>=30?'good':parseFloat(whiffPct)<=20?'bad':''):'';
+    const gbC=gbPct!=='—'?(parseFloat(gbPct)>=50?'good':''):'';
+    const brlC=brlAgainst!=='—'?(parseFloat(brlAgainst)<=5?'good':parseFloat(brlAgainst)>=12?'bad':''):'';
+    const hhC=hhAgainst!=='—'?(parseFloat(hhAgainst)<=35?'good':parseFloat(hhAgainst)>=48?'bad':''):'';
+    // Store for use in probability estimates
+    S.pitcherStatcast={whiff:parseFloat(whiffPct)||null,gbPct:parseFloat(gbPct)||null,fbPct:parseFloat(fbPct)||null,brlAgainst:parseFloat(brlAgainst)||null,hhAgainst:parseFloat(hhAgainst)||null};
+    el.innerHTML=[
+      statBox('Whiff%',whiffPct,'Whiff rate allowed',whiffC),
+      statBox('GB%',gbPct,'Ground ball rate',gbC),
+      statBox('FB%',fbPct,'Fly ball rate',''),
+      statBox('Barrel% vs',brlAgainst,'Barrels allowed',brlC),
+      statBox('HH% vs',hhAgainst,'Hard contact allowed',hhC),
+      statBox('Avg EV vs',avgEVAgainst,'Avg EV against',''),
+    ].join('');
+  }catch(e){
+    el.innerHTML=`<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Pitcher Statcast unavailable.</div>`;
+  }
+}
+
 // ═══════════ UMPIRE ════════════════════════════════════════════════════════════
-const UMP_DB={'Doug Eddings':{tendency:'pitcher',adj:-2,note:'Pitcher-friendly zone — calls extra strikes'},'CB Bucknor':{tendency:'hitter',adj:3,note:'Tight zone — more walks, hitter-friendly'},'Laz Diaz':{tendency:'hitter',adj:2,note:'Below-average called strike rate'},'Bill Miller':{tendency:'pitcher',adj:-2,note:'Expanded zone — pitcher advantage'},'Angel Hernandez':{tendency:'neutral',adj:0,note:'Inconsistent zone, high variance'}};
+const UMP_DB={
+  'Doug Eddings':    {tendency:'pitcher',adj:-2,note:'Pitcher-friendly zone — calls extra strikes'},
+  'CB Bucknor':      {tendency:'hitter', adj: 3,note:'Tight zone — more walks, hitter-friendly'},
+  'Laz Diaz':        {tendency:'hitter', adj: 2,note:'Below-average called strike rate'},
+  'Bill Miller':     {tendency:'pitcher',adj:-2,note:'Expanded zone — pitcher advantage'},
+  'Angel Hernandez': {tendency:'neutral',adj: 0,note:'Inconsistent zone, high variance'},
+  'Jeff Nelson':     {tendency:'pitcher',adj:-3,note:'Consistently expanded zone, pitcher-friendly CSW'},
+  'Joe West':        {tendency:'pitcher',adj:-2,note:'Large strike zone, extra called strikes'},
+  'Mark Wegner':     {tendency:'pitcher',adj:-1,note:'Slight pitcher lean, below-average walk rate'},
+  'Alan Porter':     {tendency:'hitter', adj: 2,note:'Tight zone — above-average walk environment'},
+  'Gabe Morales':    {tendency:'neutral',adj:-1,note:'Slightly expanded zone on the corners'},
+  'Brian Gorman':    {tendency:'neutral',adj: 0,note:'Neutral, consistent zone'},
+  'Jerry Meals':     {tendency:'hitter', adj: 2,note:'Tight zone, above-average walk totals'},
+  'Alfonso Marquez': {tendency:'neutral',adj: 0,note:'Average zone consistency'},
+  'Mike Winters':    {tendency:'pitcher',adj:-2,note:'Expanded zone, extra called strikes'},
+  'Todd Tichenor':   {tendency:'neutral',adj: 0,note:'League-average called strike rate'},
+  'Chris Guccione':  {tendency:'hitter', adj: 1,note:'Slightly tight zone, mild hitter lean'},
+  'Dan Iassogna':    {tendency:'neutral',adj: 0,note:'Consistent, neutral zone'},
+  'Larry Vanover':   {tendency:'hitter', adj: 2,note:'Tight strike zone — more ball calls'},
+  'Sam Holbrook':    {tendency:'pitcher',adj:-1,note:'Slightly expanded zone'},
+  'Adrian Johnson':  {tendency:'neutral',adj: 0,note:'Average zone, high strike call rate'},
+  'Rob Drake':       {tendency:'pitcher',adj:-2,note:'Below-average walk rate — wide zone'},
+  'Quinn Wolcott':   {tendency:'neutral',adj: 0,note:'No significant zone bias on record'},
+  'Chad Fairchild':  {tendency:'hitter', adj: 2,note:'Below-average called strike rate, high walk environment'},
+  'Marvin Hudson':   {tendency:'pitcher',adj:-1,note:'Slight zone expansion, pitcher lean'},
+  'Ted Barrett':     {tendency:'neutral',adj: 0,note:'Neutral zone, league-average consistency'},
+  'Stu Scheurwater': {tendency:'hitter', adj: 1,note:'Slightly tight zone on the edges'},
+  'Jim Reynolds':    {tendency:'neutral',adj: 0,note:'Neutral zone, no significant lean'},
+  'Lance Barrett':   {tendency:'neutral',adj: 0,note:'Average zone, consistent calls'},
+  'Jansen Visconti': {tendency:'neutral',adj: 0,note:'No significant zone bias on record'},
+  'Roberto Ortiz':   {tendency:'neutral',adj: 0,note:'Average zone, no meaningful tendency'},
+  'Ryan Additon':    {tendency:'pitcher',adj:-1,note:'Slight zone expansion, below-average walk rate'},
+};
 
 async function loadUmpireAndWeather(){
   const dv=document.getElementById('game-date').value;
@@ -231,6 +301,28 @@ async function autoLoadNextGame(){
     // Set stadium from venue name
     const stadVal=VENUE_MAP[game.venue?.name];
     if(stadVal){document.getElementById('stadium-select').value=stadVal;onStadiumChange();}
+    // Travel fatigue detection — compare to last completed game
+    try{
+      const weekAgo=new Date(Date.now()-8*24*60*60*1000).toISOString().split('T')[0];
+      const yesterday=new Date(Date.now()-1*24*60*60*1000).toISOString().split('T')[0];
+      const prevR=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&startDate=${weekAgo}&endDate=${yesterday}`);
+      const prevD=await prevR.json();
+      const prevGames=(prevD?.dates||[]).flatMap(d=>d.games||[]).filter(g=>g.status?.abstractGameState==='Final');
+      const prevGame=prevGames[prevGames.length-1];
+      if(prevGame){
+        const prevVenue=prevGame.venue?.name;
+        const currVenue=game.venue?.name;
+        const daysBetween=(new Date(game.officialDate)-new Date(prevGame.officialDate))/(1000*60*60*24);
+        const travelSel=document.getElementById('travel-select');
+        if(prevVenue&&currVenue&&prevVenue!==currVenue&&daysBetween<=2){
+          const prevUTC=new Date(prevGame.gameDate);
+          const prevMSTHour=(prevUTC.getUTCHours()-7+24)%24;
+          travelSel.value=prevMSTHour>=21?'redeye':'same';
+        }else{
+          document.getElementById('travel-select').value='none';
+        }
+      }
+    }catch(e){console.log('Travel detection failed:',e.message);}
     // Load umpire, weather, lineup
     await loadUmpireAndWeather();
   }catch(e){console.log('Auto game load failed:',e.message);}
@@ -633,6 +725,75 @@ function corbetReasoning(propKey,direction,propScore){
   return`${prefix}: ${drivers.slice(0,4).join(' · ')||'general conditions'}`;
 }
 
+function impliedProb(odds){
+  if(!odds)return null;
+  return odds<0?(-odds)/(-odds+100)*100:100/(odds+100)*100;
+}
+
+function _factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+function _poissonCDF(lambda,k){let p=0;for(let i=0;i<=k;i++)p+=Math.pow(lambda,i)*Math.exp(-lambda)/_factorial(i);return p;}
+
+function estimateProbability(propKey,direction,line){
+  const ss=S.seasonStat;
+  const pa=ss?.plateAppearances||1;
+  const gamePAs=4.0;
+  let prob=null;
+
+  if(propKey==='batter_strikeouts'){
+    const carrollK=ss?.strikeOuts?(ss.strikeOuts/pa):0.18;
+    const pitcherPA=S.pitcher?.st?.battersFaced||1;
+    const pitcherK=S.pitcher?.st?.strikeOuts?(S.pitcher.st.strikeOuts/pitcherPA):0.22;
+    const blended=carrollK*0.55+pitcherK*0.45;
+    if(line<=0.5){
+      prob=(1-Math.pow(1-blended,gamePAs))*100;
+    }else{
+      const p0=Math.pow(1-blended,gamePAs);
+      const p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);
+      prob=(1-p0-p1)*100;
+    }
+  }
+  else if(propKey==='batter_hits'){
+    const avg=parseFloat(ss?.avg)||0.265;
+    const ab=gamePAs-0.5;
+    if(line<=0.5){
+      prob=(1-Math.pow(1-avg,ab))*100;
+    }else{
+      const p0=Math.pow(1-avg,ab);
+      const p1=ab*avg*Math.pow(1-avg,ab-1);
+      prob=(1-p0-p1)*100;
+    }
+  }
+  else if(propKey==='batter_home_runs'){
+    const abPerHR=parseFloat(ss?.atBatsPerHomeRun)||35;
+    const hrRate=Math.min(1/abPerHR,0.15);
+    prob=(1-Math.pow(1-hrRate,gamePAs))*100;
+  }
+  else if(propKey==='batter_walks'){
+    const bbFrac=ss?.baseOnBalls?(ss.baseOnBalls/pa):0.09;
+    if(line<=0.5){
+      prob=(1-Math.pow(1-bbFrac,gamePAs))*100;
+    }else{
+      const p0=Math.pow(1-bbFrac,gamePAs);
+      const p1=gamePAs*bbFrac*Math.pow(1-bbFrac,gamePAs-1);
+      prob=(1-p0-p1)*100;
+    }
+  }
+  else if(propKey==='batter_total_bases'){
+    const slg=parseFloat(ss?.slg)||0.420;
+    const bbFrac=ss?.baseOnBalls?(ss.baseOnBalls/pa):0.09;
+    const lambda=slg*(gamePAs*(1-bbFrac));
+    prob=(1-_poissonCDF(lambda,Math.floor(line)))*100;
+  }
+  else if(propKey==='batter_rbis'){
+    const rbiPerGame=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.4;
+    prob=(1-_poissonCDF(rbiPerGame,Math.floor(line)))*100;
+  }
+
+  if(prob===null)return null;
+  if(direction==='under')prob=100-prob;
+  return Math.max(1,Math.min(99,prob));
+}
+
 function generateCorbetBets(score,factors,props){
   const propNames={
     'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
@@ -727,8 +888,13 @@ async function loadCorbet(){
 
     const ratingLabel={green:'🟢 Best Bet',yellow:'🟡 Moderate',red:'🔴 Long Shot'};
     const ratingColor={green:'#2ecc71',yellow:'#f39c12',red:'#e74c3c'};
-    document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>`
-      <div class="bet-card ${b.rating}">
+    document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>{
+      const impl=impliedProb(b.odds);
+      const est=estimateProbability(b.propKey,b.direction.toLowerCase(),b.line);
+      const edge=(impl!==null&&est!==null)?(est-impl):null;
+      const edgeColor=edge===null?'#888':edge>2?'#2ecc71':edge<-2?'#e74c3c':'#f39c12';
+      const edgeLabel=edge===null?'—':(edge>0?'+':'')+edge.toFixed(1)+'%';
+      return`<div class="bet-card ${b.rating}">
         <div class="bet-card-header">
           <span class="bet-rating ${b.rating}">${ratingLabel[b.rating]}</span>
           <button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save to Record</button>
@@ -738,9 +904,16 @@ async function loadCorbet(){
           <span style="font-size:11px;color:#888;font-family:monospace;">/100 prop score</span>
         </div>
         <div class="bet-prop ${b.rating}">${S.playerName} ${b.direction} ${b.line} ${b.prop}</div>
-        <div class="bet-odds">${b.odds>0?'+':''}${b.odds} · ${b.books.slice(0,3).join(', ')}</div>
+        <div style="display:flex;gap:14px;margin:8px 0 4px;flex-wrap:wrap;">
+          <div style="font-family:monospace;font-size:11px;"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">American</div><div style="color:#ccc;">${b.odds>0?'+':''}${b.odds}</div></div>
+          <div style="font-family:monospace;font-size:11px;"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Implied</div><div style="color:#ccc;">${impl!==null?impl.toFixed(1)+'%':'—'}</div></div>
+          <div style="font-family:monospace;font-size:11px;"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Est. Prob</div><div style="color:#ccc;">${est!==null?est.toFixed(1)+'%':'—'}</div></div>
+          <div style="font-family:monospace;font-size:11px;"><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Edge</div><div style="color:${edgeColor};font-weight:700;">${edgeLabel}</div></div>
+        </div>
+        <div style="font-size:10px;color:#666;font-family:monospace;margin-bottom:6px;">${b.books.slice(0,3).join(' · ')}</div>
         <div class="bet-reasoning">${b.reasoning}</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     S.corbetBets=bets;
     show('corbet-bets');
   }catch(e){
