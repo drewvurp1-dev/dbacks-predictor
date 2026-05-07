@@ -1035,13 +1035,15 @@ function generateCorbetBets(score,factors,rawMarketMap){
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
     if(!PROP_NAMES[propKey])return;
     const line=mkt.line||0.5;
-    // Require ≥1 bookmaker with valid (non-outlier, non-excluded) prices on each side
-    if(!mkt.overPrices?.length||!mkt.underPrices?.length){
+    // Prefer DraftKings/FanDuel prices when available on both sides; fall back to all valid books
+    const calcOver=mkt.trustedOverPrices?.length?mkt.trustedOverPrices:mkt.overPrices;
+    const calcUnder=mkt.trustedUnderPrices?.length?mkt.trustedUnderPrices:mkt.underPrices;
+    if(!calcOver?.length||!calcUnder?.length){
       results.push({prop:PROP_NAMES[propKey],propKey,line,insufficient:true,
         overBest:mkt.overBest,underBest:mkt.underBest,edgeStrength:'none',absDelta:0});
       return;
     }
-    const dv=devig(mkt.overPrices,mkt.underPrices);
+    const dv=devig(calcOver,calcUnder);
     if(!dv)return;
     const modelProb=modelProbability(propKey,line,score);
     if(modelProb===null)return;
@@ -1106,19 +1108,24 @@ async function loadCorbet(){
     let propData;
     try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
 
-    // Build rawMarketMap: capture Over/Under prices from ALL books separately.
-    // BetOnline.ag is excluded from calc prices (known to post erroneous novelty odds)
-    // but still tracked for best-odds display. Outlier positive odds are also filtered.
+    // Build rawMarketMap.
+    // Trusted books (DK/FD) are preferred for devig when available on both sides.
+    // BetOnline.ag excluded from calc (posts erroneous novelty odds) but kept for display.
+    // Outlier positive odds filtered to avoid data errors skewing probabilities.
     const EXCLUDED_CALC_BOOKS=new Set(['BetOnline.ag']);
+    const TRUSTED_BOOKS=new Set(['DraftKings','FanDuel']);
     const isOutlierPrice=(price,line)=>price>0&&(line<=0.5?price>300:price>400);
     const playerSearch=S.playerName.toLowerCase().split(' ').pop();
     const rawMarketMap={};
     (propData.bookmakers||[]).forEach(book=>{
       const skipCalc=EXCLUDED_CALC_BOOKS.has(book.title);
+      const isTrusted=TRUSTED_BOOKS.has(book.title);
       (book.markets||[]).forEach(market=>{
         if(!PROP_NAMES[market.key])return;
         if(!rawMarketMap[market.key])rawMarketMap[market.key]={
-          overPrices:[],underPrices:[],overBest:null,underBest:null,line:null,books:[],calcBooks:new Set()
+          overPrices:[],underPrices:[],
+          trustedOverPrices:[],trustedUnderPrices:[],
+          overBest:null,underBest:null,line:null,books:[],calcBooks:new Set()
         };
         const m=rawMarketMap[market.key];
         if(!m.books.includes(book.title))m.books.push(book.title);
@@ -1137,8 +1144,15 @@ async function loadCorbet(){
             }
             // Calc prices: skip excluded books and outlier odds
             if(skipCalc||isOutlierPrice(price,line||0.5))return;
-            if(dir==='over'){m.overPrices.push(price);m.calcBooks.add(book.title);}
-            else if(dir==='under'){m.underPrices.push(price);m.calcBooks.add(book.title);}
+            if(dir==='over'){
+              m.overPrices.push(price);
+              m.calcBooks.add(book.title);
+              if(isTrusted)m.trustedOverPrices.push(price);
+            }else if(dir==='under'){
+              m.underPrices.push(price);
+              m.calcBooks.add(book.title);
+              if(isTrusted)m.trustedUnderPrices.push(price);
+            }
           });
       });
     });
