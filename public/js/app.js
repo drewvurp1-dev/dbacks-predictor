@@ -1166,7 +1166,7 @@ async function loadCorbet(){
 
       const overW=b.marketOverProb.toFixed(0);
       const underW=b.marketUnderProb.toFixed(0);
-      const markerLeft=Math.max(1,Math.min(99,100-b.modelProb)).toFixed(1);
+      const markerLeft=Math.max(1,Math.min(99,b.modelProb)).toFixed(1);
       const deltaLabel=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
       const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
       const dirColor=b.delta>0?'#2ecc71':'#e74c3c';
@@ -1193,12 +1193,12 @@ async function loadCorbet(){
           :`<div style="font-size:10px;color:#555;font-family:monospace;margin:6px 0 10px;">${b.conflict?'No recommendation — resolve conflict above':'Model agrees with market — no edge'}</div>`}
         <div style="margin-bottom:22px;">
           <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
-            <span>Under ${underW}%</span><span>Over ${overW}%</span>
+            <span>Over ${overW}%</span><span>Under ${underW}%</span>
           </div>
           <div style="position:relative;">
             <div class="prob-bar-wrap">
-              <div class="prob-bar-under" style="width:${underW}%">${underW}%</div>
               <div class="prob-bar-over" style="width:${overW}%">${overW}%</div>
+              <div class="prob-bar-under" style="width:${underW}%">${underW}%</div>
             </div>
             <div style="position:absolute;top:0;left:${markerLeft}%;width:2px;height:22px;background:rgba(255,255,255,0.9);transform:translateX(-50%);pointer-events:none;border-radius:1px;box-shadow:0 0 4px rgba(255,255,255,0.5);"></div>
           </div>
