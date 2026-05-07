@@ -412,12 +412,11 @@ async function loadLineupContext(dv){
       setText('lineup-empty','Lineup not yet posted — check back closer to first pitch.');
       hide('lineup-spinner');show('lineup-empty');return;
     }
-    const ordered=players
-      .filter(p=>p.battingOrder)
-      .sort((a,b)=>parseInt(a.battingOrder)-parseInt(b.battingOrder));
+    // Players are already in batting order by array position — no battingOrder field present
+    const ordered=players.slice();
     if(!ordered.length){setText('lineup-empty','Lineup order not yet available.');hide('lineup-spinner');show('lineup-empty');return;}
 
-    const stats=await Promise.all(ordered.map(p=>
+    const stats=await Promise.all(ordered.map((p,idx)=>
       fetch(`/mlb/api/v1/people/${p.id}/stats?stats=season&group=hitting&season=2026&gameType=R`)
         .then(r=>r.json())
         .then(d=>{
@@ -425,12 +424,12 @@ async function loadLineupContext(dv){
           return{
             id:p.id,name:p.fullName,
             pos:p.primaryPosition?.abbreviation||'—',
-            order:Math.round(parseInt(p.battingOrder)/100),
+            order:idx+1,
             avg:parseFloat(st?.avg)||null,
             ops:parseFloat(st?.ops)||null,
           };
         })
-        .catch(()=>({id:p.id,name:p.fullName,pos:'—',order:Math.round(parseInt(p.battingOrder)/100),avg:null,ops:null}))
+        .catch(()=>({id:p.id,name:p.fullName,pos:'—',order:idx+1,avg:null,ops:null}))
     ));
 
     // Protection tier from 3-4-5 spots
@@ -1036,8 +1035,8 @@ function generateCorbetBets(score,factors,rawMarketMap){
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
     if(!PROP_NAMES[propKey])return;
     const line=mkt.line||0.5;
-    // Require ≥2 bookmakers with valid (non-outlier, non-excluded) prices
-    if((mkt.calcBooks?.size||0)<2||!mkt.overPrices?.length||!mkt.underPrices?.length){
+    // Require ≥1 bookmaker with valid (non-outlier, non-excluded) prices on each side
+    if(!mkt.overPrices?.length||!mkt.underPrices?.length){
       results.push({prop:PROP_NAMES[propKey],propKey,line,insufficient:true,
         overBest:mkt.overBest,underBest:mkt.underBest,edgeStrength:'none',absDelta:0});
       return;
