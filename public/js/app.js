@@ -853,36 +853,37 @@ function modelProbability(propKey,line,score){
   const gamePAs=4.0;
   let p=null;
 
-  // All base calculations anchored so score=50 → realistic neutral probability.
-  // Floors/ceilings are enforced at the very end, after trend adjustments.
+  // Piecewise linear interpolation between three anchor points (score 20/50/80).
+  // Clamps to anchor values outside that range.
+  function lerp3(sc,s1,p1,s2,p2,s3,p3){
+    const c=Math.max(s1,Math.min(s3,sc));
+    if(c<=s2)return p1+(p2-p1)*(c-s1)/(s2-s1);
+    return p2+(p3-p2)*(c-s2)/(s3-s2);
+  }
 
   if(propKey==='batter_hits'){
-    // score=50→57%, score=70→70%, score=30→44%. Slope 0.65/pt anchored at 50→57.
-    const lineAdj=line<=0.5?0:-28; // over 1.5H is ~28pts less likely
-    p=0.65*(score-50)+57+lineAdj;
+    if(line<=0.5) p=lerp3(score,20,42,50,62,80,78);
+    else          p=lerp3(score,20,18,50,32,80,52);
   }
   else if(propKey==='batter_total_bases'){
-    // score=50→52% (Over 1.5 TB), slope 0.60/pt
-    const lineAdj=line<=1.5?0:line<=2.5?-22:-38;
-    p=0.60*(score-50)+52+lineAdj;
+    if(line<=0.5)      p=lerp3(score,20,38,50,58,80,74);
+    else if(line<=1.5) p=lerp3(score,20,22,50,40,80,62);
+    else if(line<=2.5) p=lerp3(score,20,12,50,24,80,42);
+    else               p=lerp3(score,20, 6,50,14,80,26);
   }
   else if(propKey==='batter_home_runs'){
-    if(score>32&&score<72)return null; // high variance — only flag extremes
-    if(score>=72){
-      // score=72→15%, score=100→65%
-      p=15+(score-72)/28*50;
-    }else{
-      // score=32→15%, score=0→~7%  (model is bearish but bounded at floor)
-      p=15-(32-score)/32*8;
-    }
+    p=lerp3(score,20,8,50,14,80,28);
   }
   else if(propKey==='batter_walks'){
     const bbF=ss?.baseOnBalls?(ss.baseOnBalls/pa):0.09;
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
     const pBBF=S.pitcher?.st?.baseOnBalls?(S.pitcher.st.baseOnBalls/pitcherPA):0.08;
     const blended=bbF*0.6+pBBF*0.4;
-    if(line<=0.5){p=(1-Math.pow(1-blended,gamePAs))*100;}
-    else{const p0=Math.pow(1-blended,gamePAs),p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);p=(1-p0-p1)*100;}
+    const rateBase=line<=0.5
+      ?(1-Math.pow(1-blended,gamePAs))*100
+      :(()=>{const p0=Math.pow(1-blended,gamePAs),p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);return(1-p0-p1)*100;})();
+    const scoreBase=lerp3(score,20,18,50,30,80,48);
+    p=scoreBase*0.6+rateBase*0.4;
   }
   else if(propKey==='batter_strikeouts'){
     const kF=ss?.strikeOuts?(ss.strikeOuts/pa):0.18;
@@ -890,65 +891,82 @@ function modelProbability(propKey,line,score){
     const pKF=S.pitcher?.st?.strikeOuts?(S.pitcher.st.strikeOuts/pitcherPA):0.22;
     const whiffAdj=S.statcast?.whiff?(S.statcast.whiff-22)*0.01:0;
     const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj);
-    if(line<=0.5){p=(1-Math.pow(1-blended,gamePAs))*100;}
-    else{const p0=Math.pow(1-blended,gamePAs),p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);p=(1-p0-p1)*100;}
+    const rateBase=line<=0.5
+      ?(1-Math.pow(1-blended,gamePAs))*100
+      :(()=>{const p0=Math.pow(1-blended,gamePAs),p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);return(1-p0-p1)*100;})();
+    const scoreBase=lerp3(score,20,28,50,48,80,68);
+    p=scoreBase*0.6+rateBase*0.4;
   }
   else if(propKey==='batter_rbis'){
     const rbiPG=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.4;
-    p=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
+    const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
+    const scoreBase=lerp3(score,20,15,50,28,80,45);
+    p=scoreBase*0.6+rateBase*0.4;
     if(S.lineupProtection?.tier==='strong')p+=5;
     else if(S.lineupProtection?.tier==='weak')p-=5;
   }
 
   if(p===null)return null;
 
-  // Trend: last 4 games
+  // Trend adjustments — accumulated then capped at ±6pts total
+  let trendAdj=0;
   const last4=S.recentGameLog?.slice(0,4)||[];
   const last3=S.recentGameLog?.slice(0,3)||[];
   if(last4.length>=3){
     if(propKey==='batter_hits'){
       const hot=last4.filter(g=>(parseInt(g.stat.hits)||0)>=2).length;
       const cold=last3.filter(g=>(parseInt(g.stat.hits)||0)===0).length;
-      if(hot>=3)p+=5; else if(hot>=2)p+=2;
-      if(cold>=2)p-=5; else if(cold>=1)p-=2;
+      if(hot>=3)trendAdj+=5; else if(hot>=2)trendAdj+=2;
+      if(cold>=2)trendAdj-=5; else if(cold>=1)trendAdj-=2;
     } else if(propKey==='batter_total_bases'){
       const avgTB=last4.reduce((s,g)=>s+(parseInt(g.stat.totalBases)||0),0)/4;
-      if(avgTB>=2.5)p+=5; else if(avgTB<=0.5)p-=4;
+      if(avgTB>=2.5)trendAdj+=5; else if(avgTB<=0.5)trendAdj-=4;
     } else if(propKey==='batter_home_runs'){
       const recentHR=last4.reduce((s,g)=>s+(parseInt(g.stat.homeRuns)||0),0);
-      if(recentHR>=2)p+=4;
+      if(recentHR>=2)trendAdj+=4;
     } else if(propKey==='batter_strikeouts'){
       const avgK=last4.reduce((s,g)=>s+(parseInt(g.stat.strikeOuts)||0),0)/4;
-      if(avgK>1.5)p+=4; else if(avgK<0.5)p-=3;
+      if(avgK>1.5)trendAdj+=4; else if(avgK<0.5)trendAdj-=3;
     } else if(propKey==='batter_walks'){
       const wkGames=last4.filter(g=>(parseInt(g.stat.baseOnBalls)||0)>=1).length;
-      if(wkGames>=3)p+=4; else if(wkGames===0)p-=3;
+      if(wkGames>=3)trendAdj+=4; else if(wkGames===0)trendAdj-=3;
     }
   }
 
-  // Pitcher recent form (last 3 starts)
+  // Pitcher recent form
   const p3=S.pitcher?.last3;
   if(p3?.length>=1){
     if(propKey==='batter_hits'){
       const avgH=p3.reduce((s,g)=>s+(parseInt(g.stat.hits)||0),0)/p3.length;
-      if(avgH>=8)p+=4; else if(avgH<=4)p-=3;
+      if(avgH>=8)trendAdj+=4; else if(avgH<=4)trendAdj-=3;
     } else if(propKey==='batter_strikeouts'){
       const avgK=p3.reduce((s,g)=>s+(parseInt(g.stat.strikeOuts)||0),0)/p3.length;
-      if(avgK>=9)p+=4; else if(avgK<=4)p-=3;
+      if(avgK>=9)trendAdj+=4; else if(avgK<=4)trendAdj-=3;
     } else if(propKey==='batter_total_bases'){
       const avgER=p3.reduce((s,g)=>s+(parseInt(g.stat.earnedRuns)||0),0)/p3.length;
-      if(avgER>=4)p+=3; else if(avgER<=1)p-=2;
+      if(avgER>=4)trendAdj+=3; else if(avgER<=1)trendAdj-=2;
     }
   }
 
-  // Prop-specific realistic bounds — applied last so trends can't escape them
-  if(propKey==='batter_hits')          p=Math.max(25,Math.min(85,p));
-  else if(propKey==='batter_total_bases') p=Math.max(30,Math.min(80,p));
-  else if(propKey==='batter_home_runs')   p=Math.max(15,Math.min(65,p));
-  else if(propKey==='batter_walks')       p=Math.max(20,Math.min(70,p));
-  else if(propKey==='batter_strikeouts')  p=Math.max(20,Math.min(75,p));
-  else if(propKey==='batter_rbis')        p=Math.max(15,Math.min(70,p));
-  else p=Math.max(5,Math.min(95,p));
+  p+=Math.max(-6,Math.min(6,trendAdj));
+
+  // Line-specific hard clamps applied last
+  if(propKey==='batter_hits'){
+    if(line<=0.5) p=Math.max(38,Math.min(82,p));
+    else          p=Math.max(20,Math.min(65,p));
+  } else if(propKey==='batter_total_bases'){
+    p=Math.max(20,Math.min(78,p));
+  } else if(propKey==='batter_home_runs'){
+    p=Math.max(5,Math.min(45,p));
+  } else if(propKey==='batter_walks'){
+    p=Math.max(15,Math.min(65,p));
+  } else if(propKey==='batter_strikeouts'){
+    p=Math.max(20,Math.min(75,p));
+  } else if(propKey==='batter_rbis'){
+    p=Math.max(12,Math.min(65,p));
+  } else{
+    p=Math.max(5,Math.min(95,p));
+  }
 
   return p;
 }
