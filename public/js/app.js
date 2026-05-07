@@ -1034,7 +1034,8 @@ function generateCorbetBets(score,factors,rawMarketMap){
   const results=[];
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
     if(!PROP_NAMES[propKey])return;
-    const line=mkt.line||0.5;
+    // Use trusted (DK/FD) line if available, then any calc-book line, never BetOnline's exotic line
+    const line=mkt.trustedLine||mkt.calcLine||mkt.line||0.5;
     // Prefer DraftKings/FanDuel prices when available on both sides; fall back to all valid books
     const calcOver=mkt.trustedOverPrices?.length?mkt.trustedOverPrices:mkt.overPrices;
     const calcUnder=mkt.trustedUnderPrices?.length?mkt.trustedUnderPrices:mkt.underPrices;
@@ -1125,7 +1126,9 @@ async function loadCorbet(){
         if(!rawMarketMap[market.key])rawMarketMap[market.key]={
           overPrices:[],underPrices:[],
           trustedOverPrices:[],trustedUnderPrices:[],
-          overBest:null,underBest:null,line:null,books:[],calcBooks:new Set()
+          overBest:null,underBest:null,
+          line:null,calcLine:null,trustedLine:null,
+          books:[],calcBooks:new Set()
         };
         const m=rawMarketMap[market.key];
         if(!m.books.includes(book.title))m.books.push(book.title);
@@ -1135,6 +1138,7 @@ async function loadCorbet(){
             const dir=o.name.toLowerCase();
             const price=o.price;
             const line=o.point||0;
+            // Display line: smallest seen across all books (for reference only)
             if(!m.line||line<m.line)m.line=line;
             // Best odds from ALL books for display
             if(dir==='over'){
@@ -1142,8 +1146,13 @@ async function loadCorbet(){
             }else if(dir==='under'){
               if(!m.underBest||price>m.underBest.price)m.underBest={price,book:book.title};
             }
-            // Calc prices: skip excluded books and outlier odds
-            if(skipCalc||isOutlierPrice(price,line||0.5))return;
+            // Calc prices: skip excluded books.
+            // Trusted books (DK/FD) skip the outlier filter — their odds are always reliable.
+            if(skipCalc)return;
+            if(!isTrusted&&isOutlierPrice(price,line||0.5))return;
+            // Calc line: derived from reliable books only (ignores BetOnline's exotic lines)
+            if(!m.calcLine||line<m.calcLine)m.calcLine=line;
+            if(isTrusted&&(!m.trustedLine||line<m.trustedLine))m.trustedLine=line;
             if(dir==='over'){
               m.overPrices.push(price);
               m.calcBooks.add(book.title);
