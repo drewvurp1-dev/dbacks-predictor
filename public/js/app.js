@@ -1855,6 +1855,7 @@ async function confirmGrade(pendingId, actualStats) {
     date: pred.date,
     score: pred.score,
     tier: pred.tier,
+    playerName: pred.playerName,
     pitcherName: pred.pitcherName,
     factors: pred.factors,
     actual: actualStats,
@@ -1969,11 +1970,13 @@ async function renderGradePanel() {
     document.getElementById('grade-log').innerHTML = log.map(g => {
       const modelLabel = g.grade.modelAccurate ? 'Accurate' : 'Off';
       const modelClass = g.grade.modelAccurate ? 'accurate' : 'off';
+      const playerLast = g.playerName ? g.playerName.split(' ').pop() : '—';
       return `<div class="grade-log-row">
         <span style="color:#888;font-family:monospace;font-size:11px;">${g.date}</span>
         <span style="font-family:monospace;font-size:13px;font-weight:800;color:#A71930;">${g.score}</span>
+        <span style="color:#aaa;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${playerLast}</span>
         <span style="color:#ccc;font-family:monospace;font-size:11px;">${g.actual.summary||`${g.actual.hits}H ${g.actual.totalBases}TB`}</span>
-        <span style="color:#888;font-family:monospace;font-size:11px;">${g.actual.totalBases}TB</span>
+        <span style="color:#888;font-family:monospace;font-size:11px;">${g.actual.totalBases}</span>
         <span class="outcome-badge ${g.grade.outcome}">${outcomeLabels[g.grade.outcome]||g.grade.outcome}</span>
         <span class="model-badge ${modelClass}">${modelLabel}</span>
       </div>`;
@@ -1990,9 +1993,33 @@ async function autoGrade(predId, playerId, date) {
     if (!actual) {
       // Game not found — might not have finished yet
       if (btn) { btn.textContent = '⟳ Fetch & Grade'; btn.disabled = false; }
-      alert(`No stats found for ${date}. The game may not have finished yet, or the player didn't play.`);
+      const actionsEl = document.getElementById(`grade-actions-${predId}`);
+      if (actionsEl && !actionsEl.querySelector('.remove-btn')) {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'grade-btn remove-btn';
+        removeBtn.textContent = '✕ Remove';
+        removeBtn.style.cssText = 'background:#2a1a1a;color:#e74c3c;border:1px solid #e74c3c;';
+        removeBtn.onclick = () => removePending(predId);
+        actionsEl.appendChild(removeBtn);
+        const note = document.createElement('span');
+        note.style.cssText = 'font-size:10px;color:#e74c3c;font-family:monospace;';
+        note.textContent = 'Game not found — may not have played';
+        actionsEl.appendChild(note);
+      }
       return;
     }
+
+    // Player didn't appear in the game (0 PA = didn't play)
+    if ((actual.pa ?? 0) === 0) {
+      const actionsEl = document.getElementById(`grade-actions-${predId}`);
+      if (actionsEl) {
+        actionsEl.innerHTML = `
+          <button class="grade-btn remove-btn" style="background:#2a1a1a;color:#e74c3c;border:1px solid #e74c3c;" onclick="removePending(${predId})">✕ Remove (didn't play)</button>
+          <span style="font-size:10px;color:#e74c3c;font-family:monospace;">Player had 0 PA — no at-bats recorded</span>`;
+      }
+      return;
+    }
+
     // Show actual stats
     const statMap = { H: actual.hits, TB: actual.totalBases, HR: actual.homeRuns, BB: actual.walks, K: actual.strikeOuts, RBI: actual.rbi };
     Object.entries(statMap).forEach(([key, val]) => {
@@ -2004,6 +2031,11 @@ async function autoGrade(predId, playerId, date) {
     if (btn) { btn.textContent = '⟳ Fetch & Grade'; btn.disabled = false; }
     alert('Could not fetch stats: ' + e.message);
   }
+}
+
+function removePending(predId) {
+  savePending(getPending().filter(p => p.id !== predId));
+  renderGradePanel();
 }
 
 function drawPerfChart(log) {

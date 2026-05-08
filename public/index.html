@@ -39,7 +39,7 @@
           <select id="player-select" onchange="loadPlayer()">
             <option value="682998">Corbin Carroll · CF · Bats L</option>
             <option value="660162">Ketel Marte · 2B · Bats S</option>
-            <option value="666971">Alek Thomas · CF · Bats L</option>
+            <option value="677950">Alek Thomas · CF · Bats L</option>
             <option value="668804">Gabriel Moreno · C · Bats R</option>
             <option value="669701">Geraldo Perdomo · SS · Bats S</option>
             <option value="545121">Ildemaro Vargas · 2B/SS · Bats S</option>
@@ -327,7 +327,7 @@
       <div class="card-body">
         <div id="grade-learning-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Grade at least 5 games to start seeing model insights.</div>
         <div id="grade-learning-content" class="hidden">
-          <div style="font-size:10px;color:#999;font-family:monospace;margin-bottom:12px;">Each factor's hit rate = % of times Carroll outperformed baseline when that factor fired. Model auto-adjusts weights after 15+ games.</div>
+          <div style="font-size:10px;color:#999;font-family:monospace;margin-bottom:12px;">Each factor's hit rate = % of times the player outperformed baseline when that factor fired. Model auto-adjusts weights after 15+ games.</div>
           <div id="factor-performance-list"></div>
         </div>
       </div>
@@ -349,8 +349,8 @@
       <div class="card-header"><span>📋 Graded Game Log</span><button onclick="clearGrades()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
         <div id="grade-log-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">No graded games yet.</div>
-        <div id="grade-log-headers" class="hidden" style="display:grid;grid-template-columns:80px 80px 1fr 60px 80px 60px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
-          <span>Date</span><span>Score</span><span>Actual Line</span><span>TB</span><span>Outcome</span><span>Model</span>
+        <div id="grade-log-headers" class="hidden" style="display:grid;grid-template-columns:80px 40px 90px 1fr 50px 80px 55px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
+          <span>Date</span><span>Scr</span><span>Player</span><span>Actual Line</span><span>TB</span><span>Outcome</span><span>Model</span>
         </div>
         <div id="grade-log"></div>
       </div>

@@ -137,7 +137,7 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .grade-btn { padding: 8px 16px; border-radius: 6px; border: none; font-family: monospace; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: opacity 0.15s; }
 .grade-btn.confirm { background: linear-gradient(135deg, #1a5a10, #0d3a08); color: #2ecc71; }
 .grade-btn.confirm:hover { opacity: 0.82; }
-.grade-log-row { display: grid; grid-template-columns: 80px 80px 1fr 60px 80px 60px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; }
+.grade-log-row { display: grid; grid-template-columns: 80px 40px 90px 1fr 50px 80px 55px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; }
 .outcome-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-align: center; }
 .outcome-badge.great  { background: #0d3a0d; color: #2ecc71; }
 .outcome-badge.good   { background: #1a3a10; color: #a8e063; }
