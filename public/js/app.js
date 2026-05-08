@@ -1457,7 +1457,6 @@ function estimateProbability(propKey,direction,line){
 const PROP_NAMES={
   'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
   'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
-  'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
 };
 
 function generateCorbetBets(score,factors,rawMarketMap){
