@@ -1570,8 +1570,6 @@ async function loadCorbet(){
             const dir=o.name.toLowerCase();
             const price=o.price;
             const line=o.point||0;
-            // Runs 0.5 is trivially "did they score at all" — skip it, use 1.5+ only
-            if(market.key==='batter_runs_scored'&&line<=0.5)return;
             // Display line: smallest seen across all books (for reference only)
             if(!m.line||line<m.line)m.line=line;
             // Best odds from ALL books for display
