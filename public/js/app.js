@@ -1540,9 +1540,8 @@ async function loadCorbet(){
     const propsText=await pr.text();
     let propData;
     try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
-    console.log('[CorBET] propData keys:', Object.keys(propData||{}));
-    console.log('[CorBET] bookmakers:', (propData.bookmakers||[]).length, (propData.bookmakers||[]).map(b=>b.title));
-    if(propData.message){throw new Error('Odds API: '+propData.message);}
+    console.log('[CorBET] propData full:', JSON.stringify(propData).slice(0,400));
+    if(propData.message||propData.error_code){throw new Error('Odds API error: '+(propData.message||propData.error_code));}
 
     // Build rawMarketMap.
     // Trusted books (DK/FD) are preferred for devig when available on both sides.
