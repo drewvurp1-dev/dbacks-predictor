@@ -234,8 +234,8 @@ function buildPredictionSummary(factors){
     const spark=recent.map(g=>{
       const h=parseInt(g.stat.hits)||0;const hr=parseInt(g.stat.homeRuns)||0;
       const rbi=parseInt(g.stat.rbi)||0;
-      const bg=hr>0?'#7f1d1d':h>=3?'#14532d':h>=2?'#1a3a1a':h===1?'#3a2800':'#18171f';
-      const fg=hr>0?'#ef4444':h>=3?'#4ade80':h>=2?'#86efac':h===1?'#fbbf24':'#555';
+      const bg=hr>0?'#1e3a5f':h>=3?'#14532d':h>=2?'#1a3a1a':h===1?'#3a2800':'#18171f';
+      const fg=hr>0?'#60a5fa':h>=3?'#4ade80':h>=2?'#86efac':h===1?'#fbbf24':'#555';
       const lbl=hr>0?`${h}/${hr}HR`:h>0?`${h}H`:'0';
       const dateShort=g.date?g.date.slice(5):'';
       return`<div title="${g.date||''}: ${h}H ${hr}HR ${rbi}RBI" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;background:${bg};border-radius:4px;padding:4px 2px;">
@@ -250,7 +250,7 @@ function buildPredictionSummary(factors){
         <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
           <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${avg10}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">AVG</div></div>
           <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalH}/${totalAB}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">H/AB</div></div>
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:${totalHR>0?'#ef4444':'#ccc'};">${totalHR}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">HR</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:${totalHR>0?'#60a5fa':'#ccc'};">${totalHR}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">HR</div></div>
           <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalRBI}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">RBI</div></div>
           <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalBB}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">BB</div></div>
           <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalK}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">K</div></div>
