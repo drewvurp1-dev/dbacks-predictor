@@ -210,113 +210,105 @@ async function loadPitcherStatcast(pitcherId){
   const safeRows=(text,label)=>{
     if(!text||text.trim().startsWith('<')){console.warn(`[PitcherStatcast] ${label} returned HTML or empty`);return[];}
     const rows=parseCSV(text);
-    console.log(`[PitcherStatcast] ${label}: ${rows.length} rows, columns:`,rows[0]?Object.keys(rows[0]).join(', '):'none');
+    console.log(`[PitcherStatcast] ${label}: ${rows.length} rows, cols:`,rows[0]?Object.keys(rows[0]).join(', '):'none');
     return rows;
   };
   const findRow=(rows,label)=>{
-    const row=rows.find(r=>String(r.player_id||r['player_id']||'').trim()===pid);
+    const row=rows.find(r=>String(r.player_id||'').trim()===pid);
     console.log(`[PitcherStatcast] ${label} match for pid ${pid}:`,row?'found':'not found');
     return row||null;
   };
-  const findFgRow=(rows)=>{
-    const row=rows.find(r=>String(r.xMLBAMID||r.MLBAMID||r.mlbamid||'').trim()===pid);
-    console.log(`[PitcherStatcast] FanGraphs match for pid ${pid}:`,row?'found':'not found');
-    return row||null;
-  };
-  // Pick first non-null value from a list of column keys
   const col=(row,...keys)=>{if(!row)return null;for(const k of keys){const v=row[k];if(v!=null&&v!=='')return v;}return null;};
   const fmtPct=(v,digits=1)=>{const n=parseFloat(v);return isNaN(n)?'—':n.toFixed(digits)+'%';};
   const fmtVal=(v,digits=2)=>{const n=parseFloat(v);return isNaN(n)?'—':n.toFixed(digits);};
 
   try{
-    const [scRes,expRes,cswRes,stuffRes,fgRes]=await Promise.allSettled([
+    const [scRes,expRes,cswRes]=await Promise.allSettled([
       fetch('/savant/statcast?type=pitcher&year=2026').then(r=>r.text()),
       fetch('/savant/expected?type=pitcher&year=2026').then(r=>r.text()),
       fetch('/savant/csw?year=2026').then(r=>r.text()),
-      fetch('/savant/stuffplus?year=2026').then(r=>r.text()),
-      fetch('/fangraphs/pitchers?year=2026').then(r=>r.text()),
     ]);
 
     const scRows  = safeRows(scRes.status==='fulfilled'?scRes.value:'',  'statcast');
     const expRows = safeRows(expRes.status==='fulfilled'?expRes.value:'', 'expected');
-    const cswRows = safeRows(cswRes.status==='fulfilled'?cswRes.value:'', 'csw');
-    const stuffRows=safeRows(stuffRes.status==='fulfilled'?stuffRes.value:'','stuffplus');
-    const fgRows  = safeRows(fgRes.status==='fulfilled'?fgRes.value:'',   'fangraphs');
+    const cswRows = safeRows(cswRes.status==='fulfilled'?cswRes.value:'', 'arsenal');
 
-    const scRow   = findRow(scRows,  'statcast');
-    const expRow  = findRow(expRows, 'expected');
-    const stuffRow= findRow(stuffRows,'stuffplus');
-    const fgRow   = findFgRow(fgRows);
+    const scRow  = findRow(scRows,  'statcast');
+    const expRow = findRow(expRows, 'expected');
 
-    // CSW: pitch-arsenal endpoint may have one row per pitcher (overall) or per pitch type
-    // If multiple rows for same pid, average CSW weighted by pitch usage
-    const cswPidRows=cswRows.filter(r=>String(r.player_id||'').trim()===pid);
-    let cswRaw=null;
-    if(cswPidRows.length===1){
-      cswRaw=col(cswPidRows[0],'csw_percent','csw','called_str_plus_whiff_pct','cswp');
-    }else if(cswPidRows.length>1){
-      // Weight by pitch_percent or pa_of_pitches
-      let totalUsage=0,weightedCSW=0;
-      cswPidRows.forEach(r=>{
-        const usage=parseFloat(r.pitch_percent||r.pitch_usage||0)||0;
-        const cswVal=parseFloat(col(r,'csw_percent','csw','called_str_plus_whiff_pct','cswp')||0)||0;
-        weightedCSW+=cswVal*usage; totalUsage+=usage;
+    // Pitch-arsenal: one row per pitch type — weighted average across all pitches
+    const arsenalRows=cswRows.filter(r=>String(r.player_id||'').trim()===pid);
+    console.log('[PitcherStatcast] arsenal rows for pid:',arsenalRows.length);
+    const weightedAvg=(field)=>{
+      if(!arsenalRows.length)return null;
+      let total=0,weighted=0;
+      arsenalRows.forEach(r=>{
+        const usage=parseFloat(r.pitch_usage||0)||0;
+        const val=parseFloat(r[field]||0)||0;
+        weighted+=val*usage; total+=usage;
       });
-      if(totalUsage>0)cswRaw=(weightedCSW/totalUsage).toFixed(1);
-    }
-    console.log('[PitcherStatcast] CSW rows for pid:',cswPidRows.length,'raw value:',cswRaw);
+      return total>0?(weighted/total).toFixed(1):null;
+    };
+    const whiffRaw   = weightedAvg('whiff_percent');
+    const kPctRaw    = weightedAvg('k_percent');
+    const putAwayRaw = weightedAvg('put_away');
 
-    // Extract stats — try multiple column names
-    const whiffRaw = col(scRow,'whiff_percent','whiffs_percent','whiff_pct','whiff');
-    const gbRaw    = col(scRow,'groundballs_percent','gb_percent','gb');
-    const fbRaw    = col(scRow,'flyballs_percent','fb_percent','fbld','fb');
-    const brlRaw   = col(scRow,'brl_percent','brl_pa','brl_pitcher');
-    const hhRaw    = col(scRow,'ev95percent','hard_hit_percent','hard_hit_pct');
-    const evRaw    = col(scRow,'avg_hit_speed','avg_exit_velocity');
-    const xwobaRaw = col(expRow,'est_woba','xwoba','expected_woba');
-    const stuffRaw = col(stuffRow,'stuff_plus','stuff+','Stuff+','stuff','stuffplus');
-    const xeraRaw  = col(stuffRow,'xera','xERA','x_era','est_era');
-    const xfipRaw  = col(fgRow,'xFIP','xfip','xFip');
+    // Statcast pitcher: GB%, FB%, Barrel%, HH%, Avg EV
+    const gbRaw        = col(scRow,'gb','groundballs_percent','gb_percent');
+    const fbRaw        = col(scRow,'fbld','flyballs_percent','fb_percent');
+    const brlRaw       = col(scRow,'brl_percent','brl_pa');
+    const hhRaw        = col(scRow,'ev95percent','hard_hit_percent');
+    const evRaw        = col(scRow,'avg_hit_speed','avg_exit_velocity');
 
-    const whiffPct = fmtPct(whiffRaw);
-    const gbPct    = fmtPct(gbRaw);
-    const fbPct    = fmtPct(fbRaw);
-    const brlAgainst = fmtPct(brlRaw);
-    const hhAgainst  = fmtPct(hhRaw);
+    // Expected pitcher: xwOBA against, xERA
+    const xwobaRaw     = col(expRow,'est_woba','xwoba');
+    const xeraRaw      = col(expRow,'xera','xERA');
+
+    const whiffPct     = fmtPct(whiffRaw);
+    const kPct         = fmtPct(kPctRaw);
+    const putAway      = fmtPct(putAwayRaw);
+    const gbPct        = fmtPct(gbRaw);
+    const fbPct        = fmtPct(fbRaw);
+    const brlAgainst   = fmtPct(brlRaw);
+    const hhAgainst    = fmtPct(hhRaw);
     const avgEVAgainst = evRaw?fmtVal(evRaw,1)+' mph':'—';
-    const xwobaPct = fmtVal(xwobaRaw,3);
-    const cswPct   = fmtPct(cswRaw);
-    const stuffPlus= stuffRaw?fmtVal(stuffRaw,0):'—';
-    const xERAVal  = fmtVal(xeraRaw,2);
-    const xfipVal  = fmtVal(xfipRaw,2);
+    const xwobaPct     = fmtVal(xwobaRaw,3);
+    const xERAVal      = fmtVal(xeraRaw,2);
 
-    // Color coding
     const whiffC  = whiffPct!=='—'?(parseFloat(whiffPct)>=28?'good':parseFloat(whiffPct)<=18?'bad':''):'';
+    const kC      = kPct!=='—'?(parseFloat(kPct)>=28?'good':parseFloat(kPct)<=18?'bad':''):'';
+    const putAwayC= putAway!=='—'?(parseFloat(putAway)>=33?'good':parseFloat(putAway)<=20?'bad':''):'';
     const gbC     = gbPct!=='—'?(parseFloat(gbPct)>=50?'good':''):'';
     const brlC    = brlAgainst!=='—'?(parseFloat(brlAgainst)<=5?'good':parseFloat(brlAgainst)>=12?'bad':''):'';
     const hhC     = hhAgainst!=='—'?(parseFloat(hhAgainst)<=35?'good':parseFloat(hhAgainst)>=48?'bad':''):'';
-    const cswC    = cswPct!=='—'?(parseFloat(cswPct)>=30?'good':parseFloat(cswPct)<=22?'bad':''):'';
-    const stuffC  = stuffPlus!=='—'?(parseFloat(stuffPlus)>=105?'good':parseFloat(stuffPlus)<=95?'bad':''):'';
-    const xeraC   = xERAVal!=='—'?(parseFloat(xERAVal)<=3.50?'good':parseFloat(xERAVal)>=4.50?'bad':''):'';
-    const xfipC   = xfipVal!=='—'?(parseFloat(xfipVal)<=3.50?'good':parseFloat(xfipVal)>=4.50?'bad':''):'';
+    const xeraC   = xERAVal!=='—'?(parseFloat(xERAVal)<=3.25?'good':parseFloat(xERAVal)>=4.50?'bad':''):'';
 
-    S.pitcherStatcast={whiff:parseFloat(whiffPct)||null,gbPct:parseFloat(gbPct)||null,fbPct:parseFloat(fbPct)||null,brlAgainst:parseFloat(brlAgainst)||null,hhAgainst:parseFloat(hhAgainst)||null};
+    S.pitcherStatcast={
+      whiff:    parseFloat(whiffRaw)||null,
+      kPct:     parseFloat(kPctRaw)||null,
+      putAway:  parseFloat(putAwayRaw)||null,
+      gbPct:    parseFloat(gbRaw)||null,
+      fbPct:    parseFloat(fbRaw)||null,
+      brlAgainst: parseFloat(brlRaw)||null,
+      hhAgainst:  parseFloat(hhRaw)||null,
+      xwoba:    parseFloat(xwobaRaw)||null,
+      xera:     parseFloat(xeraRaw)||null,
+    };
 
     const boxes=[
-      statBox('Whiff%',whiffPct,'Whiff rate allowed',whiffC),
-      statBox('GB%',gbPct,'Ground ball rate',gbC),
-      statBox('FB%',fbPct,'Fly ball rate',''),
-      statBox('CSW%',cswPct,'Called Strike + Whiff%',cswC),
-      statBox('Barrel% vs',brlAgainst,'Barrels allowed',brlC),
-      statBox('HH% vs',hhAgainst,'Hard contact allowed',hhC),
-      statBox('Avg EV vs',avgEVAgainst,'Avg EV against',''),
-      statBox('xwOBA vs',xwobaPct,'Expected wOBA against',''),
-      statBox('Stuff+',stuffPlus,'Pitch quality score',stuffC),
-      statBox('xERA',xERAVal,'Expected ERA',xeraC),
-      statBox('xFIP',xfipVal,'Expected FIP (FG)',xfipC),
+      statBox('Whiff%',    whiffPct,     'Whiff rate per pitch',       whiffC),
+      statBox('K%',        kPct,         'Strikeout rate',             kC),
+      statBox('Put Away%', putAway,      '2-strike put-away rate',     putAwayC),
+      statBox('GB%',       gbPct,        'Ground ball rate',           gbC),
+      statBox('FB%',       fbPct,        'Fly ball rate',              ''),
+      statBox('Barrel% vs',brlAgainst,   'Barrels allowed',            brlC),
+      statBox('HH% vs',   hhAgainst,    'Hard contact allowed',       hhC),
+      statBox('Avg EV vs',avgEVAgainst, 'Avg exit velo against',      ''),
+      statBox('xwOBA vs', xwobaPct,     'Expected wOBA against',      ''),
+      statBox('xERA',     xERAVal,      'Expected ERA',               xeraC),
     ].join('');
 
-    if(!scRow&&!expRow&&cswPidRows.length===0&&!stuffRow&&!fgRow){
+    if(!scRow&&!expRow&&arsenalRows.length===0){
       el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">No Statcast data found for this pitcher.</div>';
     }else{
       el.innerHTML=boxes;
@@ -643,21 +635,77 @@ function calcPrediction(){
     if(bbP>=12)add('BB%',bbP.toFixed(1)+'%',3,'Elite walk rate');
     if(kP>=28)add('K%',kP.toFixed(1)+'%',-3,'High strikeout rate');
   }
-  // Statcast factors
+  // Batter Statcast factors
   if(S.statcast){
-    const {brl,hhRate,whiff,xwoba}=S.statcast;
-    if(brl!=null&&!isNaN(brl)){
+    const {brl,hhRate,whiff,xwoba,xba,xslg,sweetSpot,batSpeed,swingLength,squaredUp,blast,avgEV}=S.statcast;
+    if(brl!=null){
       if(brl>=12)add('Barrel%',brl.toFixed(1)+'%',4,'Elite barrel rate — hard contact tendency');
       else if(brl<=4)add('Barrel%',brl.toFixed(1)+'%',-2,'Below-average barrel rate');
     }
-    if(hhRate!=null&&!isNaN(hhRate)&&hhRate>=50)add('Hard-Hit%',hhRate.toFixed(1)+'%',3,'Elite hard-hit rate — consistent solid contact');
-    if(whiff!=null&&!isNaN(whiff)){
+    if(hhRate!=null){
+      if(hhRate>=48)add('Hard-Hit%',hhRate.toFixed(1)+'%',3,'Elite hard-hit rate — consistent solid contact');
+      else if(hhRate<=33)add('Hard-Hit%',hhRate.toFixed(1)+'%',-2,'Low hard-hit rate — soft contact tendency');
+    }
+    if(avgEV!=null){
+      if(avgEV>=93)add('Avg EV',avgEV.toFixed(1)+' mph',2,'Elite average exit velocity');
+      else if(avgEV<=84)add('Avg EV',avgEV.toFixed(1)+' mph',-2,'Below-average exit velocity');
+    }
+    if(whiff!=null){
       if(whiff<=18)add('Whiff%',whiff.toFixed(1)+'%',3,'Low whiff rate — difficult to strike out');
       else if(whiff>=30)add('Whiff%',whiff.toFixed(1)+'%',-3,'High whiff rate — vulnerable to swing-and-miss stuff');
     }
-    if(xwoba!=null&&!isNaN(xwoba)){
+    if(xwoba!=null){
       if(xwoba>=0.380)add('xwOBA',xwoba.toFixed(3),4,'Elite expected production — hitting the ball well');
       else if(xwoba<=0.290)add('xwOBA',xwoba.toFixed(3),-3,'Below-average expected production');
+    }
+    if(xba!=null){
+      if(xba>=0.290)add('xBA',xba.toFixed(3),2,'High expected batting average — quality contact');
+      else if(xba<=0.210)add('xBA',xba.toFixed(3),-2,'Low expected BA — weak contact quality');
+    }
+    if(xslg!=null){
+      if(xslg>=0.500)add('xSLG',xslg.toFixed(3),3,'Elite expected slugging — extra-base power');
+      else if(xslg<=0.350)add('xSLG',xslg.toFixed(3),-2,'Low expected slugging — limited power output');
+    }
+    if(sweetSpot!=null){
+      if(sweetSpot>=40)add('Sweet Spot%',sweetSpot.toFixed(1)+'%',2,'High sweet spot contact — consistent quality hits');
+      else if(sweetSpot<=25)add('Sweet Spot%',sweetSpot.toFixed(1)+'%',-2,'Low sweet spot % — poor launch angle profile');
+    }
+    if(batSpeed!=null){
+      if(batSpeed>=76)add('Bat Speed',batSpeed.toFixed(1)+' mph',2,'Elite bat speed — generates more power');
+      else if(batSpeed<=67)add('Bat Speed',batSpeed.toFixed(1)+' mph',-2,'Slow bat speed — timing vulnerability');
+    }
+    if(squaredUp!=null&&squaredUp>=22)add('Sqd Up%',squaredUp.toFixed(1)+'%',2,'Elite squared-up contact rate');
+    if(blast!=null&&blast>=8)add('Blast%',blast.toFixed(1)+'%',2,'Elite blast rate — authoritative contact');
+  }
+  // Pitcher Statcast factors
+  if(S.pitcherStatcast){
+    const{whiff:pWhiff,kPct,putAway,gbPct,brlAgainst,hhAgainst,xwoba:pXwoba,xera}=S.pitcherStatcast;
+    if(pWhiff!=null){
+      if(pWhiff>=28)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',-4,'Elite whiff rate — dominant swing-and-miss stuff','pitcher');
+      else if(pWhiff<=16)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',3,'Low pitcher whiff rate — hitter-friendly contact','pitcher');
+    }
+    if(kPct!=null){
+      if(kPct>=28)add('Pitcher K%',kPct.toFixed(1)+'%',-3,'Elite strikeout rate pitcher','pitcher');
+      else if(kPct<=18)add('Pitcher K%',kPct.toFixed(1)+'%',3,'Low K rate — contact-heavy opportunity','pitcher');
+    }
+    if(putAway!=null&&putAway>=33)add('Put Away%',putAway.toFixed(1)+'%',-2,'Elite 2-strike put-away — finishes hitters','pitcher');
+    if(gbPct!=null&&gbPct>=50)add('GB%',gbPct.toFixed(1)+'%',-2,'Ground ball pitcher — limits extra-base power','pitcher');
+    if(brlAgainst!=null){
+      if(brlAgainst<=5)add('Barrel% vs',brlAgainst.toFixed(1)+'%',-2,'Suppresses barrels — elite contact quality control','pitcher');
+      else if(brlAgainst>=12)add('Barrel% vs',brlAgainst.toFixed(1)+'%',3,'High barrel rate allowed — hitter-friendly contact','pitcher');
+    }
+    if(hhAgainst!=null){
+      if(hhAgainst<=33)add('HH% vs',hhAgainst.toFixed(1)+'%',-2,'Allows very little hard contact','pitcher');
+      else if(hhAgainst>=48)add('HH% vs',hhAgainst.toFixed(1)+'%',3,'Allows heavy hard contact — hitter-friendly','pitcher');
+    }
+    if(pXwoba!=null){
+      if(pXwoba<=0.280)add('xwOBA vs',pXwoba.toFixed(3),-3,'Elite expected wOBA suppression','pitcher');
+      else if(pXwoba>=0.370)add('xwOBA vs',pXwoba.toFixed(3),3,'High xwOBA allowed — hitter-friendly profile','pitcher');
+    }
+    if(xera!=null){
+      if(xera<=3.00)add('xERA',xera.toFixed(2),-4,'Elite expected ERA — dominant pitcher','pitcher');
+      else if(xera<=3.75)add('xERA',xera.toFixed(2),-2,'Above-average expected ERA','pitcher');
+      else if(xera>=4.75)add('xERA',xera.toFixed(2),3,'High xERA — hittable pitcher profile','pitcher');
     }
   }
   const w=S.weather;const wm=document.getElementById('weather-manual')&&!document.getElementById('weather-manual').classList.contains('hidden');
@@ -1917,39 +1965,78 @@ async function loadStatcast(playerId) {
     const expRows  = parseCSV(expText);
     const batRows  = parseCSV(batText);
 
-    // Find player row by ID
     const sid = String(playerId);
-    // Try multiple possible ID column names and strip any whitespace
-    const statRow = statRows.find(r => String(r.player_id||r['player_id']||'').trim() === sid);
-    const expRow  = expRows.find(r  => String(r.player_id||r['player_id']||'').trim() === sid);
-    const batRow  = batRows.find(r  => String(r.id||r['id']||r.player_id||'').trim() === sid);
+    const statRow = statRows.find(r => String(r.player_id||'').trim() === sid);
+    const expRow  = expRows.find(r  => String(r.player_id||'').trim() === sid);
+    const batRow  = batRows.find(r  => String(r.id||r.player_id||'').trim() === sid);
 
-    // Debug log to console
-    console.log('Statcast rows found:', statRows.length, 'stat match:', !!statRow, 'exp match:', !!expRow, 'bat match:', !!batRow);
+    console.log('Statcast rows:', statRows.length, 'stat:', !!statRow, 'exp:', !!expRow, 'bat:', !!batRow);
 
-    const xwoba   = expRow  ? parseFloat(expRow.est_woba).toFixed(3)       : '—';
-    const brl     = statRow ? parseFloat(statRow.brl_percent).toFixed(1)+'%': '—';
-    const hhRate  = statRow ? parseFloat(statRow.ev95percent).toFixed(1)+'%': '—';
-    const avgEV   = statRow ? parseFloat(statRow.avg_hit_speed).toFixed(1)  : '—';
-    const whiff   = batRow  ? (parseFloat(batRow.whiff_per_swing)*100).toFixed(1)+'%': '—';
-    const batSpd  = batRow  ? parseFloat(batRow.avg_bat_speed).toFixed(1)+' mph': '—';
+    const p=(v,d=1)=>{const n=parseFloat(v);return isNaN(n)?null:n};
 
-    const xwobaColor = xwoba!=='—'?(parseFloat(xwoba)>=0.360?'good':parseFloat(xwoba)<=0.300?'bad':''):'';
-    const brlColor   = brl!=='—'?(parseFloat(brl)>=10?'good':parseFloat(brl)<=4?'bad':''):'';
-    const hhColor    = hhRate!=='—'?(parseFloat(hhRate)>=45?'good':parseFloat(hhRate)<=35?'bad':''):'';
-    const whiffColor = whiff!=='—'?(parseFloat(whiff)<=20?'good':parseFloat(whiff)>=30?'bad':''):'';
+    // Expected stats
+    const xwobaRaw = p(expRow?.est_woba);
+    const xbaRaw   = p(expRow?.est_ba);
+    const xslgRaw  = p(expRow?.est_slg);
+
+    // Statcast contact quality
+    const brlRaw     = p(statRow?.brl_percent);
+    const hhRaw      = p(statRow?.ev95percent);
+    const avgEVRaw   = p(statRow?.avg_hit_speed);
+    const sweetSpRaw = p(statRow?.anglesweetspotpercent);
+    const gbRaw      = p(statRow?.gb);
+    const fbRaw      = p(statRow?.fbld);
+
+    // Bat tracking
+    const whiffRaw   = batRow ? p(batRow.whiff_per_swing)*100 : null;
+    const batSpdRaw  = p(batRow?.avg_bat_speed);
+    const swLenRaw   = p(batRow?.swing_length);
+    const sqdUpRaw   = batRow ? p(batRow.squared_up_per_bat_contact)*100 : null;
+    const blastRaw   = batRow ? p(batRow.blast_per_bat_contact)*100 : null;
+
+    const fmt=(v,d,suffix='')=>v!=null?v.toFixed(d)+suffix:'—';
+    const fmtPct=(v,d=1)=>fmt(v,d,'%');
+
+    const xwoba   = fmt(xwobaRaw,3);
+    const xba     = fmt(xbaRaw,3);
+    const xslg    = fmt(xslgRaw,3);
+    const brl     = fmtPct(brlRaw);
+    const hhRate  = fmtPct(hhRaw);
+    const avgEV   = avgEVRaw!=null?avgEVRaw.toFixed(1)+' mph':'—';
+    const sweetSp = fmtPct(sweetSpRaw);
+    const whiff   = fmtPct(whiffRaw);
+    const batSpd  = batSpdRaw!=null?batSpdRaw.toFixed(1)+' mph':'—';
+    const swLen   = swLenRaw!=null?swLenRaw.toFixed(1)+' ft':'—';
+    const sqdUp   = fmtPct(sqdUpRaw);
+    const blast   = fmtPct(blastRaw);
+
+    const c=(v,good,bad,invert=false)=>{
+      if(v==null)return '';
+      return (invert?(v<=bad?'good':v>=good?'bad':''):(v>=good?'good':v<=bad?'bad':''));
+    };
 
     document.getElementById('stat-statcast').innerHTML = [
-      statBox('xwOBA',  xwoba,  'Expected weighted OBA', xwobaColor),
-      statBox('Barrel%', brl,   'Barrel rate', brlColor),
-      statBox('HH Rate', hhRate,'Hard-hit rate (95+ mph EV)', hhColor),
-      statBox('Avg EV',  avgEV+'mph', 'Avg exit velocity', ''),
-      statBox('Whiff%',  whiff, 'Whiff rate per swing', whiffColor),
-      statBox('Bat Spd', batSpd,'Avg bat speed', ''),
+      statBox('xwOBA',   xwoba,  'Expected weighted OBA',        c(xwobaRaw,0.360,0.300)),
+      statBox('xBA',     xba,    'Expected batting average',     c(xbaRaw,0.280,0.220)),
+      statBox('xSLG',    xslg,   'Expected slugging %',          c(xslgRaw,0.480,0.360)),
+      statBox('Barrel%', brl,    'Barrel rate',                  c(brlRaw,10,4)),
+      statBox('HH Rate', hhRate, 'Hard-hit rate (95+ mph EV)',   c(hhRaw,45,35)),
+      statBox('Avg EV',  avgEV,  'Avg exit velocity',            c(avgEVRaw,92,86)),
+      statBox('Sweet Sp%',sweetSp,'Sweet spot contact %',        c(sweetSpRaw,40,28)),
+      statBox('Whiff%',  whiff,  'Whiff rate per swing',         c(whiffRaw,30,20,true)),
+      statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68)),
+      statBox('Sw Len',  swLen,  'Swing length (shorter=better)',c(swLenRaw,7.4,6.8,true)),
+      statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12)),
+      statBox('Blast%',  blast,  'Blast per contact',            c(blastRaw,8,3)),
     ].join('');
 
-    // Store for prediction use
-    S.statcast = { xwoba: parseFloat(xwoba)||null, brl: parseFloat(brl)||null, hhRate: parseFloat(hhRate)||null, whiff: parseFloat(whiff)||null };
+    S.statcast = {
+      xwoba: xwobaRaw, xba: xbaRaw, xslg: xslgRaw,
+      brl: brlRaw, hhRate: hhRaw, avgEV: avgEVRaw,
+      sweetSpot: sweetSpRaw, gb: gbRaw, fb: fbRaw,
+      whiff: whiffRaw, batSpeed: batSpdRaw,
+      swingLength: swLenRaw, squaredUp: sqdUpRaw, blast: blastRaw,
+    };
 
   } catch(e) {
     document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
