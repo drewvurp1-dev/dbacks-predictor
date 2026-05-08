@@ -1466,8 +1466,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
     if(!PROP_NAMES[propKey])return;
     // Use trusted (DK/FD) line if available, then any calc-book line, never BetOnline's exotic line
     const rawLine=mkt.trustedLine||mkt.calcLine||mkt.line;
-    // Runs: never show 0.5 (trivial "did they score" line) — use 1.5 as the floor
-    const line=propKey==='batter_runs_scored'?(rawLine&&rawLine>0.5?rawLine:1.5):(rawLine||0.5);
+    const line=rawLine||0.5;
     // Prefer DraftKings/FanDuel prices when available on both sides; fall back to all valid books
     const calcOver=mkt.trustedOverPrices?.length?mkt.trustedOverPrices:mkt.overPrices;
     const calcUnder=mkt.trustedUnderPrices?.length?mkt.trustedUnderPrices:mkt.underPrices;
