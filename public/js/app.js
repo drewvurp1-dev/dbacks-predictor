@@ -70,63 +70,206 @@ async function loadGameLog(){
     const r=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=gameLog&group=hitting&season=2026&gameType=R`);
     const d=await r.json();
     const games=d?.stats?.[0]?.splits||[];
-    S.recentGameLog=games.slice(-8).reverse(); // most recent first
+    S.recentGameLog=games.slice(-10).reverse(); // most recent first
   }catch(e){ S.recentGameLog=null; }
 }
 
 function buildPredictionSummary(factors){
   const el=document.getElementById('prediction-summary');
   if(!el)return;
-  const positives=factors.filter(f=>f.impact==='positive');
-  const negatives=factors.filter(f=>f.impact==='negative');
+
   const lastName=S.playerName.split(' ').pop();
-  let text='';
+  const score=S.lastScore||50;
+  const pn=S.pitcher?.name||document.getElementById('m-pitcher-name')?.value||'Unknown Pitcher';
+  const pitcherLast=pn.split(' ').pop();
+  const hand=S.pitcher?.hand||S.pitcherThrows;
+  const era=S.pitcher?.st?.era?parseFloat(S.pitcher.st.era).toFixed(2):null;
+  const xera=S.pitcherStatcast?.xera;
+  const daysRest=S.pitcher?.daysRest;
+  const lastPC=S.pitcher?.lastOuting?.numberOfPitches;
+  const gender=S.playerName.toLowerCase().endsWith('a')?'her':'his'; // rough heuristic, fine for D-backs roster
 
-  // Top positives (first 3)
-  const topPos=positives.slice(0,3);
-  if(topPos.length){
-    const posStr=topPos.map(f=>`${f.label} (${f.value})`).join(', ');
-    text+=`Working in ${lastName}'s favor today: ${posStr}. `;
+  // Sort factors by absolute impact magnitude
+  const sorted=[...factors].sort((a,b)=>Math.abs(b.adj||0)-Math.abs(a.adj||0));
+  const drivers=sorted.filter(f=>f.impact==='positive').slice(0,4);
+  const headwinds=sorted.filter(f=>f.impact==='negative').slice(0,4);
+
+  // ── VERDICT ────────────────────────────────────────────────────────────
+  let verdict='';
+  if(score>=75)verdict=`The model sees a strong setup for ${lastName} today — multiple high-confidence signals are stacking up against ${pitcherLast}.`;
+  else if(score>=62)verdict=`More factors lean in ${lastName}'s favor than against him today, with ${pitcherLast} presenting a realistic opportunity for production.`;
+  else if(score>=50)verdict=`This is a coin-flip setup for ${lastName}. The model finds modest positives but meaningful resistance from ${pitcherLast}.`;
+  else if(score>=38)verdict=`${lastName} is facing a tough setup — the factors lean toward a below-average day against ${pitcherLast}.`;
+  else verdict=`Difficult day projected for ${lastName}. Multiple headwinds — including the pitcher profile and conditions — significantly suppress the model's outlook.`;
+
+  // ── DRIVERS ─────────────────────────────────────────────────────────────
+  const driversHTML=drivers.length?`
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;color:#2ecc71;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Key Drivers</div>
+      ${drivers.map(f=>`
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #0e0c22;">
+          <div style="flex-shrink:0;margin-right:8px;">
+            <span style="color:#2ecc71;font-weight:700;font-size:12px;font-family:monospace;">${f.label}</span>
+            <span style="color:#888;font-size:11px;margin-left:5px;">${f.value}</span>
+          </div>
+          <div style="color:#aaa;font-size:11px;text-align:right;">${f.note}</div>
+        </div>`).join('')}
+    </div>`:''
+
+  // ── HEADWINDS ────────────────────────────────────────────────────────────
+  const headwindsHTML=headwinds.length?`
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;color:#e74c3c;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Key Headwinds</div>
+      ${headwinds.map(f=>`
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #0e0c22;">
+          <div style="flex-shrink:0;margin-right:8px;">
+            <span style="color:#e74c3c;font-weight:700;font-size:12px;font-family:monospace;">${f.label}</span>
+            <span style="color:#888;font-size:11px;margin-left:5px;">${f.value}</span>
+          </div>
+          <div style="color:#aaa;font-size:11px;text-align:right;">${f.note}</div>
+        </div>`).join('')}
+    </div>`:''
+
+  // ── PITCHER READ ─────────────────────────────────────────────────────────
+  let pitcherLines=[];
+  if(era){
+    if(xera){
+      const diff=parseFloat(era)-xera;
+      if(diff>0.75)pitcherLines.push(`${pitcherLast}'s ERA (${era}) is inflated vs. xERA (${xera.toFixed(2)}) — likely pitching better than results show. Expect strong performance.`);
+      else if(diff<-0.75)pitcherLines.push(`${pitcherLast}'s ERA (${era}) sits well below xERA (${xera.toFixed(2)}) — regression risk, has outperformed underlying metrics.`);
+      else pitcherLines.push(`${pitcherLast}'s ERA (${era}) aligns with xERA (${xera.toFixed(2)}) — results match underlying performance.`);
+    }else{
+      pitcherLines.push(`${pitcherLast} carries a ${era} ERA on the season.`);
+    }
+  }
+  const pWhiff=S.pitcherStatcast?.whiff;const pKPct=S.pitcherStatcast?.kPct;
+  const pPutAway=S.pitcherStatcast?.putAway;const pGB=S.pitcherStatcast?.gbPct;
+  if(pWhiff!=null&&pKPct!=null){
+    if(pWhiff>=28&&pKPct>=26)pitcherLines.push(`Dominant swing-and-miss arsenal — ${pWhiff.toFixed(1)}% Whiff, ${pKPct.toFixed(1)}% K rate. Premium strikeout threat.`);
+    else if(pWhiff>=24)pitcherLines.push(`Above-average movement: ${pWhiff.toFixed(1)}% Whiff, ${pKPct.toFixed(1)}% K%. Will generate weak contact.`);
+    else if(pWhiff<=18)pitcherLines.push(`Below-average swing-and-miss (${pWhiff.toFixed(1)}% Whiff) — ${lastName} can expect to put the ball in play regularly.`);
+    else pitcherLines.push(`Moderate arsenal: ${pWhiff.toFixed(1)}% Whiff, ${pKPct.toFixed(1)}% K%.`);
+  }
+  if(pPutAway!=null&&pPutAway>=32)pitcherLines.push(`Elite 2-strike put-away rate (${pPutAway.toFixed(1)}%) — difficult to battle back once behind in the count.`);
+  if(pGB!=null&&pGB>=50)pitcherLines.push(`Pronounced ground ball tendency (${pGB.toFixed(1)}% GB) — power is suppressed, extra-base opportunities limited.`);
+  if(daysRest!=='—'&&daysRest!=null){
+    if(daysRest<4)pitcherLines.push(`⚠ On short rest (${daysRest} days) — command may waver, pitch count could be managed early.`);
+    else if(daysRest>=6)pitcherLines.push(`Well-rested on ${daysRest} days — expect sharp command and a full arsenal.`);
+  }
+  if(lastPC&&lastPC>=100)pitcherLines.push(`Threw ${lastPC} pitches last outing — possible accumulated fatigue this start.`);
+
+  const pitcherHTML=pitcherLines.length?`
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;color:#a855f7;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Pitcher Read — ${pn} (${hand}HP)</div>
+      ${pitcherLines.map(l=>`<div style="font-size:12px;color:#bbb;padding:5px 0;border-bottom:1px solid #0e0c22;line-height:1.5;">${l}</div>`).join('')}
+    </div>`:''
+
+  // ── CAREER MATCHUP ───────────────────────────────────────────────────────
+  let matchupHTML='';
+  const mu=S.matchupStats;
+  if(mu&&mu.ab>=3){
+    const opsColor=mu.ops>=0.850?'#2ecc71':mu.ops<=0.620?'#e74c3c':'#f39c12';
+    let muNarr='';
+    if(mu.ab>=20){
+      if(mu.ops>=0.950)muNarr=`${lastName} owns this matchup historically — consistently damages ${pitcherLast} in a substantial sample.`;
+      else if(mu.ops>=0.800)muNarr=`Solid career track record vs. ${pitcherLast} — ${lastName} has handled this arm well over time.`;
+      else if(mu.ops<=0.600)muNarr=`${pitcherLast} has historically dominated ${lastName} — clear historical edge for the pitcher.`;
+      else if(mu.ops<=0.700)muNarr=`${lastName} has below-average career numbers vs. ${pitcherLast} — the pitcher holds a mild edge.`;
+      else muNarr=`Career matchup is relatively neutral — neither player holds a clear historical edge.`;
+    }else if(mu.ab>=10){
+      muNarr=`Moderate sample (${mu.ab} AB): ${lastName} is batting ${mu.avg} with a ${mu.ops.toFixed(3)} OPS vs. ${pitcherLast}.`;
+    }else{
+      muNarr=`Small sample (${mu.ab} AB) — directional signal only. ${lastName} is ${mu.ops.toFixed(3)} OPS in limited career matchups.`;
+    }
+    if(mu.hr>=2)muNarr+=` Has gone deep ${mu.hr}× against ${pitcherLast}.`;
+    if(mu.k&&mu.ab>=8){const kr=((mu.k/mu.ab)*100).toFixed(0);if(parseInt(kr)>=30)muNarr+=` High K rate (${kr}%) — ${pitcherLast} generates swing-and-miss from ${lastName} career-wide.`;}
+    if(mu.bb&&mu.ab>=8){const bbr=((mu.bb/mu.ab)*100).toFixed(0);if(parseInt(bbr)>=15)muNarr+=` ${lastName} draws walks at a high rate vs. ${pitcherLast} (${bbr}% BB).`;}
+    matchupHTML=`
+      <div style="margin-bottom:16px;">
+        <div style="font-size:10px;color:#f39c12;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Career vs. ${pitcherLast} · ${mu.ab} AB</div>
+        <div style="display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap;">
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:${opsColor};">${mu.ops.toFixed(3)}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">OPS</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:#ccc;">${mu.avg}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">AVG</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:${(mu.hr||0)>0?'#A71930':'#ccc'};">${mu.hr||0}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">HR</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:#ccc;">${mu.k||0}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">K</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:#ccc;">${mu.bb||0}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">BB</div></div>
+        </div>
+        <div style="font-size:12px;color:#bbb;line-height:1.5;">${muNarr}</div>
+      </div>`;
   }
 
-  // Top negatives (first 2)
-  const topNeg=negatives.slice(0,2);
-  if(topNeg.length){
-    const negStr=topNeg.length===1
-      ?`${topNeg[0].label} (${topNeg[0].value})`
-      :`${topNeg[0].label} (${topNeg[0].value}) and ${topNeg[1].label} (${topNeg[1].value})`;
-    text+=`The main headwinds are ${negStr}. `;
-  } else if(topPos.length){
-    text+='No significant headwinds today. ';
-  }
-
-  // Recent form from game log
+  // ── LAST 10 GAMES ────────────────────────────────────────────────────────
+  let recentHTML='';
   if(S.recentGameLog?.length>0){
-    const recent=S.recentGameLog.slice(0,8);
-    const last4=recent.slice(0,4);
-    const last3=recent.slice(0,3);
+    const recent=S.recentGameLog.slice(0,10);const n=recent.length;
     const totalH=recent.reduce((s,g)=>s+(parseInt(g.stat.hits)||0),0);
     const totalAB=recent.reduce((s,g)=>s+(parseInt(g.stat.atBats)||0),0);
     const totalHR=recent.reduce((s,g)=>s+(parseInt(g.stat.homeRuns)||0),0);
-    const hotGames=last4.filter(g=>(parseInt(g.stat.hits)||0)>=2).length;
-    const hitlessLast3=last3.filter(g=>(parseInt(g.stat.hits)||0)===0).length;
-    const l4H=last4.reduce((s,g)=>s+(parseInt(g.stat.hits)||0),0);
-    const l4AB=last4.reduce((s,g)=>s+(parseInt(g.stat.atBats)||0),0);
-    let trend='';
-    if(hotGames>=3){
-      trend=`${lastName} is on fire — ${l4H}-for-${l4AB} over his last 4 games${totalHR>0?` with ${totalHR} HR over ${recent.length} games`:''}.`;
-    } else if(hitlessLast3>=2){
-      trend=`${lastName} has cooled off, going hitless in ${hitlessLast3} of his last 3 games.`;
-    } else {
-      const avg=totalAB>0?(totalH/totalAB).toFixed(3):'—';
-      trend=`Over the last ${recent.length} games: ${totalH}-for-${totalAB} (${avg})${totalHR>0?` with ${totalHR} HR`:''}.`;
-    }
-    text+=trend;
-  } else {
-    text+='Recent game log unavailable.';
+    const totalRBI=recent.reduce((s,g)=>s+(parseInt(g.stat.rbi)||0),0);
+    const totalBB=recent.reduce((s,g)=>s+(parseInt(g.stat.baseOnBalls)||0),0);
+    const totalK=recent.reduce((s,g)=>s+(parseInt(g.stat.strikeOuts)||0),0);
+    const multiHit=recent.filter(g=>(parseInt(g.stat.hits)||0)>=2).length;
+    const hitless=recent.filter(g=>(parseInt(g.stat.hits)||0)===0).length;
+    const avg10=totalAB>0?(totalH/totalAB).toFixed(3):'—';
+    const last3H=recent.slice(0,3).reduce((s,g)=>s+(parseInt(g.stat.hits)||0),0);
+    const last3AB=recent.slice(0,3).reduce((s,g)=>s+(parseInt(g.stat.atBats)||0),0);
+    const last5H=recent.slice(0,5).reduce((s,g)=>s+(parseInt(g.stat.hits)||0),0);
+    const last5AB=recent.slice(0,5).reduce((s,g)=>s+(parseInt(g.stat.atBats)||0),0);
+    const avg3=last3AB>0?last3H/last3AB:0;
+    const avg5=last5AB>0?last5H/last5AB:0;
+    const avg10N=totalAB>0?totalH/totalAB:0;
+
+    let formNarr='';
+    if(avg3>=0.450)formNarr=`🔥 ${lastName} is scorching — batting ${avg3.toFixed(3)} over his last 3 games.`;
+    else if(avg3>=0.350&&multiHit>=3)formNarr=`${lastName} is on a tear with ${multiHit} multi-hit games in his last ${n}.`;
+    else if(avg3===0&&hitless>=3)formNarr=`❄️ ${lastName} is in a cold stretch — hitless in ${hitless} of his last ${n} games.`;
+    else if(avg5>=0.360)formNarr=`${lastName} is trending up, batting ${avg5.toFixed(3)} over his last 5 games.`;
+    else if(avg10N>=0.300)formNarr=`${lastName} has been productive over his last ${n}, batting ${avg10} with ${multiHit} multi-hit outings.`;
+    else if(avg10N<=0.185)formNarr=`${lastName} has been in a slump over his last ${n} games, batting ${avg10} with ${hitless} hitless outings.`;
+    else formNarr=`${lastName} has been average over his last ${n} — batting ${avg10} with ${multiHit} multi-hit games.`;
+    if(totalHR>0)formNarr+=` ${totalHR} HR over this stretch.`;
+    if(totalBB>=Math.ceil(n*0.5))formNarr+=` Drawing walks at a high clip (${totalBB} BB in ${n} G).`;
+    if(totalK>=Math.ceil(n*1.3))formNarr+=` Elevated K rate this stretch (${totalK} K in ${n} G).`;
+
+    const spark=recent.map(g=>{
+      const h=parseInt(g.stat.hits)||0;const hr=parseInt(g.stat.homeRuns)||0;
+      const rbi=parseInt(g.stat.rbi)||0;
+      const bg=hr>0?'#7f1d1d':h>=3?'#14532d':h>=2?'#1a3a1a':h===1?'#3a2800':'#18171f';
+      const fg=hr>0?'#ef4444':h>=3?'#4ade80':h>=2?'#86efac':h===1?'#fbbf24':'#555';
+      const lbl=hr>0?`${h}/${hr}HR`:h>0?`${h}H`:'0';
+      const dateShort=g.date?g.date.slice(5):'';
+      return`<div title="${g.date||''}: ${h}H ${hr}HR ${rbi}RBI" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;background:${bg};border-radius:4px;padding:4px 2px;">
+        <div style="font-size:10px;font-weight:700;font-family:monospace;color:${fg};white-space:nowrap;">${lbl}</div>
+        <div style="font-size:8px;color:#555;font-family:monospace;white-space:nowrap;">${dateShort}</div>
+      </div>`;
+    }).join('');
+
+    recentHTML=`
+      <div style="margin-bottom:4px;">
+        <div style="font-size:10px;color:#38bdf8;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Last ${n} Games</div>
+        <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${avg10}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">AVG</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalH}/${totalAB}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">H/AB</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:${totalHR>0?'#ef4444':'#ccc'};">${totalHR}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">HR</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalRBI}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">RBI</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalBB}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">BB</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalK}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">K</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${multiHit}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">2H+</div></div>
+        </div>
+        <div style="display:flex;gap:3px;margin-bottom:10px;">${spark}</div>
+        <div style="font-size:12px;color:#bbb;line-height:1.5;">${formNarr}</div>
+      </div>`;
   }
 
-  el.innerHTML=`<p style="font-size:13px;color:#bbb;line-height:1.8;font-family:Georgia,serif;margin:0;">${text}</p>`;
+  el.innerHTML=`
+    <div>
+      <div style="font-size:13px;color:#ddd;line-height:1.7;font-family:Georgia,serif;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1a1730;">${verdict}</div>
+      ${driversHTML}
+      ${headwindsHTML}
+      ${pitcherHTML}
+      ${matchupHTML}
+      ${recentHTML}
+    </div>`;
 }
 
 // ═══════════ PITCHER SEARCH ════════════════════════════════════════════════════
@@ -593,7 +736,7 @@ function updateWeatherForTime(){if(S.weather)fetchWeather();const h=parseInt((do
 function calcPrediction(){
   let score=50;const factors=[];
   let batScore=0,pitScore=0,conScore=0;
-  const add=(l,v,adj,n,cat='batter')=>{score+=adj;if(cat==='batter')batScore+=adj;else if(cat==='pitcher')pitScore+=adj;else conScore+=adj;factors.push({label:l,value:v,impact:adj>2?'positive':adj<-2?'negative':'neutral',note:n,cat});};
+  const add=(l,v,adj,n,cat='batter')=>{score+=adj;if(cat==='batter')batScore+=adj;else if(cat==='pitcher')pitScore+=adj;else conScore+=adj;factors.push({label:l,value:v,adj,impact:adj>2?'positive':adj<-2?'negative':'neutral',note:n,cat});};
   if(S.splits){
     const hand=S.pitcher?.hand||S.pitcherThrows;
     const hs=hand==='L'?S.splits.vl:S.splits.vr;
