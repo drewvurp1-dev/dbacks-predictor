@@ -1601,8 +1601,8 @@ async function loadCorbet(){
     });
 
     const bets=generateCorbetBets(S.lastScore,S.lastPrediction.factors,rawMarketMap);
-    // Safety clamp: Runs 0.5 is trivial — force 1.5 as minimum displayed line
-    bets.forEach(b=>{if(b.propKey==='batter_runs_scored'&&b.line<=0.5)b.line=1.5;});
+    // Safety clamp: Total Bases 0.5 = a hit, not offered by DK/FD/MGM. Force 1.5 minimum.
+    bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
     if(bets.length===0){hide('corbet-loading');show('corbet-no-props');return;}
 
     const edgeLabels={strong:'🟢 Strong Edge',moderate:'🟡 Moderate Edge',small:'Small Edge',none:''};
