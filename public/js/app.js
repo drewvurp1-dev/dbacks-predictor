@@ -526,9 +526,18 @@ async function loadMatchupStats(){
   show('matchup-section');show('matchup-spinner');hide('matchup-content');
   S.matchupStats=null;
   try{
-    const r=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${S.pitcher.id}&gameType=R`);
+    // Include season=2026 so new pitchers with no prior history still resolve correctly
+    const r=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${S.pitcher.id}&gameType=R&season=2026`);
     const d=await r.json();
-    const st=d?.stats?.[0]?.splits?.[0]?.stat;
+    let st=d?.stats?.[0]?.splits?.[0]?.stat;
+
+    // If 2026-scoped query returns nothing, fall back to all-time total
+    if(!st||parseInt(st?.atBats)===0){
+      const r2=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${S.pitcher.id}&gameType=R`);
+      const d2=await r2.json();
+      st=d2?.stats?.[0]?.splits?.[0]?.stat;
+    }
+
     const ab=parseInt(st?.atBats)||0;
     if(!st||ab===0){
       document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">No career matchup data — may be first-time opponents.</div>';
@@ -549,7 +558,7 @@ async function loadMatchupStats(){
           ${[['AVG',st.avg],['OBP',st.obp],['SLG',st.slg],['AB',ab],['H',h],['HR',hr],['K',k],['BB',bb]].map(([l,v])=>`<div><div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;">${l}</div><div style="font-size:13px;font-weight:700;font-family:monospace;color:#ccc;">${v}</div></div>`).join('')}
         </div>
       </div>
-      <div style="font-size:9px;color:#777;font-family:monospace;">${sample} · ${ab} career AB vs ${S.pitcher.name}</div>`;
+      <div style="font-size:9px;color:#777;font-family:monospace;">${sample} · ${ab} AB vs ${S.pitcher.name}</div>`;
     show('matchup-content');
   }catch(e){
     document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">Could not load matchup data.</div>';
@@ -893,7 +902,7 @@ function calcPrediction(){
   return{score,tier:tiers.find(t=>score>=t.min),factors,tempF,windMph,windDir:wd,humidity,catTotals:{batter:Math.round(batScore),pitcher:Math.round(pitScore),conditions:Math.round(conScore)}};
 }
 
-function runPrediction(){
+async function runPrediction(){
   const{score,tier,factors,tempF,windMph,windDir,humidity,catTotals}=calcPrediction();
   const C=2*Math.PI*52;
   document.getElementById('gauge-circle').style.strokeDashoffset=C-(score/100)*C;
@@ -910,6 +919,8 @@ function runPrediction(){
   document.getElementById('pitch-display').innerHTML=Object.entries(S.pitcherPitches).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a).map(([type,pct])=>`<div class="pitch-row"><span class="pitch-label">${type}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${pct}%</span></div>`).join('');
   S.lastScore=score;S.lastPrediction={score,tier,factors,catTotals,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:document.getElementById('game-date').value||new Date().toISOString().split('T')[0]};
   savePredictionForGrading(S.lastPrediction);
+  // Refresh game log every time prediction runs so Last 10 Games is always current
+  await loadGameLog();
   buildPredictionSummary(factors);
   hide('no-prediction');show('prediction-output');
   // Reset corbet
