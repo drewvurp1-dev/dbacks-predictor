@@ -1540,6 +1540,9 @@ async function loadCorbet(){
     const propsText=await pr.text();
     let propData;
     try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
+    console.log('[CorBET] propData keys:', Object.keys(propData||{}));
+    console.log('[CorBET] bookmakers:', (propData.bookmakers||[]).length, (propData.bookmakers||[]).map(b=>b.title));
+    if(propData.message){throw new Error('Odds API: '+propData.message);}
 
     // Build rawMarketMap.
     // Trusted books (DK/FD) are preferred for devig when available on both sides.
@@ -1598,7 +1601,10 @@ async function loadCorbet(){
       });
     });
 
+    console.log('[CorBET] rawMarketMap keys:', Object.keys(rawMarketMap));
+    console.log('[CorBET] playerSearch:', S.playerName, '→', S.playerName.toLowerCase().split(' ').pop());
     const bets=generateCorbetBets(S.lastScore,S.lastPrediction.factors,rawMarketMap);
+    console.log('[CorBET] bets:', bets.length, bets.map(b=>b.prop+'@'+b.line+'('+b.edgeStrength+')'));
     if(bets.length===0){hide('corbet-loading');show('corbet-no-props');return;}
 
     const edgeLabels={strong:'🟢 Strong Edge',moderate:'🟡 Moderate Edge',small:'Small Edge',none:''};
