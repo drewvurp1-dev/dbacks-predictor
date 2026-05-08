@@ -1535,13 +1535,12 @@ async function loadCorbet(){
       show('corbet-no-props');return;
     }
 
-    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
+    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts';
     const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?regions=us&markets=${propMarkets}&oddsFormat=american`);
     const propsText=await pr.text();
     let propData;
     try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
-    console.log('[CorBET] propData full:', JSON.stringify(propData).slice(0,400));
-    if(propData.message||propData.error_code){throw new Error('Odds API error: '+(propData.message||propData.error_code));}
+    if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
 
     // Build rawMarketMap.
     // Trusted books (DK/FD) are preferred for devig when available on both sides.
@@ -1600,10 +1599,7 @@ async function loadCorbet(){
       });
     });
 
-    console.log('[CorBET] rawMarketMap keys:', Object.keys(rawMarketMap));
-    console.log('[CorBET] playerSearch:', S.playerName, '→', S.playerName.toLowerCase().split(' ').pop());
     const bets=generateCorbetBets(S.lastScore,S.lastPrediction.factors,rawMarketMap);
-    console.log('[CorBET] bets:', bets.length, bets.map(b=>b.prop+'@'+b.line+'('+b.edgeStrength+')'));
     if(bets.length===0){hide('corbet-loading');show('corbet-no-props');return;}
 
     const edgeLabels={strong:'🟢 Strong Edge',moderate:'🟡 Moderate Edge',small:'Small Edge',none:''};
