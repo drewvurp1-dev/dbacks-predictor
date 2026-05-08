@@ -178,9 +178,41 @@
             <div id="gauge-label" class="gauge-label"></div>
             <div id="gauge-desc" class="gauge-desc"></div>
           </div>
+          <div style="display:flex;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #1a1730;">
+            <div style="flex:1;background:#07060f;border:1px solid #1a1730;border-radius:8px;padding:10px 12px;text-align:center;">
+              <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">🏃 Batter</div>
+              <div id="mini-batter-val" style="font-size:18px;font-weight:900;font-family:monospace;color:#888;">—</div>
+              <div style="margin-top:7px;height:3px;background:#1a1730;border-radius:2px;overflow:hidden;"><div id="mini-batter-bar" style="height:100%;width:0%;border-radius:2px;transition:width 0.5s,background 0.5s;"></div></div>
+            </div>
+            <div style="flex:1;background:#07060f;border:1px solid #1a1730;border-radius:8px;padding:10px 12px;text-align:center;">
+              <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">⚾ Pitcher</div>
+              <div id="mini-pitcher-val" style="font-size:18px;font-weight:900;font-family:monospace;color:#888;">—</div>
+              <div style="margin-top:7px;height:3px;background:#1a1730;border-radius:2px;overflow:hidden;"><div id="mini-pitcher-bar" style="height:100%;width:0%;border-radius:2px;transition:width 0.5s,background 0.5s;"></div></div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="card"><div class="card-header">🔍 Factor Breakdown</div><div class="card-body" id="factors-body"></div></div>
+      <div class="card">
+        <div class="card-header" onclick="toggleFactorCard('batter')" style="cursor:pointer;user-select:none;">
+          <span>🏃 Batter Factors <span id="factors-batter-arrow" style="color:#555;font-size:10px;margin-left:4px;">▼</span></span>
+          <span id="factors-batter-net"></span>
+        </div>
+        <div id="factors-batter-body" class="card-body"></div>
+      </div>
+      <div class="card">
+        <div class="card-header" onclick="toggleFactorCard('pitcher')" style="cursor:pointer;user-select:none;">
+          <span>⚾ Pitcher Factors <span id="factors-pitcher-arrow" style="color:#555;font-size:10px;margin-left:4px;">▼</span></span>
+          <span id="factors-pitcher-net"></span>
+        </div>
+        <div id="factors-pitcher-body" class="card-body"></div>
+      </div>
+      <div class="card">
+        <div class="card-header" onclick="toggleFactorCard('conditions')" style="cursor:pointer;user-select:none;">
+          <span>🌤 Conditions <span id="factors-conditions-arrow" style="color:#555;font-size:10px;margin-left:4px;">▼</span></span>
+          <span id="factors-conditions-net"></span>
+        </div>
+        <div id="factors-conditions-body" class="card-body"></div>
+      </div>
       <div class="card"><div class="card-header">📝 Game Summary</div><div class="card-body" id="prediction-summary"><div style="color:#777;font-family:monospace;font-size:11px;">Run a prediction to generate the game summary.</div></div></div>
       <div class="card"><div class="card-header">⚾ Pitch Mix</div><div class="card-body" id="pitch-display"></div></div>
       <div style="margin-top:12px;">

@@ -600,7 +600,8 @@ function updateWeatherForTime(){if(S.weather)fetchWeather();const h=parseInt((do
 // ═══════════ PREDICTION ENGINE ════════════════════════════════════════════════
 function calcPrediction(){
   let score=50;const factors=[];
-  const add=(l,v,adj,n)=>{score+=adj;factors.push({label:l,value:v,impact:adj>2?'positive':adj<-2?'negative':'neutral',note:n});};
+  let batScore=0,pitScore=0,conScore=0;
+  const add=(l,v,adj,n,cat='batter')=>{score+=adj;if(cat==='batter')batScore+=adj;else if(cat==='pitcher')pitScore+=adj;else conScore+=adj;factors.push({label:l,value:v,impact:adj>2?'positive':adj<-2?'negative':'neutral',note:n,cat});};
   if(S.splits){
     const hand=S.pitcher?.hand||S.pitcherThrows;
     const hs=hand==='L'?S.splits.vl:S.splits.vr;
@@ -613,17 +614,17 @@ function calcPrediction(){
   }
   if(S.pitcher?.st){
     const era=parseFloat(S.pitcher.st.era);
-    if(!isNaN(era)){const a=(era-4.00)*4;add('Pitcher ERA',era.toFixed(2),a,era<3.25?'Elite arm':era<4.00?'Above-average':era<5.00?'League-average':'Hittable pitcher');}
+    if(!isNaN(era)){const a=(era-4.00)*4;add('Pitcher ERA',era.toFixed(2),a,era<3.25?'Elite arm':era<4.00?'Above-average':era<5.00?'League-average':'Hittable pitcher','pitcher');}
     const pa=S.pitcher.st.battersFaced||1;
     const kp=S.pitcher.st.strikeOuts?(S.pitcher.st.strikeOuts/pa)*100:null;
-    if(kp&&kp>=28)add('High K%',kp.toFixed(1)+'%',-4,'Elite swing-and-miss stuff');
-    if(kp&&kp<=15)add('Low K%',kp.toFixed(1)+'%',3,'Below-average K rate — more contact opportunities');
-    if(S.pitcher.daysRest!=='—'){if(S.pitcher.daysRest<4)add('Short Rest',S.pitcher.daysRest+'d',3,'Pitcher on short rest — fatigue advantage');else if(S.pitcher.daysRest>=6)add('Extra Rest',S.pitcher.daysRest+'d',-2,'Well-rested pitcher — sharper command');}
+    if(kp&&kp>=28)add('High K%',kp.toFixed(1)+'%',-4,'Elite swing-and-miss stuff','pitcher');
+    if(kp&&kp<=15)add('Low K%',kp.toFixed(1)+'%',3,'Below-average K rate — more contact opportunities','pitcher');
+    if(S.pitcher.daysRest!=='—'){if(S.pitcher.daysRest<4)add('Short Rest',S.pitcher.daysRest+'d',3,'Pitcher on short rest — fatigue advantage','pitcher');else if(S.pitcher.daysRest>=6)add('Extra Rest',S.pitcher.daysRest+'d',-2,'Well-rested pitcher — sharper command','pitcher');}
     const lpc=S.pitcher.lastOuting?.numberOfPitches;
-    if(lpc&&lpc>=100)add('High Prev PC',lpc+' pitches',2,`${lpc} pitches last outing — possible fatigue`);
+    if(lpc&&lpc>=100)add('High Prev PC',lpc+' pitches',2,`${lpc} pitches last outing — possible fatigue`,'pitcher');
   } else {
     const mEra=parseFloat(document.getElementById('m-pitcher-era')?.value);
-    if(!isNaN(mEra)){const a=(mEra-4.00)*4;add('Pitcher ERA',mEra.toFixed(2),a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher');}
+    if(!isNaN(mEra)){const a=(mEra-4.00)*4;add('Pitcher ERA',mEra.toFixed(2),a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher','pitcher');}
   }
   if(S.matchupStats&&S.matchupStats.ab>=5){
     const{ops,ab}=S.matchupStats;
@@ -670,16 +671,16 @@ function calcPrediction(){
   const isOut=outDirs.some(d=>windDir?.startsWith(d)),isIn=inDirs.some(d=>windDir?.startsWith(d));
   const wd=isOut?'out':isIn?'in':windDir==='out'?'out':windDir==='in'?'in':'cross';
   if(!roofClosed){
-    if(tempF>=90)add('Heat',tempF+'°F',4,'Hot thin air — more carry on contact');
-    else if(tempF<=55)add('Cold',tempF+'°F',-4,'Dense cold air suppresses ball flight');
-    if(wd==='out'&&windMph>=8)add('Wind Out',windMph+' mph',windMph*0.35,'Blowing out — HR potential elevated');
-    else if(wd==='in'&&windMph>=8)add('Wind In',windMph+' mph',-windMph*0.28,'Blowing in — suppresses power');
-    else if(windMph>=15)add('Crosswind',windMph+' mph',-2,'Strong crosswind affects pitch movement');
+    if(tempF>=90)add('Heat',tempF+'°F',4,'Hot thin air — more carry on contact','conditions');
+    else if(tempF<=55)add('Cold',tempF+'°F',-4,'Dense cold air suppresses ball flight','conditions');
+    if(wd==='out'&&windMph>=8)add('Wind Out',windMph+' mph',windMph*0.35,'Blowing out — HR potential elevated','conditions');
+    else if(wd==='in'&&windMph>=8)add('Wind In',windMph+' mph',-windMph*0.28,'Blowing in — suppresses power','conditions');
+    else if(windMph>=15)add('Crosswind',windMph+' mph',-2,'Strong crosswind affects pitch movement','conditions');
   }
-  if(humidity>70)add('High Humidity',humidity+'%',-1,'Heavy air slightly suppresses carry');
-  if(roofClosed)add('Roof Closed','Indoor',-2,'Controlled environment neutralizes weather edge');
-  if(elev>4000)add('Altitude',elev.toLocaleString()+'ft',8,'Thin mile-high air — significant carry boost');
-  else if(elev>2000)add('Elevation',elev.toLocaleString()+'ft',3,'Moderate elevation adds mild carry');
+  if(humidity>70)add('High Humidity',humidity+'%',-1,'Heavy air slightly suppresses carry','conditions');
+  if(roofClosed)add('Roof Closed','Indoor',-2,'Controlled environment neutralizes weather edge','conditions');
+  if(elev>4000)add('Altitude',elev.toLocaleString()+'ft',8,'Thin mile-high air — significant carry boost','conditions');
+  else if(elev>2000)add('Elevation',elev.toLocaleString()+'ft',3,'Moderate elevation adds mild carry','conditions');
   const travel=document.getElementById('travel-select').value;
   if(travel==='redeye')add('Red-Eye','Fatigue risk',-6,'Cross-timezone red-eye suppresses performance');
   else if(travel==='same')add('Same-Day Travel','Mild fatigue',-3,'Same-day travel, minor rest concern');
@@ -698,11 +699,11 @@ function calcPrediction(){
   }
   score=Math.max(4,Math.min(96,Math.round(score)));
   const tiers=[{min:75,label:'Strong Game',color:'#2ecc71',desc:'Conditions strongly favor a productive day'},{min:60,label:'Favorable',color:'#a8e063',desc:'More factors lean positive than negative'},{min:42,label:'Neutral',color:'#f39c12',desc:'Mixed bag — could go either way'},{min:28,label:'Tough Spot',color:'#e67e22',desc:'Multiple headwinds against production'},{min:0,label:'Difficult',color:'#e74c3c',desc:'Significant factors stacked against a big day'}];
-  return{score,tier:tiers.find(t=>score>=t.min),factors,tempF,windMph,windDir:wd,humidity};
+  return{score,tier:tiers.find(t=>score>=t.min),factors,tempF,windMph,windDir:wd,humidity,catTotals:{batter:Math.round(batScore),pitcher:Math.round(pitScore),conditions:Math.round(conScore)}};
 }
 
 function runPrediction(){
-  const{score,tier,factors,tempF,windMph,windDir,humidity}=calcPrediction();
+  const{score,tier,factors,tempF,windMph,windDir,humidity,catTotals}=calcPrediction();
   const C=2*Math.PI*52;
   document.getElementById('gauge-circle').style.strokeDashoffset=C-(score/100)*C;
   document.getElementById('gauge-circle').style.stroke=tier.color;
@@ -714,11 +715,9 @@ function runPrediction(){
   const hand=S.pitcher?.hand||S.pitcherThrows;
   const era=S.pitcher?.st?.era||document.getElementById('m-pitcher-era')?.value;
   document.getElementById('pred-header').textContent=`${S.playerName} · ${pn} (${hand}HP)${era?` · ERA ${parseFloat(era).toFixed(2)}`:''}`;
-  const colors={positive:'#2ecc71',negative:'#e74c3c',neutral:'#f39c12'};
-  const icons={positive:'▲',negative:'▼',neutral:'●'};
-  document.getElementById('factors-body').innerHTML=factors.length===0?'<div style="font-size:12px;color:#777;font-family:monospace;">Add more conditions for a richer breakdown.</div>':factors.map(f=>`<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('');
+  renderFactorCards(factors,catTotals);
   document.getElementById('pitch-display').innerHTML=Object.entries(S.pitcherPitches).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a).map(([type,pct])=>`<div class="pitch-row"><span class="pitch-label">${type}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${pct}%</span></div>`).join('');
-  S.lastScore=score;S.lastPrediction={score,tier,factors,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:document.getElementById('game-date').value||new Date().toISOString().split('T')[0]};
+  S.lastScore=score;S.lastPrediction={score,tier,factors,catTotals,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:document.getElementById('game-date').value||new Date().toISOString().split('T')[0]};
   savePredictionForGrading(S.lastPrediction);
   buildPredictionSummary(factors);
   hide('no-prediction');show('prediction-output');
@@ -726,6 +725,47 @@ function runPrediction(){
   hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');
   show('corbet-no-prediction');
   switchTab('result');
+}
+
+// ═══════════ FACTOR CARD RENDERING ════════════════════════════════════════════
+
+function renderFactorCards(factors, catTotals){
+  const colors={positive:'#2ecc71',negative:'#e74c3c',neutral:'#f39c12'};
+  const icons={positive:'▲',negative:'▼',neutral:'●'};
+  const fmtRows=fs=>fs.length
+    ?fs.map(f=>`<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('')
+    :'<div style="font-size:11px;color:#555;font-family:monospace;padding:4px 0;">No significant factors.</div>';
+  const fmtNet=n=>{
+    const s=n>0?'+':'',c=n>0?'#2ecc71':n<0?'#e74c3c':'#888';
+    return`<span style="color:${c};font-weight:900;font-family:monospace;font-size:12px;letter-spacing:0;text-transform:none;">${s}${n}</span>`;
+  };
+  ['batter','pitcher','conditions'].forEach(cat=>{
+    const fs=factors.filter(f=>f.cat===cat);
+    const net=catTotals?.[cat]||0;
+    const bodyEl=document.getElementById(`factors-${cat}-body`);
+    const netEl=document.getElementById(`factors-${cat}-net`);
+    if(bodyEl)bodyEl.innerHTML=fmtRows(fs);
+    if(netEl)netEl.innerHTML=fmtNet(net);
+  });
+  // Mini score bars
+  const setMini=(id,net)=>{
+    const c=net>0?'#2ecc71':net<0?'#e74c3c':'#888';
+    const w=Math.min(100,Math.abs(net)/20*100);
+    const valEl=document.getElementById(`mini-${id}-val`);
+    const barEl=document.getElementById(`mini-${id}-bar`);
+    if(valEl){valEl.textContent=(net>0?'+':'')+net;valEl.style.color=c;}
+    if(barEl){barEl.style.width=w+'%';barEl.style.background=c;}
+  };
+  setMini('batter',catTotals?.batter||0);
+  setMini('pitcher',catTotals?.pitcher||0);
+}
+
+function toggleFactorCard(cat){
+  const body=document.getElementById(`factors-${cat}-body`);
+  const arrow=document.getElementById(`factors-${cat}-arrow`);
+  if(!body)return;
+  const collapsed=body.classList.toggle('hidden');
+  if(arrow)arrow.textContent=collapsed?'▶':'▼';
 }
 
 // ═══════════ CORBET CARROLL ════════════════════════════════════════════════════

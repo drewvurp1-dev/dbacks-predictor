@@ -23,32 +23,32 @@ function savantFetch(url, res) {
 router.get('/statcast', (req, res) => {
   const year = req.query.year || '2026';
   const type = req.query.type || 'batter';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/statcast?type=${type}&year=${year}&position=&team=&min=30&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/statcast?type=${type}&year=${year}&position=&team=&min=15&csv=true`, res);
 });
 
 // xwOBA, xBA, xSLG
 router.get('/expected', (req, res) => {
   const year = req.query.year || '2026';
   const type = req.query.type || 'batter';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=${type}&year=${year}&position=&team=&min=30&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=${type}&year=${year}&position=&team=&min=15&csv=true`, res);
 });
 
 // Whiff Rate, Bat Speed, Swing Length
 router.get('/battracking', (req, res) => {
   const year = req.query.year || '2026';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=${year}&min=30&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&year=${year}&min=15&csv=true`, res);
 });
 
 // CSW% (Called Strike + Whiff %) by pitch arsenal
 router.get('/csw', (req, res) => {
   const year = req.query.year || '2026';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=pitcher&year=${year}&min=30&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=pitcher&year=${year}&min=15&csv=true`, res);
 });
 
 // Stuff+ and xERA
 router.get('/stuffplus', (req, res) => {
   const year = req.query.year || '2026';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitcher-quality?type=pitcher&year=${year}&min=30&csv=true`, res);
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitcher-quality?type=pitcher&year=${year}&min=15&csv=true`, res);
 });
 
 module.exports = router;
