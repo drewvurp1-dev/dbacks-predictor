@@ -45,4 +45,10 @@ router.get('/csw', (req, res) => {
   savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=pitcher&year=${year}&min=3&csv=true`, res);
 });
 
+// Batter Whiff% by pitch arsenal (whiff_per_swing is blank in bat-tracking; this endpoint has it per pitch type)
+router.get('/batter-arsenal', (req, res) => {
+  const year = req.query.year || '2026';
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=batter&year=${year}&min=3&csv=true`, res);
+});
+
 module.exports = router;

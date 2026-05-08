@@ -2129,25 +2129,41 @@ function parseCSV(text) {
 async function loadStatcast(playerId) {
   document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div>';
   try {
-    const [statRes, expRes, batRes] = await Promise.all([
+    const [statRes, expRes, batRes, arsenalRes] = await Promise.all([
       fetch('/savant/statcast?type=batter&year=2026'),
       fetch('/savant/expected?type=batter&year=2026'),
       fetch('/savant/battracking?year=2026'),
+      fetch('/savant/batter-arsenal?year=2026'),
     ]);
-    const [statText, expText, batText] = await Promise.all([statRes.text(), expRes.text(), batRes.text()]);
+    const [statText, expText, batText, arsenalText] = await Promise.all([statRes.text(), expRes.text(), batRes.text(), arsenalRes.text()]);
 
-    const statRows = parseCSV(statText);
-    const expRows  = parseCSV(expText);
-    const batRows  = parseCSV(batText);
+    const statRows    = parseCSV(statText);
+    const expRows     = parseCSV(expText);
+    const batRows     = parseCSV(batText);
+    const arsenalRows = parseCSV(arsenalText);
 
     const sid = String(playerId);
     const statRow = statRows.find(r => String(r.player_id||'').trim() === sid);
     const expRow  = expRows.find(r  => String(r.player_id||'').trim() === sid);
     const batRow  = batRows.find(r  => String(r.id||r.player_id||'').trim() === sid);
 
-    console.log('Statcast rows:', statRows.length, 'stat:', !!statRow, 'exp:', !!expRow, 'bat:', !!batRow);
+    // Whiff% from batter pitch-arsenal: weighted avg of whiff_percent by pitch_usage
+    // (bat-tracking endpoint has blank whiff_per_swing for 2026)
+    const batArsenalRows = arsenalRows.filter(r => String(r.player_id||'').trim() === sid);
+    let whiffRaw = null;
+    if (batArsenalRows.length) {
+      let total = 0, weighted = 0;
+      batArsenalRows.forEach(r => {
+        const usage = parseFloat(r.pitch_usage) || 0;
+        const wh    = parseFloat(r.whiff_percent) || 0;
+        weighted += wh * usage; total += usage;
+      });
+      if (total > 0) whiffRaw = weighted / total;
+    }
 
-    const p=(v,d=1)=>{const n=parseFloat(v);return isNaN(n)?null:n};
+    console.log('Statcast rows:', statRows.length, 'stat:', !!statRow, 'exp:', !!expRow, 'bat:', !!batRow, 'arsenal:', batArsenalRows.length, 'whiff%:', whiffRaw?.toFixed(1));
+
+    const p=(v)=>{const n=parseFloat(v);return isNaN(n)?null:n};
 
     // Expected stats
     const xwobaRaw = p(expRow?.est_woba);
@@ -2162,12 +2178,11 @@ async function loadStatcast(playerId) {
     const gbRaw      = p(statRow?.gb);
     const fbRaw      = p(statRow?.fbld);
 
-    // Bat tracking
-    const whiffRaw   = batRow ? p(batRow.whiff_per_swing)*100 : null;
+    // Bat tracking (bat speed, swing length, squared-up, blast)
     const batSpdRaw  = p(batRow?.avg_bat_speed);
     const swLenRaw   = p(batRow?.swing_length);
-    const sqdUpRaw   = batRow ? p(batRow.squared_up_per_bat_contact)*100 : null;
-    const blastRaw   = batRow ? p(batRow.blast_per_bat_contact)*100 : null;
+    const sqdUpRaw   = batRow ? (v => v != null ? v * 100 : null)(p(batRow.squared_up_per_bat_contact)) : null;
+    const blastRaw   = batRow ? (v => v != null ? v * 100 : null)(p(batRow.blast_per_bat_contact)) : null;
 
     const fmt=(v,d,suffix='')=>v!=null?v.toFixed(d)+suffix:'—';
     const fmtPct=(v,d=1)=>fmt(v,d,'%');
