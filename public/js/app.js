@@ -1535,7 +1535,8 @@ async function loadCorbet(){
     }
 
     const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts';
-    const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?regions=us&markets=${propMarkets}&oddsFormat=american`);
+    const propBooks='draftkings,fanduel,betmgm';
+    const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
     const propsText=await pr.text();
     let propData;
     try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
