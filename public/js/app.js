@@ -1109,6 +1109,30 @@ function scoreIndividualProp(propKey){
     if(mu&&muW>0&&mu.k!=null) score+=(mu.k/Math.max(mu.ab,1))*250*muW;
     if(pEra!=null)       score-=(pEra-4.00)*2;
   }
+  else if(propKey==='batter_runs_scored'){
+    if(obp!=null)        score+=(obp-0.330)*80;
+    if(pWhip!=null)      score-=(pWhip-1.25)*15;
+    if(pBBPct!=null)     score+=(pBBPct-7)*1.5;
+    if(handOps)          score+=(handOps-0.750)*25;
+    if(mu&&muW>0)        score+=(parseFloat(mu.obp||0)-0.330)*40*muW;
+    if(tempF>=90)        score+=2;
+    if(elev>4000)        score+=4;
+    else if(elev>2000)   score+=2;
+    if(windDir==='out'&&windMph>=8) score+=windMph*0.15;
+  }
+  else if(propKey==='batter_hits_runs_rbis'){
+    if(avg!=null)        score+=(avg-0.265)*120;
+    if(obp!=null)        score+=(obp-0.330)*60;
+    if(slg!=null)        score+=(slg-0.420)*60;
+    if(rispAvg!=null)    score+=(rispAvg-0.255)*50;
+    if(pEra!=null)       score-=(pEra-4.00)*3;
+    if(handOps)          score+=(handOps-0.750)*30;
+    if(mu&&muW>0)        score+=(mu.ops-0.750)*50*muW;
+    if(tempF>=90)        score+=3;
+    if(elev>4000)        score+=6;
+    else if(elev>2000)   score+=2;
+    if(windDir==='out'&&windMph>=8) score+=windMph*0.25;
+  }
 
   return clamp(Math.round(score),5,95);
 }
@@ -1169,6 +1193,21 @@ function corbetReasoning(propKey,direction,propScore){
     const bb=(S.pitcherPitches?.['Slider']||0)+(S.pitcherPitches?.['Curveball']||0);
     if(bb>25)      drivers.push(`${bb.toFixed(0)}% breaking ball usage`);
     if(mu?.ab>=5&&mu.k) drivers.push(`${mu.k}K in ${mu.ab}AB career`);
+  } else if(propKey==='batter_runs_scored'){
+    if(ss?.obp)    drivers.push(`${ss.obp} OBP`);
+    if(ss?.runs&&ss?.gamesPlayed) drivers.push(`${(ss.runs/ss.gamesPlayed).toFixed(2)} R/G`);
+    if(S.pitcher?.st?.whip) drivers.push(`${parseFloat(S.pitcher.st.whip).toFixed(2)} pitcher WHIP`);
+    const hand=S.pitcher?.hand||S.pitcherThrows;
+    const handSplit=hand==='L'?S.splits?.vl:S.splits?.vr;
+    if(handSplit?.obp) drivers.push(`${handSplit.obp} OBP vs ${hand}HP`);
+    if(mu?.ab>=5&&mu.obp) drivers.push(`${mu.obp} OBP career vs pitcher`);
+  } else if(propKey==='batter_hits_runs_rbis'){
+    if(ss?.avg)    drivers.push(`${ss.avg} BA`);
+    if(ss?.obp)    drivers.push(`${ss.obp} OBP`);
+    if(ss?.slg)    drivers.push(`${ss.slg} SLG`);
+    if(S.rispStat?.avg) drivers.push(`${S.rispStat.avg} RISP BA`);
+    if(S.pitcher?.st?.era) drivers.push(`${parseFloat(S.pitcher.st.era).toFixed(2)} ERA`);
+    if(mu?.ab>=5)  drivers.push(`${mu.ops.toFixed(3)} OPS career vs pitcher`);
   }
 
   const signal=direction==='over'?'bullish':'bearish';
@@ -1251,6 +1290,21 @@ function modelProbability(propKey,line,score){
     if(S.lineupProtection?.tier==='strong')p+=5;
     else if(S.lineupProtection?.tier==='weak')p-=5;
   }
+  else if(propKey==='batter_runs_scored'){
+    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
+    const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
+    const scoreBase=lerp3(score,20,18,50,32,80,50);
+    p=scoreBase*0.5+rateBase*0.5;
+  }
+  else if(propKey==='batter_hits_runs_rbis'){
+    const hitPG=(ss?.hits&&ss?.gamesPlayed)?(ss.hits/ss.gamesPlayed):0.85;
+    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
+    const rbiPG=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.40;
+    const hrrPG=hitPG+runPG+rbiPG;
+    const rateBase=(1-_poissonCDF(hrrPG,Math.floor(line)))*100;
+    const scoreBase=lerp3(score,20,20,50,38,80,60);
+    p=scoreBase*0.5+rateBase*0.5;
+  }
 
   if(p===null)return null;
 
@@ -1276,6 +1330,14 @@ function modelProbability(propKey,line,score){
     } else if(propKey==='batter_walks'){
       const wkGames=last4.filter(g=>(parseInt(g.stat.baseOnBalls)||0)>=1).length;
       if(wkGames>=3)trendAdj+=4; else if(wkGames===0)trendAdj-=3;
+    } else if(propKey==='batter_runs_scored'){
+      const scoringGames=last4.filter(g=>(parseInt(g.stat.runs)||0)>=1).length;
+      if(scoringGames>=3)trendAdj+=4; else if(scoringGames===0)trendAdj-=3;
+    } else if(propKey==='batter_hits_runs_rbis'){
+      const avgHRR=last4.reduce((s,g)=>{
+        return s+(parseInt(g.stat.hits)||0)+(parseInt(g.stat.runs)||0)+(parseInt(g.stat.rbi)||0);
+      },0)/4;
+      if(avgHRR>=3)trendAdj+=5; else if(avgHRR<=0.5)trendAdj-=4;
     }
   }
 
@@ -1310,6 +1372,10 @@ function modelProbability(propKey,line,score){
     p=Math.max(20,Math.min(75,p));
   } else if(propKey==='batter_rbis'){
     p=Math.max(12,Math.min(65,p));
+  } else if(propKey==='batter_runs_scored'){
+    p=Math.max(15,Math.min(70,p));
+  } else if(propKey==='batter_hits_runs_rbis'){
+    p=Math.max(15,Math.min(75,p));
   } else{
     p=Math.max(5,Math.min(95,p));
   }
@@ -1372,6 +1438,16 @@ function estimateProbability(propKey,direction,line){
     const rbiPerGame=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.4;
     prob=(1-_poissonCDF(rbiPerGame,Math.floor(line)))*100;
   }
+  else if(propKey==='batter_runs_scored'){
+    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
+    prob=(1-_poissonCDF(runPG,Math.floor(line)))*100;
+  }
+  else if(propKey==='batter_hits_runs_rbis'){
+    const hitPG=(ss?.hits&&ss?.gamesPlayed)?(ss.hits/ss.gamesPlayed):0.85;
+    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
+    const rbiPG=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.40;
+    prob=(1-_poissonCDF(hitPG+runPG+rbiPG,Math.floor(line)))*100;
+  }
 
   if(prob===null)return null;
   if(direction==='under')prob=100-prob;
@@ -1381,6 +1457,7 @@ function estimateProbability(propKey,direction,line){
 const PROP_NAMES={
   'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
   'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
+  'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
 };
 
 function generateCorbetBets(score,factors,rawMarketMap){
@@ -1456,7 +1533,7 @@ async function loadCorbet(){
       show('corbet-no-props');return;
     }
 
-    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts';
+    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
     const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?regions=us&markets=${propMarkets}&oddsFormat=american`);
     const propsText=await pr.text();
     let propData;
