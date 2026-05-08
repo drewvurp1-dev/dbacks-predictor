@@ -29,11 +29,11 @@ function fgFetch(url, res) {
   }).on('error', e => res.status(500).json({ error: e.message }));
 }
 
-// Pitcher leaderboard — SIERA and advanced stats
+// Pitcher leaderboard — xFIP and advanced stats
 router.get('/pitchers', (req, res) => {
   const year = req.query.year || '2026';
   fgFetch(
-    `https://www.fangraphs.com/leaders/major-league?pos=p&stats=pit&lg=all&qual=20&type=8&season=${year}&month=0&season1=${year}&ind=0&startdate=&enddate=&player_type=pitcher&csv=true`,
+    `https://www.fangraphs.com/leaders/major-league?pos=p&stats=pit&lg=all&qual=10&type=8&season=${year}&month=0&season1=${year}&ind=0&startdate=&enddate=&player_type=pitcher&csv=true`,
     res
   );
 });

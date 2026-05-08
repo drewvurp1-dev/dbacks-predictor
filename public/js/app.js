@@ -276,7 +276,7 @@ async function loadPitcherStatcast(pitcherId){
     const xwobaRaw = col(expRow,'est_woba','xwoba','expected_woba');
     const stuffRaw = col(stuffRow,'stuff_plus','stuff+','Stuff+','stuff','stuffplus');
     const xeraRaw  = col(stuffRow,'xera','xERA','x_era','est_era');
-    const sieraRaw = col(fgRow,'SIERA','siera','Siera');
+    const xfipRaw  = col(fgRow,'xFIP','xfip','xFip');
 
     const whiffPct = fmtPct(whiffRaw);
     const gbPct    = fmtPct(gbRaw);
@@ -288,7 +288,7 @@ async function loadPitcherStatcast(pitcherId){
     const cswPct   = fmtPct(cswRaw);
     const stuffPlus= stuffRaw?fmtVal(stuffRaw,0):'—';
     const xERAVal  = fmtVal(xeraRaw,2);
-    const sieraVal = fmtVal(sieraRaw,2);
+    const xfipVal  = fmtVal(xfipRaw,2);
 
     // Color coding
     const whiffC  = whiffPct!=='—'?(parseFloat(whiffPct)>=28?'good':parseFloat(whiffPct)<=18?'bad':''):'';
@@ -298,7 +298,7 @@ async function loadPitcherStatcast(pitcherId){
     const cswC    = cswPct!=='—'?(parseFloat(cswPct)>=30?'good':parseFloat(cswPct)<=22?'bad':''):'';
     const stuffC  = stuffPlus!=='—'?(parseFloat(stuffPlus)>=105?'good':parseFloat(stuffPlus)<=95?'bad':''):'';
     const xeraC   = xERAVal!=='—'?(parseFloat(xERAVal)<=3.50?'good':parseFloat(xERAVal)>=4.50?'bad':''):'';
-    const sieraC  = sieraVal!=='—'?(parseFloat(sieraVal)<=3.50?'good':parseFloat(sieraVal)>=4.50?'bad':''):'';
+    const xfipC   = xfipVal!=='—'?(parseFloat(xfipVal)<=3.50?'good':parseFloat(xfipVal)>=4.50?'bad':''):'';
 
     S.pitcherStatcast={whiff:parseFloat(whiffPct)||null,gbPct:parseFloat(gbPct)||null,fbPct:parseFloat(fbPct)||null,brlAgainst:parseFloat(brlAgainst)||null,hhAgainst:parseFloat(hhAgainst)||null};
 
@@ -313,7 +313,7 @@ async function loadPitcherStatcast(pitcherId){
       statBox('xwOBA vs',xwobaPct,'Expected wOBA against',''),
       statBox('Stuff+',stuffPlus,'Pitch quality score',stuffC),
       statBox('xERA',xERAVal,'Expected ERA',xeraC),
-      statBox('SIERA',sieraVal,'Skill-based ERA (FG)',sieraC),
+      statBox('xFIP',xfipVal,'Expected FIP (FG)',xfipC),
     ].join('');
 
     if(!scRow&&!expRow&&cswPidRows.length===0&&!stuffRow&&!fgRow){
