@@ -167,7 +167,13 @@ function buildPredictionSummary(factors){
   // ── CAREER MATCHUP ───────────────────────────────────────────────────────
   let matchupHTML='';
   const mu=S.matchupStats;
-  if(mu&&mu.ab>=3){
+  if(!mu||mu.ab===0){
+    matchupHTML=`
+      <div style="margin-bottom:16px;">
+        <div style="font-size:10px;color:#f39c12;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Career vs. ${pitcherLast}</div>
+        <div style="font-size:12px;color:#777;font-family:monospace;">${lastName} has no recorded plate appearances vs. ${pitcherLast} — first-time matchup. Prediction relies on season-level and Statcast metrics.</div>
+      </div>`;
+  } else if(mu&&mu.ab>=3){
     const opsColor=mu.ops>=0.850?'#2ecc71':mu.ops<=0.620?'#e74c3c':'#f39c12';
     let muNarr='';
     if(mu.ab>=20){
@@ -540,7 +546,9 @@ async function loadMatchupStats(){
 
     const ab=parseInt(st?.atBats)||0;
     if(!st||ab===0){
-      document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">No career matchup data — may be first-time opponents.</div>';
+      const pLast=S.playerName.split(' ').pop();
+      const pitLast=S.pitcher.name?.split(' ').pop()||S.pitcher.name||'this pitcher';
+      document.getElementById('matchup-content').innerHTML=`<div style="font-size:11px;color:#777;font-family:monospace;">${pLast} has no recorded plate appearances vs. ${pitLast} — first-time matchup.</div>`;
       show('matchup-content');hide('matchup-spinner');return;
     }
     const ops=parseFloat(st.ops)||0;
@@ -828,6 +836,9 @@ function calcPrediction(){
     }
     if(squaredUp!=null&&squaredUp>=22)add('Sqd Up%',squaredUp.toFixed(1)+'%',2,'Elite squared-up contact rate');
     if(blast!=null&&blast>=8)add('Blast%',blast.toFixed(1)+'%',2,'Elite blast rate — authoritative contact');
+    const{gb,fb}=S.statcast;
+    if(gb!=null&&gb>=55)add('GB%',gb.toFixed(1)+'%',-2,'Heavy ground ball hitter — limits extra-base upside');
+    if(fb!=null&&fb>=45)add('FB%',fb.toFixed(1)+'%',2,'High fly ball rate — elevated HR and total bases ceiling');
   }
   // Pitcher Statcast factors
   if(S.pitcherStatcast){
@@ -1001,6 +1012,8 @@ function scoreIndividualProp(propKey){
   const hhRate=S.statcast?.hhRate;
   const whiff=S.statcast?.whiff;
   const xwoba=S.statcast?.xwoba;
+  const gbPct=S.statcast?.gb;
+  const fbPct=S.statcast?.fb;
 
   // Handedness split
   const hand=S.pitcher?.hand||S.pitcherThrows;
@@ -1040,6 +1053,8 @@ function scoreIndividualProp(propKey){
     if(pEra!=null)       score-=(pEra-4.00)*3;
     if(handOps)          score+=(handOps-0.750)*30;
     if(mu&&muW>0)        score+=(parseFloat(mu.slg||0)-0.420)*60*muW;
+    if(gbPct!=null&&gbPct>=55) score-=(gbPct-55)*0.4; // heavy GB = fewer extra bases
+    if(fbPct!=null&&fbPct>=45) score+=(fbPct-45)*0.5; // high FB = more extra bases
     if(tempF>=90)        score+=4;
     if(elev>4000)        score+=8;
     else if(elev>2000)   score+=3;
@@ -1054,6 +1069,8 @@ function scoreIndividualProp(propKey){
     if(pEra!=null)       score-=(pEra-4.00)*5;
     if(handOps)          score+=(handOps-0.750)*25;
     if(mu&&muW>0&&mu.hr!=null) score+=(mu.hr/Math.max(mu.ab,1))*300*muW;
+    if(gbPct!=null&&gbPct>=55) score-=(gbPct-55)*0.6; // ground balls don't leave the yard
+    if(fbPct!=null&&fbPct>=45) score+=(fbPct-45)*0.7; // fly balls = HR opportunities
     if(tempF>=90)        score+=5;
     if(elev>4000)        score+=12;
     else if(elev>2000)   score+=5;
@@ -2140,23 +2157,28 @@ function parseCSV(text) {
 async function loadStatcast(playerId) {
   document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div>';
   try {
-    const [statRes, expRes, batRes, arsenalRes] = await Promise.all([
+    const [statRes, expRes, batRes, arsenalRes, battedRes] = await Promise.all([
       fetch('/savant/statcast?type=batter&year=2026'),
       fetch('/savant/expected?type=batter&year=2026'),
       fetch('/savant/battracking?year=2026'),
       fetch('/savant/batter-arsenal?year=2026'),
+      fetch('/savant/batted-ball?year=2026'),
     ]);
-    const [statText, expText, batText, arsenalText] = await Promise.all([statRes.text(), expRes.text(), batRes.text(), arsenalRes.text()]);
+    const [statText, expText, batText, arsenalText, battedText] = await Promise.all([
+      statRes.text(), expRes.text(), batRes.text(), arsenalRes.text(), battedRes.text()
+    ]);
 
     const statRows    = parseCSV(statText);
     const expRows     = parseCSV(expText);
     const batRows     = parseCSV(batText);
     const arsenalRows = parseCSV(arsenalText);
+    const battedRows  = parseCSV(battedText);
 
     const sid = String(playerId);
-    const statRow = statRows.find(r => String(r.player_id||'').trim() === sid);
-    const expRow  = expRows.find(r  => String(r.player_id||'').trim() === sid);
-    const batRow  = batRows.find(r  => String(r.id||r.player_id||'').trim() === sid);
+    const statRow    = statRows.find(r   => String(r.player_id||'').trim() === sid);
+    const expRow     = expRows.find(r    => String(r.player_id||'').trim() === sid);
+    const batRow     = batRows.find(r    => String(r.id||r.player_id||'').trim() === sid);
+    const battedRow  = battedRows.find(r => String(r.id||'').trim() === sid);
 
     // Whiff% from batter pitch-arsenal: weighted avg of whiff_percent by pitch_usage
     // (bat-tracking endpoint has blank whiff_per_swing for 2026)
@@ -2172,7 +2194,7 @@ async function loadStatcast(playerId) {
       if (total > 0) whiffRaw = weighted / total;
     }
 
-    console.log('Statcast rows:', statRows.length, 'stat:', !!statRow, 'exp:', !!expRow, 'bat:', !!batRow, 'arsenal:', batArsenalRows.length, 'whiff%:', whiffRaw?.toFixed(1));
+    console.log('Statcast rows:', statRows.length, 'stat:', !!statRow, 'exp:', !!expRow, 'bat:', !!batRow, 'arsenal:', batArsenalRows.length, 'batted:', !!battedRow, 'whiff%:', whiffRaw?.toFixed(1), 'gb%:', gbRaw?.toFixed(1), 'fb%:', fbRaw?.toFixed(1));
 
     const p=(v)=>{const n=parseFloat(v);return isNaN(n)?null:n};
 
@@ -2186,8 +2208,10 @@ async function loadStatcast(playerId) {
     const hhRaw      = p(statRow?.ev95percent);
     const avgEVRaw   = p(statRow?.avg_hit_speed);
     const sweetSpRaw = p(statRow?.anglesweetspotpercent);
-    const gbRaw      = p(statRow?.gb);
-    const fbRaw      = p(statRow?.fbld);
+
+    // GB%/FB% from batted-ball leaderboard (gb_rate/fb_rate are 0-1 decimals → multiply by 100)
+    const gbRaw      = battedRow?.gb_rate != null ? p(battedRow.gb_rate) * 100 : null;
+    const fbRaw      = battedRow?.fb_rate != null ? p(battedRow.fb_rate) * 100 : null;
 
     // Bat tracking (bat speed, swing length, squared-up, blast)
     const batSpdRaw  = p(batRow?.avg_bat_speed);
@@ -2216,6 +2240,9 @@ async function loadStatcast(playerId) {
       return (invert?(v<=bad?'good':v>=good?'bad':''):(v>=good?'good':v<=bad?'bad':''));
     };
 
+    const gb    = fmtPct(gbRaw);
+    const fb    = fmtPct(fbRaw);
+
     document.getElementById('stat-statcast').innerHTML = [
       statBox('xwOBA',   xwoba,  'Expected weighted OBA',        c(xwobaRaw,0.360,0.300)),
       statBox('xBA',     xba,    'Expected batting average',     c(xbaRaw,0.280,0.220)),
@@ -2225,6 +2252,8 @@ async function loadStatcast(playerId) {
       statBox('Avg EV',  avgEV,  'Avg exit velocity',            c(avgEVRaw,92,86)),
       statBox('Sweet Sp%',sweetSp,'Sweet spot contact %',        c(sweetSpRaw,40,28)),
       statBox('Whiff%',  whiff,  'Whiff rate per swing',         c(whiffRaw,30,20,true)),
+      statBox('GB%',     gb,     'Ground ball rate',             ''),
+      statBox('FB%',     fb,     'Fly ball rate',                ''),
       statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68)),
       statBox('Sw Len',  swLen,  'Swing length (shorter=better)',c(swLenRaw,7.4,6.8,true)),
       statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12)),
