@@ -2194,8 +2194,6 @@ async function loadStatcast(playerId) {
       if (total > 0) whiffRaw = weighted / total;
     }
 
-    console.log('Statcast rows:', statRows.length, 'stat:', !!statRow, 'exp:', !!expRow, 'bat:', !!batRow, 'arsenal:', batArsenalRows.length, 'batted:', !!battedRow, 'whiff%:', whiffRaw?.toFixed(1), 'gb%:', gbRaw?.toFixed(1), 'fb%:', fbRaw?.toFixed(1));
-
     const p=(v)=>{const n=parseFloat(v);return isNaN(n)?null:n};
 
     // Expected stats
