@@ -1544,7 +1544,7 @@ async function loadCorbet(){
     // BetOnline.ag excluded from calc (posts erroneous novelty odds) but kept for display.
     // Outlier positive odds filtered to avoid data errors skewing probabilities.
     const EXCLUDED_CALC_BOOKS=new Set(['BetOnline.ag']);
-    const TRUSTED_BOOKS=new Set(['DraftKings','FanDuel']);
+    const TRUSTED_BOOKS=new Set(['DraftKings','FanDuel','BetMGM']);
     const isOutlierPrice=(price,line)=>price>0&&(line<=0.5?price>300:price>400);
     const playerSearch=S.playerName.toLowerCase().split(' ').pop();
     const rawMarketMap={};
