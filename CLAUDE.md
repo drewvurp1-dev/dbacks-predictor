@@ -29,3 +29,8 @@ npm start
 - All prediction logic and UI lives in public/index.html
 - Do not call external APIs directly from the frontend — always route through the proxies in server.js
 - Savant endpoints return CSV; handle parsing on the frontend
+
+## Git Workflow
+- Develop on a feature branch (`claude/...`)
+- After pushing changes, always create a PR and squash-merge it to `main` via the GitHub MCP tools
+- Use `git rebase origin/main` if the branch has fallen behind before merging
