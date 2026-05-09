@@ -12,12 +12,13 @@
   <div>
     <small>Arizona Diamondbacks · 2026</small>
     <h1>🐍 Player Predictor</h1>
-    <p>Pre-game analysis · MLB Stats API · Live weather · Umpire data · CorBET Carroll</p>
+    <p>Pre-game analysis · MLB Stats API · Live weather · Umpire data · CorBET Analysis</p>
   </div>
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('setup')">Setup</button>
+  <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="tab" onclick="switchTab('setup')">Setup</button>
   <button class="tab" onclick="switchTab('result')">Prediction</button>
   <button class="tab" onclick="switchTab('corbet')">CorBET 🟢</button>
   <button class="tab" onclick="switchTab('record')">Record</button>
@@ -29,8 +30,23 @@
 
 <div class="content">
 
+  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+  <div id="panel-dashboard" class="panel active">
+    <div id="dash-game-banner"></div>
+    <div class="card">
+      <div class="card-header">Top Bets · MC ≥85%</div>
+      <div class="card-body" id="dash-top-bets"><div class="dash-empty">Loading…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">Player Scores</div>
+      <div class="card-body">
+        <div id="dash-player-grid" class="dash-player-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════════ SETUP ═══════════════════ -->
-  <div id="panel-setup" class="panel active">
+  <div id="panel-setup" class="panel">
     <div class="card">
       <div class="card-header">👤 Player</div>
       <div class="card-body">
