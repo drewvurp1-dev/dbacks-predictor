@@ -13,6 +13,11 @@ const S = {
   betLog: JSON.parse(localStorage.getItem('corbetRecord') || '[]'),
 };
 
+const CORBET_ROSTER = [
+  { name: 'Corbin Carroll',     id: '682998' },
+  // I'll add more here later — leave this list editable in one place
+];
+
 // ═══════════ TABS ════════════════════════════════════════════════════════════
 function switchTab(id) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -1516,6 +1521,75 @@ function generateCorbetBets(score,factors,rawMarketMap){
   return results;
 }
 
+async function _corbetFetchStatcastCSVs(){
+  const [r1,r2,r3,r4,r5]=await Promise.all([
+    fetch('/savant/statcast?type=batter&year=2026'),
+    fetch('/savant/expected?type=batter&year=2026'),
+    fetch('/savant/battracking?year=2026'),
+    fetch('/savant/batter-arsenal?year=2026'),
+    fetch('/savant/batted-ball?year=2026'),
+  ]);
+  const [t1,t2,t3,t4,t5]=await Promise.all([r1.text(),r2.text(),r3.text(),r4.text(),r5.text()]);
+  return{statRows:parseCSV(t1),expRows:parseCSV(t2),batRows:parseCSV(t3),arsenalRows:parseCSV(t4),battedRows:parseCSV(t5)};
+}
+
+function _corbetExtractStatcast(playerId,{statRows,expRows,batRows,arsenalRows,battedRows}){
+  const sid=String(playerId);
+  const statRow=statRows.find(r=>String(r.player_id||'').trim()===sid);
+  const expRow=expRows.find(r=>String(r.player_id||'').trim()===sid);
+  const batRow=batRows.find(r=>String(r.id||r.player_id||'').trim()===sid);
+  const battedRow=battedRows.find(r=>String(r.id||'').trim()===sid);
+  const batArsenalRows=arsenalRows.filter(r=>String(r.player_id||'').trim()===sid);
+  const p=v=>{const n=parseFloat(v);return isNaN(n)?null:n};
+  let whiffRaw=null;
+  if(batArsenalRows.length){
+    let total=0,weighted=0;
+    batArsenalRows.forEach(r=>{const u=parseFloat(r.pitch_usage)||0,w=parseFloat(r.whiff_percent)||0;weighted+=w*u;total+=u;});
+    if(total>0)whiffRaw=weighted/total;
+  }
+  return{
+    xwoba:p(expRow?.est_woba),xba:p(expRow?.est_ba),xslg:p(expRow?.est_slg),
+    brl:p(statRow?.brl_percent),hhRate:p(statRow?.ev95percent),avgEV:p(statRow?.avg_hit_speed),
+    sweetSpot:p(statRow?.anglesweetspotpercent),
+    gb:battedRow?.gb_rate!=null?p(battedRow.gb_rate)*100:null,
+    fb:battedRow?.fb_rate!=null?p(battedRow.fb_rate)*100:null,
+    whiff:whiffRaw,
+    batSpeed:p(batRow?.avg_bat_speed),swingLength:p(batRow?.swing_length),
+    squaredUp:batRow?(v=>v!=null?v*100:null)(p(batRow.squared_up_per_bat_contact)):null,
+    blast:batRow?(v=>v!=null?v*100:null)(p(batRow.blast_per_bat_contact)):null,
+  };
+}
+
+async function _corbetFetchMLBStats(playerId,pitcherId){
+  const base=`/mlb/api/v1/people/${playerId}/stats`;
+  const [a,b,c,d]=await Promise.all([
+    fetch(`${base}?stats=statSplits&group=hitting&season=2026&gameType=R&sitCodes=h,a,vl,vr,d,n`),
+    fetch(`${base}?stats=season&group=hitting&season=2026&gameType=R`),
+    fetch(`${base}?stats=statSplits&group=hitting&season=2026&gameType=R&sitCodes=risp`),
+    fetch(`${base}?stats=gameLog&group=hitting&season=2026&gameType=R`),
+  ]);
+  const [sd,ss,rd,gd]=await Promise.all([a.json(),b.json(),c.json(),d.json()]);
+  const byCode={};
+  (sd?.stats?.[0]?.splits??[]).forEach(s=>{if(s.split?.code)byCode[s.split.code]={ops:parseFloat(s.stat.ops)||null,avg:s.stat.avg,obp:s.stat.obp,slg:s.stat.slg,gp:s.stat.gamesPlayed,hr:s.stat.homeRuns,rbi:s.stat.rbi};});
+  let matchupStats=null;
+  if(pitcherId){
+    try{
+      const mr=await fetch(`${base}?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${pitcherId}&gameType=R&season=2026`);
+      const md=await mr.json();
+      const st=md?.stats?.[0]?.splits?.[0]?.stat;
+      const ab=parseInt(st?.atBats)||0;
+      if(st&&ab>0){const ops=parseFloat(st.ops)||0;matchupStats={ab,h:parseInt(st.hits)||0,hr:parseInt(st.homeRuns)||0,k:parseInt(st.strikeOuts)||0,bb:parseInt(st.baseOnBalls)||0,ops,avg:st.avg,obp:st.obp,slg:st.slg};}
+    }catch(e){}
+  }
+  return{
+    splits:byCode,
+    seasonStat:ss?.stats?.[0]?.splits?.[0]?.stat??null,
+    rispStat:rd?.stats?.[0]?.splits?.[0]?.stat??null,
+    recentGameLog:(gd?.stats?.[0]?.splits||[]).slice(-10).reverse(),
+    matchupStats,
+  };
+}
+
 async function loadCorbet(){
   if(!S.lastPrediction){show('corbet-no-prediction');return;}
   hide('corbet-no-prediction');hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');
@@ -1542,73 +1616,100 @@ async function loadCorbet(){
     try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
     if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
 
-    // Build rawMarketMap.
+    // Build per-player market maps in one pass through bookmaker data.
     // Trusted books (DK/FD) are preferred for devig when available on both sides.
     // BetOnline.ag excluded from calc (posts erroneous novelty odds) but kept for display.
     // Outlier positive odds filtered to avoid data errors skewing probabilities.
     const EXCLUDED_CALC_BOOKS=new Set(['BetOnline.ag']);
     const TRUSTED_BOOKS=new Set(['DraftKings','FanDuel','BetMGM']);
     const isOutlierPrice=(price,line)=>price>0&&(line<=0.5?price>300:price>400);
-    const playerSearch=S.playerName.toLowerCase().split(' ').pop();
-    const rawMarketMap={};
+    const playerMaps={};
+    CORBET_ROSTER.forEach(p=>{playerMaps[p.id]={};});
     (propData.bookmakers||[]).forEach(book=>{
       const skipCalc=EXCLUDED_CALC_BOOKS.has(book.title);
       const isTrusted=TRUSTED_BOOKS.has(book.title);
       (book.markets||[]).forEach(market=>{
         if(!PROP_NAMES[market.key])return;
-        if(!rawMarketMap[market.key])rawMarketMap[market.key]={
-          overPrices:[],underPrices:[],
-          trustedOverPrices:[],trustedUnderPrices:[],
-          overBest:null,underBest:null,
-          line:null,calcLine:null,trustedLine:null,
-          books:[],calcBooks:new Set()
-        };
-        const m=rawMarketMap[market.key];
-        if(!m.books.includes(book.title))m.books.push(book.title);
-        market.outcomes
-          .filter(o=>(o.description||o.name||'').toLowerCase().includes(playerSearch))
-          .forEach(o=>{
-            const dir=o.name.toLowerCase();
-            const price=o.price;
-            const line=o.point||0;
-            // Display line: smallest seen across all books (for reference only)
-            if(!m.line||line<m.line)m.line=line;
-            // Best odds from ALL books for display
-            if(dir==='over'){
-              if(!m.overBest||price>m.overBest.price)m.overBest={price,book:book.title};
-            }else if(dir==='under'){
-              if(!m.underBest||price>m.underBest.price)m.underBest={price,book:book.title};
-            }
-            // Calc prices: skip excluded books.
-            // Trusted books (DK/FD) skip the outlier filter — their odds are always reliable.
-            if(skipCalc)return;
-            if(!isTrusted&&isOutlierPrice(price,line||0.5))return;
-            // Calc line: derived from reliable books only (ignores BetOnline's exotic lines)
-            if(!m.calcLine||line<m.calcLine)m.calcLine=line;
-            if(isTrusted&&(!m.trustedLine||line<m.trustedLine))m.trustedLine=line;
-            if(dir==='over'){
-              m.overPrices.push(price);
-              m.calcBooks.add(book.title);
-              if(isTrusted)m.trustedOverPrices.push(price);
-            }else if(dir==='under'){
-              m.underPrices.push(price);
-              m.calcBooks.add(book.title);
-              if(isTrusted)m.trustedUnderPrices.push(price);
-            }
-          });
+        CORBET_ROSTER.forEach(player=>{
+          const pSearch=player.name.toLowerCase().split(' ').pop();
+          const m0=playerMaps[player.id];
+          if(!m0[market.key])m0[market.key]={
+            overPrices:[],underPrices:[],
+            trustedOverPrices:[],trustedUnderPrices:[],
+            overBest:null,underBest:null,
+            line:null,calcLine:null,trustedLine:null,
+            books:[],calcBooks:new Set()
+          };
+          const m=m0[market.key];
+          if(!m.books.includes(book.title))m.books.push(book.title);
+          market.outcomes
+            .filter(o=>(o.description||o.name||'').toLowerCase().includes(pSearch))
+            .forEach(o=>{
+              const dir=o.name.toLowerCase();
+              const price=o.price;
+              const line=o.point||0;
+              if(!m.line||line<m.line)m.line=line;
+              if(dir==='over'){
+                if(!m.overBest||price>m.overBest.price)m.overBest={price,book:book.title};
+              }else if(dir==='under'){
+                if(!m.underBest||price>m.underBest.price)m.underBest={price,book:book.title};
+              }
+              if(skipCalc)return;
+              if(!isTrusted&&isOutlierPrice(price,line||0.5))return;
+              if(!m.calcLine||line<m.calcLine)m.calcLine=line;
+              if(isTrusted&&(!m.trustedLine||line<m.trustedLine))m.trustedLine=line;
+              if(dir==='over'){
+                m.overPrices.push(price);m.calcBooks.add(book.title);
+                if(isTrusted)m.trustedOverPrices.push(price);
+              }else if(dir==='under'){
+                m.underPrices.push(price);m.calcBooks.add(book.title);
+                if(isTrusted)m.trustedUnderPrices.push(price);
+              }
+            });
+        });
       });
     });
 
-    const bets=generateCorbetBets(S.lastScore,S.lastPrediction.factors,rawMarketMap);
-    // Safety clamp: Total Bases 0.5 = a hit, not offered by DK/FD/MGM. Force 1.5 minimum.
-    bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
-    if(bets.length===0){hide('corbet-loading');show('corbet-no-props');return;}
+    // Fetch statcast CSVs once for all roster players
+    const csvRows=await _corbetFetchStatcastCSVs();
+
+    // Generate bets for each roster player — game context (pitcher, weather, etc.) stays in S
+    const allPlayerBets=[];
+    for(const player of CORBET_ROSTER){
+      try{
+        const mlbStats=await _corbetFetchMLBStats(player.id,S.pitcher?.id);
+        const statcast=_corbetExtractStatcast(player.id,csvRows);
+        const rawMarketMap=playerMaps[player.id];
+        // Temporarily swap player-specific S fields; shared game context is untouched
+        const saved={splits:S.splits,seasonStat:S.seasonStat,rispStat:S.rispStat,
+          statcast:S.statcast,recentGameLog:S.recentGameLog,matchupStats:S.matchupStats,
+          playerName:S.playerName};
+        S.splits=mlbStats.splits;S.seasonStat=mlbStats.seasonStat;
+        S.rispStat=mlbStats.rispStat;S.statcast=statcast;
+        S.recentGameLog=mlbStats.recentGameLog;S.matchupStats=mlbStats.matchupStats;
+        S.playerName=player.name;
+        const{score,factors}=calcPrediction();
+        const bets=generateCorbetBets(score,factors,rawMarketMap);
+        Object.assign(S,saved);
+        bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
+        bets.forEach(b=>{b._playerName=player.name;b._playerScore=score;});
+        allPlayerBets.push({playerName:player.name,bets});
+      }catch(e){
+        // Skip player silently on error — continue to next
+      }
+    }
+
+    const totalBets=allPlayerBets.reduce((s,pg)=>s+pg.bets.length,0);
+    if(totalBets===0){hide('corbet-loading');show('corbet-no-props');return;}
 
     const edgeLabels={strong:'🟢 Strong Edge',moderate:'🟡 Moderate Edge',small:'Small Edge',none:''};
     const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
-    document.getElementById('corbet-bets').innerHTML=bets.map((b,i)=>{
-      // Insufficient market data card
-      if(b.insufficient)return`<div class="bet-card" style="background:#0c0a1e;border:1px solid #1a1730;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+    const flatBets=[];
+    document.getElementById('corbet-bets').innerHTML=allPlayerBets.filter(pg=>pg.bets.length>0).map(pg=>{
+      const cards=pg.bets.map(b=>{
+        const i=flatBets.length;flatBets.push(b);
+        // Insufficient market data card
+        if(b.insufficient)return`<div class="bet-card" style="background:#0c0a1e;border:1px solid #1a1730;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
         </div>
@@ -1621,19 +1722,19 @@ async function loadCorbet(){
         </div>
       </div>`;
 
-      const overW=b.marketOverProb.toFixed(0);
-      const underW=b.marketUnderProb.toFixed(0);
-      const markerLeft=Math.max(1,Math.min(99,b.modelProb)).toFixed(1);
-      const deltaLabel=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
-      const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
-      const dirColor=b.delta>0?'#2ecc71':'#e74c3c';
-      const dirBg=b.delta>0?'rgba(46,204,113,0.10)':'rgba(231,76,60,0.10)';
-      const dirBorder=b.delta>0?'#1a4a10':'#4a1010';
-      const cardBg=b.edgeStrength==='strong'?'background:#061a06;border-color:#1a4a10':
-                   b.edgeStrength==='moderate'?'background:#1a1406;border-color:#3a2a00':
-                   'background:#0c0a1e;border-color:#1a1730';
-      const showSave=b.edgeStrength!=='none';
-      return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
+        const overW=b.marketOverProb.toFixed(0);
+        const underW=b.marketUnderProb.toFixed(0);
+        const markerLeft=Math.max(1,Math.min(99,b.modelProb)).toFixed(1);
+        const deltaLabel=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
+        const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
+        const dirColor=b.delta>0?'#2ecc71':'#e74c3c';
+        const dirBg=b.delta>0?'rgba(46,204,113,0.10)':'rgba(231,76,60,0.10)';
+        const dirBorder=b.delta>0?'#1a4a10':'#4a1010';
+        const cardBg=b.edgeStrength==='strong'?'background:#061a06;border-color:#1a4a10':
+                     b.edgeStrength==='moderate'?'background:#1a1406;border-color:#3a2a00':
+                     'background:#0c0a1e;border-color:#1a1730';
+        const showSave=b.edgeStrength!=='none';
+        return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
           ${showSave?`<button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
@@ -1673,8 +1774,13 @@ async function loadCorbet(){
         </div>
         <div class="bet-reasoning">${b.reasoning}</div>
       </div>`;
+      }).join('');
+      return`<div style="margin-bottom:18px;">
+        <div style="font-size:11px;font-weight:900;font-family:monospace;color:#A71930;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1a1730;">${pg.playerName}</div>
+        ${cards}
+      </div>`;
     }).join('');
-    S.corbetBets=bets;
+    S.corbetBets=flatBets;
     show('corbet-bets');
   }catch(e){
     hide('corbet-loading');
@@ -1707,7 +1813,7 @@ function saveBet(idx, btn){
     if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save to Record';},1800);}
     return;
   }
-  const bet={id:Date.now(),date,player:S.playerName,prop,odds:b.odds,rating:b.rating,score:S.lastScore,result:null};
+  const bet={id:Date.now(),date,player:b._playerName||S.playerName,prop,odds:b.odds,rating:b.rating,score:b._playerScore||S.lastScore,result:null};
   S.betLog.unshift(bet);
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
   renderRecord();
