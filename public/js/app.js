@@ -35,7 +35,7 @@ function kellyFraction(modelProb, odds) {
   if (!odds) return 0;
   const b = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
   const p = modelProb / 100, q = 1 - p;
-  return Math.max(0, (b * p - q) / b) * 0.5;
+  return Math.max(0, (b * p - q) / b) * 0.125;
 }
 
 // Monte Carlo confidence: % of noisy-score simulations where the edge holds
@@ -1877,39 +1877,32 @@ async function loadDashboard(){
 
 function renderDashboard(){
   if(!S.allPlayerBets||S.allPlayerBets.length===0)return;
-  const edgeOrder={strong:3,moderate:2,small:1,none:0};
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
-  const qualified=[];
-  S.allPlayerBets.forEach(pg=>{
-    pg.bets.forEach(b=>{
-      if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient){
-        qualified.push({...b,playerName:pg.playerName});
-      }
-    });
-  });
-  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
-  const top3=qualified.slice(0,3);
   const betColors={strong:'#2ecc71',moderate:'#f1c40f',small:'#aaa'};
-  document.getElementById('dash-top-bets').innerHTML=top3.length?top3.map(b=>`
-    <div class="dash-bet-card">
-      <div class="dash-bet-player">${b.playerName}</div>
-      <div class="dash-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
-      <div class="dash-bet-odds">${fmtOdds(b.overBest?.price)} · <span style="color:${betColors[b.edgeStrength]||'#aaa'}">${b.edgeStrength}</span></div>
-      <div class="dash-bet-badges">
-        <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
-        <span class="dash-badge">Kelly ${(kellyFraction(b.modelProb,b.odds||b.overBest?.price)*100).toFixed(1)}%</span>
-        <span class="dash-badge">Δ ${b.delta!=null?b.delta.toFixed(1)+'%':'—'}</span>
-      </div>
-    </div>`).join(''):'<div class="dash-empty">No bets meet the 85% confidence threshold today.</div>';
-  document.getElementById('dash-player-grid').innerHTML=S.allPlayerBets.map(pg=>{
-    const avgScore=pg.bets.length?Math.round(pg.bets.reduce((s,b)=>s+(b._playerScore||50),0)/pg.bets.length):null;
-    const color=avgScore>=75?'#2ecc71':avgScore>=60?'#f1c40f':'#A71930';
-    return`<div class="dash-player-card">
-      <div class="dash-player-name">${pg.playerName.split(' ').pop()}</div>
-      <div class="dash-player-score" style="color:${color}">${avgScore??'—'}</div>
-      <div class="dash-player-bets">${pg.bets.length} props</div>
-    </div>`;
-  }).join('');
+  const sections=[];
+  S.allPlayerBets.forEach(pg=>{
+    const qbets=pg.bets.filter(b=>
+      b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient
+    ).sort((a,b)=>(b.mcConfidence||0)-(a.mcConfidence||0));
+    if(qbets.length)sections.push({playerName:pg.playerName,bets:qbets});
+  });
+  document.getElementById('dash-top-bets').innerHTML=sections.length
+    ?sections.map(pg=>`
+      <div class="dash-player-section">
+        <div class="dash-player-header">${pg.playerName}</div>
+        ${pg.bets.map(b=>`
+          <div class="dash-bet-card">
+            <div class="dash-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
+            <div class="dash-bet-odds">${fmtOdds(b.overBest?.price)} · <span style="color:${betColors[b.edgeStrength]||'#aaa'}">${b.edgeStrength}</span></div>
+            <div class="dash-bet-badges">
+              <span class="dash-badge">Model ${b.modelProb!=null?b.modelProb.toFixed(0)+'%':'—'}</span>
+              <span class="dash-badge">Market ${b.marketOverProb!=null?b.marketOverProb.toFixed(0)+'%':'—'}</span>
+              <span class="dash-badge">MC Conf. ${b.mcConfidence.toFixed(0)}%</span>
+              <span class="dash-badge">Kelly ${(kellyFraction(b.modelProb,b.odds||b.overBest?.price)*100).toFixed(1)}%</span>
+            </div>
+          </div>`).join('')}
+      </div>`).join('')
+    :'<div class="dash-empty">No bets meet the 85% confidence threshold today.</div>';
 }
 
 // Override tab switch for corbet to auto-load
