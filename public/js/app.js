@@ -24,6 +24,32 @@ const CORBET_ROSTER = [
   { name: 'Nolan Arenado',    id: '680776' },
 ];
 
+// ═══════════ MATH / BETTING UTILS ════════════════════════════════════════════
+function gaussianRandom(mean, std) {
+  const u1 = Math.random() || 1e-10, u2 = Math.random();
+  return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// Half-Kelly fraction (0–1 range; 0 means no bet)
+function kellyFraction(modelProb, odds) {
+  if (!odds) return 0;
+  const b = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
+  const p = modelProb / 100, q = 1 - p;
+  return Math.max(0, (b * p - q) / b) * 0.5;
+}
+
+// Monte Carlo confidence: % of noisy-score simulations where the edge holds
+// Requires S player fields to be swapped in before calling (same window as generateCorbetBets)
+function monteCarloConfidence(propKey, line, score, marketOverProb, N = 2000) {
+  let edgeCount = 0;
+  for (let i = 0; i < N; i++) {
+    const ns = Math.max(4, Math.min(96, gaussianRandom(score, 6)));
+    const prob = modelProbability(propKey, line, ns);
+    if (prob !== null && prob > marketOverProb) edgeCount++;
+  }
+  return (edgeCount / N) * 100;
+}
+
 // ═══════════ TABS ════════════════════════════════════════════════════════════
 function switchTab(id) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -600,7 +626,7 @@ async function autoLoadNextGame(){
   try{
     const today=new Date().toISOString().split('T')[0];
     const end=new Date(Date.now()+7*24*60*60*1000).toISOString().split('T')[0];
-    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&startDate=${today}&endDate=${end}`);
+    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=probablePitcher&startDate=${today}&endDate=${end}`);
     const d=await r.json();
     const game=d?.dates?.[0]?.games?.[0];
     if(!game)return;
@@ -620,6 +646,16 @@ async function autoLoadNextGame(){
     // Set stadium from venue name
     const stadVal=VENUE_MAP[game.venue?.name];
     if(stadVal){document.getElementById('stadium-select').value=stadVal;onStadiumChange();}
+    // Auto-load probable pitcher for the opposing team
+    try{
+      const isHomeSide=game.teams?.home?.team?.id===109;
+      const oppSide=isHomeSide?game.teams.away:game.teams.home;
+      const pp=oppSide?.probablePitcher;
+      if(pp?.id&&pp?.fullName&&!S.pitcher){
+        await selectPitcher(pp.id,pp.fullName);
+      }
+    }catch(e){console.log('Auto-pitcher failed:',e.message);}
+
     // Travel fatigue detection — compare to last completed game
     try{
       const weekAgo=new Date(Date.now()-8*24*60*60*1000).toISOString().split('T')[0];
@@ -644,6 +680,9 @@ async function autoLoadNextGame(){
     }catch(e){console.log('Travel detection failed:',e.message);}
     // Load umpire, weather, lineup
     await loadUmpireAndWeather();
+    if(document.getElementById('panel-dashboard')?.classList.contains('active')){
+      loadDashboard();
+    }
   }catch(e){console.log('Auto game load failed:',e.message);}
 }
 
@@ -1597,7 +1636,10 @@ async function _corbetFetchMLBStats(playerId,pitcherId){
 }
 
 async function loadCorbet(){
-  if(!S.lastPrediction){show('corbet-no-prediction');return;}
+  if(!S.pitcher){
+    document.getElementById('corbet-no-prediction').textContent='Game data loading — select a pitcher or wait for auto-load.';
+    show('corbet-no-prediction');return;
+  }
   hide('corbet-no-prediction');hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');hide('corbet-player-filter');
   show('corbet-loading');
   try{
@@ -1696,6 +1738,11 @@ async function loadCorbet(){
         S.playerName=player.name;
         const{score,factors}=calcPrediction();
         const bets=generateCorbetBets(score,factors,rawMarketMap);
+        bets.forEach(b=>{
+          if(!b.insufficient&&b.edgeStrength!=='none'&&b.marketOverProb!=null){
+            b.mcConfidence=monteCarloConfidence(b.propKey,b.line,score,b.marketOverProb);
+          }
+        });
         Object.assign(S,saved);
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
         bets.forEach(b=>{b._playerName=player.name;b._playerScore=score;});
@@ -1806,6 +1853,65 @@ function renderCorbetBets(){
   S.corbetBets=flatBets;
 }
 
+async function loadDashboard(){
+  const gameEl=document.getElementById('dash-game-banner');
+  if(S.pitcher){
+    const venue=document.getElementById('stadium-select')?.value||'';
+    const date=document.getElementById('game-date')?.value||'';
+    const time=document.getElementById('game-time')?.value||'';
+    gameEl.innerHTML=`<div class="dash-banner">
+      <div class="dash-banner-pitcher">🆚 ${S.pitcher.name}</div>
+      <div class="dash-banner-meta">${date} · ${time} · ${venue}</div>
+      ${S.weather?`<div class="dash-banner-weather">${S.weather.temp}°F · ${S.weather.wind} · ${S.weather.condition}</div>`:''}
+    </div>`;
+  }else{
+    gameEl.innerHTML='<div class="dash-banner dash-banner-empty">Loading game data…</div>';
+  }
+  if(!S.allPlayerBets||S.allPlayerBets.length===0){
+    document.getElementById('dash-top-bets').innerHTML='<div class="dash-empty">Loading bets…</div>';
+    document.getElementById('dash-player-grid').innerHTML='';
+    await loadCorbet();
+  }
+  renderDashboard();
+}
+
+function renderDashboard(){
+  if(!S.allPlayerBets||S.allPlayerBets.length===0)return;
+  const edgeOrder={strong:3,moderate:2,small:1,none:0};
+  const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
+  const qualified=[];
+  S.allPlayerBets.forEach(pg=>{
+    pg.bets.forEach(b=>{
+      if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient){
+        qualified.push({...b,playerName:pg.playerName});
+      }
+    });
+  });
+  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  const top3=qualified.slice(0,3);
+  const betColors={strong:'#2ecc71',moderate:'#f1c40f',small:'#aaa'};
+  document.getElementById('dash-top-bets').innerHTML=top3.length?top3.map(b=>`
+    <div class="dash-bet-card">
+      <div class="dash-bet-player">${b.playerName}</div>
+      <div class="dash-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
+      <div class="dash-bet-odds">${fmtOdds(b.overBest?.price)} · <span style="color:${betColors[b.edgeStrength]||'#aaa'}">${b.edgeStrength}</span></div>
+      <div class="dash-bet-badges">
+        <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
+        <span class="dash-badge">Kelly ${(kellyFraction(b.modelProb,b.odds||b.overBest?.price)*100).toFixed(1)}%</span>
+        <span class="dash-badge">Δ ${b.delta!=null?b.delta.toFixed(1)+'%':'—'}</span>
+      </div>
+    </div>`).join(''):'<div class="dash-empty">No bets meet the 85% confidence threshold today.</div>';
+  document.getElementById('dash-player-grid').innerHTML=S.allPlayerBets.map(pg=>{
+    const avgScore=pg.bets.length?Math.round(pg.bets.reduce((s,b)=>s+(b._playerScore||50),0)/pg.bets.length):null;
+    const color=avgScore>=75?'#2ecc71':avgScore>=60?'#f1c40f':'#A71930';
+    return`<div class="dash-player-card">
+      <div class="dash-player-name">${pg.playerName.split(' ').pop()}</div>
+      <div class="dash-player-score" style="color:${color}">${avgScore??'—'}</div>
+      <div class="dash-player-bets">${pg.bets.length} props</div>
+    </div>`;
+  }).join('');
+}
+
 // Override tab switch for corbet to auto-load
 const origSwitch=switchTab;
 function switchTab(id){
@@ -1813,6 +1919,7 @@ function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>{if(t.getAttribute('onclick')===`switchTab('${id}')`)t.classList.add('active');});
+  if(id==='dashboard')loadDashboard();
   if(id==='corbet')loadCorbet();
   if(id==='record')renderRecord();
   if(id==='grade')renderGradePanel();
