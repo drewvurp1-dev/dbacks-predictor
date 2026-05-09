@@ -236,3 +236,5 @@ input[type=range] { accent-color: #A71930; padding: 0; }
 .dash-player-name { font-size:9px; color:#888; font-family:monospace; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
 .dash-player-score { font-size:22px; font-weight:900; font-family:Georgia,serif; }
 .dash-player-bets { font-size:9px; color:#555; font-family:monospace; margin-top:2px; }
+.dash-player-section { margin-bottom:20px; }
+.dash-player-header { font-size:11px; font-weight:900; font-family:monospace; color:#A71930; letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #1a1730; }
