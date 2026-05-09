@@ -14,8 +14,14 @@ const S = {
 };
 
 const CORBET_ROSTER = [
-  { name: 'Corbin Carroll',     id: '682998' },
-  // I'll add more here later — leave this list editable in one place
+  { name: 'Corbin Carroll',   id: '682998' },
+  { name: 'Ketel Marte',      id: '660162' },
+  { name: 'Alek Thomas',      id: '677950' },
+  { name: 'Gabriel Moreno',   id: '668804' },
+  { name: 'Geraldo Perdomo',  id: '669701' },
+  { name: 'Ildemaro Vargas',  id: '545121' },
+  { name: 'Lourdes Gurriel',  id: '666971' },
+  { name: 'Nolan Arenado',    id: '680776' },
 ];
 
 // ═══════════ TABS ════════════════════════════════════════════════════════════
@@ -940,7 +946,7 @@ async function runPrediction(){
   buildPredictionSummary(factors);
   hide('no-prediction');show('prediction-output');
   // Reset corbet
-  hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');
+  hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');hide('corbet-player-filter');
   show('corbet-no-prediction');
   switchTab('result');
 }
@@ -1592,7 +1598,7 @@ async function _corbetFetchMLBStats(playerId,pitcherId){
 
 async function loadCorbet(){
   if(!S.lastPrediction){show('corbet-no-prediction');return;}
-  hide('corbet-no-prediction');hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');
+  hide('corbet-no-prediction');hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');hide('corbet-player-filter');
   show('corbet-loading');
   try{
     const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
@@ -1702,14 +1708,32 @@ async function loadCorbet(){
     const totalBets=allPlayerBets.reduce((s,pg)=>s+pg.bets.length,0);
     if(totalBets===0){hide('corbet-loading');show('corbet-no-props');return;}
 
-    const edgeLabels={strong:'🟢 Strong Edge',moderate:'🟡 Moderate Edge',small:'Small Edge',none:''};
-    const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
-    const flatBets=[];
-    document.getElementById('corbet-bets').innerHTML=allPlayerBets.filter(pg=>pg.bets.length>0).map(pg=>{
-      const cards=pg.bets.map(b=>{
-        const i=flatBets.length;flatBets.push(b);
-        // Insufficient market data card
-        if(b.insufficient)return`<div class="bet-card" style="background:#0c0a1e;border:1px solid #1a1730;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+    S.allPlayerBets=allPlayerBets.filter(pg=>pg.bets.length>0);
+    const filterEl=document.getElementById('corbet-player-filter');
+    filterEl.innerHTML='<div class="cpf-label">Show players</div>'+
+      S.allPlayerBets.map(pg=>`<label data-name="${pg.playerName}"><input type="checkbox" checked onchange="renderCorbetBets()"> ${pg.playerName}</label>`).join('');
+    show('corbet-player-filter');
+    renderCorbetBets();
+    show('corbet-bets');
+  }catch(e){
+    hide('corbet-loading');
+    setText('corbet-error','⚠ '+e.message);
+    show('corbet-error');
+  }finally{hide('corbet-loading');}
+}
+
+function renderCorbetBets(){
+  if(!S.allPlayerBets)return;
+  const edgeLabels={strong:'🟢 Strong Edge',moderate:'🟡 Moderate Edge',small:'Small Edge',none:''};
+  const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
+  const filterEl=document.getElementById('corbet-player-filter');
+  const checked=new Set(Array.from(filterEl.querySelectorAll('label')).filter(l=>l.querySelector('input').checked).map(l=>l.dataset.name));
+  const visible=S.allPlayerBets.filter(pg=>checked.has(pg.playerName));
+  const flatBets=[];
+  document.getElementById('corbet-bets').innerHTML=visible.map(pg=>{
+    const cards=pg.bets.map(b=>{
+      const i=flatBets.length;flatBets.push(b);
+      if(b.insufficient)return`<div class="bet-card" style="background:#0c0a1e;border:1px solid #1a1730;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
         </div>
@@ -1721,20 +1745,19 @@ async function loadCorbet(){
             <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${b.underBest?.book||''}</span></div></div>
         </div>
       </div>`;
-
-        const overW=b.marketOverProb.toFixed(0);
-        const underW=b.marketUnderProb.toFixed(0);
-        const markerLeft=Math.max(1,Math.min(99,b.modelProb)).toFixed(1);
-        const deltaLabel=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
-        const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
-        const dirColor=b.delta>0?'#2ecc71':'#e74c3c';
-        const dirBg=b.delta>0?'rgba(46,204,113,0.10)':'rgba(231,76,60,0.10)';
-        const dirBorder=b.delta>0?'#1a4a10':'#4a1010';
-        const cardBg=b.edgeStrength==='strong'?'background:#061a06;border-color:#1a4a10':
-                     b.edgeStrength==='moderate'?'background:#1a1406;border-color:#3a2a00':
-                     'background:#0c0a1e;border-color:#1a1730';
-        const showSave=b.edgeStrength!=='none';
-        return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
+      const overW=b.marketOverProb.toFixed(0);
+      const underW=b.marketUnderProb.toFixed(0);
+      const markerLeft=Math.max(1,Math.min(99,b.modelProb)).toFixed(1);
+      const deltaLabel=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
+      const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
+      const dirColor=b.delta>0?'#2ecc71':'#e74c3c';
+      const dirBg=b.delta>0?'rgba(46,204,113,0.10)':'rgba(231,76,60,0.10)';
+      const dirBorder=b.delta>0?'#1a4a10':'#4a1010';
+      const cardBg=b.edgeStrength==='strong'?'background:#061a06;border-color:#1a4a10':
+                   b.edgeStrength==='moderate'?'background:#1a1406;border-color:#3a2a00':
+                   'background:#0c0a1e;border-color:#1a1730';
+      const showSave=b.edgeStrength!=='none';
+      return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
           ${showSave?`<button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
@@ -1774,19 +1797,13 @@ async function loadCorbet(){
         </div>
         <div class="bet-reasoning">${b.reasoning}</div>
       </div>`;
-      }).join('');
-      return`<div style="margin-bottom:18px;">
-        <div style="font-size:11px;font-weight:900;font-family:monospace;color:#A71930;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1a1730;">${pg.playerName}</div>
-        ${cards}
-      </div>`;
     }).join('');
-    S.corbetBets=flatBets;
-    show('corbet-bets');
-  }catch(e){
-    hide('corbet-loading');
-    setText('corbet-error','⚠ '+e.message);
-    show('corbet-error');
-  }finally{hide('corbet-loading');}
+    return`<div style="margin-bottom:18px;">
+      <div style="font-size:11px;font-weight:900;font-family:monospace;color:#A71930;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1a1730;">${pg.playerName}</div>
+      ${cards}
+    </div>`;
+  }).join('');
+  S.corbetBets=flatBets;
 }
 
 // Override tab switch for corbet to auto-load
