@@ -730,9 +730,11 @@ async function autoLoadNextGame(){
     const end=new Date(Date.now()+7*24*60*60*1000).toISOString().split('T')[0];
     const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=probablePitcher&startDate=${today}&endDate=${end}`);
     const d=await r.json();
-    // Skip any games that are already Final — find the next upcoming or live game
+    // Find the next scheduled (Preview) game; fall back to Live, then last game
     const allGames=(d?.dates||[]).flatMap(dt=>dt.games||[]);
-    const game=allGames.find(g=>g.status?.abstractGameState!=='Final')||allGames[allGames.length-1];
+    const game=allGames.find(g=>g.status?.abstractGameState==='Preview')
+      ||allGames.find(g=>g.status?.abstractGameState==='Live')
+      ||allGames[allGames.length-1];
     if(!game)return;
     // Set date
     document.getElementById('game-date').value=game.officialDate;
