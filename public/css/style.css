@@ -248,7 +248,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .modal-topbar { position: absolute; top: 0; left: 0; right: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 18px; border-bottom: 1px solid #1a1730; }
 .modal-player-name { font-family: 'Orbitron', monospace; font-size: 12px; color: #E8DFC8; font-weight: 700; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .modal-close { background: none; border: none; color: #E8DFC8; font-size: 24px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }
-.modal-slot .panel { display: block !important; }
+#modal-slot .panel { display: block !important; }
 
 /* ── Dashboard main ── */
 .dash-game-banner { background: #000; border: 1px solid #009A8B; border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
