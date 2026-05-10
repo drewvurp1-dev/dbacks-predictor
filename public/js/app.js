@@ -1757,8 +1757,12 @@ async function loadCorbet(){
     const dbacksGame=events.find(e=>e.home_team?.includes('Arizona')||e.away_team?.includes('Arizona'));
     if(!dbacksGame){
       hide('corbet-loading');
-      document.getElementById('corbet-no-props').textContent='No D-backs game found. Props typically appear 1-2 days before game time.';
-      show('corbet-no-props');return;
+      const msg='No D-backs game on the board yet — props usually post the evening before or morning of game day.';
+      document.getElementById('corbet-no-props').textContent=msg;
+      show('corbet-no-props');
+      document.getElementById('dash-best-bets').innerHTML=`<div class="dash-empty">${msg}</div>`;
+      document.getElementById('dash-player-cards').innerHTML='';
+      return;
     }
 
     const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored';
@@ -1860,7 +1864,12 @@ async function loadCorbet(){
     }
 
     const totalBets=allPlayerBets.reduce((s,pg)=>s+pg.bets.length,0);
-    if(totalBets===0){hide('corbet-loading');show('corbet-no-props');return;}
+    if(totalBets===0){
+      hide('corbet-loading');show('corbet-no-props');
+      document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Player props not yet posted for this game — check back tonight or tomorrow morning.</div>';
+      document.getElementById('dash-player-cards').innerHTML='';
+      return;
+    }
 
     S.allPlayerBets=allPlayerBets.filter(pg=>pg.bets.length>0);
     const filterEl=document.getElementById('corbet-player-filter');
