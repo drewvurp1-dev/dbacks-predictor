@@ -1879,9 +1879,6 @@ async function loadCorbet(){
       });
     });
 
-    // Fetch statcast CSVs once for all roster players
-    const csvRows=await _corbetFetchStatcastCSVs();
-
     // Generate bets for each roster player — game context (pitcher, weather, etc.) stays in S
     const allPlayerBets=[];
     for(const player of activeRoster()){
