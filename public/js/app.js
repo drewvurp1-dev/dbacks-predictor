@@ -884,7 +884,7 @@ async function loadLineupContext(dv){
     show('lineup-content');
 
     // Use confirmed lineup as the active CorBET roster
-    const newRoster=stats.map(p=>({name:p.name,id:String(p.id)}));
+    const newRoster=stats.map(p=>({name:p.name,id:String(p.id),order:p.order||null}));
     S.lineupRoster=newRoster;
     rebuildPlayerSelect(newRoster);
     // If bets are already on screen with stale roster, regenerate them
@@ -1792,7 +1792,8 @@ async function loadCorbet(){
         const{score,tier,factors,catTotals}=calcPrediction();
         S.players[player.id]={name:player.name,score,tier,factors,catTotals,
           splits:mlbStats.splits,seasonStat:mlbStats.seasonStat,rispStat:mlbStats.rispStat,
-          recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast};
+          recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast,
+          order:player.order||null};
         Object.assign(S,saved);
       }catch(e){}
     }
@@ -2093,32 +2094,122 @@ function renderDashboard(){
       :'<div class="dash-empty">No bets meet the 85% MC threshold today.</div>';
   }
 
-  // Player cards — always show every roster player; add bet data when available
+  // Player rows — collapsible, sorted by batting order
   const betsMap={};
   (S.allPlayerBets||[]).forEach(pg=>{betsMap[pg.playerName]=pg;});
-  document.getElementById('dash-player-cards').innerHTML=activeRoster().map(player=>{
+
+  // Pre-compute top-3 set so star icons can be applied per bet row
+  const top3Keys=new Set();
+  if(S.allPlayerBets){
+    const qualified=[];
+    S.allPlayerBets.forEach(pg=>pg.bets.forEach(b=>{
+      if(b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
+        qualified.push({...b,playerName:pg.playerName});
+    }));
+    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+    qualified.slice(0,3).forEach(b=>top3Keys.add(`${b.playerName}_${b.propKey}_${b.direction}`));
+  }
+
+  const orderedRoster=[...activeRoster()].sort((a,b)=>{
+    const oa=S.players?.[a.id]?.order??99;
+    const ob=S.players?.[b.id]?.order??99;
+    return oa-ob;
+  });
+
+  document.getElementById('dash-player-cards').innerHTML=orderedRoster.map(player=>{
     const snap=S.players?.[player.id];
     if(!snap)return'';
     const pid=player.id;
     const scoreColor=snap.tier?.color||'#aaa';
     const pg=betsMap[player.name];
-    const best=pg?.bets.filter(b=>!b.insufficient&&b.mcConfidence!=null)
-      .sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0))[0];
-    return`<div class="dash-pcard">
-      <div class="dash-pcard-name">${player.name}</div>
-      <div class="dash-pcard-score" style="color:${scoreColor}">${snap.score}</div>
-      <div class="dash-pcard-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>
-      ${best
-        ?`<div class="dash-pcard-best">${best.direction.toUpperCase()} ${best.line} ${best.prop}</div>
-          <div class="dash-pcard-delta">MC ${best.mcConfidence.toFixed(0)}% · ${fmtOdds(best.overBest?.price)}</div>`
-        :`<div class="dash-pcard-delta" style="margin-bottom:10px;color:#555;">props pending</div>`}
-      <div class="dash-pcard-actions">
-        <button class="dash-pcard-btn" onclick="openPlayerDetails('${pid}')">Details</button>
-        ${pg?`<button class="dash-pcard-btn" onclick="openPlayerCorbet('${pid}')">CorBET</button>`:''}
-        <button class="dash-pcard-btn" onclick="openPlayerStats('${pid}')">Stats</button>
+    const orderLabel=snap.order||'—';
+
+    // Bets to show in expanded body: non-none edge, up to 5
+    const visibleBets=(pg?.bets||[])
+      .filter(b=>!b.insufficient&&b.edgeStrength!=='none')
+      .sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0))
+      .slice(0,5);
+
+    let betsHtml;
+    if(visibleBets.length){
+      const rows=visibleBets.map(b=>{
+        const key=`${player.name}_${b.propKey}_${b.direction}`;
+        const icon=top3Keys.has(key)
+          ?'<span class="dpb-icon-star">★</span>'
+          :b.edgeStrength==='strong'
+            ?'<span class="dpb-icon-strong">●</span>'
+            :'<span class="dpb-icon-moderate">■</span>';
+        const bestOdds=b.direction.toLowerCase()==='over'?b.overBest:b.underBest;
+        const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
+        const deltaStr=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
+        return`<tr>
+          <td>${icon}</td>
+          <td class="dpb-prop">${b.prop} ${b.line} ${b.direction.toUpperCase()}</td>
+          <td class="dpb-mc">${b.mcConfidence!=null?b.mcConfidence.toFixed(0)+'%':'—'}</td>
+          <td class="dpb-delta" style="color:${deltaColor}">${deltaStr}</td>
+          <td class="dpb-odds">${fmtOdds(bestOdds?.price)}<span class="dpb-book">${bestOdds?.book||''}</span></td>
+        </tr>`;
+      }).join('');
+      betsHtml=`<table class="dpb-bets-table">${rows}</table>
+        ${pg?`<button class="dpb-more-bets" onclick="openPlayerCorbet('${pid}')">View More Bets for ${player.name} ›</button>`:''}`;
+    }else if(pg){
+      betsHtml='<div class="dpb-no-edge">No strong edges today</div>';
+    }else{
+      betsHtml='<div class="dpb-no-edge">Props not yet posted</div>';
+    }
+
+    const analysisText=_lineupAnalysisText(snap);
+    const analysisHtml=analysisText?`<div class="dpb-lineup-analysis">${analysisText}</div>`:'';
+
+    const avgStr=snap.seasonStat?.avg?parseFloat(snap.seasonStat.avg).toFixed(3):'—';
+    const opsStr=snap.seasonStat?.ops?parseFloat(snap.seasonStat.ops).toFixed(3):'—';
+
+    return`<div class="dash-prow" id="dpr-${pid}">
+      <div class="dash-prow-header" onclick="togglePlayerCard('${pid}')">
+        <span class="dash-prow-order">${orderLabel}</span>
+        <span class="dash-prow-name">${player.name}</span>
+        <span class="dash-prow-statline">AVG ${avgStr} &nbsp; OPS ${opsStr}</span>
+        <button class="dash-prow-more" onclick="event.stopPropagation();openPlayerStats('${pid}')">More Stats ›</button>
+        <span class="dash-prow-arrow" id="dpa-${pid}">▼</span>
+      </div>
+      <div class="dash-prow-body hidden" id="dpb-${pid}">
+        <div class="dpb-left">
+          <div class="dpb-gauge" style="border-color:${scoreColor}">
+            <div class="dpb-gauge-score" style="color:${scoreColor}">${snap.score}</div>
+          </div>
+          <div class="dpb-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>
+          <button class="dpb-details-btn" onclick="openPlayerDetails('${pid}')">Details ›</button>
+        </div>
+        <div class="dpb-right">${betsHtml}</div>
+        ${analysisHtml}
       </div>
     </div>`;
   }).join('');
+}
+
+function togglePlayerCard(playerId){
+  const body=document.getElementById('dpb-'+playerId);
+  const arrow=document.getElementById('dpa-'+playerId);
+  if(!body)return;
+  const nowHidden=body.classList.toggle('hidden');
+  if(arrow)arrow.textContent=nowHidden?'▼':'▲';
+}
+
+function _lineupAnalysisText(snap){
+  const ss=snap.seasonStat;
+  const order=snap.order;
+  if(!ss||!order)return null;
+  const pa=ss.plateAppearances||1;
+  const kPct=((ss.strikeOuts/pa)*100).toFixed(0);
+  const bbPct=((ss.baseOnBalls/pa)*100).toFixed(0);
+  const avg=ss.avg?parseFloat(ss.avg).toFixed(3):null;
+  const obp=ss.obp?parseFloat(ss.obp).toFixed(3):null;
+  const ops=ss.ops?parseFloat(ss.ops).toFixed(3):null;
+  const suffix=order===1?'LEADOFF':order===4?'CLEANUP':`#${order} HITTER`;
+  if(order===1)return obp&&kPct?`${obp} OBP · ${kPct}% K RATE BATTING ${suffix} THIS SEASON`:null;
+  if(order===2)return avg&&bbPct?`${avg} AVG · ${bbPct}% BB RATE BATTING ${suffix} THIS SEASON`:null;
+  if(order<=5)return ops&&ss.homeRuns!=null?`${ops} OPS · ${ss.homeRuns} HR BATTING ${suffix} THIS SEASON`:null;
+  return avg&&kPct?`${avg} AVG · ${kPct}% K RATE BATTING ${suffix} THIS SEASON`:null;
 }
 
 // ═══════════ BET RECORD ════════════════════════════════════════════════════════
