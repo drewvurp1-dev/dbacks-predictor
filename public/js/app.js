@@ -8,6 +8,7 @@ const S = {
   weather:null, umpire:null, weatherManual:false, pitcherManual:false,
   matchupStats:null,
   lineupProtection:{tier:'average',avgOps:null,spots:[],manual:true},
+  lineupRoster:null,
   recentGameLog:null,
   lastScore:null, lastPrediction:null,
   betLog: JSON.parse(localStorage.getItem('corbetRecord') || '[]'),
@@ -22,6 +23,17 @@ const CORBET_ROSTER = [
   { name: 'Lourdes Gurriel',  id: '666971' },
   { name: 'Nolan Arenado',    id: '680776' },
 ];
+// Returns the live lineup roster when available, otherwise the hardcoded fallback
+function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
+
+function rebuildPlayerSelect(roster){
+  const sel=document.getElementById('player-select');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  if(roster.some(p=>String(p.id)===String(cur)))sel.value=cur;
+  else{sel.selectedIndex=0;loadPlayer();}
+}
 
 // ═══════════ MATH / BETTING UTILS ════════════════════════════════════════════
 function gaussianRandom(mean, std) {
@@ -865,6 +877,13 @@ async function loadLineupContext(dv){
         ${weakProtection&&nextBatter?`<div style="font-size:10px;color:#e74c3c;font-family:monospace;margin-top:6px;">⚠ ${nextBatter.name} bats behind ${playerLastName} (.${Math.round((nextBatter.avg||0)*1000)}) — pitchers may work around him</div>`:''}
       </div>`;
     show('lineup-content');
+
+    // Use confirmed lineup as the active CorBET roster
+    const newRoster=stats.map(p=>({name:p.name,id:String(p.id)}));
+    S.lineupRoster=newRoster;
+    rebuildPlayerSelect(newRoster);
+    // If bets are already on screen with stale roster, regenerate them
+    if(S.allPlayerBets){S.allPlayerBets=null;loadDashboard();}
   }catch(e){setText('lineup-empty','Could not load lineup data.');show('lineup-empty');console.error('Lineup:',e);}
   finally{hide('lineup-spinner');}
 }
@@ -1781,13 +1800,13 @@ async function loadCorbet(){
     const TRUSTED_BOOKS=new Set(['DraftKings','FanDuel','BetMGM']);
     const isOutlierPrice=(price,line)=>price>0&&(line<=0.5?price>300:price>400);
     const playerMaps={};
-    CORBET_ROSTER.forEach(p=>{playerMaps[p.id]={};});
+    activeRoster().forEach(p=>{playerMaps[p.id]={};});
     (propData.bookmakers||[]).forEach(book=>{
       const skipCalc=EXCLUDED_CALC_BOOKS.has(book.title);
       const isTrusted=TRUSTED_BOOKS.has(book.title);
       (book.markets||[]).forEach(market=>{
         if(!PROP_NAMES[market.key])return;
-        CORBET_ROSTER.forEach(player=>{
+        activeRoster().forEach(player=>{
           const pSearch=player.name.toLowerCase().split(' ').pop();
           const m0=playerMaps[player.id];
           if(!m0[market.key])m0[market.key]={
@@ -1832,7 +1851,7 @@ async function loadCorbet(){
 
     // Generate bets for each roster player — game context (pitcher, weather, etc.) stays in S
     const allPlayerBets=[];
-    for(const player of CORBET_ROSTER){
+    for(const player of activeRoster()){
       try{
         const mlbStats=await _corbetFetchMLBStats(player.id,S.pitcher?.id);
         const statcast=_corbetExtractStatcast(player.id,csvRows);
@@ -2057,9 +2076,9 @@ function renderDashboard(){
 
   // Player cards
   document.getElementById('dash-player-cards').innerHTML=S.allPlayerBets.map(pg=>{
-    const snap=S.players?.[CORBET_ROSTER.find(r=>r.name===pg.playerName)?.id];
+    const snap=S.players?.[activeRoster().find(r=>r.name===pg.playerName)?.id];
     const best=pg.bets.filter(b=>!b.insufficient&&b.mcConfidence!=null).sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0))[0];
-    const pid=CORBET_ROSTER.find(r=>r.name===pg.playerName)?.id||'';
+    const pid=activeRoster().find(r=>r.name===pg.playerName)?.id||'';
     const scoreColor=snap?.tier?.color||'#aaa';
     return`<div class="dash-pcard">
       <div class="dash-pcard-name">${pg.playerName}</div>
