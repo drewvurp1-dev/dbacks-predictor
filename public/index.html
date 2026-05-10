@@ -3,39 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🐍 D-backs Player Predictor</title>
-<link rel="stylesheet" href="/css/style.css?v=3">
+<title>Snake Savant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=4">
 </head>
 <body>
 
 <div class="header">
-  <div>
+  <div class="header-left">
     <small>Arizona Diamondbacks · 2026</small>
-    <h1>🐍 Player Predictor</h1>
-    <p>Pre-game analysis · MLB Stats API · Live weather · Umpire data · CorBET Analysis</p>
+    <div class="site-title">SNAKE SAVANT</div>
   </div>
-</div>
-
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
-  <button class="tab" onclick="switchTab('setup')">Setup</button>
-  <button class="tab" onclick="switchTab('result')">Prediction</button>
-  <button class="tab" onclick="switchTab('corbet')">CorBET 🟢</button>
-  <button class="tab" onclick="switchTab('record')">Record</button>
-  <button class="tab" onclick="switchTab('splits')">Splits</button>
-  <button class="tab" onclick="switchTab('stats')">Adv. Stats</button>
-  <button class="tab" onclick="switchTab('pitcher')">Pitcher</button>
-  <button class="tab" onclick="switchTab('grade')">📊 Grade</button>
+  <div class="header-right">
+    <div id="api-credits" class="api-credits" title="Odds API credits remaining">— credits</div>
+    <button class="header-btn" onclick="openModal('panel-grade','Grade &amp; Learn');renderGradePanel();">📊 GRADE</button>
+    <button class="header-btn" onclick="openModal('panel-record','Bet Record');renderRecord();">📝 RECORD</button>
+  </div>
 </div>
 
 <div class="content">
 
-  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
-  <div id="panel-dashboard" class="panel active">
-    <div id="dash-game-banner"></div>
+  <!-- ═══════════════════ DASHBOARD (always visible) ═══════════════════ -->
+  <div id="dashboard-main">
+    <div id="dash-game-banner"><div class="dash-banner-empty">Loading game data…</div></div>
+    <div id="dash-pitcher-card"></div>
     <div class="card">
-      <div class="card-header">Player Props · MC ≥85%</div>
-      <div class="card-body" id="dash-top-bets"><div class="dash-empty">Loading…</div></div>
+      <div class="card-header">Top 3 Bets · MC ≥85%</div>
+      <div class="card-body" id="dash-best-bets"><div class="dash-empty">Loading…</div></div>
+    </div>
+    <div id="dash-player-cards"></div>
+    <div class="dash-setup-link">
+      <button onclick="openModal('panel-setup','Setup &amp; Overrides')">⚙ Manual Setup / Overrides</button>
     </div>
   </div>
 
@@ -49,7 +49,6 @@
           <select id="player-select" onchange="loadPlayer()">
             <option value="682998">Corbin Carroll · CF · Bats L</option>
             <option value="660162">Ketel Marte · 2B · Bats S</option>
-            <option value="677950">Alek Thomas · CF · Bats L</option>
             <option value="668804">Gabriel Moreno · C · Bats R</option>
             <option value="669701">Geraldo Perdomo · SS · Bats S</option>
             <option value="545121">Ildemaro Vargas · 2B/SS · Bats S</option>
@@ -77,7 +76,7 @@
         <div id="pitcher-error" class="status error hidden"></div>
         <div id="pitcher-loaded" class="hidden"></div>
         <div id="matchup-section" class="hidden" style="margin-top:12px;">
-          <div style="font-size:9px;color:#A71930;font-family:monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">Career vs This Pitcher</div>
+          <div style="font-size:9px;color:#009A8B;font-family:monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">Career vs This Pitcher</div>
           <div id="matchup-spinner" class="spinner hidden" style="padding:8px 0;"><div class="spinner-circle"></div></div>
           <div id="matchup-content" class="hidden"></div>
         </div>
@@ -125,7 +124,7 @@
     </div>
 
     <div class="card">
-      <div class="card-header">🌤 Stadium & Weather</div>
+      <div class="card-header">🌤 Stadium &amp; Weather</div>
       <div class="card-body">
         <div class="row">
           <label>Stadium</label>
@@ -168,7 +167,7 @@
 
   <!-- ═══════════════════ RESULT ═══════════════════ -->
   <div id="panel-result" class="panel">
-    <div id="no-prediction" style="text-align:center;padding:40px;color:#777;font-family:monospace;font-size:12px;">Complete the Setup tab and hit Run Prediction first.</div>
+    <div id="no-prediction" style="text-align:center;padding:40px;color:#777;font-family:monospace;font-size:12px;">Complete the Setup and hit Run Prediction first.</div>
     <div id="prediction-output" class="hidden">
       <div class="prediction-header" id="pred-header"></div>
       <div class="card">
@@ -225,19 +224,19 @@
       </div>
       <div class="card"><div class="card-header">📝 Scouting Report</div><div class="card-body" id="prediction-summary" style="padding:14px 16px;"><div style="color:#777;font-family:monospace;font-size:11px;">Run a prediction to generate the scouting report.</div></div></div>
       <div class="card"><div class="card-header">⚾ Pitch Mix</div><div class="card-body" id="pitch-display"></div></div>
-      <div style="margin-top:12px;">
-        <button class="btn-primary" onclick="switchTab('corbet')" style="background:linear-gradient(135deg,#0d3a0d,#1a5a10);">View CorBET Carroll →</button>
+      <div style="margin-top:12px;" id="result-nav-btns">
+        <button class="btn-primary" onclick="closeModal();openModal('panel-corbet','CorBET Carroll');loadCorbet();" style="background:linear-gradient(135deg,#009A8B,#007a70);">View CorBET →</button>
+        <button class="btn-secondary" onclick="closeModal();openModal('panel-setup','Setup &amp; Overrides')">← Adjust Conditions</button>
       </div>
-      <button class="btn-secondary" onclick="switchTab('setup')">← Adjust Conditions</button>
     </div>
   </div>
 
-  <!-- ═══════════════════ CORBET CARROLL ═══════════════════ -->
+  <!-- ═══════════════════ CORBET ═══════════════════ -->
   <div id="panel-corbet" class="panel">
     <div class="corbet-header">
       <div class="corbet-logo">🎰</div>
       <div>
-        <div class="corbet-title">CorBET Carroll</div>
+        <div class="corbet-title">SNAKE SAVANT CorBET</div>
         <div class="corbet-sub">Model-aligned prop recommendations · Odds API</div>
       </div>
     </div>
@@ -294,7 +293,7 @@
         <div id="stats-content" class="hidden">
           <div class="stats-section-title">Slash Line</div><div class="stats-grid" id="stat-slash"></div>
           <div class="stats-section-title">Plate Discipline</div><div class="stats-grid" id="stat-discipline"></div>
-          <div class="stats-section-title">Power & Contact</div><div class="stats-grid" id="stat-power"></div>
+          <div class="stats-section-title">Power &amp; Contact</div><div class="stats-grid" id="stat-power"></div>
           <div class="stats-section-title">Runners in Scoring Position</div><div id="stat-risp"></div>
           <div class="stats-section-title">Statcast / Advanced</div><div class="stats-grid" id="stat-statcast"><div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div></div>
         </div>
@@ -322,8 +321,6 @@
 
   <!-- ═══════════════════ GRADE & LEARN ═══════════════════ -->
   <div id="panel-grade" class="panel">
-
-    <!-- Ungraded predictions -->
     <div class="card" id="grade-pending-card">
       <div class="card-header">⚡ Pending Grades</div>
       <div class="card-body">
@@ -331,8 +328,6 @@
         <div id="grade-pending-list"></div>
       </div>
     </div>
-
-    <!-- Factor performance dashboard -->
     <div class="card">
       <div class="card-header"><span>🧠 Model Learning</span><span id="grade-confidence" style="font-size:10px;color:#999;font-weight:400;font-family:monospace;"></span></div>
       <div class="card-body">
@@ -343,8 +338,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Score vs actual chart -->
     <div class="card">
       <div class="card-header">📈 Prediction Score vs Actual Performance</div>
       <div class="card-body">
@@ -354,8 +347,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Graded game log -->
     <div class="card">
       <div class="card-header"><span>📋 Graded Game Log</span><button onclick="clearGrades()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
@@ -366,9 +357,19 @@
         <div id="grade-log"></div>
       </div>
     </div>
-
   </div>
 
+</div>
+
+<!-- ═══════════════════ MODAL OVERLAY ═══════════════════ -->
+<div id="modal-overlay" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()">
+  <div class="modal-frame">
+    <div class="modal-topbar">
+      <div class="modal-player-name" id="modal-player-name"></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-slot"></div>
+  </div>
 </div>
 
 <script src="/js/app.js"></script>

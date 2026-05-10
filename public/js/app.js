@@ -16,7 +16,6 @@ const S = {
 const CORBET_ROSTER = [
   { name: 'Corbin Carroll',   id: '682998' },
   { name: 'Ketel Marte',      id: '660162' },
-  { name: 'Alek Thomas',      id: '677950' },
   { name: 'Gabriel Moreno',   id: '668804' },
   { name: 'Geraldo Perdomo',  id: '669701' },
   { name: 'Ildemaro Vargas',  id: '545121' },
@@ -50,13 +49,113 @@ function monteCarloConfidence(propKey, line, score, marketOverProb, N = 2000) {
   return (edgeCount / N) * 100;
 }
 
-// ═══════════ TABS ════════════════════════════════════════════════════════════
-function switchTab(id) {
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
-  document.querySelectorAll('.tab').forEach(t=>{ if(t.getAttribute('onclick')===`switchTab('${id}')`) t.classList.add('active'); });
-  if(id==='record') renderRecord();
+// ═══════════ MODAL SYSTEM ════════════════════════════════════════════════════
+let _modalPanels = [];
+let _modalSavedS = null;
+
+function _clearModalSlot() {
+  const content = document.querySelector('.content');
+  _modalPanels.forEach(id => {
+    const p = document.getElementById(id);
+    if (p) content.appendChild(p);
+  });
+  _modalPanels = [];
+  document.getElementById('modal-slot').innerHTML = '';
+}
+
+function _moveToModal(panelId) {
+  const p = document.getElementById(panelId);
+  if (!p) return;
+  document.getElementById('modal-slot').appendChild(p);
+  _modalPanels.push(panelId);
+}
+
+function openModal(panelIds, title) {
+  if (typeof panelIds === 'string') panelIds = [panelIds];
+  _clearModalSlot();
+  document.getElementById('modal-player-name').textContent = title || '';
+  panelIds.forEach(id => _moveToModal(id));
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  _clearModalSlot();
+  document.getElementById('modal-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (_modalSavedS) { Object.assign(S, _modalSavedS); _modalSavedS = null; }
+}
+
+function _swapToPlayer(playerId) {
+  const p = S.players?.[playerId];
+  if (!p) return null;
+  const saved = {
+    playerName: S.playerName, splits: S.splits, seasonStat: S.seasonStat,
+    rispStat: S.rispStat, statcast: S.statcast, recentGameLog: S.recentGameLog,
+    matchupStats: S.matchupStats, lastScore: S.lastScore
+  };
+  S.playerName = p.name; S.splits = p.splits; S.seasonStat = p.seasonStat;
+  S.rispStat = p.rispStat; S.statcast = p.statcast;
+  S.recentGameLog = p.recentGameLog; S.matchupStats = p.matchupStats;
+  S.lastScore = p.score;
+  return saved;
+}
+
+function openPlayerDetails(playerId) {
+  const snap = S.players?.[playerId];
+  if (!snap) return;
+  _modalSavedS = _swapToPlayer(playerId);
+  const C = 2 * Math.PI * 52;
+  document.getElementById('gauge-circle').style.strokeDashoffset = C - (snap.score / 100) * C;
+  document.getElementById('gauge-circle').style.stroke = snap.tier.color;
+  document.getElementById('gauge-score').textContent = snap.score;
+  document.getElementById('gauge-label').textContent = snap.tier.label;
+  document.getElementById('gauge-label').style.color = snap.tier.color;
+  document.getElementById('gauge-desc').textContent = snap.tier.desc;
+  const pn = S.pitcher?.name || 'TBD';
+  const hand = S.pitcher?.hand || 'R';
+  const era = S.pitcher?.st?.era;
+  document.getElementById('pred-header').textContent = `${snap.name} · ${pn} (${hand}HP)${era ? ` · ERA ${parseFloat(era).toFixed(2)}` : ''}`;
+  renderFactorCards(snap.factors, snap.catTotals);
+  buildPredictionSummary(snap.factors);
+  document.getElementById('result-nav-btns').style.display = 'none';
+  hide('no-prediction'); show('prediction-output');
+  openModal('panel-result', snap.name + ' · Details');
+}
+
+function openPlayerCorbet(playerId) {
+  const snap = S.players?.[playerId];
+  if (!snap) return;
+  _modalSavedS = _swapToPlayer(playerId);
+  const playerBets = S.allPlayerBets?.filter(pg => pg.playerName === snap.name) || [];
+  if (!playerBets.length) {
+    document.getElementById('corbet-no-prediction').textContent = 'No bets available for this player.';
+    show('corbet-no-prediction'); hide('corbet-bets'); hide('corbet-player-filter');
+  } else {
+    const savedAll = S.allPlayerBets;
+    S.allPlayerBets = playerBets;
+    hide('corbet-no-prediction'); hide('corbet-loading'); hide('corbet-player-filter');
+    renderCorbetBets();
+    show('corbet-bets');
+    S.allPlayerBets = savedAll;
+  }
+  openModal('panel-corbet', snap.name + ' · CorBET');
+}
+
+function openPlayerStats(playerId) {
+  const snap = S.players?.[playerId];
+  if (!snap) return;
+  _modalSavedS = _swapToPlayer(playerId);
+  renderSplitsTab(); renderStatsTab();
+  openModal(['panel-splits', 'panel-stats'], snap.name + ' · Stats');
+}
+
+function setApiCredits(remaining) {
+  const el = document.getElementById('api-credits');
+  if (!el) return;
+  const n = parseInt(remaining) || 0;
+  el.textContent = n + ' credits';
+  el.className = 'api-credits' + (n < 50 ? ' critical' : n < 200 ? ' low' : '');
 }
 
 // ═══════════ TOGGLES ══════════════════════════════════════════════════════════
@@ -650,6 +749,7 @@ async function autoLoadNextGame(){
     try{
       const isHomeSide=game.teams?.home?.team?.id===109;
       const oppSide=isHomeSide?game.teams.away:game.teams.home;
+      S.opposingTeam=oppSide?.team?.name||'';
       const pp=oppSide?.probablePitcher;
       if(pp?.id&&pp?.fullName&&!S.pitcher){
         await selectPitcher(pp.id,pp.fullName);
@@ -680,9 +780,7 @@ async function autoLoadNextGame(){
     }catch(e){console.log('Travel detection failed:',e.message);}
     // Load umpire, weather, lineup
     await loadUmpireAndWeather();
-    if(document.getElementById('panel-dashboard')?.classList.contains('active')){
-      loadDashboard();
-    }
+    loadDashboard();
   }catch(e){console.log('Auto game load failed:',e.message);}
 }
 
@@ -984,10 +1082,13 @@ async function runPrediction(){
   await loadGameLog();
   buildPredictionSummary(factors);
   hide('no-prediction');show('prediction-output');
-  // Reset corbet
+  // Reset corbet state
   hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');hide('corbet-player-filter');
   show('corbet-no-prediction');
-  switchTab('result');
+  // Show nav buttons (hidden in player-detail modal view)
+  const navBtns=document.getElementById('result-nav-btns');
+  if(navBtns)navBtns.style.display='';
+  openModal('panel-result', S.playerName + ' · Prediction');
 }
 
 // ═══════════ FACTOR CARD RENDERING ════════════════════════════════════════════
@@ -1644,6 +1745,7 @@ async function loadCorbet(){
   show('corbet-loading');
   try{
     const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
+    {const rem=r.headers.get('X-Requests-Remaining');if(rem!=null)setApiCredits(rem);}
     const eventsText=await r.text();
     let events;
     try{events=JSON.parse(eventsText);}catch(e){throw new Error('Could not parse Odds API response.');}
@@ -1736,13 +1838,15 @@ async function loadCorbet(){
         S.rispStat=mlbStats.rispStat;S.statcast=statcast;
         S.recentGameLog=mlbStats.recentGameLog;S.matchupStats=mlbStats.matchupStats;
         S.playerName=player.name;
-        const{score,factors}=calcPrediction();
+        const{score,tier,factors,catTotals}=calcPrediction();
         const bets=generateCorbetBets(score,factors,rawMarketMap);
         bets.forEach(b=>{
           if(!b.insufficient&&b.edgeStrength!=='none'&&b.marketOverProb!=null){
             b.mcConfidence=monteCarloConfidence(b.propKey,b.line,score,b.marketOverProb);
           }
         });
+        S.players=S.players||{};
+        S.players[player.id]={name:player.name,score,tier,factors,catTotals,splits:mlbStats.splits,seasonStat:mlbStats.seasonStat,rispStat:mlbStats.rispStat,recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast};
         Object.assign(S,saved);
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
         bets.forEach(b=>{b._playerName=player.name;b._playerScore=score;});
@@ -1762,6 +1866,8 @@ async function loadCorbet(){
     show('corbet-player-filter');
     renderCorbetBets();
     show('corbet-bets');
+    renderDashboard();
+    autoSaveTopBets();
   }catch(e){
     hide('corbet-loading');
     setText('corbet-error','⚠ '+e.message);
@@ -1846,7 +1952,7 @@ function renderCorbetBets(){
       </div>`;
     }).join('');
     return`<div style="margin-bottom:18px;">
-      <div style="font-size:11px;font-weight:900;font-family:monospace;color:#A71930;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1a1730;">${pg.playerName}</div>
+      <div class="dash-player-header">${pg.playerName}</div>
       ${cards}
     </div>`;
   }).join('');
@@ -1854,68 +1960,98 @@ function renderCorbetBets(){
 }
 
 async function loadDashboard(){
-  const gameEl=document.getElementById('dash-game-banner');
-  if(S.pitcher){
-    const venue=document.getElementById('stadium-select')?.value||'';
-    const date=document.getElementById('game-date')?.value||'';
-    const time=document.getElementById('game-time')?.value||'';
-    gameEl.innerHTML=`<div class="dash-banner">
-      <div class="dash-banner-pitcher">🆚 ${S.pitcher.name}</div>
-      <div class="dash-banner-meta">${date} · ${time} · ${venue}</div>
-      ${S.weather?`<div class="dash-banner-weather">${S.weather.temp}°F · ${S.weather.wind} · ${S.weather.condition}</div>`:''}
-    </div>`;
-  }else{
-    gameEl.innerHTML='<div class="dash-banner dash-banner-empty">Loading game data…</div>';
-  }
+  // Render game banner with current context
+  _renderGameBanner();
+  _renderPitcherCard();
   if(!S.allPlayerBets||S.allPlayerBets.length===0){
-    document.getElementById('dash-top-bets').innerHTML='<div class="dash-empty">Loading bets…</div>';
-    document.getElementById('dash-player-grid').innerHTML='';
-    await loadCorbet();
+    document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Loading bets…</div>';
+    document.getElementById('dash-player-cards').innerHTML='';
+    await loadCorbet(); // calls renderDashboard() at end
+  } else {
+    renderDashboard();
   }
-  renderDashboard();
+}
+
+function _renderGameBanner(){
+  const el=document.getElementById('dash-game-banner');
+  if(!el)return;
+  const opp=S.opposingTeam||'';
+  const date=document.getElementById('game-date')?.value||'';
+  const time=document.getElementById('game-time')?.value||'';
+  const venue=document.getElementById('stadium-select')?.value||'';
+  const umpName=S.umpire?.fullName||S.umpire?.name||'';
+  if(!opp&&!S.pitcher){el.innerHTML='<div class="dash-banner-empty">Loading game data…</div>';return;}
+  el.innerHTML=`
+    ${opp?`<div class="dash-opp">vs ${opp}</div>`:''}
+    <div class="dash-game-meta">${[date,time,venue].filter(Boolean).join(' · ')}</div>
+    ${S.weather?`<div class="dash-game-weather">${S.weather.temp}°F · ${S.weather.condition}${S.weather.wind?' · '+S.weather.wind:''}</div>`:''}
+    ${umpName?`<div class="dash-ump">HP Umpire: ${umpName}</div>`:''}
+  `;
+}
+
+function _renderPitcherCard(){
+  const el=document.getElementById('dash-pitcher-card');
+  if(!el)return;
+  if(!S.pitcher){el.innerHTML='';return;}
+  const era=S.pitcher.st?.era?parseFloat(S.pitcher.st.era).toFixed(2):'—';
+  const hand=S.pitcher.hand||'R';
+  el.innerHTML=`<div class="dash-pitcher-card">
+    <div>
+      <div class="dash-pitcher-name">${S.pitcher.name}</div>
+      <div class="dash-pitcher-meta">${hand}HP · ERA ${era}</div>
+    </div>
+    <button class="dash-pitcher-btn" onclick="openModal('panel-pitcher','Pitcher Analysis')">View Stats</button>
+  </div>`;
 }
 
 function renderDashboard(){
   if(!S.allPlayerBets||S.allPlayerBets.length===0)return;
+  _renderGameBanner();
+  _renderPitcherCard();
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
-  const betColors={strong:'#2ecc71',moderate:'#f1c40f',small:'#aaa'};
-  const sections=[];
-  S.allPlayerBets.forEach(pg=>{
-    const qbets=pg.bets.filter(b=>
-      b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient
-    ).sort((a,b)=>(b.mcConfidence||0)-(a.mcConfidence||0));
-    if(qbets.length)sections.push({playerName:pg.playerName,bets:qbets});
-  });
-  document.getElementById('dash-top-bets').innerHTML=sections.length
-    ?sections.map(pg=>`
-      <div class="dash-player-section">
-        <div class="dash-player-header">${pg.playerName}</div>
-        ${pg.bets.map(b=>`
-          <div class="dash-bet-card">
-            <div class="dash-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
-            <div class="dash-bet-odds">${fmtOdds(b.overBest?.price)} · <span style="color:${betColors[b.edgeStrength]||'#aaa'}">${b.edgeStrength}</span></div>
-            <div class="dash-bet-badges">
-              <span class="dash-badge">Model ${b.modelProb!=null?b.modelProb.toFixed(0)+'%':'—'}</span>
-              <span class="dash-badge">Market ${b.marketOverProb!=null?b.marketOverProb.toFixed(0)+'%':'—'}</span>
-              <span class="dash-badge">MC Conf. ${b.mcConfidence.toFixed(0)}%</span>
-              <span class="dash-badge">Kelly ${(kellyFraction(b.modelProb,b.odds||b.overBest?.price)*100).toFixed(1)}%</span>
-            </div>
-          </div>`).join('')}
-      </div>`).join('')
-    :'<div class="dash-empty">No bets meet the 85% confidence threshold today.</div>';
-}
+  const edgeOrder={strong:3,moderate:2,small:1,none:0};
 
-// Override tab switch for corbet to auto-load
-const origSwitch=switchTab;
-function switchTab(id){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
-  document.querySelectorAll('.tab').forEach(t=>{if(t.getAttribute('onclick')===`switchTab('${id}')`)t.classList.add('active');});
-  if(id==='dashboard')loadDashboard();
-  if(id==='corbet')loadCorbet();
-  if(id==='record')renderRecord();
-  if(id==='grade')renderGradePanel();
+  // Top 3 bets
+  const qualified=[];
+  S.allPlayerBets.forEach(pg=>{
+    pg.bets.forEach(b=>{
+      if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
+        qualified.push({...b,playerName:pg.playerName});
+    });
+  });
+  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  const top3=qualified.slice(0,3);
+  document.getElementById('dash-best-bets').innerHTML=top3.length
+    ?top3.map(b=>`<div class="dash-best-bet-row">
+      <div class="dash-best-bet-left">
+        <div class="dash-best-bet-player">${b.playerName}</div>
+        <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
+      </div>
+      <div class="dash-best-bet-right">
+        <span class="dash-badge">${fmtOdds(b.overBest?.price)}</span>
+        <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
+        <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
+      </div>
+    </div>`).join('')
+    :'<div class="dash-empty">No bets meet the 85% MC threshold today.</div>';
+
+  // Player cards
+  document.getElementById('dash-player-cards').innerHTML=S.allPlayerBets.map(pg=>{
+    const snap=S.players?.[CORBET_ROSTER.find(r=>r.name===pg.playerName)?.id];
+    const best=pg.bets.filter(b=>!b.insufficient&&b.mcConfidence!=null).sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0))[0];
+    const pid=CORBET_ROSTER.find(r=>r.name===pg.playerName)?.id||'';
+    const scoreColor=snap?.tier?.color||'#aaa';
+    return`<div class="dash-pcard">
+      <div class="dash-pcard-name">${pg.playerName}</div>
+      ${snap?`<div class="dash-pcard-score" style="color:${scoreColor}">${snap.score}</div><div class="dash-pcard-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>`:''}
+      ${best?`<div class="dash-pcard-best">${best.direction.toUpperCase()} ${best.line} ${best.prop}</div><div class="dash-pcard-delta">MC ${best.mcConfidence.toFixed(0)}% · ${fmtOdds(best.overBest?.price)}</div>`:'<div class="dash-pcard-delta" style="margin-bottom:10px;">No edge bets</div>'}
+      <div class="dash-pcard-actions">
+        <button class="dash-pcard-btn" onclick="openPlayerDetails('${pid}')">Details</button>
+        <button class="dash-pcard-btn" onclick="openPlayerCorbet('${pid}')">CorBET</button>
+        <button class="dash-pcard-btn" onclick="openPlayerStats('${pid}')">Stats</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ═══════════ BET RECORD ════════════════════════════════════════════════════════
@@ -1935,6 +2071,27 @@ function saveBet(idx, btn){
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
   renderRecord();
   if(btn){btn.textContent='✓ Saved!';btn.style.color='#2ecc71';setTimeout(()=>{btn.textContent='+ Save to Record';btn.style.color='';},2000);}
+}
+
+function autoSaveTopBets(){
+  if(!S.allPlayerBets)return;
+  const date=new Date().toISOString().split('T')[0];
+  const edgeOrder={strong:3,moderate:2,small:1,none:0};
+  const qualified=[];
+  S.allPlayerBets.forEach(pg=>{
+    pg.bets.forEach(b=>{
+      if(b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
+        qualified.push({...b,playerName:pg.playerName});
+    });
+  });
+  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  qualified.slice(0,3).forEach(b=>{
+    const prop=`${b.direction} ${b.line} ${b.prop}`;
+    if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
+    const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
+    S.betLog.unshift({id:Date.now(),date,player:b.playerName,prop,odds:b.overBest?.price,rating,score:b._playerScore,result:null});
+  });
+  localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
 }
 
 function setResult(id,result){
@@ -2060,6 +2217,13 @@ const DEFAULT_WEIGHTS = {
   'Wind Out': 1, 'Wind In': -1, 'Roof Closed': -2,
   'Altitude': 8, 'Elevation': 3, 'Red-Eye': -6, 'Same-Day Travel': -3,
   'Umpire': 1, 'Barrel%': 4, 'Hard-Hit%': 3, 'Whiff%': 3, 'xwOBA': 4,
+  'xBA': 3, 'xSLG': 3,
+  'Sweet Spot%': 2, 'Bat Speed': 2, 'Squared-Up%': 2, 'Blast%': 2,
+  'GB%': -2, 'FB%': 2,
+  'vs Pitcher Career': 6,
+  'Crosswind': -2, 'Humidity': -1,
+  'Pitcher xwOBA Against': 3, 'Pitcher xERA': 4, 'Pitcher Whiff%': 3,
+  'Lineup Protection': 3,
 };
 
 // Storage keys
