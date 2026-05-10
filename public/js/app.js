@@ -51,12 +51,14 @@ function kellyFraction(modelProb, odds) {
 
 // Monte Carlo confidence: % of noisy-score simulations where the edge holds
 // Requires S player fields to be swapped in before calling (same window as generateCorbetBets)
-function monteCarloConfidence(propKey, line, score, marketOverProb, N = 2000) {
+function monteCarloConfidence(propKey, line, score, marketOverProb, direction = 'Over', N = 2000) {
   let edgeCount = 0;
+  const isUnder = String(direction).toLowerCase() === 'under';
   for (let i = 0; i < N; i++) {
     const ns = Math.max(4, Math.min(96, gaussianRandom(score, 6)));
     const prob = modelProbability(propKey, line, ns);
-    if (prob !== null && prob > marketOverProb) edgeCount++;
+    if (prob === null) continue;
+    if (isUnder ? prob < marketOverProb : prob > marketOverProb) edgeCount++;
   }
   return (edgeCount / N) * 100;
 }
@@ -1891,7 +1893,7 @@ async function loadCorbet(){
         const bets=generateCorbetBets(snap.score,snap.factors,rawMarketMap);
         bets.forEach(b=>{
           if(!b.insufficient&&b.edgeStrength!=='none'&&b.marketOverProb!=null){
-            b.mcConfidence=monteCarloConfidence(b.propKey,b.line,snap.score,b.marketOverProb);
+            b.mcConfidence=monteCarloConfidence(b.propKey,b.line,snap.score,b.marketOverProb,b.direction);
           }
         });
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
@@ -2160,6 +2162,8 @@ function renderDashboard(){
 
     const analysisText=_lineupAnalysisText(snap);
     const analysisHtml=analysisText?`<div class="dpb-lineup-analysis">${analysisText}</div>`:'';
+    const matchupHtml=_matchupCardHtml(snap);
+    const recentHtml=_recentFormHtml(snap);
 
     const avgStr=snap.seasonStat?.avg?parseFloat(snap.seasonStat.avg).toFixed(3):'—';
     const opsStr=snap.seasonStat?.ops?parseFloat(snap.seasonStat.ops).toFixed(3):'—';
@@ -2180,7 +2184,8 @@ function renderDashboard(){
           <div class="dpb-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>
           <button class="dpb-details-btn" onclick="openPlayerDetails('${pid}')">Details ›</button>
         </div>
-        <div class="dpb-right">${betsHtml}</div>
+        <div class="dpb-center">${betsHtml}</div>
+        <div class="dpb-right">${matchupHtml}${recentHtml}</div>
         ${analysisHtml}
       </div>
     </div>`;
@@ -2210,6 +2215,48 @@ function _lineupAnalysisText(snap){
   if(order===2)return avg&&bbPct?`${avg} AVG · ${bbPct}% BB RATE BATTING ${suffix} THIS SEASON`:null;
   if(order<=5)return ops&&ss.homeRuns!=null?`${ops} OPS · ${ss.homeRuns} HR BATTING ${suffix} THIS SEASON`:null;
   return avg&&kPct?`${avg} AVG · ${kPct}% K RATE BATTING ${suffix} THIS SEASON`:null;
+}
+
+function _matchupCardHtml(snap){
+  const m=snap.matchupStats;
+  const pitcherLast=(S.pitcher?.name||'').split(' ').pop().toUpperCase();
+  const header=pitcherLast?`VS ${pitcherLast}`:'VS PITCHER';
+  if(!m||!m.ab||m.ab<1){
+    return`<div class="dpb-mini-card">
+      <div class="dpb-mini-head">${header}</div>
+      <div class="dpb-mini-empty">First career matchup</div>
+    </div>`;
+  }
+  const fmt=v=>(parseFloat(v)||0).toFixed(3).replace(/^0/,'');
+  const slash=`${fmt(m.avg)}/${fmt(m.obp)}/${fmt(m.slg)}`;
+  return`<div class="dpb-mini-card">
+    <div class="dpb-mini-head">${header} · ${m.ab} AB</div>
+    <div class="dpb-mini-row">${slash}</div>
+    <div class="dpb-mini-row">${m.h} H · ${m.hr} HR · ${m.k} K · ${m.bb} BB</div>
+  </div>`;
+}
+
+function _recentFormHtml(snap){
+  // recentGameLog is most-recent-first (see line ~224); take the first 7
+  const log=snap.recentGameLog;
+  if(!log||!log.length)return'';
+  const games=log.slice(0,7);
+  let ab=0,h=0,hr=0,bb=0,k=0;
+  games.forEach(g=>{
+    const s=g.stat||g;
+    ab+=parseInt(s.atBats)||0;
+    h+=parseInt(s.hits)||0;
+    hr+=parseInt(s.homeRuns)||0;
+    bb+=parseInt(s.baseOnBalls)||0;
+    k+=parseInt(s.strikeOuts)||0;
+  });
+  if(!ab)return'';
+  const avg=(h/ab).toFixed(3).replace(/^0/,'');
+  return`<div class="dpb-mini-card">
+    <div class="dpb-mini-head">LAST ${games.length}G · ${ab} AB</div>
+    <div class="dpb-mini-row">${avg} AVG</div>
+    <div class="dpb-mini-row">${h} H · ${hr} HR · ${k} K · ${bb} BB</div>
+  </div>`;
 }
 
 // ═══════════ BET RECORD ════════════════════════════════════════════════════════
