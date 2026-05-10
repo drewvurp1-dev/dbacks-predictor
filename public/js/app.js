@@ -2079,7 +2079,7 @@ function renderDashboard(){
           qualified.push({...b,playerName:pg.playerName});
       });
     });
-    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
     const top3=qualified.slice(0,3);
     document.getElementById('dash-best-bets').innerHTML=top3.length
       ?top3.map(b=>`<div class="dash-best-bet-row">
@@ -2108,7 +2108,7 @@ function renderDashboard(){
       if(b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
         qualified.push({...b,playerName:pg.playerName});
     }));
-    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
     qualified.slice(0,3).forEach(b=>top3Keys.add(`${b.playerName}_${b.propKey}_${b.direction}`));
   }
 
@@ -2129,7 +2129,7 @@ function renderDashboard(){
     // Bets to show in expanded body: non-none edge, up to 5
     const visibleBets=(pg?.bets||[])
       .filter(b=>!b.insufficient&&b.edgeStrength!=='none')
-      .sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0))
+      .sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0))
       .slice(0,5);
 
     let betsHtml;
@@ -2289,7 +2289,7 @@ function autoSaveTopBets(){
         qualified.push({...b,playerName:pg.playerName});
     });
   });
-  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
   qualified.slice(0,3).forEach(b=>{
     const prop=`${b.direction} ${b.line} ${b.prop}`;
     if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
