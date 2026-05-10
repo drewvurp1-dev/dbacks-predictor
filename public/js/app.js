@@ -1766,6 +1766,32 @@ async function loadCorbet(){
   hide('corbet-no-prediction');hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');hide('corbet-player-filter');
   show('corbet-loading');
   try{
+    // ── Phase 1: Player stats + predictions (no odds needed) ─────────────────
+    // Fetch Statcast CSVs once, then run predictions for all roster players.
+    // Cards render immediately so DETAILS / STATS work before props post.
+    const csvRows=await _corbetFetchStatcastCSVs();
+    S.players=S.players||{};
+    for(const player of activeRoster()){
+      try{
+        const mlbStats=await _corbetFetchMLBStats(player.id,S.pitcher?.id);
+        const statcast=_corbetExtractStatcast(player.id,csvRows);
+        const saved={splits:S.splits,seasonStat:S.seasonStat,rispStat:S.rispStat,
+          statcast:S.statcast,recentGameLog:S.recentGameLog,matchupStats:S.matchupStats,playerName:S.playerName};
+        S.splits=mlbStats.splits;S.seasonStat=mlbStats.seasonStat;
+        S.rispStat=mlbStats.rispStat;S.statcast=statcast;
+        S.recentGameLog=mlbStats.recentGameLog;S.matchupStats=mlbStats.matchupStats;
+        S.playerName=player.name;
+        const{score,tier,factors,catTotals}=calcPrediction();
+        S.players[player.id]={name:player.name,score,tier,factors,catTotals,
+          splits:mlbStats.splits,seasonStat:mlbStats.seasonStat,rispStat:mlbStats.rispStat,
+          recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast};
+        Object.assign(S,saved);
+      }catch(e){}
+    }
+    // Render score-only player cards immediately — modals work now
+    renderDashboard();
+
+    // ── Phase 2: Odds + bets (optional — cards already visible above) ─────────
     const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
     {const rem=r.headers.get('X-Requests-Remaining');if(rem!=null)setApiCredits(rem);}
     const eventsText=await r.text();
@@ -1780,7 +1806,6 @@ async function loadCorbet(){
       document.getElementById('corbet-no-props').textContent=msg;
       show('corbet-no-props');
       document.getElementById('dash-best-bets').innerHTML=`<div class="dash-empty">${msg}</div>`;
-      document.getElementById('dash-player-cards').innerHTML='';
       return;
     }
 
@@ -1853,40 +1878,27 @@ async function loadCorbet(){
     const allPlayerBets=[];
     for(const player of activeRoster()){
       try{
-        const mlbStats=await _corbetFetchMLBStats(player.id,S.pitcher?.id);
-        const statcast=_corbetExtractStatcast(player.id,csvRows);
+        // Reuse the snapshot already computed in Phase 1 — no re-fetching needed
+        const snap=S.players[player.id];
+        if(!snap)continue;
         const rawMarketMap=playerMaps[player.id];
-        // Temporarily swap player-specific S fields; shared game context is untouched
-        const saved={splits:S.splits,seasonStat:S.seasonStat,rispStat:S.rispStat,
-          statcast:S.statcast,recentGameLog:S.recentGameLog,matchupStats:S.matchupStats,
-          playerName:S.playerName};
-        S.splits=mlbStats.splits;S.seasonStat=mlbStats.seasonStat;
-        S.rispStat=mlbStats.rispStat;S.statcast=statcast;
-        S.recentGameLog=mlbStats.recentGameLog;S.matchupStats=mlbStats.matchupStats;
-        S.playerName=player.name;
-        const{score,tier,factors,catTotals}=calcPrediction();
-        const bets=generateCorbetBets(score,factors,rawMarketMap);
+        const bets=generateCorbetBets(snap.score,snap.factors,rawMarketMap);
         bets.forEach(b=>{
           if(!b.insufficient&&b.edgeStrength!=='none'&&b.marketOverProb!=null){
-            b.mcConfidence=monteCarloConfidence(b.propKey,b.line,score,b.marketOverProb);
+            b.mcConfidence=monteCarloConfidence(b.propKey,b.line,snap.score,b.marketOverProb);
           }
         });
-        S.players=S.players||{};
-        S.players[player.id]={name:player.name,score,tier,factors,catTotals,splits:mlbStats.splits,seasonStat:mlbStats.seasonStat,rispStat:mlbStats.rispStat,recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast};
-        Object.assign(S,saved);
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
-        bets.forEach(b=>{b._playerName=player.name;b._playerScore=score;});
+        bets.forEach(b=>{b._playerName=player.name;b._playerScore=snap.score;});
         allPlayerBets.push({playerName:player.name,bets});
       }catch(e){
         // Skip player silently on error — continue to next
       }
     }
 
-    const totalBets=allPlayerBets.reduce((s,pg)=>s+pg.bets.length,0);
-    if(totalBets===0){
+    if(allPlayerBets.reduce((s,pg)=>s+pg.bets.length,0)===0){
       hide('corbet-loading');show('corbet-no-props');
       document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Player props not yet posted for this game — check back tonight or tomorrow morning.</div>';
-      document.getElementById('dash-player-cards').innerHTML='';
       return;
     }
 
@@ -1904,7 +1916,6 @@ async function loadCorbet(){
     setText('corbet-error','⚠ '+e.message);
     show('corbet-error');
     document.getElementById('dash-best-bets').innerHTML=`<div class="dash-empty" style="color:#e74c3c;">⚠ ${e.message}</div>`;
-    document.getElementById('dash-player-cards').innerHTML='';
   }finally{hide('corbet-loading');}
 }
 
@@ -1996,10 +2007,9 @@ async function loadDashboard(){
   // Render game banner with current context
   _renderGameBanner();
   _renderPitcherCard();
-  if(!S.allPlayerBets||S.allPlayerBets.length===0){
-    document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Loading bets…</div>';
-    document.getElementById('dash-player-cards').innerHTML='';
-    await loadCorbet(); // calls renderDashboard() at end
+  if(!S.players||Object.keys(S.players).length===0){
+    document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Loading…</div>';
+    await loadCorbet();
   } else {
     renderDashboard();
   }
@@ -2044,49 +2054,59 @@ function _renderPitcherCard(){
 }
 
 function renderDashboard(){
-  if(!S.allPlayerBets||S.allPlayerBets.length===0)return;
   _renderGameBanner();
   _renderPitcherCard();
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
 
-  // Top 3 bets
-  const qualified=[];
-  S.allPlayerBets.forEach(pg=>{
-    pg.bets.forEach(b=>{
-      if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
-        qualified.push({...b,playerName:pg.playerName});
+  // Top 3 bets — only when props are available
+  if(S.allPlayerBets&&S.allPlayerBets.length){
+    const qualified=[];
+    S.allPlayerBets.forEach(pg=>{
+      pg.bets.forEach(b=>{
+        if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
+          qualified.push({...b,playerName:pg.playerName});
+      });
     });
-  });
-  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
-  const top3=qualified.slice(0,3);
-  document.getElementById('dash-best-bets').innerHTML=top3.length
-    ?top3.map(b=>`<div class="dash-best-bet-row">
-      <div class="dash-best-bet-left">
-        <div class="dash-best-bet-player">${b.playerName}</div>
-        <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
-      </div>
-      <div class="dash-best-bet-right">
-        <span class="dash-badge">${fmtOdds(b.overBest?.price)}</span>
-        <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
-        <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
-      </div>
-    </div>`).join('')
-    :'<div class="dash-empty">No bets meet the 85% MC threshold today.</div>';
+    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+    const top3=qualified.slice(0,3);
+    document.getElementById('dash-best-bets').innerHTML=top3.length
+      ?top3.map(b=>`<div class="dash-best-bet-row">
+        <div class="dash-best-bet-left">
+          <div class="dash-best-bet-player">${b.playerName}</div>
+          <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
+        </div>
+        <div class="dash-best-bet-right">
+          <span class="dash-badge">${fmtOdds(b.overBest?.price)}</span>
+          <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
+          <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
+        </div>
+      </div>`).join('')
+      :'<div class="dash-empty">No bets meet the 85% MC threshold today.</div>';
+  }
 
-  // Player cards
-  document.getElementById('dash-player-cards').innerHTML=S.allPlayerBets.map(pg=>{
-    const snap=S.players?.[activeRoster().find(r=>r.name===pg.playerName)?.id];
-    const best=pg.bets.filter(b=>!b.insufficient&&b.mcConfidence!=null).sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0))[0];
-    const pid=activeRoster().find(r=>r.name===pg.playerName)?.id||'';
-    const scoreColor=snap?.tier?.color||'#aaa';
+  // Player cards — always show every roster player; add bet data when available
+  const betsMap={};
+  (S.allPlayerBets||[]).forEach(pg=>{betsMap[pg.playerName]=pg;});
+  document.getElementById('dash-player-cards').innerHTML=activeRoster().map(player=>{
+    const snap=S.players?.[player.id];
+    if(!snap)return'';
+    const pid=player.id;
+    const scoreColor=snap.tier?.color||'#aaa';
+    const pg=betsMap[player.name];
+    const best=pg?.bets.filter(b=>!b.insufficient&&b.mcConfidence!=null)
+      .sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.mcConfidence||0)-(a.mcConfidence||0))[0];
     return`<div class="dash-pcard">
-      <div class="dash-pcard-name">${pg.playerName}</div>
-      ${snap?`<div class="dash-pcard-score" style="color:${scoreColor}">${snap.score}</div><div class="dash-pcard-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>`:''}
-      ${best?`<div class="dash-pcard-best">${best.direction.toUpperCase()} ${best.line} ${best.prop}</div><div class="dash-pcard-delta">MC ${best.mcConfidence.toFixed(0)}% · ${fmtOdds(best.overBest?.price)}</div>`:'<div class="dash-pcard-delta" style="margin-bottom:10px;">No edge bets</div>'}
+      <div class="dash-pcard-name">${player.name}</div>
+      <div class="dash-pcard-score" style="color:${scoreColor}">${snap.score}</div>
+      <div class="dash-pcard-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>
+      ${best
+        ?`<div class="dash-pcard-best">${best.direction.toUpperCase()} ${best.line} ${best.prop}</div>
+          <div class="dash-pcard-delta">MC ${best.mcConfidence.toFixed(0)}% · ${fmtOdds(best.overBest?.price)}</div>`
+        :`<div class="dash-pcard-delta" style="margin-bottom:10px;color:#555;">props pending</div>`}
       <div class="dash-pcard-actions">
         <button class="dash-pcard-btn" onclick="openPlayerDetails('${pid}')">Details</button>
-        <button class="dash-pcard-btn" onclick="openPlayerCorbet('${pid}')">CorBET</button>
+        ${pg?`<button class="dash-pcard-btn" onclick="openPlayerCorbet('${pid}')">CorBET</button>`:''}
         <button class="dash-pcard-btn" onclick="openPlayerStats('${pid}')">Stats</button>
       </div>
     </div>`;
