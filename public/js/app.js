@@ -2057,7 +2057,7 @@ function _renderGameBanner(){
   el.innerHTML=`
     ${opp?`<div class="dash-opp">vs ${opp}</div>`:''}
     <div class="dash-game-meta">${[date,time,venue].filter(Boolean).join(' · ')}</div>
-    ${S.weather?`<div class="dash-game-weather">${S.weather.temp}°F · ${S.weather.condition}${S.weather.wind?' · '+S.weather.wind:''}</div>`:''}
+    ${S.weather?`<div class="dash-game-weather">${S.weather.tempF}°F · ${S.weather.desc}${S.weather.windMph?' · '+S.weather.windMph+' mph '+S.weather.windDir:''}</div>`:''}
     ${umpName?`<div class="dash-ump">HP Umpire: ${umpName}</div>`:''}
   `;
 }

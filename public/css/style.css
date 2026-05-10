@@ -325,3 +325,48 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-setup-link button { background: none; border: none; color: #444; font-family: monospace; font-size: 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; text-decoration: underline; }
 .dash-setup-link button:hover { color: #888; }
 .dash-player-header { font-size: 11px; font-weight: 900; font-family: monospace; color: #009A8B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #1a1730; }
+
+/* ── Mobile ── */
+@media (max-width: 560px) {
+  body { padding-bottom: 30px; }
+  .content { padding: 10px; }
+
+  /* Header */
+  .header { padding: 10px 12px; }
+  .site-title { font-size: 15px; letter-spacing: 2px; }
+  .header small { font-size: 8px; letter-spacing: 2px; }
+  .api-credits { display: none; }
+  .header-btn { font-size: 9px; padding: 6px 8px; letter-spacing: 1px; }
+
+  /* Game banner */
+  .dash-game-banner { padding: 10px 12px; margin-bottom: 10px; }
+  .dash-opp { font-size: 14px; }
+
+  /* Pitcher card */
+  .dash-pitcher-card { padding: 10px 12px; margin-bottom: 10px; gap: 8px; }
+  .dash-pitcher-name { font-size: 10px; }
+
+  /* Best bets card */
+  .dash-best-bet-right { justify-content: flex-start; margin-top: 4px; }
+  .dash-best-bet-prop { font-size: 11px; }
+
+  /* Player row header */
+  .dash-prow-header { padding: 10px 10px; gap: 8px; }
+  .dash-prow-statline { display: none; }
+  .dash-prow-more { display: none; }
+  .dash-prow-name { font-size: 9px; }
+
+  /* Player row body — stack columns */
+  .dash-prow-body { gap: 10px; padding: 10px; }
+  .dpb-left { width: 100%; flex-direction: row; justify-content: center; gap: 16px; min-width: 0; }
+  .dpb-center { min-width: 0; width: 100%; max-width: 100%; }
+  .dpb-right { min-width: 0; width: 100%; }
+
+  /* Larger touch targets for buttons inside card */
+  .dpb-details-btn { padding: 8px 12px; font-size: 9px; }
+  .dpb-more-bets { padding: 10px; }
+
+  /* Modal — full-width sheet */
+  .modal-overlay { padding: 8px 4px 0; align-items: flex-end; }
+  .modal-frame { border-radius: 12px 12px 0 0; padding: 48px 12px 20px; max-height: 92vh; overflow-y: auto; }
+}
