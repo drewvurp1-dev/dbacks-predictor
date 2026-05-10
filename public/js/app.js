@@ -96,6 +96,7 @@ function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
   document.body.style.overflow = '';
   if (_modalSavedS) { Object.assign(S, _modalSavedS); _modalSavedS = null; }
+  _renderPitcherCard(); // re-assert card after DOM-move operations
 }
 
 function _swapToPlayer(playerId) {
@@ -464,7 +465,9 @@ async function selectPitcher(id,name){
     let daysRest='—';
     if(gameLogs.length){const ld=new Date(gameLogs[gameLogs.length-1].date);daysRest=Math.round((new Date()-ld)/(1000*60*60*24));}
     const lastOuting=gameLogs.length?gameLogs[gameLogs.length-1].stat:null;
-    S.pitcher={id,name,hand,st,last3,daysRest,lastOuting};
+    // Bullpen / opener detection: flag if all of last 3 outings are under 45 pitches
+    const bullpenGame=last3.length>=3&&last3.every(g=>(g.stat?.numberOfPitches||0)<45);
+    S.pitcher={id,name,hand,st,last3,daysRest,lastOuting,bullpenGame};
     const era=parseFloat(st.era)||null;
     const whip=parseFloat(st.whip)||null;
     const ip=st.inningsPitched||'—';
@@ -484,8 +487,10 @@ async function selectPitcher(id,name){
     loadPitcherStatcast(id);
     loadMatchupStats();
     // If bets were already loaded without pitcher data, re-run with the new pitcher
-    if(S.allPlayerBets){S.allPlayerBets=null;loadDashboard();}
-    else{_renderPitcherCard();}
+    if(S.players){
+      // Pitcher changed after dashboard loaded — full re-run so scores use new pitcher data
+      S.allPlayerBets=null;S.players=null;loadDashboard();
+    }else{_renderPitcherCard();}
   }catch(e){setText('pitcher-error','⚠ Could not load pitcher stats.');show('pitcher-error');}
   finally{hide('pitcher-spinner');}
 }
@@ -948,6 +953,9 @@ function calcPrediction(){
     if(S.pitcher.daysRest!=='—'){if(S.pitcher.daysRest<4)add('Short Rest',S.pitcher.daysRest+'d',3,'Pitcher on short rest — fatigue advantage','pitcher');else if(S.pitcher.daysRest>=6)add('Extra Rest',S.pitcher.daysRest+'d',-2,'Well-rested pitcher — sharper command','pitcher');}
     const lpc=S.pitcher.lastOuting?.numberOfPitches;
     if(lpc&&lpc>=100)add('High Prev PC',lpc+' pitches',2,`${lpc} pitches last outing — possible fatigue`,'pitcher');
+    if(S.pitcher.bullpenGame){
+      add('Bullpen Game',`<45 PC × 3`,7,'Opener/bullpen game — hitters benefit from facing multiple pitchers and weaker arms throughout','pitcher');
+    }
   } else {
     const mEra=parseFloat(document.getElementById('m-pitcher-era')?.value);
     if(!isNaN(mEra)){const a=(mEra-4.00)*4;add('Pitcher ERA',mEra.toFixed(2),a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher','pitcher');}
@@ -2044,10 +2052,13 @@ function _renderPitcherCard(){
   }
   const era=S.pitcher.st?.era?parseFloat(S.pitcher.st.era).toFixed(2):'—';
   const hand=S.pitcher.hand||'R';
+  const bpBadge=S.pitcher.bullpenGame
+    ?`<span style="background:#f39c12;color:#000;font-family:monospace;font-size:9px;font-weight:900;letter-spacing:2px;padding:2px 7px;border-radius:4px;margin-left:8px;">OPENER/BULLPEN</span>`
+    :'';
   el.innerHTML=`<div class="dash-pitcher-card">
     <div>
-      <div class="dash-pitcher-name">${S.pitcher.name}</div>
-      <div class="dash-pitcher-meta">${hand}HP · ERA ${era}</div>
+      <div class="dash-pitcher-name">${S.pitcher.name}${bpBadge}</div>
+      <div class="dash-pitcher-meta">${hand}HP · ERA ${era}${S.pitcher.bullpenGame?' · Expect multiple relievers':''}</div>
     </div>
     <button class="dash-pitcher-btn" onclick="openModal('panel-pitcher','Pitcher Analysis')">View Stats</button>
   </div>`;
@@ -2271,7 +2282,7 @@ const DEFAULT_WEIGHTS = {
   'vs LHP': 70, 'vs RHP': 70, 'Home': 35, 'Away': 35,
   'Day Game': 25, 'Night Game': 25, 'RISP': 20,
   'Pitcher ERA': 4, 'High K%': -4, 'Low K%': 3,
-  'Short Rest': 3, 'Extra Rest': -2, 'High Prev PC': 2,
+  'Short Rest': 3, 'Extra Rest': -2, 'High Prev PC': 2, 'Bullpen Game': 7,
   'BB%': 3, 'K%': -3, 'Heat': 4, 'Cold': -4,
   'Wind Out': 1, 'Wind In': -1, 'Roof Closed': -2,
   'Altitude': 8, 'Elevation': 3, 'Red-Eye': -6, 'Same-Day Travel': -3,
