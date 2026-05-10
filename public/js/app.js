@@ -1642,7 +1642,7 @@ function estimateProbability(propKey,direction,line){
 const PROP_NAMES={
   'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
   'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
-  'batter_runs_scored':'Runs',
+  'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
 };
 
 function generateCorbetBets(score,factors,rawMarketMap){
@@ -1817,7 +1817,7 @@ async function loadCorbet(){
       return;
     }
 
-    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored';
+    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
     const propBooks='draftkings,fanduel,betmgm';
     const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
     const propsText=await pr.text();
