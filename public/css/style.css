@@ -353,7 +353,6 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   /* Player row header */
   .dash-prow-header { padding: 10px 10px; gap: 8px; }
   .dash-prow-statline { display: none; }
-  .dash-prow-more { display: none; }
   .dash-prow-name { font-size: 9px; }
 
   /* Player row body — stack columns */
