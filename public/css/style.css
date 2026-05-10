@@ -270,16 +270,50 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-best-bet-right { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; }
 .dash-badge { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 4px; padding: 2px 6px; font-family: monospace; font-size: 9px; color: #009A8B; white-space: nowrap; }
 .dash-empty { font-family: monospace; font-size: 11px; color: #555; padding: 8px 0; }
-#dash-player-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 12px; margin-top: 4px; margin-bottom: 20px; }
-.dash-pcard { background: #0e0c22; border: 1px solid #1a1730; border-radius: 10px; padding: 14px 12px; }
-.dash-pcard-name { font-family: 'Orbitron', monospace; font-size: 10px; color: #E8DFC8; font-weight: 800; margin-bottom: 6px; letter-spacing: 0.5px; line-height: 1.3; }
-.dash-pcard-score { font-size: 26px; font-weight: 900; font-family: monospace; margin-bottom: 2px; }
-.dash-pcard-tier { font-size: 9px; font-family: monospace; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-.dash-pcard-best { font-family: monospace; font-size: 9px; color: #009A8B; margin-bottom: 2px; line-height: 1.4; }
-.dash-pcard-delta { font-family: monospace; font-size: 9px; color: #888; margin-bottom: 10px; }
-.dash-pcard-actions { display: flex; gap: 4px; }
-.dash-pcard-btn { flex: 1; background: transparent; border: 1px solid #1a1730; color: #888; font-family: monospace; font-size: 8px; padding: 6px 0; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: border-color 0.12s, color 0.12s; }
-.dash-pcard-btn:hover { color: #E8DFC8; border-color: #009A8B; }
+/* ── Collapsible player lineup rows ── */
+#dash-player-cards { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; margin-bottom: 20px; }
+
+.dash-prow { background: #0e0c22; border: 1px solid #1a1730; border-radius: 10px; overflow: hidden; }
+.dash-prow-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; user-select: none; transition: background 0.12s; }
+.dash-prow-header:hover { background: #13102e; }
+.dash-prow-order { font-family: 'Orbitron', monospace; font-size: 12px; color: #009A8B; font-weight: 900; min-width: 20px; text-align: center; }
+.dash-prow-name { font-family: 'Orbitron', monospace; font-size: 10px; color: #E8DFC8; font-weight: 800; flex: 1; letter-spacing: 0.5px; }
+.dash-prow-statline { font-family: monospace; font-size: 10px; color: #888; white-space: nowrap; }
+.dash-prow-more { background: transparent; border: 1px solid #1a1730; color: #009A8B; font-family: monospace; font-size: 9px; padding: 4px 9px; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: background 0.12s, color 0.12s; }
+.dash-prow-more:hover { background: #009A8B; color: #000; }
+.dash-prow-arrow { font-size: 10px; color: #555; min-width: 14px; text-align: right; }
+
+/* Expanded body */
+.dash-prow-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 12px 14px 14px; border-top: 1px solid #1a1730; }
+.dash-prow-body.hidden { display: none; }
+
+/* Left: score gauge */
+.dpb-left { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 76px; }
+.dpb-gauge { width: 58px; height: 58px; border-radius: 50%; border: 3px solid #aaa; display: flex; align-items: center; justify-content: center; }
+.dpb-gauge-score { font-family: monospace; font-size: 20px; font-weight: 900; }
+.dpb-tier { font-family: monospace; font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 1px; text-align: center; line-height: 1.3; }
+.dpb-details-btn { background: transparent; border: 1px solid #1a1730; color: #888; font-family: monospace; font-size: 8px; padding: 5px 9px; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: border-color 0.12s, color 0.12s; }
+.dpb-details-btn:hover { color: #E8DFC8; border-color: #009A8B; }
+
+/* Right: bets table */
+.dpb-right { flex: 1; min-width: 220px; }
+.dpb-bets-table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 10px; }
+.dpb-bets-table td { padding: 5px 6px; vertical-align: middle; }
+.dpb-bets-table tr:not(:last-child) td { border-bottom: 1px solid #1a1730; }
+.dpb-icon-star     { color: #f1c40f; font-size: 13px; }
+.dpb-icon-strong   { color: #2ecc71; font-size: 13px; }
+.dpb-icon-moderate { color: #f39c12; font-size: 13px; }
+.dpb-prop  { color: #E8DFC8; }
+.dpb-mc    { color: #888; text-align: right; padding-left: 10px; }
+.dpb-delta { font-weight: 700; text-align: right; padding-left: 8px; }
+.dpb-odds  { color: #009A8B; text-align: right; white-space: nowrap; padding-left: 8px; }
+.dpb-book  { font-size: 8px; background: #1a1730; padding: 1px 4px; border-radius: 3px; color: #888; margin-left: 4px; }
+.dpb-more-bets { display: block; width: 100%; margin-top: 8px; background: transparent; border: 1px solid #1a1730; color: #009A8B; font-family: monospace; font-size: 9px; padding: 7px; border-radius: 4px; cursor: pointer; text-align: center; transition: background 0.12s, color 0.12s; }
+.dpb-more-bets:hover { background: #009A8B; color: #000; }
+.dpb-no-edge { font-family: monospace; font-size: 10px; color: #555; padding: 8px 0; }
+
+/* Lineup analysis bar */
+.dpb-lineup-analysis { width: 100%; font-family: monospace; font-size: 9px; color: #666; padding: 8px 0 2px; border-top: 1px solid #1a1730; letter-spacing: 0.5px; text-transform: uppercase; }
 .dash-setup-link { text-align: center; padding: 12px 0; border-top: 1px solid #1a1730; margin-top: 8px; }
 .dash-setup-link button { background: none; border: none; color: #444; font-family: monospace; font-size: 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; text-decoration: underline; }
 .dash-setup-link button:hover { color: #888; }
