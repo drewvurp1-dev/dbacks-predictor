@@ -2102,7 +2102,7 @@ function renderDashboard(){
           <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
         </div>
         <div class="dash-best-bet-right">
-          <span class="dash-badge">${fmtOdds(b.overBest?.price)}</span>
+          <span class="dash-badge">${fmtOdds(b.direction.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price)}</span>
           <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
           <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
         </div>
