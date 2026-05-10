@@ -471,6 +471,9 @@ async function selectPitcher(id,name){
     renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip);
     loadPitcherStatcast(id);
     loadMatchupStats();
+    // If bets were already loaded without pitcher data, re-run with the new pitcher
+    if(S.allPlayerBets){S.allPlayerBets=null;loadDashboard();}
+    else{_renderPitcherCard();}
   }catch(e){setText('pitcher-error','⚠ Could not load pitcher stats.');show('pitcher-error');}
   finally{hide('pitcher-spinner');}
 }
@@ -727,7 +730,9 @@ async function autoLoadNextGame(){
     const end=new Date(Date.now()+7*24*60*60*1000).toISOString().split('T')[0];
     const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=probablePitcher&startDate=${today}&endDate=${end}`);
     const d=await r.json();
-    const game=d?.dates?.[0]?.games?.[0];
+    // Skip any games that are already Final — find the next upcoming or live game
+    const allGames=(d?.dates||[]).flatMap(dt=>dt.games||[]);
+    const game=allGames.find(g=>g.status?.abstractGameState!=='Final')||allGames[allGames.length-1];
     if(!game)return;
     // Set date
     document.getElementById('game-date').value=game.officialDate;
@@ -1737,10 +1742,6 @@ async function _corbetFetchMLBStats(playerId,pitcherId){
 }
 
 async function loadCorbet(){
-  if(!S.pitcher){
-    document.getElementById('corbet-no-prediction').textContent='Game data loading — select a pitcher or wait for auto-load.';
-    show('corbet-no-prediction');return;
-  }
   hide('corbet-no-prediction');hide('corbet-bets');hide('corbet-no-props');hide('corbet-error');hide('corbet-player-filter');
   show('corbet-loading');
   try{
@@ -1992,7 +1993,13 @@ function _renderGameBanner(){
 function _renderPitcherCard(){
   const el=document.getElementById('dash-pitcher-card');
   if(!el)return;
-  if(!S.pitcher){el.innerHTML='';return;}
+  if(!S.pitcher){
+    el.innerHTML=`<div class="dash-pitcher-card" style="justify-content:space-between;">
+      <div class="dash-pitcher-meta" style="color:#f39c12;">⚠ Probable pitcher not yet announced — scores exclude pitcher factors.</div>
+      <button class="dash-pitcher-btn" onclick="openModal('panel-setup','Setup &amp; Overrides')" style="white-space:nowrap;">Set Pitcher</button>
+    </div>`;
+    return;
+  }
   const era=S.pitcher.st?.era?parseFloat(S.pitcher.st.era).toFixed(2):'—';
   const hand=S.pitcher.hand||'R';
   el.innerHTML=`<div class="dash-pitcher-card">
