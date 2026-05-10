@@ -1875,6 +1875,8 @@ async function loadCorbet(){
     hide('corbet-loading');
     setText('corbet-error','⚠ '+e.message);
     show('corbet-error');
+    document.getElementById('dash-best-bets').innerHTML=`<div class="dash-empty" style="color:#e74c3c;">⚠ ${e.message}</div>`;
+    document.getElementById('dash-player-cards').innerHTML='';
   }finally{hide('corbet-loading');}
 }
 
