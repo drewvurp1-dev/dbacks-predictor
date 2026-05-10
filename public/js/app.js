@@ -1651,15 +1651,29 @@ function generateCorbetBets(score,factors,rawMarketMap){
   const results=[];
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
     if(!PROP_NAMES[propKey])return;
-    // Use trusted (DK/FD) line if available, then any calc-book line, never BetOnline's exotic line
-    const rawLine=mkt.trustedLine||mkt.calcLine||mkt.line;
-    const line=rawLine||0.5;
-    // Prefer DraftKings/FanDuel prices when available on both sides; fall back to all valid books
-    const calcOver=mkt.trustedOverPrices?.length?mkt.trustedOverPrices:mkt.overPrices;
-    const calcUnder=mkt.trustedUnderPrices?.length?mkt.trustedUnderPrices:mkt.underPrices;
+    // Find the minimum line where trusted books have BOTH sides; fall back to any two-sided line.
+    // This prevents mixing 0.5-line prices (heavily skewed) with 1.5-line prices in devig.
+    const allLines=new Set([
+      ...Object.keys(mkt.trustedOverByLine||{}),...Object.keys(mkt.trustedUnderByLine||{}),
+      ...Object.keys(mkt.overByLine||{}),...Object.keys(mkt.underByLine||{})
+    ].map(Number));
+    let effectiveLine=null;
+    for(const l of [...allLines].sort((a,b)=>a-b)){
+      if(mkt.trustedOverByLine[l]?.length&&mkt.trustedUnderByLine[l]?.length){effectiveLine=l;break;}
+    }
+    if(effectiveLine===null){
+      for(const l of [...allLines].sort((a,b)=>a-b)){
+        if(mkt.overByLine[l]?.length&&mkt.underByLine[l]?.length){effectiveLine=l;break;}
+      }
+    }
+    const line=effectiveLine!=null?effectiveLine:0.5;
+    const calcOver=(mkt.trustedOverByLine[line]?.length?mkt.trustedOverByLine[line]:mkt.overByLine[line])||[];
+    const calcUnder=(mkt.trustedUnderByLine[line]?.length?mkt.trustedUnderByLine[line]:mkt.underByLine[line])||[];
+    const overBest=mkt.overBestByLine[line]||null;
+    const underBest=mkt.underBestByLine[line]||null;
     if(!calcOver?.length||!calcUnder?.length){
       results.push({prop:PROP_NAMES[propKey],propKey,line,insufficient:true,
-        overBest:mkt.overBest,underBest:mkt.underBest,edgeStrength:'none',absDelta:0});
+        overBest,underBest,edgeStrength:'none',absDelta:0});
       return;
     }
     const dv=devig(calcOver,calcUnder);
@@ -1676,14 +1690,14 @@ function generateCorbetBets(score,factors,rawMarketMap){
     else edgeStrength='none';
 
     const direction=delta>0?'Over':'Under';
-    const bestOdds=delta>0?mkt.overBest:mkt.underBest;
+    const bestOdds=delta>0?overBest:underBest;
 
     results.push({
       prop:PROP_NAMES[propKey],propKey,line,direction,
       delta,absDelta,edgeStrength,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
-      overBest:mkt.overBest,underBest:mkt.underBest,
+      overBest,underBest,
       books:mkt.books||[],
       odds:bestOdds?.price||0,
       reasoning:corbetReasoning(propKey,direction.toLowerCase(),modelProb>=50?modelProb:100-modelProb),
@@ -1846,10 +1860,9 @@ async function loadCorbet(){
           const pSearch=player.name.toLowerCase().split(' ').pop();
           const m0=playerMaps[player.id];
           if(!m0[market.key])m0[market.key]={
-            overPrices:[],underPrices:[],
-            trustedOverPrices:[],trustedUnderPrices:[],
-            overBest:null,underBest:null,
-            line:null,calcLine:null,trustedLine:null,
+            overByLine:{},underByLine:{},
+            trustedOverByLine:{},trustedUnderByLine:{},
+            overBestByLine:{},underBestByLine:{},
             books:[],calcBooks:new Set()
           };
           const m=m0[market.key];
@@ -1859,23 +1872,24 @@ async function loadCorbet(){
             .forEach(o=>{
               const dir=o.name.toLowerCase();
               const price=o.price;
-              const line=o.point||0;
-              if(!m.line||line<m.line)m.line=line;
+              const line=o.point||0.5;
               if(dir==='over'){
-                if(!m.overBest||price>m.overBest.price)m.overBest={price,book:book.title};
+                if(!m.overBestByLine[line]||price>m.overBestByLine[line].price)
+                  m.overBestByLine[line]={price,book:book.title};
               }else if(dir==='under'){
-                if(!m.underBest||price>m.underBest.price)m.underBest={price,book:book.title};
+                if(!m.underBestByLine[line]||price>m.underBestByLine[line].price)
+                  m.underBestByLine[line]={price,book:book.title};
               }
               if(skipCalc)return;
-              if(!isTrusted&&isOutlierPrice(price,line||0.5))return;
-              if(!m.calcLine||line<m.calcLine)m.calcLine=line;
-              if(isTrusted&&(!m.trustedLine||line<m.trustedLine))m.trustedLine=line;
+              if(!isTrusted&&isOutlierPrice(price,line))return;
               if(dir==='over'){
-                m.overPrices.push(price);m.calcBooks.add(book.title);
-                if(isTrusted)m.trustedOverPrices.push(price);
+                (m.overByLine[line]=m.overByLine[line]||[]).push(price);
+                m.calcBooks.add(book.title);
+                if(isTrusted)(m.trustedOverByLine[line]=m.trustedOverByLine[line]||[]).push(price);
               }else if(dir==='under'){
-                m.underPrices.push(price);m.calcBooks.add(book.title);
-                if(isTrusted)m.trustedUnderPrices.push(price);
+                (m.underByLine[line]=m.underByLine[line]||[]).push(price);
+                m.calcBooks.add(book.title);
+                if(isTrusted)(m.trustedUnderByLine[line]=m.trustedUnderByLine[line]||[]).push(price);
               }
             });
         });
