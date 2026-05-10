@@ -1863,7 +1863,9 @@ async function loadCorbet(){
       (book.markets||[]).forEach(market=>{
         if(!PROP_NAMES[market.key])return;
         activeRoster().forEach(player=>{
-          const pSearch=player.name.toLowerCase().split(' ').pop();
+          const _pParts=player.name.toLowerCase().split(/\s+/);
+          const pSearch=_pParts[_pParts.length-1];          // last name
+          const pFirstHint=(_pParts[0]||'').slice(0,3);     // first 3 chars of first name
           const m0=playerMaps[player.id];
           if(!m0[market.key])m0[market.key]={
             overByLine:{},underByLine:{},
@@ -1874,7 +1876,7 @@ async function loadCorbet(){
           const m=m0[market.key];
           if(!m.books.includes(book.title))m.books.push(book.title);
           market.outcomes
-            .filter(o=>(o.description||o.name||'').toLowerCase().includes(pSearch))
+            .filter(o=>{const d=(o.description||o.name||'').toLowerCase();return d.includes(pSearch)&&(!pFirstHint||d.includes(pFirstHint));})
             .forEach(o=>{
               const dir=o.name.toLowerCase();
               const price=o.price;
