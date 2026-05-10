@@ -38,6 +38,11 @@ router.use('/', (req, res) => {
     oddsRes.on('data', chunk => { data += chunk; });
     oddsRes.on('end', () => {
       console.log('Odds API status:', oddsRes.statusCode, 'for', req.url.split('?')[0]);
+      // Forward rate-limit headers so the frontend can show remaining credits
+      const remaining = oddsRes.headers['x-requests-remaining'];
+      const used = oddsRes.headers['x-requests-used'];
+      if (remaining != null) res.setHeader('X-Requests-Remaining', remaining);
+      if (used != null) res.setHeader('X-Requests-Used', used);
       // Only cache successful responses
       if (oddsRes.statusCode === 200) {
         _cache[cacheKey] = { data, ts: now };
