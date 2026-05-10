@@ -1651,20 +1651,26 @@ function generateCorbetBets(score,factors,rawMarketMap){
   const results=[];
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
     if(!PROP_NAMES[propKey])return;
-    // Find the minimum line where trusted books have BOTH sides; fall back to any two-sided line.
-    // This prevents mixing 0.5-line prices (heavily skewed) with 1.5-line prices in devig.
+    // Pick the line whose over/under prices are most balanced (closest to 50/50 implied).
+    // This selects the main market line (e.g. HRR 1.5 at -119/+105) over extreme alternate
+    // lines (e.g. HRR 0.5 at -1900/+1000) which skew the devig probability to 90%+.
+    // Only consider lines where at least one trusted book (DK/FD/MGM) has data.
     const allLines=new Set([
       ...Object.keys(mkt.trustedOverByLine||{}),...Object.keys(mkt.trustedUnderByLine||{}),
       ...Object.keys(mkt.overByLine||{}),...Object.keys(mkt.underByLine||{})
     ].map(Number));
+    const _med=arr=>{const s=[...arr].sort((a,b)=>a-b),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
     let effectiveLine=null;
-    for(const l of [...allLines].sort((a,b)=>a-b)){
-      if(mkt.trustedOverByLine[l]?.length&&mkt.trustedUnderByLine[l]?.length){effectiveLine=l;break;}
-    }
-    if(effectiveLine===null){
-      for(const l of [...allLines].sort((a,b)=>a-b)){
-        if(mkt.overByLine[l]?.length&&mkt.underByLine[l]?.length){effectiveLine=l;break;}
-      }
+    let minImbalance=Infinity;
+    for(const l of [...allLines]){
+      if(!mkt.trustedOverByLine[l]?.length&&!mkt.trustedUnderByLine[l]?.length)continue;
+      const oArr=mkt.trustedOverByLine[l]?.length?mkt.trustedOverByLine[l]:(mkt.overByLine[l]||[]);
+      const uArr=mkt.trustedUnderByLine[l]?.length?mkt.trustedUnderByLine[l]:(mkt.underByLine[l]||[]);
+      if(!oArr.length||!uArr.length)continue;
+      const rO=impliedProb(_med(oArr)),rU=impliedProb(_med(uArr));
+      if(!rO||!rU)continue;
+      const imbalance=Math.abs(rO/(rO+rU)-0.5);
+      if(imbalance<minImbalance){minImbalance=imbalance;effectiveLine=l;}
     }
     const line=effectiveLine!=null?effectiveLine:0.5;
     const calcOver=(mkt.trustedOverByLine[line]?.length?mkt.trustedOverByLine[line]:mkt.overByLine[line])||[];
