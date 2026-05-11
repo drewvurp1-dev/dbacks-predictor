@@ -741,6 +741,22 @@ const VENUE_MAP={
   'T-Mobile Park':'T-Mobile Park (SEA)','Fenway Park':'Fenway Park (BOS)',
   'Yankee Stadium':'Yankee Stadium (NYY)','Citi Field':'Citi Field (NYM)',
   'Great American Ball Park':'Great American (CIN)','PNC Park':'PNC Park (PIT)',
+  'Globe Life Field':'Globe Life Field (TEX)',
+  'Minute Maid Park':'Minute Maid Park (HOU)',
+  'loanDepot park':'loanDepot Park (MIA)','loanDepot Park':'loanDepot Park (MIA)',
+  'American Family Field':'American Family Field (MIL)',
+  'Rogers Centre':'Rogers Centre (TOR)',
+  'Tropicana Field':'Tropicana Field (TB)',
+  'Truist Park':'Truist Park (ATL)',
+  'Nationals Park':'Nationals Park (WSH)',
+  'Citizens Bank Park':'Citizens Bank Park (PHI)',
+  'Kauffman Stadium':'Kauffman Stadium (KC)',
+  'Target Field':'Target Field (MIN)',
+  'Angel Stadium':'Angel Stadium (LAA)',
+  'Progressive Field':'Progressive Field (CLE)',
+  'Comerica Park':'Comerica Park (DET)',
+  'Guaranteed Rate Field':'Guaranteed Rate Field (CWS)',
+  'Sutter Health Park':'Sutter Health Park (OAK)',
 };
 
 async function autoLoadNextGame(){
@@ -776,6 +792,7 @@ async function autoLoadNextGame(){
       const isHomeSide=game.teams?.home?.team?.id===109;
       const oppSide=isHomeSide?game.teams.away:game.teams.home;
       S.opposingTeam=oppSide?.team?.name||'';
+      S.opposingTeamAbbr=oppSide?.team?.abbreviation||'';
       const pp=oppSide?.probablePitcher;
       if(pp?.id&&pp?.fullName&&!S.pitcher){
         await selectPitcher(pp.id,pp.fullName);
@@ -2307,7 +2324,7 @@ function saveBet(idx, btn){
     if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save to Record';},1800);}
     return;
   }
-  const bet={id:Date.now(),date,player:b._playerName||S.playerName,prop,odds:b.odds,rating:b.rating,score:b._playerScore||S.lastScore,result:null};
+  const bet={id:Date.now(),date,player:b._playerName||S.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:b.odds,rating:b.rating,score:b._playerScore||S.lastScore,result:null};
   S.betLog.unshift(bet);
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
   renderRecord();
@@ -2330,7 +2347,8 @@ function autoSaveTopBets(){
     const prop=`${b.direction} ${b.line} ${b.prop}`;
     if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
     const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
-    S.betLog.unshift({id:Date.now(),date,player:b.playerName,prop,odds:b.overBest?.price,rating,score:b._playerScore,result:null});
+    const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
+    S.betLog.unshift({id:Date.now(),date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null});
   });
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
 }
@@ -2402,8 +2420,10 @@ function renderRecord(){
   document.getElementById('bet-log').innerHTML=log.map(b=>`
     <div class="bet-log-item${b.result?'':' bet-pending'}">
       <span class="bli-date">${b.date}</span>
+      <span class="bli-player">${b.player||'—'}</span>
+      <span class="bli-opp">${b.opponent||'—'}</span>
       <span class="bli-prop">${b.prop}</span>
-      <span class="bli-odds">${b.odds>0?'+':''}${b.odds}</span>
+      <span class="bli-odds">${b.odds>0?'+':''}${b.odds??'—'}</span>
       <span class="bli-rating" style="background:${ratingBg[b.rating]};color:${ratingColors[b.rating]}">${b.rating}</span>
       <span class="bli-result">
         <button class="result-btn win ${b.result==='win'?'active':''}" onclick="setResult(${b.id},'win')">W</button>
@@ -2506,25 +2526,32 @@ function savePredictionForGrading(prediction) {
 
 // Fetch actual Carroll stats for a given date from MLB API
 async function fetchActualStats(playerId, date) {
-  const res = await fetch(`/mlb/api/v1/people/${playerId}/stats?stats=gameLog&group=hitting&season=2026&gameType=R`);
+  // Convert YYYY-MM-DD to MM/DD/YYYY for MLB API date filter params
+  const [y, m, d] = date.split('-');
+  const mlbDate = `${m}/${d}/${y}`;
+  const season = y || '2026';
+  const res = await fetch(`/mlb/api/v1/people/${playerId}/stats?stats=gameLog&group=hitting&season=${season}&gameType=R&startDate=${mlbDate}&endDate=${mlbDate}`);
   const data = await res.json();
   const splits = data?.stats?.[0]?.splits ?? [];
-  const game = splits.find(s => s.date === date);
-  if (!game) return null;
+  if (!splits.length) return null;
+  // Use first split (covers doubleheader game 1; acceptable for grading)
+  const game = splits[0];
+  const s = game.stat;
   return {
-    hits:         game.stat.hits ?? 0,
-    totalBases:   game.stat.totalBases ?? 0,
-    homeRuns:     game.stat.homeRuns ?? 0,
-    walks:        game.stat.baseOnBalls ?? 0,
-    strikeOuts:   game.stat.strikeOuts ?? 0,
-    rbi:          game.stat.rbi ?? 0,
-    runs:         game.stat.runs ?? 0,
-    atBats:       game.stat.atBats ?? 0,
-    pa:           game.stat.plateAppearances ?? 0,
-    summary:      game.stat.summary ?? '',
+    hits:         s.hits ?? 0,
+    totalBases:   s.totalBases ?? 0,
+    homeRuns:     s.homeRuns ?? 0,
+    walks:        s.baseOnBalls ?? 0,
+    strikeOuts:   s.strikeOuts ?? 0,
+    rbi:          s.rbi ?? 0,
+    runs:         s.runs ?? 0,
+    atBats:       s.atBats ?? 0,
+    pa:           s.plateAppearances ?? 0,
+    summary:      s.summary ?? '',
     opponent:     game.opponent?.name ?? '',
     isHome:       game.isHome ?? false,
     isWin:        game.isWin ?? false,
+    _raw:         s,
   };
 }
 
@@ -2764,6 +2791,15 @@ async function autoGrade(predId, playerId, date) {
       const el = document.getElementById(`stat-${predId}-${key}`);
       if (el) { el.textContent = val; el.classList.remove('loading'); el.style.color = val > 0 ? '#2ecc71' : '#fff'; }
     });
+    // Add collapsible raw stats for spot-checking against box score
+    const statsEl = document.getElementById(`stats-${predId}`);
+    if (statsEl && !statsEl.querySelector('.raw-stats-details')) {
+      const det = document.createElement('details');
+      det.className = 'raw-stats-details';
+      det.style.cssText = 'grid-column:1/-1;font-size:9px;font-family:monospace;color:#555;margin-top:4px;';
+      det.innerHTML = `<summary style="cursor:pointer;color:#444;letter-spacing:1px;">RAW MLB API</summary><pre style="color:#555;white-space:pre-wrap;font-size:9px;margin:4px 0 0;">${JSON.stringify(actual._raw||actual,null,2)}</pre>`;
+      statsEl.appendChild(det);
+    }
     if (btn) { btn.textContent = '✓ Confirm Grade'; btn.disabled = false; btn.onclick = () => confirmGrade(predId, actual); }
   } catch(e) {
     if (btn) { btn.textContent = '⟳ Fetch & Grade'; btn.disabled = false; }
