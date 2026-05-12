@@ -11,7 +11,18 @@ const S = {
   lineupRoster:null,
   recentGameLog:null,
   lastScore:null, lastPrediction:null,
-  betLog: JSON.parse(localStorage.getItem('corbetRecord') || '[]'),
+  betLog: (()=>{
+    const log=JSON.parse(localStorage.getItem('corbetRecord')||'[]');
+    // Repair any duplicate IDs from a prior bug where autoSaveTopBets used the same Date.now() timestamp
+    const seen=new Set();
+    let repaired=false;
+    log.forEach((b,i)=>{
+      if(seen.has(b.id)){b.id=Date.now()+i;repaired=true;}
+      seen.add(b.id);
+    });
+    if(repaired)localStorage.setItem('corbetRecord',JSON.stringify(log));
+    return log;
+  })(),
 };
 
 const CORBET_ROSTER = [
@@ -1670,6 +1681,12 @@ const PROP_NAMES={
   'batter_runs_scored':'Runs',
 };
 
+function americanToDecimal(price){
+  price=Number(price);
+  if(!price)return null;
+  return price>0?price/100+1:100/Math.abs(price)+1;
+}
+
 function generateCorbetBets(score,factors,rawMarketMap){
   const results=[];
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
@@ -1712,18 +1729,26 @@ function generateCorbetBets(score,factors,rawMarketMap){
 
     const delta=modelProb-dv.overProb;
     const absDelta=Math.abs(delta);
-    let edgeStrength;
-    if(absDelta>=10)edgeStrength='strong';
-    else if(absDelta>=6)edgeStrength='moderate';
-    else if(absDelta>=3)edgeStrength='small';
-    else edgeStrength='none';
-
     const direction=delta>0?'Over':'Under';
     const bestOdds=delta>0?overBest:underBest;
 
+    // EV = winProb × (decimal - 1) - (1 - winProb); normalizes for position on probability spectrum
+    let ev=null;
+    const _dec=bestOdds?.price!=null?americanToDecimal(bestOdds.price):null;
+    if(_dec){
+      const winProb=direction==='Under'?(100-modelProb)/100:modelProb/100;
+      ev=winProb*(_dec-1)-(1-winProb);
+    }
+    let edgeStrength;
+    if(ev!==null){
+      edgeStrength=ev>=0.12?'strong':ev>=0.06?'moderate':ev>=0.02?'small':'none';
+    }else{
+      edgeStrength=absDelta>=10?'strong':absDelta>=6?'moderate':absDelta>=3?'small':'none';
+    }
+
     results.push({
       prop:PROP_NAMES[propKey],propKey,line,direction,
-      delta,absDelta,edgeStrength,
+      delta,absDelta,ev,edgeStrength,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
       overBest,underBest,
@@ -2144,7 +2169,7 @@ function renderDashboard(){
           qualified.push({...b,playerName:pg.playerName});
       });
     });
-    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
     const top3=qualified.slice(0,3);
     document.getElementById('dash-best-bets').innerHTML=top3.length
       ?top3.map(b=>`<div class="dash-best-bet-row">
@@ -2173,7 +2198,7 @@ function renderDashboard(){
       if(b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
         qualified.push({...b,playerName:pg.playerName});
     }));
-    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
+    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
     qualified.slice(0,3).forEach(b=>top3Keys.add(`${b.playerName}_${b.propKey}_${b.direction}`));
   }
 
@@ -2194,7 +2219,7 @@ function renderDashboard(){
     // Bets to show in expanded body: non-none edge, up to 5
     const visibleBets=(pg?.bets||[])
       .filter(b=>!b.insufficient&&b.edgeStrength!=='none')
-      .sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0))
+      .sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0))
       .slice(0,5);
 
     let betsHtml;
@@ -2207,8 +2232,8 @@ function renderDashboard(){
             ?'<span class="dpb-icon-strong">●</span>'
             :'<span class="dpb-icon-moderate">■</span>';
         const bestOdds=b.direction.toLowerCase()==='over'?b.overBest:b.underBest;
-        const deltaColor=b.delta>0?'#2ecc71':'#e74c3c';
-        const deltaStr=(b.delta>0?'+':'')+b.delta.toFixed(1)+'%';
+        const deltaColor=b.ev!=null?(b.ev>=0?'#2ecc71':'#e74c3c'):(b.delta>0?'#2ecc71':'#e74c3c');
+        const deltaStr=b.ev!=null?`EV ${b.ev>=0?'+':''}${(b.ev*100).toFixed(1)}%`:(b.delta>0?'+':'')+b.delta.toFixed(1)+'pp';
         return`<tr>
           <td>${icon}</td>
           <td class="dpb-prop">${b.prop} ${b.line} ${b.direction.toUpperCase()}</td>
@@ -2359,13 +2384,13 @@ function autoSaveTopBets(){
         qualified.push({...b,playerName:pg.playerName});
     });
   });
-  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.absDelta||0)-(a.absDelta||0)||(b.mcConfidence||0)-(a.mcConfidence||0));
-  qualified.slice(0,3).forEach(b=>{
+  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  qualified.slice(0,3).forEach((b,i)=>{
     const prop=`${b.direction} ${b.line} ${b.prop}`;
     if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
     const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
     const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
-    S.betLog.unshift({id:Date.now(),date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null});
+    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null});
   });
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
 }
