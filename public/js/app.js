@@ -11,7 +11,18 @@ const S = {
   lineupRoster:null,
   recentGameLog:null,
   lastScore:null, lastPrediction:null,
-  betLog: JSON.parse(localStorage.getItem('corbetRecord') || '[]'),
+  betLog: (()=>{
+    const log=JSON.parse(localStorage.getItem('corbetRecord')||'[]');
+    // Repair any duplicate IDs from a prior bug where autoSaveTopBets used the same Date.now() timestamp
+    const seen=new Set();
+    let repaired=false;
+    log.forEach((b,i)=>{
+      if(seen.has(b.id)){b.id=Date.now()+i;repaired=true;}
+      seen.add(b.id);
+    });
+    if(repaired)localStorage.setItem('corbetRecord',JSON.stringify(log));
+    return log;
+  })(),
 };
 
 const CORBET_ROSTER = [
