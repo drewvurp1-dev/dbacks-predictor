@@ -267,7 +267,7 @@
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
-      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
         <div class="record-summary">
           <div class="record-cell green"><div class="rc-label">🟢 Green</div><div class="rc-record" id="rec-green">0-0</div><div class="rc-pct" id="rec-green-pct">—%</div><div class="rc-roi" id="rec-green-roi" style="color:#2ecc71;"></div></div>
@@ -282,6 +282,37 @@
         </div>
         <div id="bet-log"></div>
         <div id="bet-log-empty" style="text-align:center;padding:24px;color:#777;font-family:monospace;font-size:12px;">No bets logged yet. Run predictions and save CorBET picks to build your record.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ CALIBRATION ═══════════════════ -->
+  <div id="panel-calibration" class="panel">
+    <div class="card">
+      <div class="card-header">📊 Model Calibration</div>
+      <div class="card-body">
+        <div id="cal-empty" style="text-align:center;padding:24px;color:#777;font-family:monospace;font-size:12px;">Calibration data builds up as you grade bets. New bets save model probability and MC confidence — older bets without these fields are excluded.</div>
+        <div id="cal-content" class="hidden">
+          <div id="cal-summary" style="font-size:11px;color:#888;font-family:monospace;margin-bottom:14px;text-align:center;"></div>
+
+          <div class="cal-section">
+            <div class="cal-section-title">CALIBRATION BY PREDICTED PROBABILITY</div>
+            <div class="cal-section-note">If the model is well-calibrated, "Avg Pred" should match "Hit Rate" in each bucket.</div>
+            <div id="cal-prob-table" class="cal-table"></div>
+          </div>
+
+          <div class="cal-section">
+            <div class="cal-section-title">MC CONFIDENCE THRESHOLD</div>
+            <div class="cal-section-note">85%+ is the Top-3 cutoff. Higher MC should mean higher hit rate.</div>
+            <div id="cal-mc-table" class="cal-table"></div>
+          </div>
+
+          <div class="cal-section">
+            <div class="cal-section-title">PER-PROP TYPE BREAKDOWN</div>
+            <div class="cal-section-note">Identifies which prop markets the model handles well vs poorly.</div>
+            <div id="cal-prop-table" class="cal-table"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
