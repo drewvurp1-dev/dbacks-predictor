@@ -2307,7 +2307,9 @@ function saveBet(idx, btn){
     if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save to Record';},1800);}
     return;
   }
-  const bet={id:Date.now(),date,player:b._playerName||S.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:b.odds,rating:b.rating,score:b._playerScore||S.lastScore,result:null};
+  const bet={id:Date.now(),date,player:b._playerName||S.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:b.odds,rating:b.rating,score:b._playerScore||S.lastScore,result:null,
+    modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
+    propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null};
   S.betLog.unshift(bet);
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
   renderRecord();
@@ -2343,7 +2345,9 @@ function autoSaveTopBets(){
     if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
     const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
     const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
-    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null});
+    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null,
+      modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
+      propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null});
   });
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
 }
@@ -2445,6 +2449,135 @@ function renderRecord(){
       </span>
       <button class="del-btn" onclick="deleteBet(${b.id})" title="Remove">×</button>
     </div>`).join('');
+}
+
+// ═══════════ MODEL CALIBRATION ════════════════════════════════════════════════
+// Reads bets from S.betLog that have BOTH a graded result and the modelProb/
+// mcConfidence fields captured at save time. Older bets without those fields
+// are excluded. Three views: predicted-probability calibration, MC threshold
+// performance, per-prop-type breakdown.
+
+// Returns the bet's win probability AS PREDICTED at save time, accounting for
+// the bet direction. modelProb is stored as the OVER probability, so an UNDER
+// bet's win prob is 100 - modelProb.
+function _calBetWinProb(b){
+  if(b.modelProb==null)return null;
+  return (b.direction||'').toLowerCase()==='under'?100-b.modelProb:b.modelProb;
+}
+
+function _calBucketize(rows,bucketFn){
+  const buckets=new Map();
+  rows.forEach(r=>{
+    const k=bucketFn(r);
+    if(k==null)return;
+    if(!buckets.has(k))buckets.set(k,[]);
+    buckets.get(k).push(r);
+  });
+  return buckets;
+}
+
+function _calProfit(odds){
+  if(!odds)return 0;
+  return odds>0?odds/100:100/Math.abs(odds);
+}
+
+function renderCalibration(){
+  // Eligible: graded (W/L/P) AND has modelProb captured at save time.
+  // Pushes are excluded from hit-rate math but counted in totals.
+  const all=(S.betLog||[]).filter(b=>b.result&&b.modelProb!=null);
+  const settled=all.filter(b=>b.result==='win'||b.result==='loss');
+  const empty=document.getElementById('cal-empty');
+  const content=document.getElementById('cal-content');
+  if(!all.length){
+    show('cal-empty');hide('cal-content');return;
+  }
+  hide('cal-empty');show('cal-content');
+
+  const summary=document.getElementById('cal-summary');
+  const pendingOld=(S.betLog||[]).filter(b=>b.modelProb==null).length;
+  summary.innerHTML=`${all.length} graded bet${all.length===1?'':'s'} with model data` +
+    (pendingOld?` · ${pendingOld} older bet${pendingOld===1?'':'s'} excluded (no model data captured)`:'');
+
+  // ─── 1. Predicted-probability calibration ─────────────────────────────────
+  // Bucket bets by their predicted win prob (direction-adjusted). Compare avg
+  // prediction vs actual hit rate. A well-calibrated model has gap ≈ 0.
+  const probBucket=b=>{
+    const p=_calBetWinProb(b);
+    if(p==null)return null;
+    if(p<50)return'<50%';
+    if(p<60)return'50–59%';
+    if(p<70)return'60–69%';
+    if(p<80)return'70–79%';
+    if(p<90)return'80–89%';
+    return'90%+';
+  };
+  const probBuckets=_calBucketize(settled,probBucket);
+  const probOrder=['<50%','50–59%','60–69%','70–79%','80–89%','90%+'];
+  const probHeader=`<div class="cal-row cal-header" style="grid-template-columns:84px 56px 80px 80px 80px;"><span>Predicted</span><span>Count</span><span>Avg Pred</span><span>Hit Rate</span><span>Gap</span></div>`;
+  let probRows='';
+  probOrder.forEach(k=>{
+    const bs=probBuckets.get(k);
+    if(!bs?.length)return;
+    const avgPred=bs.reduce((s,b)=>s+_calBetWinProb(b),0)/bs.length;
+    const wins=bs.filter(b=>b.result==='win').length;
+    const hitRate=(wins/bs.length)*100;
+    const gap=hitRate-avgPred;
+    const gapCls=Math.abs(gap)<=5?'cal-cell-good':Math.abs(gap)<=10?'cal-cell-neutral':'cal-cell-bad';
+    probRows+=`<div class="cal-row" style="grid-template-columns:84px 56px 80px 80px 80px;"><span class="cal-cell-neutral">${k}</span><span class="cal-cell-muted">${bs.length}</span><span class="cal-cell-muted">${avgPred.toFixed(1)}%</span><span class="cal-cell-neutral">${hitRate.toFixed(1)}%</span><span class="${gapCls}">${gap>0?'+':''}${gap.toFixed(1)}%</span></div>`;
+  });
+  if(!probRows)probRows=`<div class="cal-row cal-empty-row">No graded bets with model probability yet.</div>`;
+  document.getElementById('cal-prob-table').innerHTML=probHeader+probRows;
+
+  // ─── 2. MC confidence threshold ───────────────────────────────────────────
+  const mcBucket=b=>{
+    const m=b.mcConfidence;
+    if(m==null)return null;
+    if(m<70)return'<70%';
+    if(m<85)return'70–84%';
+    return'85%+ (Top)';
+  };
+  const mcBuckets=_calBucketize(settled.filter(b=>b.mcConfidence!=null),mcBucket);
+  const mcOrder=['<70%','70–84%','85%+ (Top)'];
+  const mcHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span>MC Range</span><span>Count</span><span>Wins</span><span>Hit Rate</span><span>ROI</span></div>`;
+  let mcRows='';
+  mcOrder.forEach(k=>{
+    const bs=mcBuckets.get(k);
+    if(!bs?.length)return;
+    const wins=bs.filter(b=>b.result==='win').length;
+    const losses=bs.filter(b=>b.result==='loss').length;
+    const profit=bs.reduce((s,b)=>s+(b.result==='win'?_calProfit(b.odds):b.result==='loss'?-1:0),0);
+    const hitRate=bs.length?(wins/bs.length)*100:0;
+    const roi=bs.length?(profit/bs.length)*100:0;
+    const hitCls=hitRate>=55?'cal-cell-good':hitRate>=45?'cal-cell-neutral':'cal-cell-bad';
+    const roiCls=roi>=0?'cal-cell-good':'cal-cell-bad';
+    mcRows+=`<div class="cal-row" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span class="cal-cell-neutral">${k}</span><span class="cal-cell-muted">${bs.length}</span><span class="cal-cell-muted">${wins}-${losses}</span><span class="${hitCls}">${hitRate.toFixed(1)}%</span><span class="${roiCls}">${roi>=0?'+':''}${roi.toFixed(1)}%</span></div>`;
+  });
+  if(!mcRows)mcRows=`<div class="cal-row cal-empty-row">No graded bets with MC data yet.</div>`;
+  document.getElementById('cal-mc-table').innerHTML=mcHeader+mcRows;
+
+  // ─── 3. Per-prop-type breakdown ───────────────────────────────────────────
+  const propLabel={
+    batter_hits:'Hits',batter_total_bases:'Total Bases',batter_home_runs:'Home Runs',
+    batter_rbis:'RBI',batter_walks:'Walks',batter_strikeouts:'Strikeouts',
+    batter_runs_scored:'Runs',batter_hits_runs_rbis:'H+R+RBI',
+  };
+  const propBuckets=_calBucketize(settled,b=>b.propKey||null);
+  const propHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 60px 80px 80px;"><span>Prop</span><span>Count</span><span>W-L</span><span>Hit %</span><span>Avg Model</span></div>`;
+  let propRows='';
+  const sortedProps=[...propBuckets.entries()].sort((a,b)=>b[1].length-a[1].length);
+  sortedProps.forEach(([key,bs])=>{
+    const wins=bs.filter(b=>b.result==='win').length;
+    const losses=bs.filter(b=>b.result==='loss').length;
+    const total=wins+losses;
+    const hitRate=total?(wins/total)*100:0;
+    const avgPred=bs.reduce((s,b)=>{const p=_calBetWinProb(b);return s+(p||0);},0)/bs.length;
+    const gap=hitRate-avgPred;
+    const hitCls=hitRate>=55?'cal-cell-good':hitRate>=45?'cal-cell-neutral':'cal-cell-bad';
+    const gapCls=Math.abs(gap)<=5?'cal-cell-good':Math.abs(gap)<=10?'cal-cell-neutral':'cal-cell-bad';
+    propRows+=`<div class="cal-row" style="grid-template-columns:1fr 56px 60px 80px 80px;"><span class="cal-cell-neutral">${propLabel[key]||key}</span><span class="cal-cell-muted">${bs.length}</span><span class="cal-cell-muted">${wins}-${losses}</span><span class="${hitCls}">${hitRate.toFixed(1)}%</span><span class="${gapCls}">${avgPred.toFixed(1)}% (${gap>0?'+':''}${gap.toFixed(1)})</span></div>`;
+  });
+  if(!propRows)propRows=`<div class="cal-row cal-empty-row">No graded bets with prop type data yet.</div>`;
+  document.getElementById('cal-prop-table').innerHTML=propHeader+propRows;
 }
 
 // ═══════════ SPLITS ════════════════════════════════════════════════════════════
