@@ -76,12 +76,39 @@ function gaussianRandom(mean, std) {
   return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
-// Half-Kelly fraction (0–1 range; 0 means no bet)
+// Eighth-Kelly fraction (0–1 range; 0 means no bet). Conservative sizing to
+// dampen variance from model error — full Kelly assumes perfect win-prob estimates.
 function kellyFraction(modelProb, odds) {
   if (!odds) return 0;
   const b = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
   const p = modelProb / 100, q = 1 - p;
   return Math.max(0, (b * p - q) / b) * 0.125;
+}
+
+// Advanced pitcher metrics (FIP, xFIP, K-BB%, HR/9) derived from MLB Stats API
+// + Baseball Savant Statcast. Returns nulls when data is insufficient.
+const _FIP_CONSTANT = 3.10; // Approximates league-avg (ERA - raw FIP) — stable around 3.0-3.2
+const _LG_HRFB = 0.105;     // League-average HR per fly ball, used for xFIP normalization
+function _computePitcherMetrics(st, statcast){
+  const ip=parseFloat(st?.inningsPitched)||0;
+  const hr=parseInt(st?.homeRuns)||0;
+  const bb=parseInt(st?.baseOnBalls)||0;
+  const hbp=parseInt(st?.hitByPitch)||0;
+  const k=parseInt(st?.strikeOuts)||0;
+  const tbf=parseInt(st?.battersFaced)||0;
+  if(ip<1||tbf<1)return{fip:null,xfip:null,kbbPct:null,hr9:null};
+  const fip=(13*hr+3*(bb+hbp)-2*k)/ip+_FIP_CONSTANT;
+  const hr9=(hr/ip)*9;
+  const kbbPct=((k-bb)/tbf)*100;
+  let xfip=null;
+  const fbPct=statcast?.fbPct;
+  if(fbPct!=null&&fbPct>0){
+    const bip=Math.max(0,tbf-k-bb-hbp);
+    const fbCount=bip*(fbPct/100);
+    const expHR=fbCount*_LG_HRFB;
+    xfip=(13*expHR+3*(bb+hbp)-2*k)/ip+_FIP_CONSTANT;
+  }
+  return{fip,xfip,kbbPct,hr9};
 }
 
 // Monte Carlo confidence: % of noisy-score simulations where the edge holds
@@ -485,7 +512,7 @@ async function onPitcherSearch(val){
       if(!pitchers.length){hide('pitcher-search-results');return;}
       document.getElementById('pitcher-search-results').innerHTML=pitchers.map(p=>`<div class="search-result-item" onclick="selectPitcher(${p.id},'${p.fullName.replace(/'/g,"\\'")}')"><span>${p.fullName}</span><span class="sr-pos">${p.pitchHand?.code||'?'}HP</span></div>`).join('');
       show('pitcher-search-results');
-    }catch{hide('pitcher-search-results');}
+    }catch(e){console.warn('Pitcher search failed:',e.message);hide('pitcher-search-results');}
   },300);
 }
 
@@ -512,7 +539,8 @@ async function selectPitcher(id,name){
     const lastOuting=gameLogs.length?gameLogs[gameLogs.length-1].stat:null;
     // Bullpen / opener detection: flag if all of last 3 outings are under 45 pitches
     const bullpenGame=last3.length>=3&&last3.every(g=>(g.stat?.numberOfPitches||0)<45);
-    S.pitcher={id,name,hand,st,last3,daysRest,lastOuting,bullpenGame};
+    const advanced=_computePitcherMetrics(st,null);
+    S.pitcher={id,name,hand,st,last3,daysRest,lastOuting,bullpenGame,advanced};
     const era=parseFloat(st.era)||null;
     const whip=parseFloat(st.whip)||null;
     const ip=st.inningsPitched||'—';
@@ -520,15 +548,17 @@ async function selectPitcher(id,name){
     const kPct=st.strikeOuts?((st.strikeOuts/pa)*100).toFixed(1)+'%':'—';
     const bbPct=st.baseOnBalls?((st.baseOnBalls/pa)*100).toFixed(1)+'%':'—';
     const k9=st.strikeOuts&&st.inningsPitched?((st.strikeOuts/parseFloat(st.inningsPitched))*9).toFixed(1):'—';
-    const fip=era?(era*0.92).toFixed(2):'—';
+    const fip=advanced.fip!=null?advanced.fip.toFixed(2):'—';
+    const kbb=advanced.kbbPct!=null?advanced.kbbPct.toFixed(1)+'%':'—';
+    const hr9=advanced.hr9!=null?advanced.hr9.toFixed(2):'—';
     document.getElementById('pitcher-hand-badge').textContent=`${hand}HP · ${name}`;
-    document.getElementById('pitcher-loaded').innerHTML=`<div class="pitcher-loaded"><div class="pl-hand">Throws ${hand==='L'?'Left':'Right'}</div><div class="pl-name">${name}</div><div class="pl-stats"><span>ERA <strong>${era?era.toFixed(2):'—'}</strong></span><span>FIP <strong>${fip}</strong></span><span>WHIP <strong>${whip?whip.toFixed(2):'—'}</strong></span><span>K% <strong>${kPct}</strong></span><span>BB% <strong>${bbPct}</strong></span><span>K/9 <strong>${k9}</strong></span><span>Days Rest <strong>${daysRest}</strong></span>${lastOuting?`<span>Last PC <strong>${lastOuting.numberOfPitches||'—'}</strong></span>`:''}</div></div>`;
+    document.getElementById('pitcher-loaded').innerHTML=`<div class="pitcher-loaded"><div class="pl-hand">Throws ${hand==='L'?'Left':'Right'}</div><div class="pl-name">${name}</div><div class="pl-stats"><span>ERA <strong>${era?era.toFixed(2):'—'}</strong></span><span>FIP <strong>${fip}</strong></span><span>WHIP <strong>${whip?whip.toFixed(2):'—'}</strong></span><span>K-BB% <strong>${kbb}</strong></span><span>HR/9 <strong>${hr9}</strong></span><span>K/9 <strong>${k9}</strong></span><span>Days Rest <strong>${daysRest}</strong></span>${lastOuting?`<span>Last PC <strong>${lastOuting.numberOfPitches||'—'}</strong></span>`:''}</div></div>`;
     show('pitcher-loaded');
     const mix=hand==='L'?{'4-Seam FB':35,'Sinker':5,'Cutter':10,'Slider':20,'Curveball':10,'Changeup':15,'Splitter':5}:{'4-Seam FB':35,'Sinker':10,'Cutter':8,'Slider':22,'Curveball':10,'Changeup':12,'Splitter':3};
     Object.assign(S.pitcherPitches,mix);
     buildPitchMixGrid('pitch-mix-grid',S.pitcherPitches);
     show('pitcher-pitch-mix');
-    renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip);
+    renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip,kbb,hr9);
     loadPitcherStatcast(id);
     loadMatchupStats();
     // If bets were already loaded without pitcher data, re-run with the new pitcher
@@ -540,12 +570,21 @@ async function selectPitcher(id,name){
   finally{hide('pitcher-spinner');}
 }
 
-function renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip){
+function renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip,kbb,hr9){
   hide('pitcher-tab-empty');show('pitcher-tab-content');
   document.getElementById('pitcher-tab-header').textContent=`📋 ${name} · Pitcher Analysis`;
   const eraC=era<3.25?'good':era>5.0?'bad':'';
   const whipC=whip<1.1?'good':whip>1.4?'bad':'';
-  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average'],['FIP',fip,'','Fielding independent pitching'],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP'],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate'],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate'],['IP',ip,'','Innings pitched'],['K/9',k9,'','Strikeouts per 9'],['GS',st.gamesStarted||'—','','Games started']].map(([l,v,c,ctx])=>`<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v}</div><div class="stat-context">${ctx}</div></div>`).join('');
+  const fipNum=parseFloat(fip);
+  const fipC=!isNaN(fipNum)?(fipNum<3.50?'good':fipNum>4.50?'bad':''):'';
+  const xfipNum=S.pitcher?.advanced?.xfip;
+  const xfipC=xfipNum!=null?(xfipNum<3.50?'good':xfipNum>4.50?'bad':''):'';
+  const xfipDisplay=xfipNum!=null?xfipNum.toFixed(2):'—';
+  const kbbNum=parseFloat(kbb);
+  const kbbC=!isNaN(kbbNum)?(kbbNum>=15?'good':kbbNum<=8?'bad':''):'';
+  const hr9Num=parseFloat(hr9);
+  const hr9C=!isNaN(hr9Num)?(hr9Num<=0.9?'good':hr9Num>=1.5?'bad':''):'';
+  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average'],['FIP',fip,fipC,'Fielding independent (strips luck)'],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB'],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP'],['K-BB%',kbb,kbbC,'Skill gap — best K predictor'],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP'],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate'],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate'],['IP',ip,'','Innings pitched'],['K/9',k9,'','Strikeouts per 9'],['GS',st.gamesStarted||'—','','Games started']].map(([l,v,c,ctx])=>`<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v}</div><div class="stat-context">${ctx}</div></div>`).join('');
   document.getElementById('pt-pitchmix').innerHTML=PITCH_TYPES.map(pt=>{const p=S.pitcherPitches[pt]||0;if(!p)return'';return`<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;}).join('');
   document.getElementById('pt-recent').innerHTML=last3.length?last3.map(g=>`<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K <span style="color:#999;margin-left:8px;">${g.stat.numberOfPitches||'—'} pitches</span></div>`).join(''):'<span style="color:#777;">No recent game log available.</span>';
   document.getElementById('pt-workload').innerHTML=`<div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>${lastOuting?`<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches||'—'}</strong></div>`:''}${daysRest!=='—'&&daysRest<4?'<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>':''}${daysRest!=='—'&&daysRest>=5?'<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>':''}`;
@@ -645,6 +684,9 @@ async function loadPitcherStatcast(pitcherId){
       xera:     parseFloat(xeraRaw)||null,
     };
 
+    // Recompute pitcher metrics now that FB% is available — gives us xFIP
+    if(S.pitcher?.st){S.pitcher.advanced=_computePitcherMetrics(S.pitcher.st,S.pitcherStatcast);}
+
     const boxes=[
       statBox('Whiff%',    whiffPct,     'Whiff rate per pitch',       whiffC),
       statBox('K%',        kPct,         'Strikeout rate',             kC),
@@ -723,7 +765,7 @@ async function loadUmpire(dv){
     const ut=UMP_DB[hp.official.fullName]||{tendency:'neutral',adj:0,note:'No significant zone bias on record.'};
     document.getElementById('ump-content').innerHTML=`<div class="ump-box"><div class="ump-sub">Home Plate Umpire</div><div class="ump-name">${hp.official.fullName}</div><div class="ump-tendency ${ut.tendency}">${ut.tendency==='pitcher'?'Pitcher-Friendly':ut.tendency==='hitter'?'Hitter-Friendly':'Neutral Zone'}</div><div style="font-size:11px;color:#999;font-family:monospace;margin-top:8px;">${ut.note}</div>${ut.adj!==0?`<div style="font-size:10px;color:#999;font-family:monospace;margin-top:4px;">Est. run impact: <strong style="color:${ut.adj>0?'#2ecc71':'#e74c3c'}">${ut.adj>0?'+':''}${ut.adj} R/G</strong></div>`:''}`;
     show('ump-content');
-  }catch{setText('ump-empty','Could not load umpire data.');show('ump-empty');}
+  }catch(e){console.warn('Umpire load failed:',e.message);setText('ump-empty','Could not load umpire data.');show('ump-empty');}
   finally{hide('ump-spinner');}
 }
 
@@ -990,7 +1032,7 @@ async function fetchWeather(){
     const roofRec=document.getElementById('roof-rec');
     if(hasRoof){if(uT>=90){roofRec.className='roof-recommendation likely-closed';roofRec.textContent=`⚠ ${uT}°F — Roof likely closed.`;roofRec.classList.remove('hidden');}else if(uT<80){roofRec.className='roof-recommendation likely-open';roofRec.textContent=`✓ ${uT}°F — Roof likely open.`;roofRec.classList.remove('hidden');}else roofRec.classList.add('hidden');}else roofRec.classList.add('hidden');
     show('weather-content');
-  }catch{hide('weather-spinner');}
+  }catch(e){console.warn('Weather load failed:',e.message);hide('weather-spinner');}
   finally{hide('weather-spinner');}
 }
 
@@ -1013,11 +1055,30 @@ function calcPrediction(){
   }
   if(S.pitcher?.st){
     const era=parseFloat(S.pitcher.st.era);
-    if(!isNaN(era)){const a=(era-4.00)*4;add('Pitcher ERA',era.toFixed(2),a,era<3.25?'Elite arm':era<4.00?'Above-average':era<5.00?'League-average':'Hittable pitcher','pitcher');}
-    const pa=S.pitcher.st.battersFaced||1;
-    const kp=S.pitcher.st.strikeOuts?(S.pitcher.st.strikeOuts/pa)*100:null;
-    if(kp&&kp>=28)add('High K%',kp.toFixed(1)+'%',-4,'Elite swing-and-miss stuff','pitcher');
-    if(kp&&kp<=15)add('Low K%',kp.toFixed(1)+'%',3,'Below-average K rate — more contact opportunities','pitcher');
+    const adv=S.pitcher.advanced||{};
+    // Use xFIP > FIP > ERA in order of predictive value. Display label reflects source.
+    const trueERA=adv.xfip??adv.fip??era;
+    const trueLabel=adv.xfip!=null?'xFIP':adv.fip!=null?'FIP':'ERA';
+    if(!isNaN(trueERA)&&trueERA!=null){
+      const a=(trueERA-4.00)*4;
+      add(`Pitcher ${trueLabel}`,trueERA.toFixed(2),a,trueERA<3.25?'Elite arm':trueERA<4.00?'Above-average':trueERA<5.00?'League-average':'Hittable pitcher','pitcher');
+    }
+    // ERA-FIP divergence reveals luck/regression — show only when gap is meaningful
+    if(adv.fip!=null&&!isNaN(era)){
+      const gap=era-adv.fip;
+      if(gap>=0.75)add('Unlucky Pitcher',`ERA ${era.toFixed(2)} vs FIP ${adv.fip.toFixed(2)}`,-2,'ERA inflated vs FIP — pitcher likely better than results show, expect regression','pitcher');
+      else if(gap<=-0.75)add('Lucky Pitcher',`ERA ${era.toFixed(2)} vs FIP ${adv.fip.toFixed(2)}`,2,'ERA suppressed vs FIP — pitcher likely worse than results show, expect regression','pitcher');
+    }
+    // K-BB% — much more predictive than raw K% alone
+    if(adv.kbbPct!=null){
+      if(adv.kbbPct>=18)add('Elite K-BB%',adv.kbbPct.toFixed(1)+'%',-4,'Dominant strikeout-to-walk skill gap','pitcher');
+      else if(adv.kbbPct<=8)add('Poor K-BB%',adv.kbbPct.toFixed(1)+'%',3,'Weak K-BB ratio — hitters get more usable contact','pitcher');
+    }
+    // HR/9 — power suppression metric
+    if(adv.hr9!=null){
+      if(adv.hr9>=1.5)add('HR-prone',adv.hr9.toFixed(2)+' HR/9',3,'Allows home runs at high rate','pitcher');
+      else if(adv.hr9<=0.8)add('HR Suppressor',adv.hr9.toFixed(2)+' HR/9',-2,'Limits home runs effectively','pitcher');
+    }
     if(S.pitcher.daysRest!=='—'){if(S.pitcher.daysRest<4)add('Short Rest',S.pitcher.daysRest+'d',3,'Pitcher on short rest — fatigue advantage','pitcher');else if(S.pitcher.daysRest>=6)add('Extra Rest',S.pitcher.daysRest+'d',-2,'Well-rested pitcher — sharper command','pitcher');}
     const lpc=S.pitcher.lastOuting?.numberOfPitches;
     if(lpc&&lpc>=100)add('High Prev PC',lpc+' pitches',2,`${lpc} pitches last outing — possible fatigue`,'pitcher');
@@ -1832,7 +1893,7 @@ async function _corbetFetchMLBStats(playerId,pitcherId){
       const st=md?.stats?.[0]?.splits?.[0]?.stat;
       const ab=parseInt(st?.atBats)||0;
       if(st&&ab>0){const ops=parseFloat(st.ops)||0;matchupStats={ab,h:parseInt(st.hits)||0,hr:parseInt(st.homeRuns)||0,k:parseInt(st.strikeOuts)||0,bb:parseInt(st.baseOnBalls)||0,ops,avg:st.avg,obp:st.obp,slg:st.slg};}
-    }catch(e){}
+    }catch(e){console.warn(`Matchup stats failed for player ${playerId} vs pitcher ${pitcherId}:`,e.message);}
   }
   return{
     splits:byCode,
@@ -1853,10 +1914,11 @@ async function loadCorbet(){
     const csvRows=await _corbetFetchStatcastCSVs();
     S.players=S.players||{};
     for(const player of activeRoster()){
+      let saved=null;
       try{
         const mlbStats=await _corbetFetchMLBStats(player.id,S.pitcher?.id);
         const statcast=_corbetExtractStatcast(player.id,csvRows);
-        const saved={splits:S.splits,seasonStat:S.seasonStat,rispStat:S.rispStat,
+        saved={splits:S.splits,seasonStat:S.seasonStat,rispStat:S.rispStat,
           statcast:S.statcast,recentGameLog:S.recentGameLog,matchupStats:S.matchupStats,playerName:S.playerName};
         S.splits=mlbStats.splits;S.seasonStat=mlbStats.seasonStat;
         S.rispStat=mlbStats.rispStat;S.statcast=statcast;
@@ -1868,8 +1930,14 @@ async function loadCorbet(){
           recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast,
           order:player.order||null,
           lowData:(mlbStats.seasonStat?.plateAppearances||0)<50};
-        Object.assign(S,saved);
-      }catch(e){}
+      }catch(e){
+        console.warn(`Player load failed for ${player.name} (${player.id}):`,e.message);
+        // Drop any stale cached entry so the UI shows the player as missing rather than displaying old stats
+        delete S.players[player.id];
+      }finally{
+        // Always restore prior S state so a partial swap doesn't leak into subsequent iterations or UI
+        if(saved)Object.assign(S,saved);
+      }
     }
     // Render score-only player cards immediately — modals work now
     renderDashboard();
@@ -1959,6 +2027,7 @@ async function loadCorbet(){
     // Generate bets for each roster player — game context (pitcher, weather, etc.) stays in S
     const allPlayerBets=[];
     for(const player of activeRoster()){
+      let savedCtx=null;
       try{
         // Reuse the snapshot already computed in Phase 1 — no re-fetching needed
         const snap=S.players[player.id];
@@ -1968,7 +2037,7 @@ async function loadCorbet(){
         // (called both inside generateCorbetBets and from monteCarloConfidence) reads
         // S.seasonStat / S.splits / S.statcast / S.recentGameLog / S.currentOrder, so all of
         // them must be swapped before MC runs and restored only after MC finishes.
-        const savedCtx={seasonStat:S.seasonStat,splits:S.splits,matchupStats:S.matchupStats,statcast:S.statcast,recentGameLog:S.recentGameLog,currentOrder:S.currentOrder};
+        savedCtx={seasonStat:S.seasonStat,splits:S.splits,matchupStats:S.matchupStats,statcast:S.statcast,recentGameLog:S.recentGameLog,currentOrder:S.currentOrder};
         S.seasonStat=snap.seasonStat;S.splits=snap.splits;S.matchupStats=snap.matchupStats;S.statcast=snap.statcast;S.recentGameLog=snap.recentGameLog;S.currentOrder=snap.order;
         const bets=generateCorbetBets(snap.score,snap.factors,rawMarketMap);
         bets.forEach(b=>{
@@ -1976,12 +2045,14 @@ async function loadCorbet(){
             b.mcConfidence=monteCarloConfidence(b.propKey,b.line,snap.score,b.marketOverProb,b.direction);
           }
         });
-        Object.assign(S,savedCtx);
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
         bets.forEach(b=>{b._playerName=player.name;b._playerScore=snap.score;});
         allPlayerBets.push({playerName:player.name,bets,lowData:(S.players[player.id]?.lowData||false)});
       }catch(e){
-        // Skip player silently on error — continue to next
+        console.warn(`Bet generation failed for ${player.name} (${player.id}):`,e.message);
+      }finally{
+        // Always restore S so a partial swap doesn't leak into subsequent iterations or UI
+        if(savedCtx)Object.assign(S,savedCtx);
       }
     }
 
