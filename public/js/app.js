@@ -115,6 +115,9 @@ function closeModal() {
 function _swapToPlayer(playerId) {
   const p = S.players?.[playerId];
   if (!p) return null;
+  // If a modal is already open with a stale save slot, restore its outer state
+  // before swapping again so the original outer state isn't permanently lost.
+  if (_modalSavedS) { Object.assign(S, _modalSavedS); _modalSavedS = null; }
   const saved = {
     playerName: S.playerName, splits: S.splits, seasonStat: S.seasonStat,
     rispStat: S.rispStat, statcast: S.statcast, recentGameLog: S.recentGameLog,
@@ -158,12 +161,17 @@ function openPlayerCorbet(playerId) {
     document.getElementById('corbet-no-prediction').textContent = 'No bets available for this player.';
     show('corbet-no-prediction'); hide('corbet-bets'); hide('corbet-player-filter');
   } else {
+    // Save both allPlayerBets and corbetBets (the flat index list renderCorbetBets sets)
+    // so the background full-tab UI still resolves saveBet(idx) against the right list
+    // after this modal closes.
     const savedAll = S.allPlayerBets;
+    const savedFlat = S.corbetBets;
     S.allPlayerBets = playerBets;
     hide('corbet-no-prediction'); hide('corbet-loading'); hide('corbet-player-filter');
     renderCorbetBets();
     show('corbet-bets');
     S.allPlayerBets = savedAll;
+    S.corbetBets = savedFlat;
   }
   openModal('panel-corbet', snap.name + ' · CorBET');
 }
@@ -2114,16 +2122,7 @@ function renderDashboard(){
 
   // Top 3 bets — only when props are available
   if(S.allPlayerBets&&S.allPlayerBets.length){
-    const qualified=[];
-    S.allPlayerBets.forEach(pg=>{
-      if(pg.lowData)return;
-      pg.bets.forEach(b=>{
-        if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
-          qualified.push({...b,playerName:pg.playerName});
-      });
-    });
-    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
-    const top3=qualified.slice(0,3);
+    const top3=_getTopBets(3);
     document.getElementById('dash-best-bets').innerHTML=top3.length
       ?top3.map(b=>`<div class="dash-best-bet-row">
         <div class="dash-best-bet-left">
@@ -2143,17 +2142,9 @@ function renderDashboard(){
   const betsMap={};
   (S.allPlayerBets||[]).forEach(pg=>{betsMap[pg.playerName]=pg;});
 
-  // Pre-compute top-3 set so star icons can be applied per bet row
-  const top3Keys=new Set();
-  if(S.allPlayerBets){
-    const qualified=[];
-    S.allPlayerBets.forEach(pg=>pg.bets.forEach(b=>{
-      if(b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
-        qualified.push({...b,playerName:pg.playerName});
-    }));
-    qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
-    qualified.slice(0,3).forEach(b=>top3Keys.add(`${b.playerName}_${b.propKey}_${b.direction}`));
-  }
+  // Pre-compute top-3 set so star icons can be applied per bet row.
+  // Shared helper ensures lowData filter matches the Top 3 panel and autoSaveTopBets.
+  const top3Keys=new Set(_getTopBets(3).map(b=>`${b.playerName}_${b.propKey}_${b.direction}`));
 
   const orderedRoster=[...activeRoster()].sort((a,b)=>{
     const oa=S.players?.[a.id]?.order??99;
@@ -2323,22 +2314,31 @@ function saveBet(idx, btn){
   if(btn){btn.textContent='✓ Saved!';btn.style.color='#2ecc71';setTimeout(()=>{btn.textContent='+ Save to Record';btn.style.color='';},2000);}
 }
 
+// Single source of truth for "top N bets". All three callers (dashboard panel,
+// player-row star icons, auto-save to localStorage) must use this so the lowData
+// filter and MC threshold stay consistent.
+function _getTopBets(n=3){
+  if(!S.allPlayerBets)return[];
+  const edgeOrder={strong:3,moderate:2,small:1,none:0};
+  const qualified=[];
+  S.allPlayerBets.forEach(pg=>{
+    if(pg.lowData)return;
+    pg.bets.forEach(b=>{
+      if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
+        qualified.push({...b,playerName:pg.playerName});
+    });
+  });
+  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  return qualified.slice(0,n);
+}
+
 function autoSaveTopBets(){
   if(!S.allPlayerBets)return;
   // Don't modify the pre-game picks once first pitch has passed
   if(S.gameStatus==='Live'||S.gameStatus==='Final')return;
   // Use loaded game's officialDate; fall back to Arizona local date (UTC-7) to avoid UTC midnight rollover.
   const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
-  const edgeOrder={strong:3,moderate:2,small:1,none:0};
-  const qualified=[];
-  S.allPlayerBets.forEach(pg=>{
-    pg.bets.forEach(b=>{
-      if(b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
-        qualified.push({...b,playerName:pg.playerName});
-    });
-  });
-  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
-  qualified.slice(0,3).forEach((b,i)=>{
+  _getTopBets(3).forEach((b,i)=>{
     const prop=`${b.direction} ${b.line} ${b.prop}`;
     if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
     const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
