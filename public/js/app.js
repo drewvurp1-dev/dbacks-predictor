@@ -798,6 +798,7 @@ async function autoLoadNextGame(){
       const oppSide=isHomeSide?game.teams.away:game.teams.home;
       S.opposingTeam=oppSide?.team?.name||'';
       S.opposingTeamAbbr=oppSide?.team?.abbreviation||'';
+      S.gameStatus=game.status?.abstractGameState||'Preview';
       const pp=oppSide?.probablePitcher;
       if(pp?.id&&pp?.fullName&&!S.pitcher){
         await selectPitcher(pp.id,pp.fullName);
@@ -1837,7 +1838,8 @@ async function loadCorbet(){
         S.players[player.id]={name:player.name,score,tier,factors,catTotals,
           splits:mlbStats.splits,seasonStat:mlbStats.seasonStat,rispStat:mlbStats.rispStat,
           recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast,
-          order:player.order||null};
+          order:player.order||null,
+          lowData:(mlbStats.seasonStat?.plateAppearances||0)<50};
         Object.assign(S,saved);
       }catch(e){}
     }
@@ -1948,7 +1950,11 @@ async function loadCorbet(){
         const snap=S.players[player.id];
         if(!snap)continue;
         const rawMarketMap=playerMaps[player.id];
+        // Temporarily restore this player's stats so corbetReasoning() reads the right data
+        const savedCtx={seasonStat:S.seasonStat,splits:S.splits,matchupStats:S.matchupStats,statcast:S.statcast};
+        S.seasonStat=snap.seasonStat;S.splits=snap.splits;S.matchupStats=snap.matchupStats;S.statcast=snap.statcast;
         const bets=generateCorbetBets(snap.score,snap.factors,rawMarketMap);
+        Object.assign(S,savedCtx);
         bets.forEach(b=>{
           if(!b.insufficient&&b.edgeStrength!=='none'&&b.marketOverProb!=null){
             b.mcConfidence=monteCarloConfidence(b.propKey,b.line,snap.score,b.marketOverProb,b.direction);
@@ -1977,6 +1983,7 @@ async function loadCorbet(){
     show('corbet-bets');
     renderDashboard();
     autoSaveTopBets();
+    autoRegisterGradePredictions();
   }catch(e){
     hide('corbet-loading');
     setText('corbet-error','⚠ '+e.message);
@@ -2226,10 +2233,12 @@ function renderDashboard(){
     const avgStr=snap.seasonStat?.avg?parseFloat(snap.seasonStat.avg).toFixed(3):'—';
     const opsStr=snap.seasonStat?.ops?parseFloat(snap.seasonStat.ops).toFixed(3):'—';
 
+    const lowDataBadge=snap.lowData?`<span class="low-data-badge" title="Fewer than 50 PA this season — small sample">⚠ Low PA</span>`:'';
+    const lowDataWarning=snap.lowData?`<div class="low-data-warning">⚠ Fewer than 50 PA this season — rate stats (BB%, K%, AVG) may not be reliable with a small sample</div>`:'';
     return`<div class="dash-prow" id="dpr-${pid}">
       <div class="dash-prow-header" onclick="togglePlayerCard('${pid}')">
         <span class="dash-prow-order">${orderLabel}</span>
-        <span class="dash-prow-name">${player.name}</span>
+        <span class="dash-prow-name">${player.name}</span>${lowDataBadge}
         <span class="dash-prow-statline">AVG ${avgStr} &nbsp; OPS ${opsStr}</span>
         <button class="dash-prow-more" onclick="event.stopPropagation();openPlayerStats('${pid}')">More Stats ›</button>
         <span class="dash-prow-arrow" id="dpa-${pid}">▼</span>
@@ -2242,7 +2251,7 @@ function renderDashboard(){
           <div class="dpb-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>
           <button class="dpb-details-btn" onclick="openPlayerDetails('${pid}')">Details ›</button>
         </div>
-        <div class="dpb-center">${betsHtml}</div>
+        <div class="dpb-center">${lowDataWarning}${betsHtml}</div>
         <div class="dpb-right">${matchupHtml}${recentHtml}</div>
         ${analysisHtml}
       </div>
@@ -2338,6 +2347,8 @@ function saveBet(idx, btn){
 
 function autoSaveTopBets(){
   if(!S.allPlayerBets)return;
+  // Don't modify the pre-game picks once first pitch has passed
+  if(S.gameStatus==='Live'||S.gameStatus==='Final')return;
   // Use loaded game's officialDate; fall back to Arizona local date (UTC-7) to avoid UTC midnight rollover.
   const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
@@ -2357,6 +2368,24 @@ function autoSaveTopBets(){
     S.betLog.unshift({id:Date.now(),date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null});
   });
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
+}
+
+function autoRegisterGradePredictions() {
+  if (!S.players) return;
+  const date = document.getElementById('game-date').value
+    || new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
+  const pitcherName = S.pitcher?.name || '';
+  Object.entries(S.players).forEach(([playerId, snap]) => {
+    if (!snap.score || !snap.factors) return;
+    savePredictionForGrading({
+      score: snap.score,
+      tier: snap.tier,
+      factors: snap.factors,
+      playerName: snap.name,
+      pitcherName,
+      date,
+    }, playerId);
+  });
 }
 
 function setResult(id,result){
@@ -2510,15 +2539,15 @@ function saveFactorWeights(d){ localStorage.setItem(FACTOR_WEIGHTS_KEY, JSON.str
 function savePending(d)      { localStorage.setItem(PENDING_KEY, JSON.stringify(d)); }
 
 // Called when Run Prediction fires — saves prediction to pending
-function savePredictionForGrading(prediction) {
+function savePredictionForGrading(prediction, overridePlayerId = null) {
   const pending = getPending();
   const entry = {
     id: Date.now(),
-    date: prediction.date || new Date().toISOString().split('T')[0],
+    date: prediction.date || new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0],
     score: prediction.score,
-    tier: prediction.tier.label,
+    tier: prediction.tier?.label || prediction.tier || '',
     playerName: prediction.playerName,
-    playerId: S.playerId,
+    playerId: overridePlayerId ?? S.playerId,
     pitcherName: prediction.pitcherName,
     factors: prediction.factors.map(f => ({ label: f.label, impact: f.impact, value: f.value })),
     graded: false,
@@ -2527,7 +2556,7 @@ function savePredictionForGrading(prediction) {
   const existingIdx = pending.findIndex(p => p.date === entry.date && p.playerId === entry.playerId);
   if (existingIdx >= 0) pending[existingIdx] = entry;
   else pending.unshift(entry);
-  savePending(pending.slice(0, 30)); // keep last 30
+  savePending(pending.slice(0, 50)); // keep last 50 (7–8 players × ~6 days)
 }
 
 // Fetch actual Carroll stats for a given date from MLB API
