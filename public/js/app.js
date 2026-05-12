@@ -2506,6 +2506,7 @@ function showSplitsLoading(){show('splits-spinner');hide('splits-error');hide('s
 function showSplitsError(m){hide('splits-spinner');setText('splits-error','⚠ '+m);show('splits-error');}
 function renderSplitsTab(){
   hide('splits-spinner');hide('splits-empty');
+  if(S.playerName)document.getElementById('splits-card-header').textContent=`📈 ${S.playerName} · 2026 Splits`;
   const ss=S.seasonStat;
   if(ss)document.getElementById('season-bar').innerHTML=[['AVG',ss.avg],['OBP',ss.obp],['SLG',ss.slg],['OPS',ss.ops],['HR',ss.homeRuns],['RBI',ss.rbi],['GP',ss.gamesPlayed]].map(([l,v])=>`<div><div class="s-label">${l}</div><div class="s-val${l==='OPS'?' green':''}">${v??'—'}</div></div>`).join('');
   document.getElementById('split-grid').innerHTML=[['vs Left-Handed','vl'],['vs Right-Handed','vr'],['Home Games','h'],['Away Games','a'],['Day Games','d'],['Night Games','n']].map(([l,c])=>{const s=S.splits?.[c];return`<div class="split-box"><div class="split-label">${l}</div><div class="split-ops" style="color:${opsColor(s?.ops)}">${s?.ops?s.ops.toFixed(3):'—'}</div><div class="split-sub">OPS</div>${s?.avg?`<div class="split-avg">AVG <span style="color:#666">${s.avg}</span></div>`:''}</div>`;}).join('');
@@ -2519,6 +2520,7 @@ function statBox(l,v,ctx,c){return`<div class="stat-box"><div class="stat-label"
 function pct(n,d){if(!n||!d||d===0)return'—';return((n/d)*100).toFixed(1)+'%';}
 function renderStatsTab(){
   hide('stats-spinner');hide('stats-empty');
+  if(S.playerName)document.getElementById('stats-card-header').textContent=`📊 ${S.playerName} · Advanced Stats 2026`;
   const ss=S.seasonStat,risp=S.rispStat;
   if(!ss){showStatsError('No season stats.');return;}
   const pa=ss.plateAppearances||1;
