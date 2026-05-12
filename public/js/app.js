@@ -1678,7 +1678,7 @@ function estimateProbability(propKey,direction,line){
 const PROP_NAMES={
   'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
   'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
-  'batter_runs_scored':'Runs',
+  'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
 };
 
 function americanToDecimal(price){
@@ -1709,7 +1709,11 @@ function generateCorbetBets(score,factors,rawMarketMap){
       if(!oArr.length||!uArr.length)continue;
       const rO=impliedProb(_med(oArr)),rU=impliedProb(_med(uArr));
       if(!rO||!rU)continue;
-      const imbalance=Math.abs(rO/(rO+rU)-0.5);
+      // Reject alt-ladder rungs (one side >85% raw implied) — books post these
+      // as ladders for HRR/HR markets, and devig produces phantom 95% edges.
+      const sideShare=rO/(rO+rU);
+      if(sideShare>0.85||sideShare<0.15)continue;
+      const imbalance=Math.abs(sideShare-0.5);
       if(imbalance<minImbalance){minImbalance=imbalance;effectiveLine=l;}
     }
     const line=effectiveLine!=null?effectiveLine:0.5;
@@ -1889,7 +1893,7 @@ async function loadCorbet(){
       return;
     }
 
-    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored';
+    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
     const propBooks='draftkings,fanduel,betmgm';
     const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
     const propsText=await pr.text();
