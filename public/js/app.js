@@ -761,14 +761,19 @@ const VENUE_MAP={
 
 async function autoLoadNextGame(){
   try{
-    const today=new Date().toISOString().split('T')[0];
-    const end=new Date(Date.now()+7*24*60*60*1000).toISOString().split('T')[0];
-    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=probablePitcher&startDate=${today}&endDate=${end}`);
+    // Use Arizona local date (UTC-7 year-round, no DST) so late-evening games near UTC midnight
+    // aren't excluded by an early date rollover.
+    const azNow=new Date(Date.now()-7*60*60*1000);
+    // Fetch from yesterday to give Live games a safety margin if game runs past midnight Arizona
+    const start=new Date(azNow.getTime()-24*60*60*1000).toISOString().split('T')[0];
+    const end=new Date(azNow.getTime()+7*24*60*60*1000).toISOString().split('T')[0];
+    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=probablePitcher&startDate=${start}&endDate=${end}`);
     const d=await r.json();
-    // Find the next scheduled (Preview) game; fall back to Live, then last game
     const allGames=(d?.dates||[]).flatMap(dt=>dt.games||[]);
-    const game=allGames.find(g=>g.status?.abstractGameState==='Preview')
-      ||allGames.find(g=>g.status?.abstractGameState==='Live')
+    // Prefer in-progress (Live) game — keep today's lineup/pitcher/bets locked until today's game is over.
+    // Only fall through to the next Preview once today's game goes Final.
+    const game=allGames.find(g=>g.status?.abstractGameState==='Live')
+      ||allGames.find(g=>g.status?.abstractGameState==='Preview')
       ||allGames[allGames.length-1];
     if(!game)return;
     // Set date
@@ -2333,7 +2338,8 @@ function saveBet(idx, btn){
 
 function autoSaveTopBets(){
   if(!S.allPlayerBets)return;
-  const date=new Date().toISOString().split('T')[0];
+  // Use loaded game's officialDate; fall back to Arizona local date (UTC-7) to avoid UTC midnight rollover.
+  const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
   const qualified=[];
   S.allPlayerBets.forEach(pg=>{
