@@ -2374,12 +2374,12 @@ function autoSaveTopBets(){
     });
   });
   qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
-  qualified.slice(0,3).forEach(b=>{
+  qualified.slice(0,3).forEach((b,i)=>{
     const prop=`${b.direction} ${b.line} ${b.prop}`;
     if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
     const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
     const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
-    S.betLog.unshift({id:Date.now(),date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null});
+    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null});
   });
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
 }
