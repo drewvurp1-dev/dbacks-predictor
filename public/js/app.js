@@ -1991,7 +1991,7 @@ async function loadCorbet(){
         });
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
         bets.forEach(b=>{b._playerName=player.name;b._playerScore=snap.score;});
-        allPlayerBets.push({playerName:player.name,bets});
+        allPlayerBets.push({playerName:player.name,bets,lowData:(S.players[player.id]?.lowData||false)});
       }catch(e){
         // Skip player silently on error — continue to next
       }
@@ -2168,6 +2168,7 @@ function renderDashboard(){
   if(S.allPlayerBets&&S.allPlayerBets.length){
     const qualified=[];
     S.allPlayerBets.forEach(pg=>{
+      if(pg.lowData)return;
       pg.bets.forEach(b=>{
         if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
           qualified.push({...b,playerName:pg.playerName});
