@@ -19,6 +19,12 @@ const S = {
     log.forEach((b,i)=>{
       if(seen.has(b.id)){b.id=Date.now()+i;repaired=true;}
       seen.add(b.id);
+      // Repair legacy entries from saveBet bug that stored rating as undefined.
+      // Derive from EV when possible; default to 'yellow' otherwise.
+      if(!['green','yellow','red'].includes(b.rating)){
+        b.rating=b.ev>=0.12?'green':b.ev>=0.06?'yellow':b.ev>=0.02?'red':'yellow';
+        repaired=true;
+      }
     });
     if(repaired)localStorage.setItem('corbetRecord',JSON.stringify(log));
     return log;
@@ -2410,7 +2416,9 @@ function saveBet(idx, btn){
     if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save to Record';},1800);}
     return;
   }
-  const bet={id:Date.now(),date,player:b._playerName||S.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:b.odds,rating:b.rating,score:b._playerScore||S.lastScore,result:null,
+  const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
+  const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
+  const bet={id:Date.now(),date,player:b._playerName||S.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore||S.lastScore,result:null,
     modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
     propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null};
   S.betLog.unshift(bet);
