@@ -372,3 +372,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .modal-overlay { padding: 8px 4px 0; align-items: flex-end; }
   .modal-frame { border-radius: 12px 12px 0 0; padding: 48px 12px 20px; max-height: 92vh; overflow-y: auto; }
 }
+
+/* Low plate appearance warning */
+.low-data-badge { font-family: monospace; font-size: 8px; color: #f39c12; background: rgba(243,156,18,0.12); border: 1px solid rgba(243,156,18,0.4); border-radius: 3px; padding: 1px 5px; margin-left: 5px; vertical-align: middle; letter-spacing: 0.5px; white-space: nowrap; }
+.low-data-warning { font-family: monospace; font-size: 10px; color: #f39c12; background: rgba(243,156,18,0.07); border: 1px solid rgba(243,156,18,0.3); border-radius: 5px; padding: 6px 10px; margin-bottom: 8px; }
