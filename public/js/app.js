@@ -47,6 +47,30 @@ function rebuildPlayerSelect(roster){
 }
 
 // ═══════════ MATH / BETTING UTILS ════════════════════════════════════════════
+
+// Park orientation helpers
+const _COMPASS_DEGS={N:0,NNE:22.5,NE:45,ENE:67.5,E:90,ESE:112.5,SE:135,SSE:157.5,S:180,SSW:202.5,SW:225,WSW:247.5,W:270,WNW:292.5,NW:315,NNW:337.5};
+function _compassDeg(pt){return _COMPASS_DEGS[pt]??null;}
+
+// Reads park HR and hit factors from the active stadium dropdown option.
+function _parkFactors(){const sel=document.getElementById('stadium-select');const opt=sel?.options[sel?.selectedIndex];return{hrF:parseFloat(opt?.dataset.hr)||1.0,hitF:parseFloat(opt?.dataset.hit)||1.0,elev:parseInt(opt?.dataset.elev)||0,hasRoof:opt?.dataset.roof==='1'};}
+
+// Returns 'out'/'in'/'cross'/'calm' relative to this park's center field orientation.
+// Accounts for live vs manual weather mode.
+function _windDir(){
+  const sel=document.getElementById('stadium-select');const opt=sel?.options[sel?.selectedIndex];
+  const cfBearing=parseInt(opt?.dataset.cf)||45;
+  const wm=document.getElementById('weather-manual')&&!document.getElementById('weather-manual').classList.contains('hidden');
+  const rawDir=(!wm&&S.weather?.windDir)||document.getElementById('wind-dir')?.value||'calm';
+  const windMph=(!wm&&S.weather?.windMph)||parseInt(document.getElementById('wind-slider')?.value)||5;
+  if(['out','in','cross'].includes(rawDir))return rawDir;
+  if(!rawDir||rawDir==='calm'||windMph<3)return 'calm';
+  const fromDeg=_compassDeg(rawDir);if(fromDeg===null)return 'cross';
+  const toDeg=(fromDeg+180)%360;
+  const comp=Math.cos((cfBearing-toDeg)*Math.PI/180);
+  return comp>0.35?'out':comp<-0.35?'in':'cross';
+}
+
 function gaussianRandom(mean, std) {
   const u1 = Math.random() || 1e-10, u2 = Math.random();
   return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
@@ -1104,9 +1128,7 @@ function calcPrediction(){
   const stadOpt=document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
   const hasRoof=stadOpt.dataset.roof==='1',elev=parseInt(stadOpt.dataset.elev);
   const roofClosed=hasRoof&&S.roofClosed;
-  const outDirs=['S','SSE','SE','SSW','SW'],inDirs=['N','NNE','NNW','NE','NW'];
-  const isOut=outDirs.some(d=>windDir?.startsWith(d)),isIn=inDirs.some(d=>windDir?.startsWith(d));
-  const wd=isOut?'out':isIn?'in':windDir==='out'?'out':windDir==='in'?'in':'cross';
+  const wd=_windDir();
   if(!roofClosed){
     if(tempF>=90)add('Heat',tempF+'°F',4,'Hot thin air — more carry on contact','conditions');
     else if(tempF<=55)add('Cold',tempF+'°F',-4,'Dense cold air suppresses ball flight','conditions');
@@ -1118,6 +1140,7 @@ function calcPrediction(){
   if(roofClosed)add('Roof Closed','Indoor',-2,'Controlled environment neutralizes weather edge','conditions');
   if(elev>4000)add('Altitude',elev.toLocaleString()+'ft',8,'Thin mile-high air — significant carry boost','conditions');
   else if(elev>2000)add('Elevation',elev.toLocaleString()+'ft',3,'Moderate elevation adds mild carry','conditions');
+  if(!roofClosed&&elev<=4000){const{hrF}=_parkFactors();if(hrF>=1.08)add('Hitter Park',`+${Math.round((hrF-1)*100)}% HR vs avg`,Math.round((hrF-1)*20),'Park dimensions and depth favor offense','conditions');else if(hrF<=0.92)add('Pitcher Park',`${Math.round((hrF-1)*100)}% HR vs avg`,Math.round((hrF-1)*20),'Spacious park suppresses power','conditions');}
   const travel=document.getElementById('travel-select').value;
   if(travel==='redeye')add('Red-Eye','Fatigue risk',-6,'Cross-timezone red-eye suppresses performance');
   else if(travel==='same')add('Same-Day Travel','Mild fatigue',-3,'Same-day travel, minor rest concern');
@@ -1570,6 +1593,15 @@ function modelProbability(propKey,line,score){
   }
 
   if(p===null)return null;
+
+  // Park factor adjustments (prop-specific, separate from general score)
+  {const{hrF,hitF,elev:pElev,hasRoof}=_parkFactors();const rfClosed=hasRoof&&S.roofClosed;
+  if(!rfClosed){
+    if(propKey==='batter_home_runs'&&pElev<=4000)
+      p+=Math.max(-8,Math.min(8,Math.round((hrF-1.0)*60)));
+    else if(['batter_hits','batter_total_bases','batter_hits_runs_rbis'].includes(propKey))
+      p+=Math.max(-5,Math.min(5,Math.round((hitF-1.0)*40)));
+  }}
 
   // Trend adjustments — accumulated then capped at ±6pts total
   let trendAdj=0;
