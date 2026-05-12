@@ -118,12 +118,12 @@ function _swapToPlayer(playerId) {
   const saved = {
     playerName: S.playerName, splits: S.splits, seasonStat: S.seasonStat,
     rispStat: S.rispStat, statcast: S.statcast, recentGameLog: S.recentGameLog,
-    matchupStats: S.matchupStats, lastScore: S.lastScore
+    matchupStats: S.matchupStats, lastScore: S.lastScore, currentOrder: S.currentOrder
   };
   S.playerName = p.name; S.splits = p.splits; S.seasonStat = p.seasonStat;
   S.rispStat = p.rispStat; S.statcast = p.statcast;
   S.recentGameLog = p.recentGameLog; S.matchupStats = p.matchupStats;
-  S.lastScore = p.score;
+  S.lastScore = p.score; S.currentOrder = p.order;
   return saved;
 }
 
@@ -1444,11 +1444,49 @@ function impliedProb(odds){
 function _factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
 function _poissonCDF(lambda,k){let p=0;for(let i=0;i<=k;i++)p+=Math.pow(lambda,i)*Math.exp(-lambda)/_factorial(i);return p;}
 
+// Expected plate appearances per game by batting order slot.
+// Leadoff hitters get ~4.6 PAs; bottom-of-order ~3.7. Used by all PA-based prop models.
+function _gamePAs(){
+  const o=S.currentOrder;
+  if(!o)return 4.0;
+  if(o<=2)return 4.6;
+  if(o<=4)return 4.4;
+  if(o<=6)return 4.2;
+  if(o<=7)return 4.0;
+  return 3.7;
+}
+
+// H+R+RBI estimate. These three events are positively correlated (a hit often produces
+// a run or RBI; HRs produce all three), so summing rates and feeding to a single Poisson
+// understates variance and biases OVER probability high. When we have ≥10 recent games,
+// use the empirical CDF directly — it captures the real joint distribution. Otherwise
+// fall back to the summed-rate Poisson with the caveat that it's biased.
+function _hrrOverPct(line, ss, recentLog){
+  const k=Math.floor(line);
+  if(recentLog?.length>=10){
+    const counts=recentLog.map(g=>(parseInt(g.stat?.hits)||0)+(parseInt(g.stat?.runs)||0)+(parseInt(g.stat?.rbi)||0));
+    const cnt=counts.filter(c=>c>k).length;
+    return (cnt/counts.length)*100;
+  }
+  const gp=ss?.gamesPlayed||1;
+  const hrrPG=(((parseInt(ss?.hits)||0)+(parseInt(ss?.runs)||0)+(parseInt(ss?.rbi)||0))/gp)||1.85;
+  return (1-_poissonCDF(hrrPG,k))*100;
+}
+
+// Median of implied probabilities (not median of American odds — odds are non-linear,
+// so a numeric median of -200 / +200 / -110 doesn't represent the median fair price).
+function _medianImpliedProb(prices){
+  const ps=prices.map(impliedProb).filter(x=>x!=null);
+  if(!ps.length)return null;
+  const s=[...ps].sort((a,b)=>a-b),m=Math.floor(s.length/2);
+  return s.length%2?s[m]:(s[m-1]+s[m])/2;
+}
+
 function devig(overPrices,underPrices){
   if(!overPrices?.length||!underPrices?.length)return null;
-  const median=arr=>{const s=[...arr].sort((a,b)=>a-b),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
-  const rawO=impliedProb(median(overPrices));
-  const rawU=impliedProb(median(underPrices));
+  const rawO=_medianImpliedProb(overPrices);
+  const rawU=_medianImpliedProb(underPrices);
+  if(rawO==null||rawU==null)return null;
   const tot=rawO+rawU;
   return{overProb:rawO/tot*100,underProb:rawU/tot*100};
 }
@@ -1456,7 +1494,7 @@ function devig(overPrices,underPrices){
 function modelProbability(propKey,line,score){
   const ss=S.seasonStat;
   const pa=ss?.plateAppearances||1;
-  const gamePAs=4.0;
+  const gamePAs=_gamePAs();
   let p=null;
 
   // Piecewise linear interpolation between three anchor points (score 20/50/80).
@@ -1518,11 +1556,7 @@ function modelProbability(propKey,line,score){
     p=scoreBase*0.5+rateBase*0.5;
   }
   else if(propKey==='batter_hits_runs_rbis'){
-    const hitPG=(ss?.hits&&ss?.gamesPlayed)?(ss.hits/ss.gamesPlayed):0.85;
-    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
-    const rbiPG=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.40;
-    const hrrPG=hitPG+runPG+rbiPG;
-    const rateBase=(1-_poissonCDF(hrrPG,Math.floor(line)))*100;
+    const rateBase=_hrrOverPct(line,ss,S.recentGameLog);
     const scoreBase=lerp3(score,20,20,50,38,80,60);
     p=scoreBase*0.5+rateBase*0.5;
   }
@@ -1604,77 +1638,6 @@ function modelProbability(propKey,line,score){
   return p;
 }
 
-function estimateProbability(propKey,direction,line){
-  const ss=S.seasonStat;
-  const pa=ss?.plateAppearances||1;
-  const gamePAs=4.0;
-  let prob=null;
-
-  if(propKey==='batter_strikeouts'){
-    const carrollK=ss?.strikeOuts?(ss.strikeOuts/pa):0.18;
-    const pitcherPA=S.pitcher?.st?.battersFaced||1;
-    const pitcherK=S.pitcher?.st?.strikeOuts?(S.pitcher.st.strikeOuts/pitcherPA):0.22;
-    const blended=carrollK*0.55+pitcherK*0.45;
-    if(line<=0.5){
-      prob=(1-Math.pow(1-blended,gamePAs))*100;
-    }else{
-      const p0=Math.pow(1-blended,gamePAs);
-      const p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);
-      prob=(1-p0-p1)*100;
-    }
-  }
-  else if(propKey==='batter_hits'){
-    const avg=parseFloat(ss?.avg)||0.265;
-    const ab=gamePAs-0.5;
-    if(line<=0.5){
-      prob=(1-Math.pow(1-avg,ab))*100;
-    }else{
-      const p0=Math.pow(1-avg,ab);
-      const p1=ab*avg*Math.pow(1-avg,ab-1);
-      prob=(1-p0-p1)*100;
-    }
-  }
-  else if(propKey==='batter_home_runs'){
-    const abPerHR=parseFloat(ss?.atBatsPerHomeRun)||35;
-    const hrRate=Math.min(1/abPerHR,0.15);
-    prob=(1-Math.pow(1-hrRate,gamePAs))*100;
-  }
-  else if(propKey==='batter_walks'){
-    const bbFrac=ss?.baseOnBalls?(ss.baseOnBalls/pa):0.09;
-    if(line<=0.5){
-      prob=(1-Math.pow(1-bbFrac,gamePAs))*100;
-    }else{
-      const p0=Math.pow(1-bbFrac,gamePAs);
-      const p1=gamePAs*bbFrac*Math.pow(1-bbFrac,gamePAs-1);
-      prob=(1-p0-p1)*100;
-    }
-  }
-  else if(propKey==='batter_total_bases'){
-    const slg=parseFloat(ss?.slg)||0.420;
-    const bbFrac=ss?.baseOnBalls?(ss.baseOnBalls/pa):0.09;
-    const lambda=slg*(gamePAs*(1-bbFrac));
-    prob=(1-_poissonCDF(lambda,Math.floor(line)))*100;
-  }
-  else if(propKey==='batter_rbis'){
-    const rbiPerGame=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.4;
-    prob=(1-_poissonCDF(rbiPerGame,Math.floor(line)))*100;
-  }
-  else if(propKey==='batter_runs_scored'){
-    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
-    prob=(1-_poissonCDF(runPG,Math.floor(line)))*100;
-  }
-  else if(propKey==='batter_hits_runs_rbis'){
-    const hitPG=(ss?.hits&&ss?.gamesPlayed)?(ss.hits/ss.gamesPlayed):0.85;
-    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
-    const rbiPG=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.40;
-    prob=(1-_poissonCDF(hitPG+runPG+rbiPG,Math.floor(line)))*100;
-  }
-
-  if(prob===null)return null;
-  if(direction==='under')prob=100-prob;
-  return Math.max(1,Math.min(99,prob));
-}
-
 const PROP_NAMES={
   'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
   'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
@@ -1694,21 +1657,17 @@ function generateCorbetBets(score,factors,rawMarketMap){
     // Pick the line whose over/under prices are most balanced (closest to 50/50 implied).
     // This selects the main market line (e.g. HRR 1.5 at -119/+105) over extreme alternate
     // lines (e.g. HRR 0.5 at -1900/+1000) which skew the devig probability to 90%+.
-    // Only consider lines where at least one trusted book (DK/FD/MGM) has data.
     const allLines=new Set([
-      ...Object.keys(mkt.trustedOverByLine||{}),...Object.keys(mkt.trustedUnderByLine||{}),
       ...Object.keys(mkt.overByLine||{}),...Object.keys(mkt.underByLine||{})
     ].map(Number));
-    const _med=arr=>{const s=[...arr].sort((a,b)=>a-b),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
     let effectiveLine=null;
     let minImbalance=Infinity;
     for(const l of [...allLines]){
-      if(!mkt.trustedOverByLine[l]?.length&&!mkt.trustedUnderByLine[l]?.length)continue;
-      const oArr=mkt.trustedOverByLine[l]?.length?mkt.trustedOverByLine[l]:(mkt.overByLine[l]||[]);
-      const uArr=mkt.trustedUnderByLine[l]?.length?mkt.trustedUnderByLine[l]:(mkt.underByLine[l]||[]);
+      const oArr=mkt.overByLine[l]||[];
+      const uArr=mkt.underByLine[l]||[];
       if(!oArr.length||!uArr.length)continue;
-      const rO=impliedProb(_med(oArr)),rU=impliedProb(_med(uArr));
-      if(!rO||!rU)continue;
+      const rO=_medianImpliedProb(oArr),rU=_medianImpliedProb(uArr);
+      if(rO==null||rU==null)continue;
       // Reject alt-ladder rungs (one side >85% raw implied) — books post these
       // as ladders for HRR/HR markets, and devig produces phantom 95% edges.
       const sideShare=rO/(rO+rU);
@@ -1717,8 +1676,8 @@ function generateCorbetBets(score,factors,rawMarketMap){
       if(imbalance<minImbalance){minImbalance=imbalance;effectiveLine=l;}
     }
     const line=effectiveLine!=null?effectiveLine:0.5;
-    const calcOver=(mkt.trustedOverByLine[line]?.length?mkt.trustedOverByLine[line]:mkt.overByLine[line])||[];
-    const calcUnder=(mkt.trustedUnderByLine[line]?.length?mkt.trustedUnderByLine[line]:mkt.underByLine[line])||[];
+    const calcOver=mkt.overByLine[line]||[];
+    const calcUnder=mkt.underByLine[line]||[];
     const overBest=mkt.overBestByLine[line]||null;
     const underBest=mkt.underBestByLine[line]||null;
     if(!calcOver?.length||!calcUnder?.length){
@@ -1902,17 +1861,11 @@ async function loadCorbet(){
     if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
 
     // Build per-player market maps in one pass through bookmaker data.
-    // Trusted books (DK/FD) are preferred for devig when available on both sides.
-    // BetOnline.ag excluded from calc (posts erroneous novelty odds) but kept for display.
-    // Outlier positive odds filtered to avoid data errors skewing probabilities.
-    const EXCLUDED_CALC_BOOKS=new Set(['BetOnline.ag']);
-    const TRUSTED_BOOKS=new Set(['DraftKings','FanDuel','BetMGM']);
-    const isOutlierPrice=(price,line)=>price>0&&(line<=0.5?price>300:price>400);
+    // The fetch only requests DK/FD/MGM, so every returned book is implicitly trusted.
+    // Bad-price defense is the lopsided-line gate in the line picker (generateCorbetBets).
     const playerMaps={};
     activeRoster().forEach(p=>{playerMaps[p.id]={};});
     (propData.bookmakers||[]).forEach(book=>{
-      const skipCalc=EXCLUDED_CALC_BOOKS.has(book.title);
-      const isTrusted=TRUSTED_BOOKS.has(book.title);
       (book.markets||[]).forEach(market=>{
         if(!PROP_NAMES[market.key])return;
         activeRoster().forEach(player=>{
@@ -1927,7 +1880,6 @@ async function loadCorbet(){
           const m0=playerMaps[player.id];
           if(!m0[market.key])m0[market.key]={
             overByLine:{},underByLine:{},
-            trustedOverByLine:{},trustedUnderByLine:{},
             overBestByLine:{},underBestByLine:{},
             books:[],calcBooks:new Set()
           };
@@ -1951,20 +1903,13 @@ async function loadCorbet(){
               if(dir==='over'){
                 if(!m.overBestByLine[line]||price>m.overBestByLine[line].price)
                   m.overBestByLine[line]={price,book:book.title};
+                (m.overByLine[line]=m.overByLine[line]||[]).push(price);
+                m.calcBooks.add(book.title);
               }else if(dir==='under'){
                 if(!m.underBestByLine[line]||price>m.underBestByLine[line].price)
                   m.underBestByLine[line]={price,book:book.title};
-              }
-              if(skipCalc)return;
-              if(!isTrusted&&isOutlierPrice(price,line))return;
-              if(dir==='over'){
-                (m.overByLine[line]=m.overByLine[line]||[]).push(price);
-                m.calcBooks.add(book.title);
-                if(isTrusted)(m.trustedOverByLine[line]=m.trustedOverByLine[line]||[]).push(price);
-              }else if(dir==='under'){
                 (m.underByLine[line]=m.underByLine[line]||[]).push(price);
                 m.calcBooks.add(book.title);
-                if(isTrusted)(m.trustedUnderByLine[line]=m.trustedUnderByLine[line]||[]).push(price);
               }
             });
         });
@@ -1979,16 +1924,19 @@ async function loadCorbet(){
         const snap=S.players[player.id];
         if(!snap)continue;
         const rawMarketMap=playerMaps[player.id];
-        // Temporarily restore this player's stats so corbetReasoning() reads the right data
-        const savedCtx={seasonStat:S.seasonStat,splits:S.splits,matchupStats:S.matchupStats,statcast:S.statcast};
-        S.seasonStat=snap.seasonStat;S.splits=snap.splits;S.matchupStats=snap.matchupStats;S.statcast=snap.statcast;
+        // Swap in this player's stats for the entire bet-generation window. modelProbability
+        // (called both inside generateCorbetBets and from monteCarloConfidence) reads
+        // S.seasonStat / S.splits / S.statcast / S.recentGameLog / S.currentOrder, so all of
+        // them must be swapped before MC runs and restored only after MC finishes.
+        const savedCtx={seasonStat:S.seasonStat,splits:S.splits,matchupStats:S.matchupStats,statcast:S.statcast,recentGameLog:S.recentGameLog,currentOrder:S.currentOrder};
+        S.seasonStat=snap.seasonStat;S.splits=snap.splits;S.matchupStats=snap.matchupStats;S.statcast=snap.statcast;S.recentGameLog=snap.recentGameLog;S.currentOrder=snap.order;
         const bets=generateCorbetBets(snap.score,snap.factors,rawMarketMap);
-        Object.assign(S,savedCtx);
         bets.forEach(b=>{
           if(!b.insufficient&&b.edgeStrength!=='none'&&b.marketOverProb!=null){
             b.mcConfidence=monteCarloConfidence(b.propKey,b.line,snap.score,b.marketOverProb,b.direction);
           }
         });
+        Object.assign(S,savedCtx);
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
         bets.forEach(b=>{b._playerName=player.name;b._playerScore=snap.score;});
         allPlayerBets.push({playerName:player.name,bets,lowData:(S.players[player.id]?.lowData||false)});
