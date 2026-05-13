@@ -210,21 +210,29 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 #corbet-player-filter input[type="checkbox"] { accent-color:#009A8B; cursor:pointer; }
 
 /* ── Record tracker ── */
-.record-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.record-cell { border-radius: 10px; padding: 14px; text-align: center; border: 1px solid; }
-.record-cell.green { background: #061a06; border-color: #1a4a10; }
-.record-cell.yellow { background: #1a1406; border-color: #3a2a00; }
-.record-cell.red { background: #1a0606; border-color: #3a1010; }
-.record-cell .rc-label { font-size: 9px; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
-.record-cell.green .rc-label { color: #1a4a10; }
-.record-cell.yellow .rc-label { color: #3a2a00; }
-.record-cell.red .rc-label { color: #3a1010; }
-.record-cell .rc-record { font-size: 22px; font-weight: 900; font-family: monospace; }
-.record-cell.green .rc-record { color: #2ecc71; }
-.record-cell.yellow .rc-record { color: #f39c12; }
-.record-cell.red .rc-record { color: #e74c3c; }
-.record-cell .rc-pct { font-size: 11px; font-family: monospace; color: #999; margin-top: 2px; }
-.record-cell .rc-roi { font-size: 10px; font-family: monospace; margin-top: 4px; }
+.record-summary-strip { display: grid; grid-template-columns: repeat(4, max-content) 1fr; gap: 18px; align-items: center; padding: 12px 16px; background: #0a0820; border: 1px solid #1a1730; border-radius: 10px; margin-bottom: 12px; }
+.rss-stat { text-align: left; }
+.rss-label { font-size: 8px; color: #666; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+.rss-val { font-size: 17px; font-family: monospace; color: #ccc; font-weight: 700; line-height: 1; }
+.rss-val.pos { color: #2ecc71; }
+.rss-val.neg { color: #e74c3c; }
+.rss-sparkline { min-width: 0; align-self: stretch; display: flex; align-items: center; padding-left: 8px; border-left: 1px solid #1a1730; }
+.rss-sparkline-empty { font-size: 9px; color: #555; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; }
+
+.prop-record-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.prop-cell { background: #0a0820; border: 1px solid #1a1730; border-radius: 8px; padding: 9px 10px; text-align: center; }
+.prop-cell.pos { border-color: #1a4a10; background: #061a06; }
+.prop-cell.neg { border-color: #3a1010; background: #1a0606; }
+.prop-cell.empty { opacity: 0.45; }
+.pc-label { font-size: 9px; color: #666; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+.prop-cell.pos .pc-label { color: #2a5a20; }
+.prop-cell.neg .pc-label { color: #5a2020; }
+.pc-record { font-size: 16px; font-family: monospace; font-weight: 700; color: #ccc; line-height: 1; }
+.prop-cell.pos .pc-record { color: #2ecc71; }
+.prop-cell.neg .pc-record { color: #e74c3c; }
+.pc-roi { font-size: 9px; font-family: monospace; color: #888; margin-top: 3px; letter-spacing: 1px; }
+.prop-cell.pos .pc-roi { color: #2ecc71; }
+.prop-cell.neg .pc-roi { color: #e74c3c; }
 .bet-log-item { display: grid; grid-template-columns: 70px 90px 36px 1fr 50px 54px 96px 22px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; }
 .bet-log-item.bet-pending { opacity: 0.55; }
 .bet-log-item .bli-date { color: #888; }

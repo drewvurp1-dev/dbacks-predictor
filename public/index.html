@@ -269,14 +269,14 @@
     <div class="card">
       <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
-        <div class="record-summary">
-          <div class="record-cell green"><div class="rc-label">🟢 Green</div><div class="rc-record" id="rec-green">0-0</div><div class="rc-pct" id="rec-green-pct">—%</div><div class="rc-roi" id="rec-green-roi" style="color:#2ecc71;"></div></div>
-          <div class="record-cell yellow"><div class="rc-label">🟡 Yellow</div><div class="rc-record" id="rec-yellow">0-0</div><div class="rc-pct" id="rec-yellow-pct">—%</div><div class="rc-roi" id="rec-yellow-roi" style="color:#f39c12;"></div></div>
-          <div class="record-cell red"><div class="rc-label">🔴 Red</div><div class="rc-record" id="rec-red">0-0</div><div class="rc-pct" id="rec-red-pct">—%</div><div class="rc-roi" id="rec-red-roi" style="color:#e74c3c;"></div></div>
+        <div class="record-summary-strip">
+          <div class="rss-stat"><div class="rss-label">Units</div><div class="rss-val" id="rec-units">—</div></div>
+          <div class="rss-stat"><div class="rss-label">ROI</div><div class="rss-val" id="rec-roi">—</div></div>
+          <div class="rss-stat"><div class="rss-label">Hit Rate</div><div class="rss-val" id="rec-hitrate">—</div></div>
+          <div class="rss-stat"><div class="rss-label">Record</div><div class="rss-val" id="rec-overall">0-0</div></div>
+          <div class="rss-sparkline" id="rec-sparkline"></div>
         </div>
-        <div style="font-size:10px;color:#777;font-family:monospace;text-align:center;margin-bottom:14px;">
-          Overall: <span id="rec-overall" style="color:#ccc;">0-0</span> · ROI: <span id="rec-roi-total" style="color:#ccc;">—%</span>
-        </div>
+        <div class="prop-record-grid" id="rec-prop-grid"></div>
         <div id="bet-log-headers" style="display:none;grid-template-columns:70px 90px 36px 1fr 50px 54px 96px 22px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
           <span>Date</span><span>Player</span><span>Opp</span><span>Prop</span><span>Odds</span><span>Rating</span><span>Result</span><span></span>
         </div>
