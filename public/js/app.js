@@ -117,13 +117,30 @@ function _computePitcherMetrics(st, statcast){
   return{fip,xfip,kbbPct,hr9};
 }
 
+// Score-variance estimate for Monte Carlo, derived from the hitter's profile.
+// High-whiff hitters have wider outcome distributions (more boom/bust), so the
+// model score is a less reliable point estimate — σ scales up. Small samples
+// (<50 PA) also widen σ since the season-rate inputs are noisy.
+// Maps: whiff 18% → σ≈5.0 (contact hitter), 28% → σ≈6.5 (league avg),
+//       38% → σ≈8.0 (three-true-outcomes). Clamped to [4.5, 10].
+function _mcVariance(){
+  const sc=S.statcast||{};
+  const ss=S.seasonStat||{};
+  const whiff=parseFloat(sc.whiff_percent);
+  let sigma=isFinite(whiff)?5+(whiff-18)*0.15:6;
+  const pa=parseInt(ss.plateAppearances)||0;
+  if(pa>0&&pa<50)sigma+=1.5;
+  return Math.max(4.5,Math.min(10,sigma));
+}
+
 // Monte Carlo confidence: % of noisy-score simulations where the edge holds
 // Requires S player fields to be swapped in before calling (same window as generateCorbetBets)
 function monteCarloConfidence(propKey, line, score, marketOverProb, direction = 'Over', N = 2000) {
   let edgeCount = 0;
   const isUnder = String(direction).toLowerCase() === 'under';
+  const sigma = _mcVariance();
   for (let i = 0; i < N; i++) {
-    const ns = Math.max(4, Math.min(96, gaussianRandom(score, 6)));
+    const ns = Math.max(4, Math.min(96, gaussianRandom(score, sigma)));
     const prob = modelProbability(propKey, line, ns);
     if (prob === null) continue;
     if (isUnder ? prob < marketOverProb : prob > marketOverProb) edgeCount++;
@@ -1642,13 +1659,34 @@ function _medianImpliedProb(prices){
   return s.length%2?s[m]:(s[m-1]+s[m])/2;
 }
 
+// Multiplicative (power) devig. Given raw implied probs o and u that sum to >1 due
+// to vig, find exponent k such that o^k + u^k = 1. Preserves the *ratio of fair odds*
+// rather than the ratio of probabilities, which is the more theoretically sound
+// transformation since books typically apply vig multiplicatively to fair odds.
+// Better than additive normalization for asymmetric overround (one side shaded).
 function devig(overPrices,underPrices){
   if(!overPrices?.length||!underPrices?.length)return null;
   const rawO=_medianImpliedProb(overPrices);
   const rawU=_medianImpliedProb(underPrices);
   if(rawO==null||rawU==null)return null;
-  const tot=rawO+rawU;
-  return{overProb:rawO/tot*100,underProb:rawU/tot*100};
+  const o=rawO/100, u=rawU/100;
+  // No vig (or fair/inverted line): fall back to simple normalization to avoid
+  // numerical issues with power method on near-fair markets.
+  if(o+u<=1.0001){
+    const tot=o+u;
+    return{overProb:(o/tot)*100,underProb:(u/tot)*100};
+  }
+  // Binary search for k. f(k)=o^k+u^k is monotonically decreasing for 0<o,u<1,
+  // so we can bracket the root. f(1)>1 by assumption; f(3) is always <1 for valid
+  // probs in this range (the alt-ladder gate at sideShare>0.85 caps inputs).
+  let lo=1.0, hi=3.0;
+  for(let i=0;i<60;i++){
+    const mid=(lo+hi)/2;
+    const sum=Math.pow(o,mid)+Math.pow(u,mid);
+    if(sum>1)lo=mid; else hi=mid;
+  }
+  const k=(lo+hi)/2;
+  return{overProb:Math.pow(o,k)*100,underProb:Math.pow(u,k)*100};
 }
 
 function modelProbability(propKey,line,score){
