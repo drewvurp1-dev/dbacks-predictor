@@ -66,9 +66,13 @@ router.get('/batter-arsenal', (req, res) => {
 });
 
 // GB% and FB% — batted-ball leaderboard (columns: id, gb_rate, fb_rate as 0-1 decimals)
+// Note: the statcast (exit-velocity-barrels) leaderboard has columns named `gb` and
+// `fbld`, but those are AVERAGE EXIT VELOCITY on those batted-ball types — not rates.
+// This endpoint is the correct source for true GB% / FB%.
 router.get('/batted-ball', (req, res) => {
   const year = req.query.year || '2026';
-  savantFetch(`https://baseballsavant.mlb.com/leaderboard/batted-ball?year=${year}&type=batter&filter=&min=1&csv=true`, res);
+  const type = req.query.type || 'batter';
+  savantFetch(`https://baseballsavant.mlb.com/leaderboard/batted-ball?year=${year}&type=${type}&filter=&min=1&csv=true`, res);
 });
 
 module.exports = router;

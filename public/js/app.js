@@ -745,18 +745,23 @@ async function loadPitcherStatcast(pitcherId){
   const fmtVal=(v,digits=2)=>{const n=parseFloat(v);return isNaN(n)?'—':n.toFixed(digits);};
 
   try{
-    const [scRes,expRes,cswRes]=await Promise.allSettled([
+    const [scRes,expRes,cswRes,bbRes]=await Promise.allSettled([
       fetch('/savant/statcast?type=pitcher&year=2026').then(r=>r.text()),
       fetch('/savant/expected?type=pitcher&year=2026').then(r=>r.text()),
       fetch('/savant/csw?year=2026').then(r=>r.text()),
+      fetch('/savant/batted-ball?type=pitcher&year=2026').then(r=>r.text()),
     ]);
 
     const scRows  = safeRows(scRes.status==='fulfilled'?scRes.value:'',  'statcast');
     const expRows = safeRows(expRes.status==='fulfilled'?expRes.value:'', 'expected');
     const cswRows = safeRows(cswRes.status==='fulfilled'?cswRes.value:'', 'arsenal');
+    const bbRows  = safeRows(bbRes.status==='fulfilled'?bbRes.value:'',   'batted-ball');
 
     const scRow  = findRow(scRows,  'statcast');
     const expRow = findRow(expRows, 'expected');
+    // Batted-ball leaderboard keys by `id` rather than `player_id`. Rates are
+    // returned as decimals (0.45 = 45%) — multiply by 100 for display/usage.
+    const bbRow = bbRows.find(r=>String(r.id||r.player_id||'').trim()===pid) || null;
 
     // Pitch-arsenal: one row per pitch type — weighted average across all pitches
     const arsenalRows=cswRows.filter(r=>String(r.player_id||'').trim()===pid);
@@ -775,9 +780,14 @@ async function loadPitcherStatcast(pitcherId){
     const kPctRaw    = weightedAvg('k_percent');
     const putAwayRaw = weightedAvg('put_away');
 
-    // Statcast pitcher: GB%, FB%, Barrel%, HH%, Avg EV
-    const gbRaw        = col(scRow,'gb','groundballs_percent','gb_percent');
-    const fbRaw        = col(scRow,'fbld','flyballs_percent','fb_percent');
+    // Statcast pitcher: Barrel%, HH%, Avg EV.
+    // GB% and FB% come from the batted-ball leaderboard (true rates) — the `gb`
+    // and `fbld` columns on the statcast endpoint are avg EV mph on those
+    // batted-ball types, not rates.
+    const gbDecimal   = bbRow ? parseFloat(bbRow.gb_rate) : NaN;
+    const fbDecimal   = bbRow ? parseFloat(bbRow.fb_rate) : NaN;
+    const gbRaw        = isFinite(gbDecimal) ? gbDecimal*100 : null;
+    const fbRaw        = isFinite(fbDecimal) ? fbDecimal*100 : null;
     const brlRaw       = col(scRow,'brl_percent','brl_pa');
     const hhRaw        = col(scRow,'ev95percent','hard_hit_percent');
     const evRaw        = col(scRow,'avg_hit_speed','avg_exit_velocity');
