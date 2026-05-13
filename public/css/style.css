@@ -9,6 +9,7 @@ body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width:
 .api-credits { font-family: monospace; font-size: 10px; color: #E8DFC8; background: rgba(0,154,139,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(0,154,139,0.3); white-space: nowrap; }
 .api-credits.low { color: #f1c40f; }
 .api-credits.critical { color: #e74c3c; }
+.odds-lock-badge { font-family: monospace; font-size: 10px; color: #f1c40f; background: rgba(241,196,15,0.08); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(241,196,15,0.35); white-space: nowrap; }
 .header-btn { background: rgba(0,0,0,0.4); border: 1px solid #009A8B; color: #E8DFC8; font-family: monospace; font-size: 10px; letter-spacing: 2px; padding: 6px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: background 0.15s, color 0.15s; white-space: nowrap; }
 .header-btn:hover { background: #009A8B; color: #000; }
 
@@ -346,6 +347,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .site-title { font-size: 15px; letter-spacing: 2px; }
   .header small { font-size: 8px; letter-spacing: 2px; }
   .api-credits { display: none; }
+  .odds-lock-badge { display: none; }
   .header-btn { font-size: 9px; padding: 6px 8px; letter-spacing: 1px; }
 
   /* Game banner */
