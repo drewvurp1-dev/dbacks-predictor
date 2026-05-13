@@ -3048,9 +3048,12 @@ function autoRegisterGradePredictions() {
   const date = document.getElementById('game-date').value
     || new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   const pitcherName = S.pitcher?.name || '';
+  const idBase = Date.now();
+  let idOffset = 0;
   Object.entries(S.players).forEach(([playerId, snap]) => {
     if (!snap.score || !snap.factors) return;
     savePredictionForGrading({
+      _id: idBase + idOffset++,
       score: snap.score,
       tier: snap.tier,
       factors: snap.factors,
@@ -3419,7 +3422,7 @@ function savePending(d)      { localStorage.setItem(PENDING_KEY, JSON.stringify(
 function savePredictionForGrading(prediction, overridePlayerId = null) {
   const pending = getPending();
   const entry = {
-    id: Date.now(),
+    id: prediction._id ?? Date.now(),
     date: prediction.date || new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0],
     score: prediction.score,
     tier: prediction.tier?.label || prediction.tier || '',
@@ -3446,8 +3449,13 @@ async function fetchActualStats(playerId, date) {
   const data = await res.json();
   const splits = data?.stats?.[0]?.splits ?? [];
   if (!splits.length) return null;
-  // Use first split (covers doubleheader game 1; acceptable for grading)
+  // Use first split (covers doubleheader game 1; acceptable for grading).
+  // Guard against the API returning a game from a different date (off-days, postponements).
   const game = splits[0];
+  if (game.date && game.date !== date) {
+    console.warn(`[grade] fetchActualStats: requested ${date} but MLB API returned ${game.date} — skipping`);
+    return null;
+  }
   const s = game.stat;
   return {
     hits:         s.hits ?? 0,
