@@ -1752,11 +1752,19 @@ function modelProbability(propKey,line,score){
     const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
     const scoreBase=lerp3(score,20,18,50,32,80,50);
     p=scoreBase*0.5+rateBase*0.5;
+    // Runs depend on hitters behind you driving you in — strong protection helps,
+    // weak protection hurts. Same magnitude as RBI.
+    if(S.lineupProtection?.tier==='strong')p+=5;
+    else if(S.lineupProtection?.tier==='weak')p-=5;
   }
   else if(propKey==='batter_hits_runs_rbis'){
     const rateBase=_hrrOverPct(line,ss,S.recentGameLog);
     const scoreBase=lerp3(score,20,20,50,38,80,60);
     p=scoreBase*0.5+rateBase*0.5;
+    // Composite of hits (no protection effect) + runs + RBI (both protection-sensitive).
+    // Roughly 2/3 the magnitude of RBI/Runs since hits are unaffected.
+    if(S.lineupProtection?.tier==='strong')p+=3;
+    else if(S.lineupProtection?.tier==='weak')p-=3;
   }
 
   if(p===null)return null;
@@ -1770,35 +1778,63 @@ function modelProbability(propKey,line,score){
       p+=Math.max(-5,Math.min(5,Math.round((hitF-1.0)*40)));
   }}
 
-  // Trend adjustments — accumulated then capped at ±6pts total
+  // Trend adjustments — accumulated then capped at ±6pts total.
+  // Recency-weighted with exponential decay (most recent game gets highest weight).
+  // decay=0.7 → most recent game ≈3.4× the influence of a game 4 days ago.
+  // For 4-game window, normalized weights are roughly [0.40, 0.28, 0.19, 0.14].
   let trendAdj=0;
   const last4=S.recentGameLog?.slice(0,4)||[];
-  const last3=S.recentGameLog?.slice(0,3)||[];
   if(last4.length>=3){
+    const decay=0.7;
+    let totW=0;
+    for(let i=0;i<last4.length;i++)totW+=Math.pow(decay,i);
+    const wFrac=(pred)=>{
+      let s=0;
+      for(let i=0;i<last4.length;i++)if(pred(last4[i]))s+=Math.pow(decay,i);
+      return s/totW;
+    };
+    const wAvg=(get)=>{
+      let s=0,vw=0;
+      for(let i=0;i<last4.length;i++){
+        const v=get(last4[i]);
+        if(v==null||isNaN(v))continue;
+        const w=Math.pow(decay,i);
+        s+=v*w; vw+=w;
+      }
+      return vw>0?s/vw:0;
+    };
+    const wSum=(get)=>{
+      let s=0;
+      for(let i=0;i<last4.length;i++){
+        const v=get(last4[i]);
+        if(v==null||isNaN(v))continue;
+        s+=v*Math.pow(decay,i);
+      }
+      return s;
+    };
+
     if(propKey==='batter_hits'){
-      const hot=last4.filter(g=>(parseInt(g.stat.hits)||0)>=2).length;
-      const cold=last3.filter(g=>(parseInt(g.stat.hits)||0)===0).length;
-      if(hot>=3)trendAdj+=5; else if(hot>=2)trendAdj+=2;
-      if(cold>=2)trendAdj-=5; else if(cold>=1)trendAdj-=2;
+      const hot=wFrac(g=>(parseInt(g.stat.hits)||0)>=2);
+      const cold=wFrac(g=>(parseInt(g.stat.hits)||0)===0);
+      if(hot>=0.65)trendAdj+=5; else if(hot>=0.4)trendAdj+=2;
+      if(cold>=0.5)trendAdj-=5; else if(cold>=0.25)trendAdj-=2;
     } else if(propKey==='batter_total_bases'){
-      const avgTB=last4.reduce((s,g)=>s+(parseInt(g.stat.totalBases)||0),0)/4;
+      const avgTB=wAvg(g=>parseInt(g.stat.totalBases)||0);
       if(avgTB>=2.5)trendAdj+=5; else if(avgTB<=0.5)trendAdj-=4;
     } else if(propKey==='batter_home_runs'){
-      const recentHR=last4.reduce((s,g)=>s+(parseInt(g.stat.homeRuns)||0),0);
-      if(recentHR>=2)trendAdj+=4;
+      const recentHR=wSum(g=>parseInt(g.stat.homeRuns)||0);
+      if(recentHR>=1.5)trendAdj+=4;
     } else if(propKey==='batter_strikeouts'){
-      const avgK=last4.reduce((s,g)=>s+(parseInt(g.stat.strikeOuts)||0),0)/4;
+      const avgK=wAvg(g=>parseInt(g.stat.strikeOuts)||0);
       if(avgK>1.5)trendAdj+=4; else if(avgK<0.5)trendAdj-=3;
     } else if(propKey==='batter_walks'){
-      const wkGames=last4.filter(g=>(parseInt(g.stat.baseOnBalls)||0)>=1).length;
-      if(wkGames>=3)trendAdj+=4; else if(wkGames===0)trendAdj-=3;
+      const wkGames=wFrac(g=>(parseInt(g.stat.baseOnBalls)||0)>=1);
+      if(wkGames>=0.65)trendAdj+=4; else if(wkGames<=0.05)trendAdj-=3;
     } else if(propKey==='batter_runs_scored'){
-      const scoringGames=last4.filter(g=>(parseInt(g.stat.runs)||0)>=1).length;
-      if(scoringGames>=3)trendAdj+=4; else if(scoringGames===0)trendAdj-=3;
+      const scoringGames=wFrac(g=>(parseInt(g.stat.runs)||0)>=1);
+      if(scoringGames>=0.65)trendAdj+=4; else if(scoringGames<=0.05)trendAdj-=3;
     } else if(propKey==='batter_hits_runs_rbis'){
-      const avgHRR=last4.reduce((s,g)=>{
-        return s+(parseInt(g.stat.hits)||0)+(parseInt(g.stat.runs)||0)+(parseInt(g.stat.rbi)||0);
-      },0)/4;
+      const avgHRR=wAvg(g=>(parseInt(g.stat.hits)||0)+(parseInt(g.stat.runs)||0)+(parseInt(g.stat.rbi)||0));
       if(avgHRR>=3)trendAdj+=5; else if(avgHRR<=0.5)trendAdj-=4;
     }
   }
