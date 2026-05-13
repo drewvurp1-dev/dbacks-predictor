@@ -1880,17 +1880,31 @@ function modelProbability(propKey,line,score){
     }
   }
 
-  // Pitcher recent form
+  // Pitcher recent form — recency-weighted with same exponential decay as batter form.
+  // For a 3-start window, normalized weights are roughly [0.46, 0.32, 0.22], so the
+  // most-recent start gets ~2× the weight of one from 3 starts back. A blow-up last
+  // outing matters more than a blow-up three starts ago.
   const p3=S.pitcher?.last3;
   if(p3?.length>=1){
+    const pDecay=0.7;
+    const pWAvg=(get)=>{
+      let s=0,vw=0;
+      for(let i=0;i<p3.length;i++){
+        const v=get(p3[i]);
+        if(v==null||isNaN(v))continue;
+        const w=Math.pow(pDecay,i);
+        s+=v*w; vw+=w;
+      }
+      return vw>0?s/vw:0;
+    };
     if(propKey==='batter_hits'){
-      const avgH=p3.reduce((s,g)=>s+(parseInt(g.stat.hits)||0),0)/p3.length;
+      const avgH=pWAvg(g=>parseInt(g.stat.hits)||0);
       if(avgH>=8)trendAdj+=4; else if(avgH<=4)trendAdj-=3;
     } else if(propKey==='batter_strikeouts'){
-      const avgK=p3.reduce((s,g)=>s+(parseInt(g.stat.strikeOuts)||0),0)/p3.length;
+      const avgK=pWAvg(g=>parseInt(g.stat.strikeOuts)||0);
       if(avgK>=9)trendAdj+=4; else if(avgK<=4)trendAdj-=3;
     } else if(propKey==='batter_total_bases'){
-      const avgER=p3.reduce((s,g)=>s+(parseInt(g.stat.earnedRuns)||0),0)/p3.length;
+      const avgER=pWAvg(g=>parseInt(g.stat.earnedRuns)||0);
       if(avgER>=4)trendAdj+=3; else if(avgER<=1)trendAdj-=2;
     }
   }
