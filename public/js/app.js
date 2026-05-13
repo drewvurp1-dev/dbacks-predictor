@@ -3432,8 +3432,8 @@ function savePredictionForGrading(prediction, overridePlayerId = null) {
     factors: prediction.factors.map(f => ({ label: f.label, impact: f.impact, value: f.value })),
     graded: false,
   };
-  // Don't duplicate same-day predictions — replace if exists
-  const existingIdx = pending.findIndex(p => p.date === entry.date && p.playerId === entry.playerId);
+  // One card per player — replace any existing entry for this player regardless of date
+  const existingIdx = pending.findIndex(p => p.playerId === entry.playerId);
   if (existingIdx >= 0) pending[existingIdx] = entry;
   else pending.unshift(entry);
   savePending(pending.slice(0, 50)); // keep last 50 (7–8 players × ~6 days)
