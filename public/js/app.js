@@ -3091,21 +3091,29 @@ function updateFactorPerf(factors, actual, gradeResult) {
   if (log.length >= 15) autoAdjustWeights(perf, log.length);
 }
 
-// Auto-adjust factor weights based on hit rates
+// Auto-adjust factor weights using Bayesian shrinkage to prevent small-sample drift.
+// Old behavior had stepped adjustments at 5/15/30% with cliffs at 60%/70%/etc.
+// hit-rate buckets, so a 5-game hot streak could move weights ±30% from default.
+//
+// New behavior:
+//   1. Posterior hit rate = (hits + α/2) / (fires + α) with α=20 (Beta(10,10) prior).
+//      Shrinks raw hit rate toward 0.5 by an amount proportional to sample weakness.
+//      Factor with 5 fires/4 hits (raw 80%) → posterior 56% (modest signal).
+//      Factor with 100 fires/80 hits (raw 80%) → posterior 75% (strong signal).
+//   2. Continuous adjustment: 1 + (postRate - 0.5) * 0.6, capped at [0.7, 1.3].
+//      No more cliffs at threshold boundaries.
+//   3. Minimum 10 fires before any adjustment — even with shrinkage, <10 is noise.
 function autoAdjustWeights(perf, gameCount) {
   const weights = getFactorWeights();
+  const ALPHA = 20; // Beta(10,10) prior — neutral, modest strength
   Object.entries(perf).forEach(([factor, data]) => {
-    if (data.fires < 5) return; // need at least 5 samples
-    const hitRate = data.hits / data.fires;
+    if (data.fires < 10) return;
     const defaultW = DEFAULT_WEIGHTS[factor];
     if (!defaultW) return;
-    // Adjust toward hit rate signal — max ±30% from default
-    let adjusted = defaultW;
-    if (hitRate >= 0.70)      adjusted = defaultW * 1.30;
-    else if (hitRate >= 0.60) adjusted = defaultW * 1.15;
-    else if (hitRate <= 0.30) adjusted = defaultW * 0.70;
-    else if (hitRate <= 0.40) adjusted = defaultW * 0.85;
-    weights[factor] = Math.round(adjusted * 10) / 10;
+    const postRate = (data.hits + ALPHA / 2) / (data.fires + ALPHA);
+    let mult = 1 + (postRate - 0.5) * 0.6;
+    mult = Math.max(0.7, Math.min(1.3, mult));
+    weights[factor] = Math.round(defaultW * mult * 10) / 10;
   });
   saveFactorWeights(weights);
 }
