@@ -258,16 +258,18 @@ function openPlayerCorbet(playerId) {
     document.getElementById('corbet-no-prediction').textContent = 'No bets available for this player.';
     show('corbet-no-prediction'); hide('corbet-bets'); hide('corbet-player-filter');
   } else {
-    // Save both allPlayerBets and corbetBets (the flat index list renderCorbetBets sets)
-    // so the background full-tab UI still resolves saveBet(idx) against the right list
-    // after this modal closes.
+    // Save allPlayerBets and corbetBetsMap so the full-tab save buttons remain correct
+    // after this modal closes. With content-keyed map lookup, the modal buttons also work
+    // against the restored full map since each bet's key is stable across both contexts.
     const savedAll = S.allPlayerBets;
+    const savedMap = S.corbetBetsMap;
     const savedFlat = S.corbetBets;
     S.allPlayerBets = playerBets;
     hide('corbet-no-prediction'); hide('corbet-loading'); hide('corbet-player-filter');
     renderCorbetBets();
     show('corbet-bets');
     S.allPlayerBets = savedAll;
+    S.corbetBetsMap = savedMap || S.corbetBetsMap; // keep player map if no full-tab map exists yet
     S.corbetBets = savedFlat;
   }
   openModal('panel-corbet', snap.name + ' · CorBET');
@@ -2695,9 +2697,12 @@ function renderCorbetBets(){
   const checked=new Set(Array.from(filterEl.querySelectorAll('label')).filter(l=>l.querySelector('input').checked).map(l=>l.dataset.name));
   const visible=S.allPlayerBets.filter(pg=>checked.has(pg.playerName));
   const flatBets=[];
+  const corbetBetsMap={};
   document.getElementById('corbet-bets').innerHTML=visible.map(pg=>{
     const cards=pg.bets.map(b=>{
-      const i=flatBets.length;flatBets.push(b);
+      flatBets.push(b);
+      const betKey=`${(b._playerName||'').replace(/[|]/g,'_')}|${b.propKey||''}|${b.line??''}|${b.direction||''}`;
+      corbetBetsMap[betKey]=b;
       if(b.insufficient)return`<div class="bet-card" style="background:#0c0a1e;border:1px solid #1a1730;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
@@ -2725,7 +2730,7 @@ function renderCorbetBets(){
       return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
-          ${showSave?`<button onclick="saveBet(${i},this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
+          ${showSave?`<button data-bk="${betKey.replace(/"/g,'&quot;')}" onclick="saveBet(this.dataset.bk,this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
         </div>
         ${b.conflict?`<div style="background:#1a0808;border:1px solid #4a1010;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e74c3c;font-family:monospace;letter-spacing:1px;">⚠ CONFLICT — Direction contradicts Total Bases recommendation. No edge shown.</div>`:''}
         ${b.edgeStrength!=='none'
@@ -2769,6 +2774,7 @@ function renderCorbetBets(){
     </div>`;
   }).join('');
   S.corbetBets=flatBets;
+  S.corbetBetsMap=corbetBetsMap;
 }
 
 async function loadDashboard(){
@@ -3017,9 +3023,9 @@ function _recentFormHtml(snap){
 }
 
 // ═══════════ BET RECORD ════════════════════════════════════════════════════════
-function saveBet(idx, btn){
-  if(!S.corbetBets||!S.corbetBets[idx])return;
-  const b=S.corbetBets[idx];
+function saveBet(key, btn){
+  const b=S.corbetBetsMap?.[key];
+  if(!b)return;
   const p=S.lastPrediction;
   const date=p?.date||new Date().toISOString().split('T')[0];
   const prop=`${b.direction} ${b.line} ${b.prop}`;
