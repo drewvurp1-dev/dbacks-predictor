@@ -28,7 +28,8 @@ router.get('/', (req, res) => {
       hint: 'run `npm run refresh-arsenal` to generate data/pitch_arsenal.json',
     });
   }
-  res.set('Cache-Control', 'public, max-age=3600');
+  // Pinned to mtime — daily refresh means we want the latest, not a browser cache.
+  res.set('Cache-Control', 'no-cache');
   res.json(data);
 });
 
