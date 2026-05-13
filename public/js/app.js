@@ -1199,16 +1199,13 @@ function calcPrediction(){
     if(hs?.ops){const a=(hs.ops-0.750)*70;add(`vs ${hand}HP`,hs.ops.toFixed(3)+' OPS',a,`${a>0?'Hits well':'Struggles'} vs ${hand==='L'?'lefties':'righties'} this season`);}
     const ls=S.isHome?S.splits.h:S.splits.a;
     if(ls?.ops){const a=(ls.ops-0.750)*35;add(S.isHome?'Home':'Away',ls.ops.toFixed(3)+' OPS',a,`OPS ${ls.ops.toFixed(3)} ${S.isHome?'at home':'on the road'}`);}
-    const ts=S.dayGame?S.splits.d:S.splits.n;
-    if(ts?.ops){const a=(ts.ops-0.750)*25;add(S.dayGame?'Day Game':'Night Game',ts.ops.toFixed(3)+' OPS',a,`OPS ${ts.ops.toFixed(3)} in ${S.dayGame?'day':'night'} games`);}
-    if(S.rispStat?.avg){const ra=parseFloat(S.rispStat.avg);const a=(ra-0.260)*20;add('RISP',S.rispStat.avg+' BA',a,ra>=0.300?'Clutch hitter':ra<=0.200?'Struggles with RISP':'Average RISP production');}
   }
   if(S.pitcher?.st){
     const era=parseFloat(S.pitcher.st.era);
     const adv=S.pitcher.advanced||{};
     // Use xFIP > FIP > ERA in order of predictive value. Display label reflects source.
-    const trueERA=adv.xfip??adv.fip??era;
-    const trueLabel=adv.xfip!=null?'xFIP':adv.fip!=null?'FIP':'ERA';
+    const trueERA=adv.siera??adv.xfip??adv.fip??era;
+    const trueLabel=adv.siera!=null?'SIERA':adv.xfip!=null?'xFIP':adv.fip!=null?'FIP':'ERA';
     if(!isNaN(trueERA)&&trueERA!=null){
       const a=(trueERA-4.00)*4;
       add(`Pitcher ${trueLabel}`,trueERA.toFixed(2),a,trueERA<3.25?'Elite arm':trueERA<4.00?'Above-average':trueERA<5.00?'League-average':'Hittable pitcher','pitcher');
@@ -1263,14 +1260,6 @@ function calcPrediction(){
       if(brl>=12)add('Barrel%',brl.toFixed(1)+'%',4,'Elite barrel rate — hard contact tendency');
       else if(brl<=4)add('Barrel%',brl.toFixed(1)+'%',-2,'Below-average barrel rate');
     }
-    if(hhRate!=null){
-      if(hhRate>=48)add('Hard-Hit%',hhRate.toFixed(1)+'%',3,'Elite hard-hit rate — consistent solid contact');
-      else if(hhRate<=33)add('Hard-Hit%',hhRate.toFixed(1)+'%',-2,'Low hard-hit rate — soft contact tendency');
-    }
-    if(avgEV!=null){
-      if(avgEV>=93)add('Avg EV',avgEV.toFixed(1)+' mph',2,'Elite average exit velocity');
-      else if(avgEV<=84)add('Avg EV',avgEV.toFixed(1)+' mph',-2,'Below-average exit velocity');
-    }
     if(whiff!=null){
       if(whiff<=18)add('Whiff%',whiff.toFixed(1)+'%',3,'Low whiff rate — difficult to strike out');
       else if(whiff>=30)add('Whiff%',whiff.toFixed(1)+'%',-3,'High whiff rate — vulnerable to swing-and-miss stuff');
@@ -1279,24 +1268,6 @@ function calcPrediction(){
       if(xwoba>=0.380)add('xwOBA',xwoba.toFixed(3),4,'Elite expected production — hitting the ball well');
       else if(xwoba<=0.290)add('xwOBA',xwoba.toFixed(3),-3,'Below-average expected production');
     }
-    if(xba!=null){
-      if(xba>=0.290)add('xBA',xba.toFixed(3),2,'High expected batting average — quality contact');
-      else if(xba<=0.210)add('xBA',xba.toFixed(3),-2,'Low expected BA — weak contact quality');
-    }
-    if(xslg!=null){
-      if(xslg>=0.500)add('xSLG',xslg.toFixed(3),3,'Elite expected slugging — extra-base power');
-      else if(xslg<=0.350)add('xSLG',xslg.toFixed(3),-2,'Low expected slugging — limited power output');
-    }
-    if(sweetSpot!=null){
-      if(sweetSpot>=40)add('Sweet Spot%',sweetSpot.toFixed(1)+'%',2,'High sweet spot contact — consistent quality hits');
-      else if(sweetSpot<=25)add('Sweet Spot%',sweetSpot.toFixed(1)+'%',-2,'Low sweet spot % — poor launch angle profile');
-    }
-    if(batSpeed!=null){
-      if(batSpeed>=76)add('Bat Speed',batSpeed.toFixed(1)+' mph',2,'Elite bat speed — generates more power');
-      else if(batSpeed<=67)add('Bat Speed',batSpeed.toFixed(1)+' mph',-2,'Slow bat speed — timing vulnerability');
-    }
-    if(squaredUp!=null&&squaredUp>=22)add('Sqd Up%',squaredUp.toFixed(1)+'%',2,'Elite squared-up contact rate');
-    if(blast!=null&&blast>=8)add('Blast%',blast.toFixed(1)+'%',2,'Elite blast rate — authoritative contact');
     const{gb,fb}=S.statcast;
     if(gb!=null&&gb>=55)add('GB%',gb.toFixed(1)+'%',-2,'Heavy ground ball hitter — limits extra-base upside');
     if(fb!=null&&fb>=45)add('FB%',fb.toFixed(1)+'%',2,'High fly ball rate — elevated HR and total bases ceiling');
@@ -1307,10 +1278,6 @@ function calcPrediction(){
     if(pWhiff!=null){
       if(pWhiff>=28)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',-4,'Elite whiff rate — dominant swing-and-miss stuff','pitcher');
       else if(pWhiff<=16)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',3,'Low pitcher whiff rate — hitter-friendly contact','pitcher');
-    }
-    if(kPct!=null){
-      if(kPct>=28)add('Pitcher K%',kPct.toFixed(1)+'%',-3,'Elite strikeout rate pitcher','pitcher');
-      else if(kPct<=18)add('Pitcher K%',kPct.toFixed(1)+'%',3,'Low K rate — contact-heavy opportunity','pitcher');
     }
     if(putAway!=null&&putAway>=33)add('Put Away%',putAway.toFixed(1)+'%',-2,'Elite 2-strike put-away — finishes hitters','pitcher');
     if(gbPct!=null&&gbPct>=50)add('GB%',gbPct.toFixed(1)+'%',-2,'Ground ball pitcher — limits extra-base power','pitcher');
@@ -1325,11 +1292,6 @@ function calcPrediction(){
     if(pXwoba!=null){
       if(pXwoba<=0.280)add('xwOBA vs',pXwoba.toFixed(3),-3,'Elite expected wOBA suppression','pitcher');
       else if(pXwoba>=0.370)add('xwOBA vs',pXwoba.toFixed(3),3,'High xwOBA allowed — hitter-friendly profile','pitcher');
-    }
-    if(xera!=null){
-      if(xera<=3.00)add('xERA',xera.toFixed(2),-4,'Elite expected ERA — dominant pitcher','pitcher');
-      else if(xera<=3.75)add('xERA',xera.toFixed(2),-2,'Above-average expected ERA','pitcher');
-      else if(xera>=4.75)add('xERA',xera.toFixed(2),3,'High xERA — hittable pitcher profile','pitcher');
     }
   }
   const w=S.weather;const wm=document.getElementById('weather-manual')&&!document.getElementById('weather-manual').classList.contains('hidden');
