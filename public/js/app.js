@@ -356,7 +356,7 @@ async function loadPlayer(){
     ]);
     const sd=await a.json(),ss=await b.json(),rd=await c.json();
     const byCode={};
-    (sd?.stats?.[0]?.splits??[]).forEach(s=>{if(s.split?.code)byCode[s.split.code]={ops:parseFloat(s.stat.ops)||null,avg:s.stat.avg,obp:s.stat.obp,slg:s.stat.slg,gp:s.stat.gamesPlayed,hr:s.stat.homeRuns,rbi:s.stat.rbi};});
+    (sd?.stats?.[0]?.splits??[]).forEach(s=>{if(s.split?.code)byCode[s.split.code]=_extractSplitStat(s.stat);});
     S.splits=byCode;
     S.seasonStat=ss?.stats?.[0]?.splits?.[0]?.stat??null;
     S.rispStat=rd?.stats?.[0]?.splits?.[0]?.stat??null;
@@ -1589,6 +1589,12 @@ function corbetReasoning(propKey,direction,propScore){
   } else if(propKey==='batter_walks'){
     const bbp=ss?((ss.baseOnBalls/pa)*100).toFixed(1):null;
     if(bbp)        drivers.push(`${bbp}% BB rate`);
+    const hs=_handSplit();
+    if(hs?.pa>=100&&hs?.bb!=null){
+      const handBB=(hs.bb/hs.pa)*100;
+      const overallBB=parseFloat(bbp);
+      if(!isNaN(overallBB)&&Math.abs(handBB-overallBB)>=1.5) drivers.push(`${handBB.toFixed(1)}% BB vs ${hand}HP`);
+    }
     if(ss?.obp)    drivers.push(`${ss.obp} OBP`);
     const pBBPct=S.pitcher?.st?.baseOnBalls?((S.pitcher.st.baseOnBalls/pitcherPA)*100).toFixed(1):null;
     if(pBBPct)     drivers.push(`pitcher ${pBBPct}% BB rate`);
@@ -1597,6 +1603,13 @@ function corbetReasoning(propKey,direction,propScore){
   } else if(propKey==='batter_strikeouts'){
     const kp=ss?((ss.strikeOuts/pa)*100).toFixed(1):null;
     if(kp)         drivers.push(`${kp}% K rate`);
+    const hs=_handSplit();
+    if(hs?.pa>=80&&hs?.k!=null){
+      const handK=(hs.k/hs.pa)*100;
+      const overallK=parseFloat(kp);
+      // Only surface when materially different from overall (≥2pp) — otherwise it's noise
+      if(!isNaN(overallK)&&Math.abs(handK-overallK)>=2) drivers.push(`${handK.toFixed(1)}% K vs ${hand}HP`);
+    }
     const pKPct=S.pitcher?.st?.strikeOuts?((S.pitcher.st.strikeOuts/pitcherPA)*100).toFixed(1):null;
     if(pKPct)      drivers.push(`pitcher ${pKPct}% K rate`);
     const pmK=_pitchMatchupReason(direction,'batter_strikeouts');
@@ -1729,6 +1742,34 @@ function _shrunkRate(numerator,denominator,leagueAvg,priorN){
   if(!denominator||denominator<=0)return leagueAvg;
   const n=denominator;
   return (numerator + priorN*leagueAvg) / (n + priorN);
+}
+
+// Extract the full stat payload from a MLB Stats API statSplits row. Includes
+// counting stats (K, BB, PA, AB, H, TB, HR) so handedness-specific rates can be
+// computed for the K/BB/Hits projections — not just OPS for the score.
+function _extractSplitStat(st){
+  if(!st)return null;
+  return{
+    ops:parseFloat(st.ops)||null,
+    avg:st.avg, obp:st.obp, slg:st.slg,
+    gp:parseInt(st.gamesPlayed)||0,
+    pa:parseInt(st.plateAppearances)||0,
+    ab:parseInt(st.atBats)||0,
+    h:parseInt(st.hits)||0,
+    tb:parseInt(st.totalBases)||0,
+    hr:parseInt(st.homeRuns)||0,
+    rbi:parseInt(st.rbi)||0,
+    k:parseInt(st.strikeOuts)||0,
+    bb:parseInt(st.baseOnBalls)||0,
+  };
+}
+
+// Return the active L/R split row for the current batter (vs the listed pitcher's
+// hand). Returns null if splits aren't loaded or the row is missing.
+function _handSplit(){
+  const hand=S.pitcher?.hand||S.pitcherThrows;
+  if(!hand||!S.splits)return null;
+  return hand==='L'?S.splits.vl:S.splits.vr;
 }
 
 // Pitch-mix vs batter weakness. Loaded once per page from /pitch-arsenal (a snapshot
@@ -1894,7 +1935,10 @@ function modelProbability(propKey,line,score){
   }
   else if(propKey==='batter_walks'){
     // League avg BB rate ~9%. Stabilization point ~120 PA → priorN=60 (light shrinkage for vets).
-    const bbF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,60):0.09;
+    const overallBBF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,60):0.09;
+    // Handedness-specific BB rate (BB stabilizes a bit slower than K — require ≥100 PA).
+    const hs=_handSplit();
+    const bbF=(hs?.pa>=100&&hs?.bb!=null)?_shrunkRate(hs.bb,hs.pa,overallBBF,60):overallBBF;
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
     const pBBF=S.pitcher?.st?.baseOnBalls?_shrunkRate(parseInt(S.pitcher.st.baseOnBalls)||0,pitcherPA,0.08,80):0.08;
     const blended=bbF*0.6+pBBF*0.4;
@@ -1906,7 +1950,12 @@ function modelProbability(propKey,line,score){
   }
   else if(propKey==='batter_strikeouts'){
     // League avg K rate ~22% batter / ~22% pitcher. K rate stabilizes ~60 PA → priorN=40.
-    const kF=ss?.strikeOuts?_shrunkRate(parseInt(ss.strikeOuts)||0,pa,0.22,40):0.22;
+    const overallKF=ss?.strikeOuts?_shrunkRate(parseInt(ss.strikeOuts)||0,pa,0.22,40):0.22;
+    // Prefer L/R-handedness-specific K rate when the split has stabilized (≥80 PA).
+    // Shrink toward the batter's overall K rate (not league average) so the
+    // adjustment captures the handedness gap without small-sample noise.
+    const hs=_handSplit();
+    const kF=(hs?.pa>=80&&hs?.k!=null)?_shrunkRate(hs.k,hs.pa,overallKF,40):overallKF;
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
     const pKF=S.pitcher?.st?.strikeOuts?_shrunkRate(parseInt(S.pitcher.st.strikeOuts)||0,pitcherPA,0.22,60):0.22;
     const whiffAdj=S.statcast?.whiff?(S.statcast.whiff-22)*0.01:0;
@@ -2245,7 +2294,7 @@ async function _corbetFetchMLBStats(playerId,pitcherId){
   ]);
   const [sd,ss,rd,gd]=await Promise.all([a.json(),b.json(),c.json(),d.json()]);
   const byCode={};
-  (sd?.stats?.[0]?.splits??[]).forEach(s=>{if(s.split?.code)byCode[s.split.code]={ops:parseFloat(s.stat.ops)||null,avg:s.stat.avg,obp:s.stat.obp,slg:s.stat.slg,gp:s.stat.gamesPlayed,hr:s.stat.homeRuns,rbi:s.stat.rbi};});
+  (sd?.stats?.[0]?.splits??[]).forEach(s=>{if(s.split?.code)byCode[s.split.code]=_extractSplitStat(s.stat);});
   let matchupStats=null;
   if(pitcherId){
     try{
