@@ -1555,6 +1555,8 @@ function corbetReasoning(propKey,direction,propScore){
   if(propKey==='batter_hits'){
     if(ss?.avg)    drivers.push(`${ss.avg} BA`);
     if(ss?.babip)  drivers.push(`${ss.babip} BABIP`);
+    const pmH=_pitchMatchupReason(direction,'batter_hits');
+    if(pmH)        drivers.push(pmH);
     const kp=ss?((ss.strikeOuts/pa)*100).toFixed(0):null;
     if(kp)         drivers.push(`${kp}% K rate`);
     if(handSplit?.ops) drivers.push(`${handSplit.ops} OPS vs ${hand}HP`);
@@ -1563,6 +1565,8 @@ function corbetReasoning(propKey,direction,propScore){
   } else if(propKey==='batter_total_bases'){
     if(ss?.slg)    drivers.push(`${ss.slg} SLG`);
     if(S.statcast?.xwoba!=null) drivers.push(`${S.statcast.xwoba.toFixed(3)} xwOBA`);
+    const pmTB=_pitchMatchupReason(direction,'batter_total_bases');
+    if(pmTB)       drivers.push(pmTB);
     if(S.statcast?.brl!=null)   drivers.push(`${S.statcast.brl.toFixed(1)}% Barrel`);
     if(S.pitcher?.st?.era) drivers.push(`${parseFloat(S.pitcher.st.era).toFixed(2)} ERA`);
     if(mu?.ab>=5)  drivers.push(`${mu.slg} SLG in ${mu.ab}AB career`);
@@ -1595,6 +1599,8 @@ function corbetReasoning(propKey,direction,propScore){
     if(kp)         drivers.push(`${kp}% K rate`);
     const pKPct=S.pitcher?.st?.strikeOuts?((S.pitcher.st.strikeOuts/pitcherPA)*100).toFixed(1):null;
     if(pKPct)      drivers.push(`pitcher ${pKPct}% K rate`);
+    const pmK=_pitchMatchupReason(direction,'batter_strikeouts');
+    if(pmK)        drivers.push(pmK);
     if(S.statcast?.whiff!=null) drivers.push(`${S.statcast.whiff.toFixed(1)}% whiff`);
     const bb=(S.pitcherPitches?.['Slider']||0)+(S.pitcherPitches?.['Curveball']||0);
     if(bb>25)      drivers.push(`${bb.toFixed(0)}% breaking ball usage`);
@@ -1725,6 +1731,117 @@ function _shrunkRate(numerator,denominator,leagueAvg,priorN){
   return (numerator + priorN*leagueAvg) / (n + priorN);
 }
 
+// Pitch-mix vs batter weakness. Loaded once per page from /pitch-arsenal (a snapshot
+// of Baseball Savant pitcher arsenal + batter pitch-arsenal leaderboards, refreshed
+// daily by scripts/refresh_pitch_arsenal.py). Compares the batter's per-pitch-type
+// rates (whiff/K/wOBA) weighted by the pitcher's actual usage% vs the batter's
+// overall baseline. Captures matchup signal the season-wide K%/wOBA stats can't.
+async function _loadPitchArsenal(){
+  if(S.pitchArsenal!==undefined)return S.pitchArsenal; // null or object — cached
+  try{
+    const r=await fetch('/pitch-arsenal');
+    if(!r.ok){S.pitchArsenal=null;return null;}
+    S.pitchArsenal=await r.json();
+    return S.pitchArsenal;
+  }catch(e){S.pitchArsenal=null;return null;}
+}
+
+const _PITCH_NAMES={FF:'4-seam',SI:'sinker',FC:'cutter',SL:'slider',ST:'sweeper',CU:'curve',CH:'change',FS:'splitter',SV:'slurve',KC:'knuckle-curve'};
+
+// Returns the matchup factor for the current batter/pitcher pair, or null if data
+// is missing or sample sizes are too small. Cached per (pitcherId, batterId) pair
+// since modelProbability is called multiple times per render.
+function _pitchMatchupFactor(){
+  const pid=S.pitcher?.id, bid=S.playerId;
+  if(S.pitchMatchupCached?.pid===pid && S.pitchMatchupCached?.bid===bid){
+    return S.pitchMatchupCached.value;
+  }
+  const cacheMiss=v=>{S.pitchMatchupCached={pid,bid,value:v};return v;};
+  const arsenal=S.pitchArsenal;
+  if(!arsenal||!pid||!bid||S.pitcher?.bullpenGame)return cacheMiss(null);
+  const pit=arsenal.pitchers?.[String(pid)];
+  const bat=arsenal.batters?.[String(bid)];
+  if(!pit||!bat)return cacheMiss(null);
+
+  // Batter baseline — weighted by PA per pitch type, all pitches the batter has faced.
+  let bWhiffSum=0,bWobaSum=0,bKSum=0,bPaTotal=0;
+  for(const pt in bat.pitches){
+    const r=bat.pitches[pt];
+    const w=r.pa||0;
+    if(!w)continue;
+    bWhiffSum+=(r.whiff||0)*w;
+    bWobaSum+=(r.woba||0)*w;
+    bKSum+=(r.k_pct||0)*w;
+    bPaTotal+=w;
+  }
+  if(bPaTotal<60)return cacheMiss(null); // need a meaningful baseline
+
+  const baseWhiff=bWhiffSum/bPaTotal;
+  const baseWoba=bWobaSum/bPaTotal;
+  const baseK=bKSum/bPaTotal;
+
+  // Expected matchup — re-weight batter's per-pitch rates by the pitcher's usage%.
+  // Only count pitches the batter has faced ≥20 times (skip noise from rare pitches).
+  let expWhiff=0,expWoba=0,expK=0,usageCovered=0;
+  const detail=[];
+  for(const pt in pit.pitches){
+    const pu=pit.pitches[pt].usage||0;
+    const br=bat.pitches[pt];
+    if(!br||(br.pa||0)<20||!pu)continue;
+    expWhiff+=pu*(br.whiff||0);
+    expWoba+=pu*(br.woba||0);
+    expK+=pu*(br.k_pct||0);
+    usageCovered+=pu;
+    detail.push({pt,usage:pu,whiff:br.whiff||0,k:br.k_pct||0,woba:br.woba||0});
+  }
+  // Require ≥60% of pitcher's mix to be covered by batter's known per-pitch rates.
+  if(usageCovered<60)return cacheMiss(null);
+  expWhiff/=usageCovered;
+  expWoba/=usageCovered;
+  expK/=usageCovered;
+
+  const whiffDelta=expWhiff-baseWhiff;
+  const kDelta=expK-baseK;
+  const wobaDelta=expWoba-baseWoba;
+
+  // Pick the single pitch type whose contribution moves K% the most — that's what
+  // we'll mention in the analysis line ("heavy SL: batter Ks 28% on it vs 22% baseline").
+  detail.sort((a,b)=>(b.usage*Math.abs(b.k-baseK))-(a.usage*Math.abs(a.k-baseK)));
+  const top=detail[0];
+  const pitchLabel=_PITCH_NAMES[top?.pt]||top?.pt||'';
+
+  return cacheMiss({
+    kDeltaPp:kDelta,
+    wobaDelta:wobaDelta,
+    whiffDelta:whiffDelta,
+    baseWhiff,baseK,baseWoba,
+    expWhiff,expK,expWoba,
+    primaryPitch:top?.pt,
+    primaryPitchName:pitchLabel,
+    primaryUsage:top?.usage,
+    primaryBatterK:top?.k,
+    primaryBatterWhiff:top?.whiff,
+  });
+}
+
+// Short driver string for the analysis text — only emit when the matchup signal
+// is meaningful (≥2pp K delta or ≥0.015 wOBA delta).
+function _pitchMatchupReason(direction,propKey){
+  const m=_pitchMatchupFactor();
+  if(!m)return null;
+  const isK = propKey==='batter_strikeouts';
+  const helpsOver = isK ? (m.kDeltaPp>0) : (m.wobaDelta>0);
+  const meaningful = isK ? Math.abs(m.kDeltaPp)>=2 : Math.abs(m.wobaDelta)>=0.015;
+  if(!meaningful)return null;
+  // Match direction — only surface when matchup supports the bet direction
+  const supports = (direction==='over' && helpsOver) || (direction==='under' && !helpsOver);
+  if(!supports)return null;
+  if(isK){
+    return `${m.primaryUsage.toFixed(0)}% ${m.primaryPitchName} (${m.primaryBatterK.toFixed(0)}% K vs ${m.baseK.toFixed(0)}% base)`;
+  }
+  return `${m.primaryUsage.toFixed(0)}% ${m.primaryPitchName} mix (${(m.wobaDelta>0?'+':'')}${m.wobaDelta.toFixed(3)} wOBA matchup)`;
+}
+
 function modelProbability(propKey,line,score){
   const ss=S.seasonStat;
   const pa=ss?.plateAppearances||1;
@@ -1749,6 +1866,10 @@ function modelProbability(propKey,line,score){
       const whip=parseFloat(S.pitcher.st.whip);
       if(isFinite(whip))p+=Math.max(-4,Math.min(4,(whip-1.30)*15));
     }
+    // Pitch-mix matchup — wOBA delta scaled to pp. wOBA spreads of 0.020 are
+    // common at extremes; 150× gives ±3pp at that magnitude. Cap ±3pp.
+    {const mu=_pitchMatchupFactor();
+     if(mu)p+=Math.max(-3,Math.min(3,mu.wobaDelta*150));}
     p+=_ttopBonus();
   }
   else if(propKey==='batter_total_bases'){
@@ -1762,6 +1883,9 @@ function modelProbability(propKey,line,score){
       const whip=parseFloat(S.pitcher.st.whip);
       if(isFinite(whip))p+=Math.max(-3,Math.min(3,(whip-1.30)*12));
     }
+    // wOBA captures slug too — TB is slug-sensitive, so weight slightly higher.
+    {const mu=_pitchMatchupFactor();
+     if(mu)p+=Math.max(-3.5,Math.min(3.5,mu.wobaDelta*180));}
     p+=_ttopBonus();
   }
   else if(propKey==='batter_home_runs'){
@@ -1786,7 +1910,12 @@ function modelProbability(propKey,line,score){
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
     const pKF=S.pitcher?.st?.strikeOuts?_shrunkRate(parseInt(S.pitcher.st.strikeOuts)||0,pitcherPA,0.22,60):0.22;
     const whiffAdj=S.statcast?.whiff?(S.statcast.whiff-22)*0.01:0;
-    const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj);
+    // Pitch-mix matchup — adds the gap between the batter's overall K% and their
+    // expected K% in this pitcher's actual usage mix. Half-weight, capped ±0.04
+    // per-PA rate (≈ ±0.16 expected K shift over 4 PAs).
+    const mu=_pitchMatchupFactor();
+    const matchupK = mu ? Math.max(-0.04,Math.min(0.04,(mu.kDeltaPp/100)*0.5)) : 0;
+    const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj+matchupK);
     const rateBase=line<=0.5
       ?(1-Math.pow(1-blended,gamePAs))*100
       :(()=>{const p0=Math.pow(1-blended,gamePAs),p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);return(1-p0-p1)*100;})();
@@ -2423,6 +2552,9 @@ async function loadDashboard(){
   // Render game banner with current context
   _renderGameBanner();
   _renderPitcherCard();
+  // Make sure pitch-arsenal data is loaded before scoring any props — the matchup
+  // factor is a no-op if S.pitchArsenal hasn't resolved yet.
+  await _loadPitchArsenal();
   if(!S.players||Object.keys(S.players).length===0){
     document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Loading…</div>';
     await loadCorbet();
@@ -3625,4 +3757,5 @@ onStadiumChange();
 loadPlayer();
 renderRecord();
 renderGradePanel();
+_loadPitchArsenal(); // warm cache for pitch-mix matchup factor
 autoLoadNextGame(); // overwrites date/time and pulls umpire, weather, lineup
