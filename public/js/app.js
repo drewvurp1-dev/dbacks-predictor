@@ -2503,37 +2503,110 @@ function clearRecord(){
   renderRecord();
 }
 
+// Display order for per-prop record cards.
+const _RECORD_PROP_ORDER=['batter_hits','batter_total_bases','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts','batter_walks','batter_hits_runs_rbis'];
+const _RECORD_PROP_SHORT={
+  batter_hits:'Hits',batter_total_bases:'TB',batter_home_runs:'HR',
+  batter_rbis:'RBI',batter_runs_scored:'Runs',batter_strikeouts:'K',
+  batter_walks:'BB',batter_hits_runs_rbis:'HRR',
+};
+
+// Modern bets store propKey; legacy bets only have the human-readable prop string.
+function _propKeyForBet(b){
+  if(b.propKey)return b.propKey;
+  const t=(b.prop||'').toLowerCase();
+  if(t.includes('total bases'))return'batter_total_bases';
+  if(t.includes('h+r+rbi'))return'batter_hits_runs_rbis';
+  if(t.includes('home run'))return'batter_home_runs';
+  if(t.includes('strikeout'))return'batter_strikeouts';
+  if(t.includes('walk'))return'batter_walks';
+  if(t.includes('rbi'))return'batter_rbis';
+  if(t.includes('runs'))return'batter_runs_scored';
+  if(t.includes('hits'))return'batter_hits';
+  return null;
+}
+
+// Cumulative-profit sparkline. Renders an inline SVG polyline, oldest → newest.
+function _renderPLSparkline(graded){
+  if(!graded.length)return'<div class="rss-sparkline-empty">No graded bets yet</div>';
+  let cum=0;const points=[0];
+  graded.forEach(b=>{
+    if(b.result==='win'){const o=b.odds;cum+=o>0?o/100:100/Math.abs(o);}
+    else if(b.result==='loss'){cum-=1;}
+    points.push(cum);
+  });
+  const w=240,h=36,pad=3;
+  const min=Math.min(0,...points),max=Math.max(0,...points);
+  const range=Math.max(0.5,max-min);
+  const xStep=(w-pad*2)/Math.max(1,points.length-1);
+  const yFor=v=>h-pad-((v-min)/range)*(h-pad*2);
+  const path=points.map((v,i)=>`${(pad+i*xStep).toFixed(1)},${yFor(v).toFixed(1)}`).join(' ');
+  const final=points[points.length-1];
+  const stroke=final>0?'#2ecc71':final<0?'#e74c3c':'#999';
+  const y0=yFor(0).toFixed(1);
+  return`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:36px;display:block;">
+    <line x1="${pad}" y1="${y0}" x2="${w-pad}" y2="${y0}" stroke="#2a2540" stroke-width="0.6" stroke-dasharray="2 2"/>
+    <polyline points="${path}" fill="none" stroke="${stroke}" stroke-width="1.4" stroke-linejoin="round"/>
+  </svg>`;
+}
+
 function renderRecord(){
   const log=S.betLog;
-  const stats={green:{w:0,l:0,profit:0},yellow:{w:0,l:0,profit:0},red:{w:0,l:0,profit:0}};
+
+  // Per-prop + overall aggregates
+  const propStats={};
+  _RECORD_PROP_ORDER.forEach(k=>{propStats[k]={w:0,l:0,profit:0};});
+  let allW=0,allL=0,allProfit=0;
   log.forEach(b=>{
-    if(!b.result||b.result==='push'||!stats[b.rating])return;
+    if(!b.result||b.result==='push')return;
+    const pk=_propKeyForBet(b);
     if(b.result==='win'){
-      stats[b.rating].w++;
-      const o=b.odds;
-      stats[b.rating].profit+=o>0?o/100:100/Math.abs(o);
-    } else if(b.result==='loss'){
-      stats[b.rating].l++;
-      stats[b.rating].profit-=1;
+      allW++;
+      const payout=b.odds>0?b.odds/100:100/Math.abs(b.odds);
+      allProfit+=payout;
+      if(propStats[pk]){propStats[pk].w++;propStats[pk].profit+=payout;}
+    }else if(b.result==='loss'){
+      allL++;allProfit-=1;
+      if(propStats[pk]){propStats[pk].l++;propStats[pk].profit-=1;}
     }
   });
-  ['green','yellow','red'].forEach(c=>{
-    const{w,l,profit}=stats[c];
-    const total=w+l;
-    const pct=total?Math.round((w/total)*100)+'%':'—%';
-    const roi=total?(profit/total*100).toFixed(1):'—';
-    document.getElementById(`rec-${c}`).textContent=`${w}-${l}`;
-    document.getElementById(`rec-${c}-pct`).textContent=pct+' hit rate';
-    document.getElementById(`rec-${c}-roi`).textContent=total?`ROI: ${profit>=0?'+':''}${roi}u`:'';
-  });
-  const allW=stats.green.w+stats.yellow.w+stats.red.w;
-  const allL=stats.green.l+stats.yellow.l+stats.red.l;
-  const allProfit=stats.green.profit+stats.yellow.profit+stats.red.profit;
+
+  // Header strip
   const allTotal=allW+allL;
+  const hitRate=allTotal?Math.round((allW/allTotal)*100)+'%':'—';
+  const roiPct=allTotal?(allProfit/allTotal*100):null;
+  const unitsEl=document.getElementById('rec-units');
+  const roiEl=document.getElementById('rec-roi');
+  unitsEl.textContent=allTotal?(allProfit>=0?'+':'')+allProfit.toFixed(2)+'u':'—';
+  unitsEl.className='rss-val '+(allTotal?(allProfit>0?'pos':allProfit<0?'neg':''):'');
+  roiEl.textContent=roiPct!=null?(roiPct>=0?'+':'')+roiPct.toFixed(1)+'%':'—';
+  roiEl.className='rss-val '+(roiPct!=null?(roiPct>0?'pos':roiPct<0?'neg':''):'');
+  document.getElementById('rec-hitrate').textContent=hitRate;
   document.getElementById('rec-overall').textContent=`${allW}-${allL}`;
-  document.getElementById('rec-roi-total').textContent=allTotal?(allProfit>=0?'+':'')+allProfit.toFixed(1)+'u':'—';
+
+  // Sparkline — log is stored newest-first, so reverse for chronological order
+  const graded=log.filter(b=>b.result&&b.result!=='push').slice().reverse();
+  document.getElementById('rec-sparkline').innerHTML=_renderPLSparkline(graded);
+
+  // Pending
   const pending=log.filter(b=>!b.result).length;
   setText('rec-pending',pending?` · ${pending} pending result${pending>1?'s':''}  ↓`:'');
+
+  // Per-prop grid
+  document.getElementById('rec-prop-grid').innerHTML=_RECORD_PROP_ORDER.map(k=>{
+    const s=propStats[k];
+    const tot=s.w+s.l;
+    const recordTxt=tot?`${s.w}-${s.l}`:'—';
+    const roiTxt=tot?(s.profit>=0?'+':'')+s.profit.toFixed(1)+'u':'';
+    const cls=!tot?'empty':s.profit>0?'pos':s.profit<0?'neg':'';
+    return`<div class="prop-cell ${cls}">
+      <div class="pc-label">${_RECORD_PROP_SHORT[k]}</div>
+      <div class="pc-record">${recordTxt}</div>
+      <div class="pc-roi">${roiTxt}</div>
+    </div>`;
+  }).join('');
+
+  // Bet log (rating column retained for historical signal)
   const ratingColors={green:'#2ecc71',yellow:'#f39c12',red:'#e74c3c'};
   const ratingBg={green:'#0d3a0d',yellow:'#2a2000',red:'#2a0808'};
   const headers=document.getElementById('bet-log-headers');
@@ -2552,7 +2625,7 @@ function renderRecord(){
       <span class="bli-opp">${b.opponent||'—'}</span>
       <span class="bli-prop">${b.prop}</span>
       <span class="bli-odds">${b.odds>0?'+':''}${b.odds??'—'}</span>
-      <span class="bli-rating" style="background:${ratingBg[b.rating]};color:${ratingColors[b.rating]}">${b.rating}</span>
+      <span class="bli-rating" style="background:${ratingBg[b.rating]||'#1a1730'};color:${ratingColors[b.rating]||'#777'}">${b.rating||'—'}</span>
       <span class="bli-result">
         <button class="result-btn win ${b.result==='win'?'active':''}" onclick="setResult(${b.id},'win')">W</button>
         <button class="result-btn loss ${b.result==='loss'?'active':''}" onclick="setResult(${b.id},'loss')">L</button>
