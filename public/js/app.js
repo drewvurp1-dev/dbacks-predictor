@@ -249,6 +249,56 @@ function setApiCredits(remaining) {
   el.className = 'api-credits' + (n < 50 ? ' critical' : n < 200 ? ' low' : '');
 }
 
+// ═══════════ ODDS LOCK ════════════════════════════════════════════════════════
+// Don't refetch odds once the game has started — live in-game lines move wildly
+// and we don't bet live. Lock window: game-start → next calendar day 06:00 MST.
+// Arizona is UTC-7 year-round (no DST), so 06:00 MST == 13:00 UTC.
+function isOddsLocked(gameDateISO){
+  if(!gameDateISO)return false;
+  const start=new Date(gameDateISO);
+  if(isNaN(start))return false;
+  const mstStart=new Date(start.getTime()-7*3600*1000);
+  const unlockUTC=Date.UTC(
+    mstStart.getUTCFullYear(),
+    mstStart.getUTCMonth(),
+    mstStart.getUTCDate()+1,
+    13,0,0
+  );
+  const now=Date.now();
+  return now>=start.getTime()&&now<unlockUTC;
+}
+
+const ODDS_CACHE_KEY='corbetOddsCache';
+function readOddsCache(gameId){
+  if(!gameId)return null;
+  try{
+    const all=JSON.parse(localStorage.getItem(ODDS_CACHE_KEY)||'{}');
+    return all[gameId]||null;
+  }catch{return null;}
+}
+function writeOddsCache(gameId,payload){
+  if(!gameId)return;
+  try{
+    const all=JSON.parse(localStorage.getItem(ODDS_CACHE_KEY)||'{}');
+    all[gameId]={savedAt:Date.now(),eventsGame:payload.eventsGame,propData:payload.propData};
+    // Keep at most 30 entries, newest first
+    const entries=Object.entries(all).sort((a,b)=>(b[1].savedAt||0)-(a[1].savedAt||0)).slice(0,30);
+    localStorage.setItem(ODDS_CACHE_KEY,JSON.stringify(Object.fromEntries(entries)));
+  }catch{}
+}
+function setOddsLockBadge(savedAt){
+  const el=document.getElementById('odds-lock-badge');
+  if(!el)return;
+  if(savedAt){
+    const t=new Date(savedAt);
+    el.textContent='Odds locked · pre-game line';
+    el.title=`Frozen at ${t.toLocaleString()}`;
+    el.classList.remove('hidden');
+  }else{
+    el.classList.add('hidden');
+  }
+}
+
 // ═══════════ TOGGLES ══════════════════════════════════════════════════════════
 function setThrows(v){S.pitcherThrows=v;document.getElementById('throws-R').classList.toggle('active',v==='R');document.getElementById('throws-L').classList.toggle('active',v==='L');}
 function setHome(v){S.isHome=v;document.getElementById('loc-home').classList.toggle('active',v);document.getElementById('loc-away').classList.toggle('active',!v);}
@@ -890,6 +940,8 @@ async function autoLoadNextGame(){
       S.opposingTeam=oppSide?.team?.name||'';
       S.opposingTeamAbbr=oppSide?.team?.abbreviation||'';
       S.gameStatus=game.status?.abstractGameState||'Preview';
+      S.gameDate=game.gameDate||null;
+      S.gamePk=game.gamePk||null;
       const pp=oppSide?.probablePitcher;
       if(pp?.id&&pp?.fullName&&!S.pitcher){
         await selectPitcher(pp.id,pp.fullName);
@@ -1949,30 +2001,53 @@ async function loadCorbet(){
     renderDashboard();
 
     // ── Phase 2: Odds + bets (optional — cards already visible above) ─────────
-    const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
-    {const rem=r.headers.get('X-Requests-Remaining');if(rem!=null)setApiCredits(rem);}
-    const eventsText=await r.text();
-    let events;
-    try{events=JSON.parse(eventsText);}catch(e){throw new Error('Could not parse Odds API response.');}
-    if(!Array.isArray(events)){throw new Error(events?.message||'Unexpected Odds API response');}
+    // Lock window: once the game starts, freeze odds until 06:00 MST next morning.
+    // Live in-game lines move wildly and we don't bet live, so we replay the last
+    // pre-game fetch from localStorage instead of hitting the API.
+    const locked=S.gameStatus==='Live'||S.gameStatus==='Final'||isOddsLocked(S.gameDate);
+    let dbacksGame, propData;
+    if(locked){
+      const cached=readOddsCache(S.gamePk);
+      if(!cached){
+        hide('corbet-loading');
+        const msg='Odds locked while game is in progress. No pre-game line was captured for this game.';
+        document.getElementById('corbet-no-props').textContent=msg;
+        show('corbet-no-props');
+        document.getElementById('dash-best-bets').innerHTML=`<div class="dash-empty">${msg}</div>`;
+        setOddsLockBadge(null);
+        return;
+      }
+      dbacksGame=cached.eventsGame;
+      propData=cached.propData;
+      setOddsLockBadge(cached.savedAt);
+    }else{
+      setOddsLockBadge(null);
+      const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
+      {const rem=r.headers.get('X-Requests-Remaining');if(rem!=null)setApiCredits(rem);}
+      const eventsText=await r.text();
+      let events;
+      try{events=JSON.parse(eventsText);}catch(e){throw new Error('Could not parse Odds API response.');}
+      if(!Array.isArray(events)){throw new Error(events?.message||'Unexpected Odds API response');}
 
-    const dbacksGame=events.find(e=>e.home_team?.includes('Arizona')||e.away_team?.includes('Arizona'));
-    if(!dbacksGame){
-      hide('corbet-loading');
-      const msg='No D-backs game on the board yet — props usually post the evening before or morning of game day.';
-      document.getElementById('corbet-no-props').textContent=msg;
-      show('corbet-no-props');
-      document.getElementById('dash-best-bets').innerHTML=`<div class="dash-empty">${msg}</div>`;
-      return;
+      dbacksGame=events.find(e=>e.home_team?.includes('Arizona')||e.away_team?.includes('Arizona'));
+      if(!dbacksGame){
+        hide('corbet-loading');
+        const msg='No D-backs game on the board yet — props usually post the evening before or morning of game day.';
+        document.getElementById('corbet-no-props').textContent=msg;
+        show('corbet-no-props');
+        document.getElementById('dash-best-bets').innerHTML=`<div class="dash-empty">${msg}</div>`;
+        return;
+      }
+
+      const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
+      const propBooks='draftkings,fanduel,betmgm';
+      const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
+      const propsText=await pr.text();
+      try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
+      if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
+
+      writeOddsCache(S.gamePk,{eventsGame:dbacksGame,propData});
     }
-
-    const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
-    const propBooks='draftkings,fanduel,betmgm';
-    const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
-    const propsText=await pr.text();
-    let propData;
-    try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
-    if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
 
     // Build per-player market maps in one pass through bookmaker data.
     // The fetch only requests DK/FD/MGM, so every returned book is implicitly trusted.
