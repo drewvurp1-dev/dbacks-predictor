@@ -1645,8 +1645,10 @@ function _hrrOverPct(line, ss, recentLog){
     const cnt=counts.filter(c=>c>k).length;
     return (cnt/counts.length)*100;
   }
-  const gp=ss?.gamesPlayed||1;
-  const hrrPG=(((parseInt(ss?.hits)||0)+(parseInt(ss?.runs)||0)+(parseInt(ss?.rbi)||0))/gp)||1.85;
+  // No recent-game log — fall back to season rate with Bayesian shrinkage.
+  // League avg H+R+RBI per game ~1.55-1.7 depending on year; use 1.6 as prior.
+  const totalHRR=(parseInt(ss?.hits)||0)+(parseInt(ss?.runs)||0)+(parseInt(ss?.rbi)||0);
+  const hrrPG=_shrunkRate(totalHRR,parseInt(ss?.gamesPlayed)||0,1.6,60);
   return (1-_poissonCDF(hrrPG,k))*100;
 }
 
@@ -1689,6 +1691,18 @@ function devig(overPrices,underPrices){
   return{overProb:Math.pow(o,k)*100,underProb:Math.pow(u,k)*100};
 }
 
+// Shrink a player rate toward league average using Bayesian-style mixing.
+// `numerator` and `denominator` are the player's totals (e.g., walks / PA).
+// `priorN` is the "equivalent prior observations" — higher = more shrinkage.
+// For 30-PA player with priorN=60, shrinkage weights player rate 33% vs 67% league.
+// For 500-PA player with priorN=60, player rate gets 89% weight. Stable for vets,
+// regression-aware for callups.
+function _shrunkRate(numerator,denominator,leagueAvg,priorN){
+  if(!denominator||denominator<=0)return leagueAvg;
+  const n=denominator;
+  return (numerator + priorN*leagueAvg) / (n + priorN);
+}
+
 function modelProbability(propKey,line,score){
   const ss=S.seasonStat;
   const pa=ss?.plateAppearances||1;
@@ -1717,9 +1731,10 @@ function modelProbability(propKey,line,score){
     p=lerp3(score,20,8,50,14,80,28);
   }
   else if(propKey==='batter_walks'){
-    const bbF=ss?.baseOnBalls?(ss.baseOnBalls/pa):0.09;
+    // League avg BB rate ~9%. Stabilization point ~120 PA → priorN=60 (light shrinkage for vets).
+    const bbF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,60):0.09;
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
-    const pBBF=S.pitcher?.st?.baseOnBalls?(S.pitcher.st.baseOnBalls/pitcherPA):0.08;
+    const pBBF=S.pitcher?.st?.baseOnBalls?_shrunkRate(parseInt(S.pitcher.st.baseOnBalls)||0,pitcherPA,0.08,80):0.08;
     const blended=bbF*0.6+pBBF*0.4;
     const rateBase=line<=0.5
       ?(1-Math.pow(1-blended,gamePAs))*100
@@ -1728,9 +1743,10 @@ function modelProbability(propKey,line,score){
     p=scoreBase*0.6+rateBase*0.4;
   }
   else if(propKey==='batter_strikeouts'){
-    const kF=ss?.strikeOuts?(ss.strikeOuts/pa):0.18;
+    // League avg K rate ~22% batter / ~22% pitcher. K rate stabilizes ~60 PA → priorN=40.
+    const kF=ss?.strikeOuts?_shrunkRate(parseInt(ss.strikeOuts)||0,pa,0.22,40):0.22;
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
-    const pKF=S.pitcher?.st?.strikeOuts?(S.pitcher.st.strikeOuts/pitcherPA):0.22;
+    const pKF=S.pitcher?.st?.strikeOuts?_shrunkRate(parseInt(S.pitcher.st.strikeOuts)||0,pitcherPA,0.22,60):0.22;
     const whiffAdj=S.statcast?.whiff?(S.statcast.whiff-22)*0.01:0;
     const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj);
     const rateBase=line<=0.5
@@ -1740,7 +1756,8 @@ function modelProbability(propKey,line,score){
     p=scoreBase*0.6+rateBase*0.4;
   }
   else if(propKey==='batter_rbis'){
-    const rbiPG=(ss?.rbi&&ss?.gamesPlayed)?(ss.rbi/ss.gamesPlayed):0.4;
+    // League avg RBI/G ~0.43. priorN=60 games (stabilization point for per-game rates).
+    const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60);
     const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
     const scoreBase=lerp3(score,20,15,50,28,80,45);
     p=scoreBase*0.6+rateBase*0.4;
@@ -1748,7 +1765,8 @@ function modelProbability(propKey,line,score){
     else if(S.lineupProtection?.tier==='weak')p-=5;
   }
   else if(propKey==='batter_runs_scored'){
-    const runPG=(ss?.runs&&ss?.gamesPlayed)?(ss.runs/ss.gamesPlayed):0.55;
+    // League avg runs/G ~0.55. priorN=60 games.
+    const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60);
     const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
     const scoreBase=lerp3(score,20,18,50,32,80,50);
     p=scoreBase*0.5+rateBase*0.5;
