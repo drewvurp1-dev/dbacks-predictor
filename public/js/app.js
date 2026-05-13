@@ -2033,9 +2033,18 @@ function generateCorbetBets(score,factors,rawMarketMap){
       edgeStrength=absDelta>=10?'strong':absDelta>=6?'moderate':absDelta>=3?'small':'none';
     }
 
+    // Market-confidence flag based on raw imbalance at the selected line. Heavily
+    // asymmetric markets (sideShare far from 50/50) are harder to devig accurately —
+    // we can't tell if the imbalance is "real" matchup signal or a book-shaded line.
+    // Doesn't change the recommendation; just informs the user that EV is more
+    // uncertain on these. minImbalance was the |sideShare - 0.5| of the chosen line.
+    let marketConfidence='high';
+    if(minImbalance>=0.20)marketConfidence='low';
+    else if(minImbalance>=0.10)marketConfidence='medium';
+
     results.push({
       prop:PROP_NAMES[propKey],propKey,line,direction,
-      delta,absDelta,ev,edgeStrength,
+      delta,absDelta,ev,edgeStrength,marketConfidence,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
       overBest,underBest,
@@ -2532,9 +2541,12 @@ function renderDashboard(){
         const deltaStr=evLine
           ?`${evLine}<br><span style="font-size:9px;opacity:0.7">${deltaLine}</span>`
           :deltaLine;
+        const softMarketBadge=b.marketConfidence==='low'
+          ?' <span class="dpb-soft-market" title="Asymmetric market — devigging less reliable; EV is more uncertain">⚠</span>'
+          :'';
         return`<tr>
           <td>${icon}</td>
-          <td class="dpb-prop">${b.prop} ${b.line} ${b.direction.toUpperCase()}</td>
+          <td class="dpb-prop">${b.prop} ${b.line} ${b.direction.toUpperCase()}${softMarketBadge}</td>
           <td class="dpb-mc">${b.mcConfidence!=null?b.mcConfidence.toFixed(0)+'%':'—'}</td>
           <td class="dpb-delta" style="color:${deltaColor}">${deltaStr}</td>
           <td class="dpb-odds">${fmtOdds(bestOdds?.price)}<span class="dpb-book">${bookAbbrev(bestOdds?.book||'')}</span></td>
