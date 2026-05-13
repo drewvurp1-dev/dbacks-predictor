@@ -1633,6 +1633,20 @@ function _gamePAs(){
   return 3.7;
 }
 
+// Times-Through-the-Order (TTOP) bonus for hits-based props. Hitters perform
+// noticeably better the more times they see a starter (~+30 pts wOBA on 3rd TTO).
+// Top-of-order batters get more TTO3 exposure when starters go 5+ innings. Bullpen
+// games dilute the effect since hitters face fresh arms each turn through.
+// Returns pp adjustment to add to model over-prob.
+function _ttopBonus(){
+  if(S.pitcher?.bullpenGame)return 0;
+  const o=S.currentOrder;
+  if(!o)return 0;
+  if(o<=3)return 2;   // ~40% of PAs are TTO3 — biggest familiarity edge
+  if(o<=6)return 1;   // some TTO3 exposure when starter goes 6+
+  return 0;           // bottom of order: mostly TTO1/TTO2
+}
+
 // H+R+RBI estimate. These three events are positively correlated (a hit often produces
 // a run or RBI; HRs produce all three), so summing rates and feeding to a single Poisson
 // understates variance and biases OVER probability high. When we have ≥10 recent games,
@@ -1727,6 +1741,7 @@ function modelProbability(propKey,line,score){
       const whip=parseFloat(S.pitcher.st.whip);
       if(isFinite(whip))p+=Math.max(-4,Math.min(4,(whip-1.30)*15));
     }
+    p+=_ttopBonus();
   }
   else if(propKey==='batter_total_bases'){
     if(line<=0.5)      p=lerp3(score,20,38,50,58,80,74);
@@ -1739,9 +1754,11 @@ function modelProbability(propKey,line,score){
       const whip=parseFloat(S.pitcher.st.whip);
       if(isFinite(whip))p+=Math.max(-3,Math.min(3,(whip-1.30)*12));
     }
+    p+=_ttopBonus();
   }
   else if(propKey==='batter_home_runs'){
     p=lerp3(score,20,8,50,14,80,28);
+    p+=_ttopBonus();
   }
   else if(propKey==='batter_walks'){
     // League avg BB rate ~9%. Stabilization point ~120 PA → priorN=60 (light shrinkage for vets).
@@ -1796,6 +1813,7 @@ function modelProbability(propKey,line,score){
     // Roughly 2/3 the magnitude of RBI/Runs since hits are unaffected.
     if(S.lineupProtection?.tier==='strong')p+=3;
     else if(S.lineupProtection?.tier==='weak')p-=3;
+    p+=_ttopBonus();
   }
 
   if(p===null)return null;
