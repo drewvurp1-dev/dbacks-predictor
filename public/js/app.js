@@ -1322,7 +1322,7 @@ async function runPrediction(){
   const era=S.pitcher?.st?.era||document.getElementById('m-pitcher-era')?.value;
   document.getElementById('pred-header').textContent=`${S.playerName} · ${pn} (${hand}HP)${era?` · ERA ${parseFloat(era).toFixed(2)}`:''}`;
   renderFactorCards(factors,catTotals);
-  document.getElementById('pitch-display').innerHTML=Object.entries(S.pitcherPitches).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a).map(([type,pct])=>`<div class="pitch-row"><span class="pitch-label">${type}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${pct}%</span></div>`).join('');
+  document.getElementById('pitch-display').innerHTML=_renderPitchMatchup();
   S.lastScore=score;S.lastPrediction={score,tier,factors,catTotals,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:document.getElementById('game-date').value||new Date().toISOString().split('T')[0]};
   savePredictionForGrading(S.lastPrediction);
   // Refresh game log every time prediction runs so Last 10 Games is always current
@@ -1863,6 +1863,117 @@ function _pitchMatchupFactor(){
     primaryBatterK:top?.k,
     primaryBatterWhiff:top?.whiff,
   });
+}
+
+// Render the Pitch Mix card on the Prediction Score panel as a per-pitch matchup
+// table. For each pitch the pitcher throws (sorted by usage), show:
+//   - pitcher's usage % (bar)
+//   - batter's BA / SLG / K% / wOBA on that pitch
+// Stats are colored vs the batter's overall baseline across all pitches:
+//   green = batter performs better than baseline on this pitch (or whiffs less)
+//   red   = batter performs worse (or whiffs more)
+// Falls back to a simple pitcher-only bar view when arsenal data isn't available.
+function _renderPitchMatchup(){
+  const arsenal=S.pitchArsenal;
+  const pid=S.pitcher?.id;
+  const bid=S.playerId;
+  const pit = arsenal&&pid ? arsenal.pitchers?.[String(pid)] : null;
+  const bat = arsenal&&bid ? arsenal.batters?.[String(bid)] : null;
+
+  // Fallback: no arsenal pitcher data → original bar-only display
+  if(!pit){
+    return Object.entries(S.pitcherPitches||{}).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a)
+      .map(([type,pct])=>`<div class="pitch-row"><span class="pitch-label">${type}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${pct}%</span></div>`).join('')
+      || '<div style="color:#777;font-family:monospace;font-size:11px;">No pitch mix data available.</div>';
+  }
+
+  // Compute the batter's baseline (weighted by PA per pitch type) across all pitches.
+  // Used to color individual rows as good/bad vs this batter's average.
+  let bBA=0,bSLG=0,bK=0,bWoba=0,bWhiff=0,bPA=0;
+  if(bat){
+    for(const pt in bat.pitches){
+      const r=bat.pitches[pt];
+      const w=r.pa||0;
+      if(!w)continue;
+      if(r.ba!=null)    bBA+=r.ba*w;
+      if(r.slg!=null)   bSLG+=r.slg*w;
+      if(r.k_pct!=null) bK+=r.k_pct*w;
+      if(r.woba!=null)  bWoba+=r.woba*w;
+      if(r.whiff!=null) bWhiff+=r.whiff*w;
+      bPA+=w;
+    }
+  }
+  const base = bPA>0 ? {ba:bBA/bPA,slg:bSLG/bPA,k:bK/bPA,woba:bWoba/bPA,whiff:bWhiff/bPA} : null;
+
+  // Color helpers — "good" means good for the batter.
+  //   higherBetter=true:  green if val > base by ≥thresh, red if val < base - thresh
+  //   higherBetter=false: inverted (used for K% and whiff%)
+  const colorFor=(val,baseline,thresh,higherBetter)=>{
+    if(val==null||baseline==null)return '#aaa';
+    const d=val-baseline;
+    const good = higherBetter ? d>=thresh : d<=-thresh;
+    const bad  = higherBetter ? d<=-thresh : d>=thresh;
+    if(good)return '#2ecc71';
+    if(bad) return '#e74c3c';
+    return '#aaa';
+  };
+  const fmt3=v=>v==null?'—':v.toFixed(3).replace(/^0/,'');
+  const fmtPct=v=>v==null?'—':v.toFixed(0)+'%';
+
+  // Sort pitches by usage descending. Only show pitches the pitcher actually throws.
+  const pitches = Object.entries(pit.pitches)
+    .filter(([,d])=>(d.usage||0)>=2) // hide pitch types thrown <2% of the time
+    .sort(([,a],[,b])=>(b.usage||0)-(a.usage||0));
+
+  if(!pitches.length){
+    return '<div style="color:#777;font-family:monospace;font-size:11px;">No arsenal data for this pitcher.</div>';
+  }
+
+  const header = base
+    ? `<div class="matchup-baseline">Batter baseline: <strong>${fmt3(base.ba)}</strong> BA · <strong>${fmt3(base.slg)}</strong> SLG · <strong>${fmtPct(base.k)}</strong> K · <strong>${fmt3(base.woba)}</strong> wOBA</div>`
+    : `<div class="matchup-baseline" style="color:#888;">No per-pitch batter data — showing pitcher arsenal only.</div>`;
+
+  const rows = pitches.map(([code,p])=>{
+    const name=_PITCH_NAMES[code]||code;
+    const usage=p.usage||0;
+    const br=bat?.pitches?.[code];
+    const usageBarColor = usage>=30 ? '#A71930' : usage>=15 ? '#7a3560' : '#3a3560';
+    const usageBar = `<div class="matchup-bar-wrap"><div class="matchup-bar" style="width:${Math.min(100,usage*1.8)}%;background:${usageBarColor};"></div></div>`;
+
+    if(!br || (br.pa||0) < 15){
+      return `<div class="matchup-row">
+        <div class="matchup-pitch">${name}</div>
+        <div class="matchup-usage">${usageBar}<span class="matchup-usage-pct">${usage.toFixed(0)}%</span></div>
+        <div class="matchup-stats" style="color:#666;">— insufficient batter sample —</div>
+      </div>`;
+    }
+
+    const baCol  = colorFor(br.ba,  base?.ba,  0.025, true);
+    const slgCol = colorFor(br.slg, base?.slg, 0.05,  true);
+    const kCol   = colorFor(br.k_pct,base?.k,  3,     false);
+    const wCol   = colorFor(br.woba,base?.woba,0.020, true);
+
+    return `<div class="matchup-row">
+      <div class="matchup-pitch">${name}</div>
+      <div class="matchup-usage">${usageBar}<span class="matchup-usage-pct">${usage.toFixed(0)}%</span></div>
+      <div class="matchup-stats">
+        <span style="color:${baCol};">${fmt3(br.ba)}</span>
+        <span class="matchup-sep">·</span>
+        <span style="color:${slgCol};">${fmt3(br.slg)}</span>
+        <span class="matchup-sep">·</span>
+        <span style="color:${kCol};">${fmtPct(br.k_pct)} K</span>
+        <span class="matchup-sep">·</span>
+        <span style="color:${wCol};">${fmt3(br.woba)}</span>
+        <span class="matchup-sample">${br.pa} PA</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const legend = base
+    ? `<div class="matchup-legend">Colors compare each pitch vs batter's all-pitch baseline. <span style="color:#2ecc71;">Green</span> = better for batter, <span style="color:#e74c3c;">red</span> = worse.</div>`
+    : '';
+
+  return header + rows + legend;
 }
 
 // Short driver string for the analysis text — only emit when the matchup signal

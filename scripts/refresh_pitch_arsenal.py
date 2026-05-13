@@ -40,7 +40,7 @@ def _clean_number(value):
 
 
 def _build_pitcher_index(df):
-    """player_id -> {name, pitches: {pitch_type: {usage, whiff, k_pct, woba, n}}}"""
+    """player_id -> {name, pitches: {pitch_type: {usage, whiff, k_pct, woba, ba, slg, n}}}"""
     index = {}
     for _, row in df.iterrows():
         pid = int(row["player_id"])
@@ -53,13 +53,15 @@ def _build_pitcher_index(df):
             "whiff": _clean_number(row.get("whiff_percent")),
             "k_pct": _clean_number(row.get("k_percent")),
             "woba": _clean_number(row.get("woba")),
+            "ba": _clean_number(row.get("ba")),
+            "slg": _clean_number(row.get("slg")),
             "n": n,
         }
     return index
 
 
 def _build_batter_index(df):
-    """player_id -> {name, pitches: {pitch_type: {whiff, k_pct, woba, usage_seen, pa}}}"""
+    """player_id -> {name, pitches: {pitch_type: {whiff, k_pct, woba, ba, slg, usage_seen, pa}}}"""
     index = {}
     for _, row in df.iterrows():
         pid = int(row["player_id"])
@@ -71,6 +73,8 @@ def _build_batter_index(df):
             "whiff": _clean_number(row.get("whiff_percent")),
             "k_pct": _clean_number(row.get("k_percent")),
             "woba": _clean_number(row.get("woba")),
+            "ba": _clean_number(row.get("ba")),
+            "slg": _clean_number(row.get("slg")),
             "usage_seen": _clean_number(row.get("pitch_usage")),
             "pa": pa,
         }
