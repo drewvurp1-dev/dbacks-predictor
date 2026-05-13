@@ -249,6 +249,16 @@ function setApiCredits(remaining) {
   el.className = 'api-credits' + (n < 50 ? ' critical' : n < 200 ? ' low' : '');
 }
 
+// ═══════════ SPORTSBOOK ABBREVIATIONS ════════════════════════════════════════
+const BOOK_ABBREVS={
+  'DraftKings':'DK',
+  'BetMGM':'MGM',
+  'FanDuel':'FD',
+  'Caesars':'CZR',
+  'Bet365':'365',
+};
+function bookAbbrev(name){return BOOK_ABBREVS[name]||name;}
+
 // ═══════════ ODDS LOCK ════════════════════════════════════════════════════════
 // Don't refetch odds once the game has started — live in-game lines move wildly
 // and we don't bet live. Lock window: game-start → next calendar day 06:00 MST.
@@ -2040,7 +2050,7 @@ async function loadCorbet(){
       }
 
       const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
-      const propBooks='draftkings,fanduel,betmgm';
+      const propBooks='draftkings,betmgm,caesars,bet365';
       const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
       const propsText=await pr.text();
       try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
@@ -2050,7 +2060,7 @@ async function loadCorbet(){
     }
 
     // Build per-player market maps in one pass through bookmaker data.
-    // The fetch only requests DK/FD/MGM, so every returned book is implicitly trusted.
+    // The fetch only requests DK/MGM/CZR/365, so every returned book is implicitly trusted.
     // Bad-price defense is the lopsided-line gate in the line picker (generateCorbetBets).
     const playerMaps={};
     activeRoster().forEach(p=>{playerMaps[p.id]={};});
@@ -2179,9 +2189,9 @@ function renderCorbetBets(){
         <div style="font-size:10px;color:#666;font-family:monospace;margin:8px 0 10px;">⚠ Insufficient market data — fewer than 2 reliable bookmakers</div>
         <div style="display:flex;gap:14px;font-family:monospace;font-size:11px;">
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Over</div>
-            <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${b.overBest?.book||''}</span></div></div>
+            <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.overBest?.book||'')}</span></div></div>
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Under</div>
-            <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${b.underBest?.book||''}</span></div></div>
+            <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.underBest?.book||'')}</span></div></div>
         </div>
       </div>`;
       const overW=b.marketOverProb.toFixed(0);
@@ -2228,9 +2238,9 @@ function renderCorbetBets(){
         </div>
         <div style="display:flex;gap:14px;margin:0 0 8px;flex-wrap:wrap;font-family:monospace;font-size:11px;">
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Over</div>
-            <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${b.overBest?.book||''}</span></div></div>
+            <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.overBest?.book||'')}</span></div></div>
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Under</div>
-            <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${b.underBest?.book||''}</span></div></div>
+            <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.underBest?.book||'')}</span></div></div>
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Delta</div>
             <div style="color:${deltaColor};font-weight:700;">${deltaLabel}</div></div>
         </div>
@@ -2361,13 +2371,18 @@ function renderDashboard(){
             :'<span class="dpb-icon-moderate">■</span>';
         const bestOdds=b.direction.toLowerCase()==='over'?b.overBest:b.underBest;
         const deltaColor=b.ev!=null?(b.ev>=0?'#2ecc71':'#e74c3c'):(b.delta>0?'#2ecc71':'#e74c3c');
-        const deltaStr=b.ev!=null?`EV ${b.ev>=0?'+':''}${(b.ev*100).toFixed(1)}%`:(b.delta>0?'+':'')+b.delta.toFixed(1)+'pp';
+        const deltaSign=b.delta>=0?'+':'';
+        const deltaLine=`Δ ${deltaSign}${b.delta.toFixed(1)}pp`;
+        const evLine=b.ev!=null?`EV ${b.ev>=0?'+':''}${(b.ev*100).toFixed(1)}%`:null;
+        const deltaStr=evLine
+          ?`${evLine}<br><span style="font-size:9px;opacity:0.7">${deltaLine}</span>`
+          :deltaLine;
         return`<tr>
           <td>${icon}</td>
           <td class="dpb-prop">${b.prop} ${b.line} ${b.direction.toUpperCase()}</td>
           <td class="dpb-mc">${b.mcConfidence!=null?b.mcConfidence.toFixed(0)+'%':'—'}</td>
           <td class="dpb-delta" style="color:${deltaColor}">${deltaStr}</td>
-          <td class="dpb-odds">${fmtOdds(bestOdds?.price)}<span class="dpb-book">${bestOdds?.book||''}</span></td>
+          <td class="dpb-odds">${fmtOdds(bestOdds?.price)}<span class="dpb-book">${bookAbbrev(bestOdds?.book||'')}</span></td>
         </tr>`;
       }).join('');
       betsHtml=`<table class="dpb-bets-table">${rows}</table>
