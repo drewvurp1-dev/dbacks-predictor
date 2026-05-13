@@ -1720,12 +1720,25 @@ function modelProbability(propKey,line,score){
   if(propKey==='batter_hits'){
     if(line<=0.5) p=lerp3(score,20,42,50,62,80,78);
     else          p=lerp3(score,20,18,50,32,80,52);
+    // WHIP is the most direct pitcher signal for hits-allowed. League avg ~1.30.
+    // Elite pitcher (1.10) → -3pp, poor (1.50) → +3pp. Skip on bullpen games (the
+    // listed pitcher faces only a few batters, so their WHIP isn't representative).
+    if(S.pitcher?.st?.whip&&!S.pitcher.bullpenGame){
+      const whip=parseFloat(S.pitcher.st.whip);
+      if(isFinite(whip))p+=Math.max(-4,Math.min(4,(whip-1.30)*15));
+    }
   }
   else if(propKey==='batter_total_bases'){
     if(line<=0.5)      p=lerp3(score,20,38,50,58,80,74);
     else if(line<=1.5) p=lerp3(score,20,22,50,40,80,62);
     else if(line<=2.5) p=lerp3(score,20,12,50,24,80,42);
     else               p=lerp3(score,20, 6,50,14,80,26);
+    // Same WHIP signal but smaller magnitude — TB is heavily HR-skewed and HR
+    // suppression is handled by the HR park factor + xFIP/HR9 score factors.
+    if(S.pitcher?.st?.whip&&!S.pitcher.bullpenGame){
+      const whip=parseFloat(S.pitcher.st.whip);
+      if(isFinite(whip))p+=Math.max(-3,Math.min(3,(whip-1.30)*12));
+    }
   }
   else if(propKey==='batter_home_runs'){
     p=lerp3(score,20,8,50,14,80,28);
