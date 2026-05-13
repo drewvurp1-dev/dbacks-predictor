@@ -10,6 +10,7 @@ app.use('/odds',       require('./routes/odds'));
 app.use('/weather',    require('./routes/weather'));
 app.use('/savant',     require('./routes/savant'));
 app.use('/fangraphs',  require('./routes/fangraphs'));
+app.use('/pitch-arsenal', require('./routes/arsenal'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`D-backs Predictor running on port ${PORT}`));
