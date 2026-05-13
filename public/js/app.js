@@ -1495,6 +1495,10 @@ function scoreIndividualProp(propKey){
     const lpc=S.pitcher?.lastOuting?.numberOfPitches;
     if(lpc&&lpc>=100)    score+=3;
     if(mu&&muW>0&&mu.bb!=null) score+=(mu.bb/Math.max(mu.ab,1))*200*muW;
+    // Cold weather hurts pitcher command (stiff fingers, harder to grip ball) → more BB.
+    // Effect is small but real for outdoor games.
+    if(tempF<=50)        score+=3;
+    else if(tempF<=60)   score+=1;
   }
   else if(propKey==='batter_strikeouts'){
     if(kPct!=null)       score+=(kPct-18)*1.8;
@@ -1506,6 +1510,10 @@ function scoreIndividualProp(propKey){
     else if(umpAdj>0)    score-=umpAdj*1.5;
     if(mu&&muW>0&&mu.k!=null) score+=(mu.k/Math.max(mu.ab,1))*250*muW;
     if(pEra!=null)       score-=(pEra-4.00)*2;
+    // Cold weather slightly boosts K rate (tight grip on bat, reduced contact). Hot
+    // weather slightly suppresses Ks (relaxed hitters, sharper vision in good light).
+    if(tempF<=50)        score+=2;
+    else if(tempF>=90)   score-=1;
   }
   else if(propKey==='batter_runs_scored'){
     if(obp!=null)        score+=(obp-0.330)*80;
