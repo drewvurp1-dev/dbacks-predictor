@@ -91,7 +91,7 @@ function kellyFraction(modelProb, odds) {
   return Math.max(0, (b * p - q) / b) * 0.125;
 }
 
-// Advanced pitcher metrics (FIP, xFIP, K-BB%, HR/9) derived from MLB Stats API
+// Advanced pitcher metrics (FIP, xFIP, SIERA, K-BB%, HR/9) derived from MLB Stats API
 // + Baseball Savant Statcast. Returns nulls when data is insufficient.
 const _FIP_CONSTANT = 3.10; // Approximates league-avg (ERA - raw FIP) — stable around 3.0-3.2
 const _LG_HRFB = 0.105;     // League-average HR per fly ball, used for xFIP normalization
@@ -102,19 +102,42 @@ function _computePitcherMetrics(st, statcast){
   const hbp=parseInt(st?.hitByPitch)||0;
   const k=parseInt(st?.strikeOuts)||0;
   const tbf=parseInt(st?.battersFaced)||0;
-  if(ip<1||tbf<1)return{fip:null,xfip:null,kbbPct:null,hr9:null};
+  if(ip<1||tbf<1)return{fip:null,xfip:null,siera:null,kbbPct:null,hr9:null};
   const fip=(13*hr+3*(bb+hbp)-2*k)/ip+_FIP_CONSTANT;
   const hr9=(hr/ip)*9;
   const kbbPct=((k-bb)/tbf)*100;
   let xfip=null;
   const fbPct=statcast?.fbPct;
+  const gbPct=statcast?.gbPct;
   if(fbPct!=null&&fbPct>0){
     const bip=Math.max(0,tbf-k-bb-hbp);
     const fbCount=bip*(fbPct/100);
     const expHR=fbCount*_LG_HRFB;
     xfip=(13*expHR+3*(bb+hbp)-2*k)/ip+_FIP_CONSTANT;
   }
-  return{fip,xfip,kbbPct,hr9};
+  // SIERA — FanGraphs formula. Captures K/BB plus batted-ball mix (GB - FB - PU).
+  // Pop-ups aren't in our Statcast cut, so we approximate (GB - FB - PU)/PA with
+  // (GB - FB)/PA, knowing this slightly understates the GB-pitcher advantage.
+  // Returns null when batted-ball mix isn't loaded.
+  let siera=null;
+  if(fbPct!=null&&gbPct!=null&&ip>=10){
+    const bip=Math.max(0,tbf-k-bb-hbp);
+    const gbCount=bip*(gbPct/100);
+    const fbCount=bip*(fbPct/100);
+    const kPA=k/tbf;
+    const bbPA=(bb+hbp)/tbf;
+    const battedDiff=(gbCount-fbCount)/tbf;
+    const ind = battedDiff>=0 ? 1 : -1;
+    siera = 6.145
+          - 16.986 * kPA
+          + 11.434 * bbPA
+          - 1.858 * battedDiff
+          + 7.653 * kPA * kPA
+          + ind * 6.664 * battedDiff * battedDiff
+          + 10.130 * kPA * battedDiff
+          - 5.195 * bbPA * battedDiff;
+  }
+  return{fip,xfip,siera,kbbPct,hr9};
 }
 
 // Score-variance estimate for Monte Carlo, derived from the hitter's profile.
@@ -660,17 +683,44 @@ function renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbP
   const whipC=whip<1.1?'good':whip>1.4?'bad':'';
   const fipNum=parseFloat(fip);
   const fipC=!isNaN(fipNum)?(fipNum<3.50?'good':fipNum>4.50?'bad':''):'';
-  const xfipNum=S.pitcher?.advanced?.xfip;
+  _renderPitcherSeasonBoxes();
+  document.getElementById('pt-pitchmix').innerHTML=PITCH_TYPES.map(pt=>{const p=S.pitcherPitches[pt]||0;if(!p)return'';return`<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;}).join('');
+  document.getElementById('pt-recent').innerHTML=last3.length?last3.map(g=>`<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K <span style="color:#999;margin-left:8px;">${g.stat.numberOfPitches||'—'} pitches</span></div>`).join(''):'<span style="color:#777;">No recent game log available.</span>';
+  document.getElementById('pt-workload').innerHTML=`<div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>${lastOuting?`<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches||'—'}</strong></div>`:''}${daysRest!=='—'&&daysRest<4?'<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>':''}${daysRest!=='—'&&daysRest>=5?'<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>':''}`;
+}
+
+// Renders the season stat boxes (ERA, FIP, xFIP, SIERA, WHIP, K-BB%, HR/9, …).
+// Called from renderPitcherTab on initial load and again from loadPitcherStatcast
+// once xFIP/SIERA become computable. Pulls everything off S.pitcher.{st,advanced}.
+function _renderPitcherSeasonBoxes(){
+  const p=S.pitcher;
+  if(!p?.st||!document.getElementById('pt-season'))return;
+  const st=p.st;
+  const pa=parseInt(st.battersFaced)||1;
+  const era=parseFloat(st.era);
+  const whip=parseFloat(st.whip);
+  const ip=st.inningsPitched||'—';
+  const kPct=st.strikeOuts?((st.strikeOuts/pa)*100).toFixed(1)+'%':'—';
+  const bbPct=st.baseOnBalls?((st.baseOnBalls/pa)*100).toFixed(1)+'%':'—';
+  const k9=st.strikeOuts&&st.inningsPitched?((st.strikeOuts/parseFloat(st.inningsPitched))*9).toFixed(1):'—';
+  const fip=p.advanced?.fip!=null?p.advanced.fip.toFixed(2):'—';
+  const kbb=p.advanced?.kbbPct!=null?p.advanced.kbbPct.toFixed(1)+'%':'—';
+  const hr9=p.advanced?.hr9!=null?p.advanced.hr9.toFixed(2):'—';
+  const eraC=era<3.25?'good':era>5.0?'bad':'';
+  const whipC=whip<1.1?'good':whip>1.4?'bad':'';
+  const fipNum=parseFloat(fip);
+  const fipC=!isNaN(fipNum)?(fipNum<3.50?'good':fipNum>4.50?'bad':''):'';
+  const xfipNum=p.advanced?.xfip;
   const xfipC=xfipNum!=null?(xfipNum<3.50?'good':xfipNum>4.50?'bad':''):'';
   const xfipDisplay=xfipNum!=null?xfipNum.toFixed(2):'—';
+  const sieraNum=p.advanced?.siera;
+  const sieraC=sieraNum!=null?(sieraNum<3.50?'good':sieraNum>4.50?'bad':''):'';
+  const sieraDisplay=sieraNum!=null?sieraNum.toFixed(2):'—';
   const kbbNum=parseFloat(kbb);
   const kbbC=!isNaN(kbbNum)?(kbbNum>=15?'good':kbbNum<=8?'bad':''):'';
   const hr9Num=parseFloat(hr9);
   const hr9C=!isNaN(hr9Num)?(hr9Num<=0.9?'good':hr9Num>=1.5?'bad':''):'';
-  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average'],['FIP',fip,fipC,'Fielding independent (strips luck)'],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB'],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP'],['K-BB%',kbb,kbbC,'Skill gap — best K predictor'],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP'],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate'],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate'],['IP',ip,'','Innings pitched'],['K/9',k9,'','Strikeouts per 9'],['GS',st.gamesStarted||'—','','Games started']].map(([l,v,c,ctx])=>`<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v}</div><div class="stat-context">${ctx}</div></div>`).join('');
-  document.getElementById('pt-pitchmix').innerHTML=PITCH_TYPES.map(pt=>{const p=S.pitcherPitches[pt]||0;if(!p)return'';return`<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;}).join('');
-  document.getElementById('pt-recent').innerHTML=last3.length?last3.map(g=>`<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K <span style="color:#999;margin-left:8px;">${g.stat.numberOfPitches||'—'} pitches</span></div>`).join(''):'<span style="color:#777;">No recent game log available.</span>';
-  document.getElementById('pt-workload').innerHTML=`<div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>${lastOuting?`<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches||'—'}</strong></div>`:''}${daysRest!=='—'&&daysRest<4?'<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>':''}${daysRest!=='—'&&daysRest>=5?'<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>':''}`;
+  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average'],['FIP',fip,fipC,'Fielding independent (strips luck)'],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB'],['SIERA',sieraDisplay,sieraC,'Skill-based ERA: K, BB, batted-ball mix'],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP'],['K-BB%',kbb,kbbC,'Skill gap — best K predictor'],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP'],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate'],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate'],['IP',ip,'','Innings pitched'],['K/9',k9,'','Strikeouts per 9'],['GS',st.gamesStarted||'—','','Games started']].map(([l,v,c,ctx])=>`<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v}</div><div class="stat-context">${ctx}</div></div>`).join('');
 }
 
 async function loadPitcherStatcast(pitcherId){
@@ -767,8 +817,11 @@ async function loadPitcherStatcast(pitcherId){
       xera:     parseFloat(xeraRaw)||null,
     };
 
-    // Recompute pitcher metrics now that FB% is available — gives us xFIP
-    if(S.pitcher?.st){S.pitcher.advanced=_computePitcherMetrics(S.pitcher.st,S.pitcherStatcast);}
+    // Recompute pitcher metrics now that FB% is available — gives us xFIP and SIERA
+    if(S.pitcher?.st){
+      S.pitcher.advanced=_computePitcherMetrics(S.pitcher.st,S.pitcherStatcast);
+      _renderPitcherSeasonBoxes();
+    }
 
     const boxes=[
       statBox('Whiff%',    whiffPct,     'Whiff rate per pitch',       whiffC),
