@@ -1769,13 +1769,23 @@ function modelProbability(propKey,line,score){
 
   if(p===null)return null;
 
-  // Park factor adjustments (prop-specific, separate from general score)
+  // Park factor adjustments (prop-specific, separate from general score).
+  // Stadiums only carry hrF and hitF data; secondary effects are derived:
+  //   K rate ↓ in hitter parks (better visibility, warmer air) — use inverse hitF
+  //   Runs/RBI scale with run-scoring environment — blend hitF (contact) + hrF (power)
+  // Park effect on walks is small (umpire dominates), so we don't adjust BB.
   {const{hrF,hitF,elev:pElev,hasRoof}=_parkFactors();const rfClosed=hasRoof&&S.roofClosed;
   if(!rfClosed){
     if(propKey==='batter_home_runs'&&pElev<=4000)
       p+=Math.max(-8,Math.min(8,Math.round((hrF-1.0)*60)));
     else if(['batter_hits','batter_total_bases','batter_hits_runs_rbis'].includes(propKey))
       p+=Math.max(-5,Math.min(5,Math.round((hitF-1.0)*40)));
+    else if(propKey==='batter_strikeouts')
+      p+=Math.max(-3,Math.min(3,Math.round(-(hitF-1.0)*25)));
+    else if(propKey==='batter_runs_scored'||propKey==='batter_rbis'){
+      const runF=hitF*0.65+hrF*0.35;
+      p+=Math.max(-5,Math.min(5,Math.round((runF-1.0)*35)));
+    }
   }}
 
   // Trend adjustments — accumulated then capped at ±6pts total.
