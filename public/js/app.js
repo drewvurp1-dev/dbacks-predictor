@@ -2066,6 +2066,12 @@ function modelProbability(propKey,line,score){
     {const mu=_pitchMatchupFactor();
      if(mu)p+=Math.max(-3.5,Math.min(3.5,mu.wobaDelta*180));}
     p+=_ttopBonus();
+    // Direct contact-quality signal for TB. Hard-Hit% (no longer in calcPrediction) and
+    // Barrel% are the strongest batted-ball predictors of extra-base output, and they
+    // can diverge from season SLG when a hitter's results lag their underlying contact.
+    // League avg hhRate ~40%, barrel% ~8%. Capped ±3pp each.
+    if(S.statcast?.hhRate!=null) p+=Math.max(-3,Math.min(3,(S.statcast.hhRate-40)*0.12));
+    if(S.statcast?.brl!=null)    p+=Math.max(-3,Math.min(3,(S.statcast.brl-8)*0.35));
   }
   else if(propKey==='batter_home_runs'){
     p=lerp3(score,20,8,50,14,80,28);
@@ -2078,7 +2084,11 @@ function modelProbability(propKey,line,score){
     const hs=_handSplit();
     const bbF=(hs?.pa>=100&&hs?.bb!=null)?_shrunkRate(hs.bb,hs.pa,overallBBF,60):overallBBF;
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
-    const pBBF=S.pitcher?.st?.baseOnBalls?_shrunkRate(parseInt(S.pitcher.st.baseOnBalls)||0,pitcherPA,0.08,80):0.08;
+    let pBBF=S.pitcher?.st?.baseOnBalls?_shrunkRate(parseInt(S.pitcher.st.baseOnBalls)||0,pitcherPA,0.08,80):0.08;
+    // Bullpen games: hitters face multiple relievers. Blend listed pitcher's BB rate
+    // toward league-average reliever BB/PA (~8.5% — BB/9 ≈ 3.2 over ~4.3 PA/IP).
+    // 40% listed / 60% reliever pool.
+    if(S.pitcher?.bullpenGame) pBBF=pBBF*0.4+0.085*0.6;
     const blended=bbF*0.6+pBBF*0.4;
     const rateBase=line<=0.5
       ?(1-Math.pow(1-blended,gamePAs))*100
@@ -2095,7 +2105,12 @@ function modelProbability(propKey,line,score){
     const hs=_handSplit();
     const kF=(hs?.pa>=80&&hs?.k!=null)?_shrunkRate(hs.k,hs.pa,overallKF,40):overallKF;
     const pitcherPA=S.pitcher?.st?.battersFaced||1;
-    const pKF=S.pitcher?.st?.strikeOuts?_shrunkRate(parseInt(S.pitcher.st.strikeOuts)||0,pitcherPA,0.22,60):0.22;
+    let pKF=S.pitcher?.st?.strikeOuts?_shrunkRate(parseInt(S.pitcher.st.strikeOuts)||0,pitcherPA,0.22,60):0.22;
+    // Bullpen games: hitters face multiple relievers, not just the listed arm. Blend the
+    // listed pitcher's K rate toward league-average reliever K/PA (~23.5% — relievers
+    // strike out batters at a higher clip than starters, K/9 ≈ 9.0 over ~4.3 PA/IP).
+    // 40% listed / 60% reliever pool.
+    if(S.pitcher?.bullpenGame) pKF=pKF*0.4+0.235*0.6;
     const whiffAdj=S.statcast?.whiff?(S.statcast.whiff-22)*0.01:0;
     // Pitch-mix matchup — adds the gap between the batter's overall K% and their
     // expected K% in this pitcher's actual usage mix. Half-weight, capped ±0.04
