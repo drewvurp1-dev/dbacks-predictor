@@ -1005,10 +1005,15 @@ async function loadTwoWeekSchedule(){
   try{
     // Arizona-local "today" so late-evening games show on the right day
     const azNow=new Date(Date.now()-7*60*60*1000);
-    const startD=new Date(azNow); startD.setUTCHours(0,0,0,0);
+    const todayD=new Date(azNow); todayD.setUTCHours(0,0,0,0);
+    // Anchor the strip to the most recent Sunday so rows are always Sun→Sat.
+    // When today rolls into Sunday, the old top week falls off and a new bottom week appears.
+    const dow=todayD.getUTCDay(); // 0=Sun … 6=Sat
+    const startD=new Date(todayD); startD.setUTCDate(startD.getUTCDate()-dow);
     const endD=new Date(startD.getTime()+13*24*60*60*1000);
     const start=startD.toISOString().split('T')[0];
     const end=endD.toISOString().split('T')[0];
+    const todayKey=todayD.toISOString().split('T')[0];
     const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=probablePitcher,team&startDate=${start}&endDate=${end}`);
     const d=await r.json();
 
@@ -1022,7 +1027,6 @@ async function loadTwoWeekSchedule(){
       });
     });
 
-    const todayKey=start;
     const cells=[];
     for(let i=0;i<14;i++){
       const d2=new Date(startD.getTime()+i*24*60*60*1000);
