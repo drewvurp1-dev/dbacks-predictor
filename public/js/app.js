@@ -3548,12 +3548,17 @@ async function fetchActualStats(playerId, date) {
 
 // Grade a performance — returns outcome category
 function gradePerformance(actual, predScore) {
-  // Composite performance score based on total bases + hits
-  const perfScore = (actual.totalBases * 15) + (actual.hits * 10) + (actual.walks * 8) + (actual.runs * 5) + (actual.rbi * 5);
-  const outcome = perfScore >= 55 ? 'great' : perfScore >= 35 ? 'good' : perfScore >= 15 ? 'avg' : 'poor';
+  // wOBA-calibrated weights. TB captures hit quality without double-counting raw hits.
+  // Walk ≈ 75% of a single → 15 pts vs 20 pts (1 TB). K is unambiguously negative.
+  // Capped 0–100 so the chart Y axis works without separate normalization.
+  const raw = (actual.totalBases * 20) + (actual.walks * 15)
+            + (actual.runs * 5) + (actual.rbi * 5)
+            - (actual.strikeOuts * 4);
+  const perfScore = Math.max(0, Math.min(100, raw));
+  const outcome = perfScore >= 65 ? 'great' : perfScore >= 40 ? 'good' : perfScore >= 15 ? 'avg' : 'poor';
   // Model accuracy: did high score predict good performance?
   const modelExpectedGood = predScore >= 60;
-  const actuallyGood = perfScore >= 35;
+  const actuallyGood = perfScore >= 40;
   const modelAccurate = modelExpectedGood === actuallyGood;
   return { perfScore, outcome, modelAccurate, modelExpectedGood, actuallyGood };
 }
@@ -3740,7 +3745,7 @@ async function renderGradePanel() {
         <span style="font-family:monospace;font-size:13px;font-weight:800;color:#A71930;">${g.score}</span>
         <span style="color:#aaa;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${playerLast}</span>
         <span style="color:#ccc;font-family:monospace;font-size:11px;">${g.actual.summary||`${g.actual.hits}H ${g.actual.totalBases}TB`}</span>
-        <span style="color:#888;font-family:monospace;font-size:11px;">${g.actual.totalBases}</span>
+        <span style="color:#888;font-family:monospace;font-size:11px;" title="Performance score">${g.grade.perfScore}</span>
         <span class="outcome-badge ${g.grade.outcome}">${outcomeLabels[g.grade.outcome]||g.grade.outcome}</span>
         <span class="model-badge ${modelClass}">${modelLabel}</span>
       </div>`;
@@ -3835,8 +3840,7 @@ function drawPerfChart(log) {
 
   const xStep = chartW / (recent.length - 1);
 
-  // Actual performance line (normalized 0-100)
-  const maxPerf = Math.max(...recent.map(g => g.grade.perfScore), 1);
+  // Actual performance line — perfScore is already capped 0-100 by gradePerformance
   ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 2; ctx.beginPath();
   recent.forEach((g, i) => {
     const x = pad.l + i * xStep;
