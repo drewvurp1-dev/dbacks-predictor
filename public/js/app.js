@@ -3737,16 +3737,19 @@ async function renderGradePanel() {
     document.getElementById('grade-log-headers').classList.remove('hidden');
     const outcomeLabels = { great:'🔥 Great', good:'✅ Good', avg:'😐 Average', poor:'❌ Poor' };
     document.getElementById('grade-log').innerHTML = log.map(g => {
-      const modelLabel = g.grade.modelAccurate ? 'Accurate' : 'Off';
-      const modelClass = g.grade.modelAccurate ? 'accurate' : 'off';
+      // Recompute on render so historical entries always reflect the current formula.
+      // Stored g.grade.perfScore is frozen at grade time and may be stale after a formula tweak.
+      const live = gradePerformance(g.actual, g.score);
+      const modelLabel = live.modelAccurate ? 'Accurate' : 'Off';
+      const modelClass = live.modelAccurate ? 'accurate' : 'off';
       const playerLast = g.playerName ? g.playerName.split(' ').pop() : '—';
       return `<div class="grade-log-row">
         <span style="color:#888;font-family:monospace;font-size:11px;">${g.date}</span>
         <span style="font-family:monospace;font-size:13px;font-weight:800;color:#A71930;">${g.score}</span>
         <span style="color:#aaa;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${playerLast}</span>
         <span style="color:#ccc;font-family:monospace;font-size:11px;">${g.actual.summary||`${g.actual.hits}H ${g.actual.totalBases}TB`}</span>
-        <span style="color:#888;font-family:monospace;font-size:11px;" title="Performance score">${g.grade.perfScore}</span>
-        <span class="outcome-badge ${g.grade.outcome}">${outcomeLabels[g.grade.outcome]||g.grade.outcome}</span>
+        <span style="color:#888;font-family:monospace;font-size:11px;" title="Performance score">${live.perfScore}</span>
+        <span class="outcome-badge ${live.outcome}">${outcomeLabels[live.outcome]||live.outcome}</span>
         <span class="model-badge ${modelClass}">${modelLabel}</span>
       </div>`;
     }).join('');
@@ -3840,18 +3843,22 @@ function drawPerfChart(log) {
 
   const xStep = chartW / (recent.length - 1);
 
+  // Recompute perfScore on render so the chart always reflects the current formula
+  // (stored values may be frozen from earlier formula versions).
+  const points = recent.map(g => ({ ...g, livePerf: gradePerformance(g.actual, g.score).perfScore }));
+
   // Actual performance line — perfScore is already capped 0-100 by gradePerformance
   ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 2; ctx.beginPath();
-  recent.forEach((g, i) => {
+  points.forEach((g, i) => {
     const x = pad.l + i * xStep;
-    const y = pad.t + chartH - (g.grade.perfScore / 100) * chartH;
+    const y = pad.t + chartH - (g.livePerf / 100) * chartH;
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
   ctx.stroke();
 
   // Prediction score line
   ctx.strokeStyle = '#A71930'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.beginPath();
-  recent.forEach((g, i) => {
+  points.forEach((g, i) => {
     const x = pad.l + i * xStep;
     const y = pad.t + chartH - (g.score / 100) * chartH;
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -3859,9 +3866,9 @@ function drawPerfChart(log) {
   ctx.stroke(); ctx.setLineDash([]);
 
   // Dots + dates
-  recent.forEach((g, i) => {
+  points.forEach((g, i) => {
     const x = pad.l + i * xStep;
-    const py = pad.t + chartH - (g.grade.perfScore / 100) * chartH;
+    const py = pad.t + chartH - (g.livePerf / 100) * chartH;
     ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(x, py, 3, 0, Math.PI*2); ctx.fill();
     if (i % 3 === 0) {
       ctx.fillStyle = '#777'; ctx.font = '8px monospace';
