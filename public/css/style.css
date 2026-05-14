@@ -467,3 +467,87 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .cal-cell-bad { color: #e74c3c; }
 .cal-cell-neutral { color: #ccc; }
 .cal-cell-muted { color: #777; }
+
+/* ── Two-week schedule (dashboard) ── */
+.sched-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.sched-grid + .sched-grid { margin-top: 6px; }
+.sched-cell {
+  background: #0e0c22;
+  border: 1px solid #1a1730;
+  border-radius: 6px;
+  padding: 6px 5px;
+  min-height: 78px;
+  font-family: monospace;
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sched-cell.sched-today { border-color: #009A8B; box-shadow: 0 0 0 1px rgba(0,154,139,0.35) inset; }
+.sched-cell.sched-off   { background: #0a0918; color: #444; }
+.sched-cell.sched-final { opacity: 0.65; }
+.sched-day {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #6a6a8a;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+.sched-dow { letter-spacing: 1.4px; }
+.sched-date { color: #888; letter-spacing: 0.5px; }
+.sched-cell.sched-today .sched-day { color: #009A8B; }
+.sched-opp {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+.sched-time {
+  font-size: 10px;
+  color: #aaa;
+}
+.sched-venue {
+  font-size: 9px;
+  color: #6a6a8a;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-pp {
+  font-size: 9px;
+  color: #c8a55c;
+  margin-top: auto;
+  padding-top: 2px;
+  border-top: 1px dashed #1a1730;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-pp.sched-pp-tbd { color: #555; }
+.sched-result {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+.sched-result.sched-w { color: #2ecc71; }
+.sched-result.sched-l { color: #e74c3c; }
+.sched-live {
+  font-size: 9px;
+  color: #f39c12;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.sched-off-label {
+  font-size: 11px;
+  text-align: center;
+  margin-top: 18px;
+  letter-spacing: 1px;
+}
