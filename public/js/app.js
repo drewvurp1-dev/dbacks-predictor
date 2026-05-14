@@ -996,6 +996,139 @@ const VENUE_MAP={
   'Sutter Health Park':'Sutter Health Park (OAK)',
 };
 
+// ── Two-week schedule (dashboard strip) ─────────────────────────────────────
+// Renders a 14-day grid (today + 13 forward) of D-backs games.
+// Off days are shown as muted cells. Final games get scores. Live games get a "LIVE" tag.
+async function loadTwoWeekSchedule(){
+  const el=document.getElementById('dash-schedule');
+  if(!el)return;
+  try{
+    // Arizona-local "today" so late-evening games show on the right day
+    const azNow=new Date(Date.now()-7*60*60*1000);
+    const startD=new Date(azNow); startD.setUTCHours(0,0,0,0);
+    const endD=new Date(startD.getTime()+13*24*60*60*1000);
+    const start=startD.toISOString().split('T')[0];
+    const end=endD.toISOString().split('T')[0];
+    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=probablePitcher,team&startDate=${start}&endDate=${end}`);
+    const d=await r.json();
+
+    // Index games by their officialDate so we can fall through to OFF DAY for missing days
+    const byDate={};
+    (d?.dates||[]).forEach(dt=>{
+      (dt.games||[]).forEach(g=>{
+        const k=g.officialDate||dt.date;
+        if(!byDate[k])byDate[k]=[];
+        byDate[k].push(g);
+      });
+    });
+
+    const todayKey=start;
+    const cells=[];
+    for(let i=0;i<14;i++){
+      const d2=new Date(startD.getTime()+i*24*60*60*1000);
+      const dk=d2.toISOString().split('T')[0];
+      const dayLabel=d2.toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'}).toUpperCase();
+      // Compact M/D so "THU 5/14" fits on one line in a narrow cell
+      const dateLabel=`${d2.getUTCMonth()+1}/${d2.getUTCDate()}`;
+      const games=byDate[dk]||[];
+      const isToday=dk===todayKey;
+      cells.push(_renderScheduleCell({dayLabel,dateLabel,games,isToday}));
+    }
+
+    // Two rows of 7
+    el.innerHTML=`
+      <div class="sched-grid">${cells.slice(0,7).join('')}</div>
+      <div class="sched-grid">${cells.slice(7,14).join('')}</div>`;
+  }catch(e){
+    el.innerHTML=`<div class="dash-empty">Schedule unavailable: ${e.message}</div>`;
+  }
+}
+
+function _renderScheduleCell({dayLabel,dateLabel,games,isToday}){
+  const todayCls=isToday?' sched-today':'';
+  if(!games.length){
+    return`<div class="sched-cell sched-off${todayCls}">
+      <div class="sched-day"><span class="sched-dow">${dayLabel}</span> <span class="sched-date">${dateLabel}</span></div>
+      <div class="sched-off-label">OFF DAY</div>
+    </div>`;
+  }
+  // If a doubleheader, show the first game and a "+1" hint
+  const game=games[0];
+  const extra=games.length>1?` <span style="color:#777">+${games.length-1}</span>`:'';
+  const isHome=game.teams?.home?.team?.id===109;
+  const opp=isHome?game.teams?.away?.team:game.teams?.home?.team;
+  const oppAbbr=opp?.abbreviation||opp?.teamCode?.toUpperCase()||'???';
+  const venue=game.venue?.name||'';
+  const state=game.status?.abstractGameState||'Preview';
+
+  // Time in MST (Arizona is UTC-7, no DST)
+  let timeStr='TBD';
+  if(!game.status?.startTimeTBD&&game.gameDate){
+    const utc=new Date(game.gameDate);
+    const h=(utc.getUTCHours()-7+24)%24;
+    const m=utc.getUTCMinutes().toString().padStart(2,'0');
+    const ampm=h>=12?'p':'a';
+    const h12=h%12===0?12:h%12;
+    timeStr=`${h12}:${m}${ampm}`;
+  }
+
+  // Probable pitcher (the opposing pitcher when home, ours when away — show opposing for context)
+  const oppSide=isHome?game.teams?.away:game.teams?.home;
+  const pp=oppSide?.probablePitcher;
+  const ppName=pp?.fullName||null;
+  const ppLast=ppName?ppName.split(' ').slice(-1)[0]:null;
+
+  // Final games: show W/L score
+  if(state==='Final'){
+    const ourSide=isHome?game.teams?.home:game.teams?.away;
+    const oppGameSide=isHome?game.teams?.away:game.teams?.home;
+    const our=ourSide?.score??0;
+    const their=oppGameSide?.score??0;
+    const win=our>their;
+    return`<div class="sched-cell sched-final${todayCls}">
+      <div class="sched-day"><span class="sched-dow">${dayLabel}</span> <span class="sched-date">${dateLabel}</span></div>
+      <div class="sched-opp">${isHome?'vs':'@'} ${oppAbbr}${extra}</div>
+      <div class="sched-venue">${_shortVenue(venue)}</div>
+      <div class="sched-result ${win?'sched-w':'sched-l'}">${win?'W':'L'} ${our}-${their}</div>
+    </div>`;
+  }
+
+  // Live games: show LIVE tag
+  if(state==='Live'){
+    const inning=game.linescore?.currentInningOrdinal||'';
+    return`<div class="sched-cell${todayCls}">
+      <div class="sched-day"><span class="sched-dow">${dayLabel}</span> <span class="sched-date">${dateLabel}</span></div>
+      <div class="sched-opp">${isHome?'vs':'@'} ${oppAbbr}${extra}</div>
+      <div class="sched-venue">${_shortVenue(venue)}</div>
+      <div class="sched-live">● LIVE ${inning}</div>
+    </div>`;
+  }
+
+  // Preview / scheduled
+  return`<div class="sched-cell${todayCls}">
+    <div class="sched-day">${dayLabel} ${dateLabel}</div>
+    <div class="sched-opp">${isHome?'vs':'@'} ${oppAbbr}${extra}</div>
+    <div class="sched-time">${timeStr}</div>
+    <div class="sched-venue">${_shortVenue(venue)}</div>
+    <div class="sched-pp${ppName?'':' sched-pp-tbd'}" title="${ppName||'TBD'}">
+      ${ppName?'vs '+ppLast:'PP TBD'}
+    </div>
+  </div>`;
+}
+
+function _shortVenue(name){
+  if(!name)return'';
+  // Trim common suffixes for tighter cells
+  return name
+    .replace(/\s+(at\s+)?Park$/i,'')
+    .replace(/\s+Stadium$/i,'')
+    .replace(/\s+Field$/i,'')
+    .replace(/Citizens Bank/i,'CBP')
+    .replace(/Oracle Park/i,'Oracle')
+    .replace(/Dodger/i,'Dodger')
+    .slice(0,18);
+}
+
 async function autoLoadNextGame(){
   try{
     // Use Arizona local date (UTC-7 year-round, no DST) so late-evening games near UTC midnight
@@ -4040,3 +4173,4 @@ renderRecord();
 renderGradePanel();
 _loadPitchArsenal(); // warm cache for pitch-mix matchup factor
 autoLoadNextGame(); // overwrites date/time and pulls umpire, weather, lineup
+loadTwoWeekSchedule(); // dashboard 14-day calendar strip
