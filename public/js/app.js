@@ -216,11 +216,11 @@ function _swapToPlayer(playerId) {
   // before swapping again so the original outer state isn't permanently lost.
   if (_modalSavedS) { Object.assign(S, _modalSavedS); _modalSavedS = null; }
   const saved = {
-    playerName: S.playerName, splits: S.splits, seasonStat: S.seasonStat,
+    playerName: S.playerName, playerId: S.playerId, splits: S.splits, seasonStat: S.seasonStat,
     rispStat: S.rispStat, statcast: S.statcast, recentGameLog: S.recentGameLog,
     matchupStats: S.matchupStats, lastScore: S.lastScore, currentOrder: S.currentOrder
   };
-  S.playerName = p.name; S.splits = p.splits; S.seasonStat = p.seasonStat;
+  S.playerName = p.name; S.playerId = playerId; S.splits = p.splits; S.seasonStat = p.seasonStat;
   S.rispStat = p.rispStat; S.statcast = p.statcast;
   S.recentGameLog = p.recentGameLog; S.matchupStats = p.matchupStats;
   S.lastScore = p.score; S.currentOrder = p.order;
@@ -244,6 +244,10 @@ function openPlayerDetails(playerId) {
   document.getElementById('pred-header').textContent = `${snap.name} · ${pn} (${hand}HP)${era ? ` · ERA ${parseFloat(era).toFixed(2)}` : ''}`;
   renderFactorCards(snap.factors, snap.catTotals);
   buildPredictionSummary(snap.factors);
+  // Auto-populate the Pitch Mix matchup grid so users see batter vs pitcher arsenal
+  // without having to click Run Prediction. _swapToPlayer already set S.playerId so
+  // _renderPitchMatchup keys into the right batter row in S.pitchArsenal.
+  document.getElementById('pitch-display').innerHTML = _renderPitchMatchup();
   document.getElementById('result-nav-btns').style.display = 'none';
   hide('no-prediction'); show('prediction-output');
   openModal('panel-result', snap.name + ' · Details');
