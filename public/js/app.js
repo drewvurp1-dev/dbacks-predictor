@@ -1257,13 +1257,11 @@ function calcPrediction(){
     if(bbP>=12)add('BB%',bbP.toFixed(1)+'%',3,'Elite walk rate');
     if(kP>=28)add('K%',kP.toFixed(1)+'%',-3,'High strikeout rate');
   }
-  // Batter Statcast factors
+  // Batter Statcast factors. Barrel% lives only in per-prop adjustments (TB/HR
+  // in modelProbability) — it has no causal effect on walks/Ks/runs/RBI and was
+  // double-counting against TB through the score → lerp3 pipeline.
   if(S.statcast){
-    const {brl,hhRate,whiff,xwoba,xba,xslg,sweetSpot,batSpeed,swingLength,squaredUp,blast,avgEV}=S.statcast;
-    if(brl!=null){
-      if(brl>=12)add('Barrel%',brl.toFixed(1)+'%',4,'Elite barrel rate — hard contact tendency');
-      else if(brl<=4)add('Barrel%',brl.toFixed(1)+'%',-2,'Below-average barrel rate');
-    }
+    const {whiff,xwoba,gb,fb}=S.statcast;
     if(whiff!=null){
       if(whiff<=18)add('Whiff%',whiff.toFixed(1)+'%',3,'Low whiff rate — difficult to strike out');
       else if(whiff>=30)add('Whiff%',whiff.toFixed(1)+'%',-3,'High whiff rate — vulnerable to swing-and-miss stuff');
@@ -1272,27 +1270,20 @@ function calcPrediction(){
       if(xwoba>=0.380)add('xwOBA',xwoba.toFixed(3),4,'Elite expected production — hitting the ball well');
       else if(xwoba<=0.290)add('xwOBA',xwoba.toFixed(3),-3,'Below-average expected production');
     }
-    const{gb,fb}=S.statcast;
     if(gb!=null&&gb>=55)add('GB%',gb.toFixed(1)+'%',-2,'Heavy ground ball hitter — limits extra-base upside');
     if(fb!=null&&fb>=45)add('FB%',fb.toFixed(1)+'%',2,'High fly ball rate — elevated HR and total bases ceiling');
   }
-  // Pitcher Statcast factors
+  // Pitcher Statcast factors. xwOBA-against is a composite of Barrel%, HH%, and
+  // launch angle, so keeping the components alongside it would triple-count the
+  // same suppression skill. Put Away% is Whiff% in 2-strike counts — same K-skill
+  // signal again. Both dropped in favor of xwOBA-against + Whiff%.
   if(S.pitcherStatcast){
-    const{whiff:pWhiff,kPct,putAway,gbPct,brlAgainst,hhAgainst,xwoba:pXwoba,xera}=S.pitcherStatcast;
+    const{whiff:pWhiff,gbPct,xwoba:pXwoba}=S.pitcherStatcast;
     if(pWhiff!=null){
       if(pWhiff>=28)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',-4,'Elite whiff rate — dominant swing-and-miss stuff','pitcher');
       else if(pWhiff<=16)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',3,'Low pitcher whiff rate — hitter-friendly contact','pitcher');
     }
-    if(putAway!=null&&putAway>=33)add('Put Away%',putAway.toFixed(1)+'%',-2,'Elite 2-strike put-away — finishes hitters','pitcher');
     if(gbPct!=null&&gbPct>=50)add('GB%',gbPct.toFixed(1)+'%',-2,'Ground ball pitcher — limits extra-base power','pitcher');
-    if(brlAgainst!=null){
-      if(brlAgainst<=5)add('Barrel% vs',brlAgainst.toFixed(1)+'%',-2,'Suppresses barrels — elite contact quality control','pitcher');
-      else if(brlAgainst>=12)add('Barrel% vs',brlAgainst.toFixed(1)+'%',3,'High barrel rate allowed — hitter-friendly contact','pitcher');
-    }
-    if(hhAgainst!=null){
-      if(hhAgainst<=33)add('HH% vs',hhAgainst.toFixed(1)+'%',-2,'Allows very little hard contact','pitcher');
-      else if(hhAgainst>=48)add('HH% vs',hhAgainst.toFixed(1)+'%',3,'Allows heavy hard contact — hitter-friendly','pitcher');
-    }
     if(pXwoba!=null){
       if(pXwoba<=0.280)add('xwOBA vs',pXwoba.toFixed(3),-3,'Elite expected wOBA suppression','pitcher');
       else if(pXwoba>=0.370)add('xwOBA vs',pXwoba.toFixed(3),3,'High xwOBA allowed — hitter-friendly profile','pitcher');
@@ -1681,14 +1672,56 @@ function _poissonCDF(lambda,k){let p=0;for(let i=0;i<=k;i++)p+=Math.pow(lambda,i
 
 // Expected plate appearances per game by batting order slot.
 // Leadoff hitters get ~4.6 PAs; bottom-of-order ~3.7. Used by all PA-based prop models.
+// Expected plate appearances for the batter in this game. Drives binomial K/BB
+// probabilities directly, and a PA-vs-league multiplier (see _paMultiplier) for
+// hits/TB/runs/RBI props whose lerp3 anchors are calibrated to league-average PAs.
+//
+// Three layered effects:
+//   1. Lineup spot (biggest signal): top of order gets ~25% more PAs than bottom.
+//   2. Home/away: home team in a winning game state doesn't bat in the bottom 9.
+//      Empirically ~0.08 fewer PA/spot for the home team across a season.
+//   3. Run environment: hits/baserunners beget more PAs for the whole lineup.
+//      Estimated from opposing-pitcher WHIP + park hit/HR factors. Skipped on
+//      bullpen games since the listed pitcher's WHIP isn't representative.
 function _gamePAs(){
   const o=S.currentOrder;
-  if(!o)return 4.0;
-  if(o<=2)return 4.6;
-  if(o<=4)return 4.4;
-  if(o<=6)return 4.2;
-  if(o<=7)return 4.0;
-  return 3.7;
+  // Base PA by lineup spot — calibrated for an average 38-team-PA game.
+  // Default 4.2 (population mean) when order is unknown.
+  let pa;
+  if(!o) pa=4.2;
+  else if(o<=2) pa=4.6;
+  else if(o<=4) pa=4.4;
+  else if(o<=6) pa=4.2;
+  else if(o<=7) pa=4.0;
+  else pa=3.7;
+
+  // Home team gets slightly fewer PAs on average — home team in the lead entering
+  // the bottom of the 9th doesn't bat. Spread across ~25% of games.
+  if(S.isHome) pa-=0.08;
+
+  // Run environment: more baserunners = more PAs across the order. Apply as a
+  // multiplier on the base PA so each spot scales proportionally with team PAs.
+  if(!S.pitcher?.bullpenGame){
+    const{hitF,hrF,hasRoof}=_parkFactors();
+    const rfClosed=hasRoof&&S.roofClosed;
+    // Park run factor — hits dominate baserunner production, HRs round it out.
+    const parkRunF=rfClosed?1.0:(hitF*0.7+hrF*0.3);
+    // WHIP delta — league avg ~1.30. Elite 1.00 → -3% PAs, poor 1.50 → +2% PAs.
+    const whip=parseFloat(S.pitcher?.st?.whip);
+    const pitcherPaF=isFinite(whip)?1.0+(whip-1.30)*0.10:1.0;
+    const env=parkRunF*pitcherPaF;
+    // Cap the combined multiplier at ±8% to keep extreme matchups from compounding.
+    pa*=Math.max(0.92,Math.min(1.08,env));
+  }
+
+  return pa;
+}
+
+// PA multiplier vs league average — used to scale hits/TB/runs/RBI projections
+// whose lerp3 anchors assume a league-average ~4.2 PA game. Returns 1.0 when no
+// signal is available so callers can multiply unconditionally.
+function _paMultiplier(){
+  return _gamePAs()/4.2;
 }
 
 // Times-Through-the-Order (TTOP) bonus for hits-based props. Hitters perform
@@ -1710,7 +1743,7 @@ function _ttopBonus(){
 // understates variance and biases OVER probability high. When we have ≥10 recent games,
 // use the empirical CDF directly — it captures the real joint distribution. Otherwise
 // fall back to the summed-rate Poisson with the caveat that it's biased.
-function _hrrOverPct(line, ss, recentLog){
+function _hrrOverPct(line, ss, recentLog, gamePAs){
   const k=Math.floor(line);
   if(recentLog?.length>=10){
     const counts=recentLog.map(g=>(parseInt(g.stat?.hits)||0)+(parseInt(g.stat?.runs)||0)+(parseInt(g.stat?.rbi)||0));
@@ -1719,8 +1752,10 @@ function _hrrOverPct(line, ss, recentLog){
   }
   // No recent-game log — fall back to season rate with Bayesian shrinkage.
   // League avg H+R+RBI per game ~1.55-1.7 depending on year; use 1.6 as prior.
+  // Scale the per-game rate by today's expected PAs vs the league-average ~4.2.
+  const paMult=gamePAs?gamePAs/4.2:1.0;
   const totalHRR=(parseInt(ss?.hits)||0)+(parseInt(ss?.runs)||0)+(parseInt(ss?.rbi)||0);
-  const hrrPG=_shrunkRate(totalHRR,parseInt(ss?.gamesPlayed)||0,1.6,60);
+  const hrrPG=_shrunkRate(totalHRR,parseInt(ss?.gamesPlayed)||0,1.6,60)*paMult;
   return (1-_poissonCDF(hrrPG,k))*100;
 }
 
@@ -2039,6 +2074,10 @@ function modelProbability(propKey,line,score){
     return p2+(p3-p2)*(c-s2)/(s3-s2);
   }
 
+  // PA delta from league-average (4.2). Used to scale lerp3-based prop probs since
+  // those anchors assume a typical-game number of plate appearances.
+  const paDelta=gamePAs-4.2;
+
   if(propKey==='batter_hits'){
     if(line<=0.5) p=lerp3(score,20,42,50,62,80,78);
     else          p=lerp3(score,20,18,50,32,80,52);
@@ -2054,6 +2093,9 @@ function modelProbability(propKey,line,score){
     {const mu=_pitchMatchupFactor();
      if(mu)p+=Math.max(-3,Math.min(3,mu.wobaDelta*150));}
     p+=_ttopBonus();
+    // PA volume — extra PAs mean extra at-bats, which compound a hit chance.
+    // ±5pp at the cap (~±0.4 PA from average).
+    p+=Math.max(-5,Math.min(5,paDelta*12));
   }
   else if(propKey==='batter_total_bases'){
     if(line<=0.5)      p=lerp3(score,20,38,50,58,80,74);
@@ -2076,10 +2118,18 @@ function modelProbability(propKey,line,score){
     // League avg hhRate ~40%, barrel% ~8%. Capped ±3pp each.
     if(S.statcast?.hhRate!=null) p+=Math.max(-3,Math.min(3,(S.statcast.hhRate-40)*0.12));
     if(S.statcast?.brl!=null)    p+=Math.max(-3,Math.min(3,(S.statcast.brl-8)*0.35));
+    // PA volume adjustment, capped at ±4pp.
+    p+=Math.max(-4,Math.min(4,paDelta*10));
   }
   else if(propKey==='batter_home_runs'){
     p=lerp3(score,20,8,50,14,80,28);
     p+=_ttopBonus();
+    // Barrel% is the single strongest predictor of HR rate — drives HR/PA. Moved
+    // out of calcPrediction so it only affects power-relevant props. Cap ±4pp.
+    if(S.statcast?.brl!=null) p+=Math.max(-4,Math.min(4,(S.statcast.brl-8)*0.5));
+    // HR rate is per-PA, so extra PAs lift HR probability proportionally — but the
+    // base prob is small (~14%), so the absolute pp swing is modest. Cap ±2pp.
+    p+=Math.max(-2,Math.min(2,paDelta*5));
   }
   else if(propKey==='batter_walks'){
     // League avg BB rate ~9%. Stabilization point ~120 PA → priorN=60 (light shrinkage for vets).
@@ -2130,7 +2180,9 @@ function modelProbability(propKey,line,score){
   }
   else if(propKey==='batter_rbis'){
     // League avg RBI/G ~0.43. priorN=60 games (stabilization point for per-game rates).
-    const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60);
+    // Scale the per-game rate by today's expected PAs vs league average — high-PA
+    // games produce proportionally more RBI opportunities.
+    const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2);
     const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
     const scoreBase=lerp3(score,20,15,50,28,80,45);
     p=scoreBase*0.6+rateBase*0.4;
@@ -2138,8 +2190,8 @@ function modelProbability(propKey,line,score){
     else if(S.lineupProtection?.tier==='weak')p-=5;
   }
   else if(propKey==='batter_runs_scored'){
-    // League avg runs/G ~0.55. priorN=60 games.
-    const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60);
+    // League avg runs/G ~0.55. priorN=60 games. PA-scaled like RBI.
+    const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2);
     const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
     const scoreBase=lerp3(score,20,18,50,32,80,50);
     p=scoreBase*0.5+rateBase*0.5;
@@ -2149,7 +2201,7 @@ function modelProbability(propKey,line,score){
     else if(S.lineupProtection?.tier==='weak')p-=5;
   }
   else if(propKey==='batter_hits_runs_rbis'){
-    const rateBase=_hrrOverPct(line,ss,S.recentGameLog);
+    const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs);
     const scoreBase=lerp3(score,20,20,50,38,80,60);
     p=scoreBase*0.5+rateBase*0.5;
     // Composite of hits (no protection effect) + runs + RBI (both protection-sensitive).
