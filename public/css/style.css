@@ -553,18 +553,55 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-setup-link button:hover { color: #888; }
 .dash-player-header { font-size: 11px; font-weight: 900; font-family: 'Chakra Petch', monospace; color: #009A8B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #1a1730; }
 
+/* ── Tablet ── */
+@media (max-width: 768px) {
+  .content { padding: 14px 14px 16px; }
+  .card-body { padding: 14px 14px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .pitcher-card-grid { grid-template-columns: 1fr; gap: 12px; }
+  .pitcher-card-grid > .dash-pitcher-btn { align-self: stretch; justify-self: stretch; }
+  .sched-grid { grid-template-columns: repeat(4, 1fr); }
+  .prop-record-grid { grid-template-columns: repeat(3, 1fr); }
+  .record-summary-strip { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .record-summary-strip .rss-sparkline { grid-column: 1 / -1; padding-left: 0; border-left: none; border-top: 1px solid #1a1730; padding-top: 8px; }
+  .factor-perf-row { grid-template-columns: 1fr 70px 50px; row-gap: 4px; }
+  .factor-perf-row .factor-perf-bar-wrap { grid-column: 1 / -1; }
+}
+
 /* ── Mobile ── */
 @media (max-width: 560px) {
-  body { padding-bottom: 30px; }
+  body { padding-bottom: 30px; padding-bottom: max(30px, env(safe-area-inset-bottom)); }
   .content { padding: 10px; }
 
+  /* Prevent iOS auto-zoom when focusing form fields (font-size must be ≥ 16px) */
+  input, select, textarea { font-size: 16px; padding: 9px 11px; }
+  .toggle-btn { padding: 8px 14px; font-size: 11px; }
+
+  /* Form rows stack: label above field for full-width inputs */
+  .row { grid-template-columns: 1fr; gap: 6px; margin-bottom: 14px; }
+  .row label { font-size: 11px; }
+
+  /* Cards */
+  .card { margin-bottom: 12px; border-radius: 10px; }
+  .card-body { padding: 14px 12px; }
+  .card-header { padding: 10px 12px; font-size: 9px; letter-spacing: 2px; }
+
+  /* Grids reflow */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .stats-grid .stat-box:nth-child(odd) .stat-info .stat-tip { left: 0; right: auto; transform: none; }
+  .stats-grid .stat-box:nth-child(even) .stat-info .stat-tip { left: auto; right: 0; transform: none; }
+  .stat-info .stat-tip { width: min(220px, calc(100vw - 60px)); }
+  .weather-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .pitch-mix-grid { grid-template-columns: 1fr; }
+
   /* Header */
-  .header { padding: 10px 12px; }
+  .header { padding: 10px 12px; gap: 8px; }
   .site-title { font-size: 15px; letter-spacing: 2px; }
   .header small { font-size: 8px; letter-spacing: 2px; }
   .api-credits { display: none; }
   .odds-lock-badge { display: none; }
-  .header-btn { font-size: 9px; padding: 6px 8px; letter-spacing: 1px; }
+  .header-btn { font-size: 9px; padding: 9px 10px; letter-spacing: 1px; min-height: 36px; }
+  .header-right { gap: 6px; }
 
   /* Game banner */
   .dash-game-banner { padding: 10px 12px; margin-bottom: 10px; }
@@ -573,6 +610,9 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   /* Pitcher card */
   .dash-pitcher-card { padding: 10px 12px; margin-bottom: 10px; gap: 8px; }
   .dash-pitcher-name { font-size: 10px; }
+  .pitcher-card-grid { grid-template-columns: 1fr; gap: 10px; }
+  .pitcher-card-grid > .dash-pitcher-btn { align-self: stretch; justify-self: stretch; text-align: center; }
+  .bm-name { font-size: 18px; }
 
   /* Best bets card */
   .dash-best-bet-right { justify-content: flex-start; margin-top: 4px; }
@@ -587,16 +627,103 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   /* Player row body — stack columns */
   .dash-prow-body { gap: 10px; padding: 10px; }
   .dpb-left { width: 100%; flex-direction: row; justify-content: center; gap: 16px; min-width: 0; }
-  .dpb-center { min-width: 0; width: 100%; max-width: 100%; }
+  .dpb-center { min-width: 0; width: 100%; max-width: 100%; overflow-x: auto; }
   .dpb-right { min-width: 0; width: 100%; }
 
   /* Larger touch targets for buttons inside card */
   .dpb-details-btn { padding: 8px 12px; font-size: 9px; }
   .dpb-more-bets { padding: 10px; }
 
+  /* Factor rows — value wraps under label, note spans full width */
+  .factor-row { grid-template-columns: 14px 1fr auto; gap: 4px 8px; }
+  .factor-row .factor-note { grid-column: 1 / -1; padding-left: 22px; }
+
+  /* Schedule grid: 4 columns instead of 7 so cells stay legible */
+  .sched-grid { grid-template-columns: repeat(4, 1fr); }
+  .sched-cell { min-height: 70px; }
+
+  /* Record summary */
+  .record-summary-strip { grid-template-columns: 1fr 1fr; gap: 10px 16px; padding: 10px 12px; }
+  .record-summary-strip .rss-sparkline { grid-column: 1 / -1; padding-left: 0; border-left: none; border-top: 1px solid #1a1730; padding-top: 8px; }
+  .prop-record-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+  /* Bet log: reflow 8 columns into a 2-row stacked card */
+  #bet-log-headers { display: none !important; }
+  .bet-log-item {
+    grid-template-columns: auto 1fr auto auto;
+    grid-template-rows: auto auto auto;
+    column-gap: 8px;
+    row-gap: 4px;
+    padding: 10px 0;
+    font-size: 12px;
+  }
+  .bet-log-item .bli-date    { grid-row: 1; grid-column: 1; }
+  .bet-log-item .bli-player  { grid-row: 1; grid-column: 2; font-size: 11px; }
+  .bet-log-item .bli-opp     { grid-row: 1; grid-column: 3; font-size: 11px; }
+  .bet-log-item .del-btn     { grid-row: 1; grid-column: 4; font-size: 18px; padding: 0 4px; }
+  .bet-log-item .bli-prop    { grid-row: 2; grid-column: 1 / -1; }
+  .bet-log-item .bli-odds    { grid-row: 3; grid-column: 1; }
+  .bet-log-item .bli-rating  { grid-row: 3; grid-column: 2; justify-self: start; }
+  .bet-log-item .bli-result  { grid-row: 3; grid-column: 3 / -1; justify-self: end; }
+
+  /* Grade log: stack header columns vertically */
+  #grade-log-headers { display: none !important; }
+  .grade-log-row {
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-rows: auto auto;
+    row-gap: 4px;
+    column-gap: 8px;
+    padding: 10px 0;
+  }
+  .grade-log-row > span:nth-child(1) { grid-row: 1; grid-column: 1; }
+  .grade-log-row > span:nth-child(2) { grid-row: 1; grid-column: 2; }
+  .grade-log-row > span:nth-child(3) { grid-row: 1; grid-column: 3; }
+  .grade-log-row > span:nth-child(4) { grid-row: 2; grid-column: 1 / span 2; }
+  .grade-log-row > span:nth-child(5) { grid-row: 1; grid-column: 4; }
+  .grade-log-row > span:nth-child(6) { grid-row: 2; grid-column: 3; justify-self: end; }
+  .grade-log-row > span:nth-child(7) { grid-row: 2; grid-column: 4; justify-self: end; }
+
+  /* Factor perf rows: bar drops to a new line for full-width visualization */
+  .factor-perf-row { grid-template-columns: 1fr auto auto; row-gap: 4px; column-gap: 8px; }
+  .factor-perf-row .factor-perf-bar-wrap { grid-column: 1 / -1; height: 5px; }
+  .factor-perf-row .factor-perf-weight { text-align: right; }
+
+  /* Momentum bar */
+  .momentum-bar { gap: 10px; padding: 7px 10px; font-size: 10px; }
+  .momentum-divider { display: none; }
+
+  /* Calibration rows */
+  .cal-table { font-size: 10px; }
+  .cal-row { padding: 5px 4px; gap: 6px; }
+
+  /* Search dropdown gets more room when keyboard is up */
+  .search-results { max-height: 50vh; }
+
   /* Modal — full-width sheet */
   .modal-overlay { padding: 8px 4px 0; align-items: flex-end; }
-  .modal-frame { border-radius: 12px 12px 0 0; padding: 48px 12px 20px; max-height: 92vh; overflow-y: auto; }
+  .modal-frame {
+    border-radius: 12px 12px 0 0;
+    padding: 48px 12px 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .modal-close { font-size: 28px; padding: 4px 10px; }
+}
+
+/* ── Small phones (iPhone SE, etc.) ── */
+@media (max-width: 380px) {
+  .content { padding: 8px; }
+  .header { padding: 8px 10px; }
+  .site-title { font-size: 13px; letter-spacing: 1.5px; }
+  .header small { display: none; }
+  .header-btn { padding: 8px 8px; font-size: 9px; letter-spacing: 0.5px; }
+  .sched-grid { grid-template-columns: repeat(3, 1fr); }
+  .sched-cell { min-height: 64px; font-size: 9px; }
+  .stat-box .stat-val { font-size: 18px; }
+  .split-box .split-ops { font-size: 22px; }
+  .corbet-header { padding: 12px 14px; gap: 10px; }
+  .corbet-title { font-size: 12px; }
 }
 
 /* Low plate appearance warning */
