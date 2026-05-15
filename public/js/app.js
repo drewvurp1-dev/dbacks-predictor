@@ -1245,17 +1245,56 @@ function _renderBestMatchup(){
     </div>`;
   }
 
+  // Build a one-line summary explaining the pick
+  const summary=_buildMatchupSummary(top,oppHand);
+
   el.innerHTML=`<div class="bm-card">
     <div class="bm-header">
       <span class="bm-tag">★ Best Matchup</span>
+    </div>
+    <div class="bm-name-row">
+      <div class="bm-name">${top.player.name}</div>
       ${score!=null?`<div class="bm-score-circle" style="border-color:${scoreColor}"><span class="bm-score-num" style="color:${scoreColor}">${score}</span></div>`:''}
     </div>
-    <div class="bm-name">${top.player.name}</div>
     <div class="bm-line">${handLine}</div>
     ${recentLine}
     ${careerLine}
     ${betLine}
+    ${summary?`<div class="bm-summary">${summary}</div>`:''}
   </div>`;
+}
+
+// Generate a short italic reason explaining why this player is the best matchup pick.
+function _buildMatchupSummary(top,oppHand){
+  const reasons=[];
+  // Strong vs-handedness
+  const handOps=top.handOps;
+  if(handOps!=null){
+    if(handOps>=0.900)reasons.push(`elite vs ${oppHand}HP`);
+    else if(handOps>=0.800)reasons.push(`strong vs ${oppHand}HP`);
+    else if(handOps>=0.750)reasons.push(`above-average vs ${oppHand}HP`);
+  }
+  // Hot recent form (compute from recent log if present)
+  const log=top.snap?.recentGameLog||[];
+  if(log.length){
+    const last7=log.slice(0,7);
+    let h=0,ab=0;
+    last7.forEach(g=>{h+=parseInt(g.stat?.hits||0);ab+=parseInt(g.stat?.atBats||0);});
+    if(ab>=10){
+      const avg=h/ab;
+      if(avg>=0.350)reasons.push('hot streak');
+      else if(avg<=0.150)reasons.push('cold of late');
+    }
+  }
+  // Career edge vs this pitcher
+  if(top.mu&&top.muAb>=5){
+    if(top.mu.hr&&top.mu.hr>=1)reasons.push(`HR history off ${S.pitcher.name.split(' ').pop()}`);
+    else if(top.muOps&&top.muOps>=0.800)reasons.push(`hits ${S.pitcher.name.split(' ').pop()} well`);
+  }
+  if(!reasons.length)return'';
+  // Capitalize first reason
+  reasons[0]=reasons[0].charAt(0).toUpperCase()+reasons[0].slice(1);
+  return reasons.join(' · ');
 }
 
 // ── (LEGACY) Projected MVP banner — replaced by Best Matchup card above ─────
