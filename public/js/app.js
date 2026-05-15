@@ -3414,6 +3414,10 @@ function _renderPitcherCard(){
     const slotS=document.getElementById('dash-pitcher-splits-slot');
     if(slotS)slotS.innerHTML='';
   }
+  // Rebuilding the card wipes the matchup slot — repopulate it so opening a
+  // player's stats (which triggers a pitcher-card re-render via state changes)
+  // doesn't blank the Best Matchup card.
+  _renderBestMatchup();
 }
 
 function renderDashboard(){
