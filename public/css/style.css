@@ -573,12 +573,13 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   background: linear-gradient(135deg, rgba(243,156,18,0.06) 0%, rgba(0,154,139,0.04) 100%);
   border: 1px solid rgba(243,156,18,0.4);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   font-family: monospace;
-  font-size: 11px;
+  font-size: 12px;
+  justify-content: center;
 }
 .bm-empty {
   font-family: monospace;
@@ -618,18 +619,20 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 }
 .bm-name {
   font-family: Georgia, serif;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.3px;
+  margin-bottom: 2px;
 }
 .bm-line {
   color: #ccc;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.3px;
+  line-height: 1.45;
 }
 .bm-line b { color: #fff; font-weight: 700; }
-.bm-stat-lbl { color: #6a6a8a; font-size: 9px; letter-spacing: 0.6px; text-transform: uppercase; margin-right: 4px; }
+.bm-stat-lbl { color: #6a6a8a; font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; margin-right: 5px; }
 .bm-career { color: #ccc; }
 .bm-bet {
   margin-top: 4px;
