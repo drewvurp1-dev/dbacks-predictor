@@ -996,6 +996,258 @@ const VENUE_MAP={
   'Sutter Health Park':'Sutter Health Park (OAK)',
 };
 
+// ── Team momentum bar (dashboard top strip) ─────────────────────────────────
+// Pulls D-backs standings: streak, last 10, run differential, NL West rank.
+async function loadTeamMomentum(){
+  const el=document.getElementById('dash-momentum-bar');
+  if(!el)return;
+  try{
+    const r=await fetch(`/mlb/api/v1/standings?leagueId=104&season=2026&standingsTypes=regularSeason&hydrate=team`);
+    const d=await r.json();
+    let team=null;
+    (d?.records||[]).forEach(div=>{
+      (div.teamRecords||[]).forEach(tr=>{
+        if(tr.team?.id===109)team=tr;
+      });
+    });
+    if(!team){el.innerHTML='';return;}
+
+    const w=team.wins, l=team.losses;
+    const streakCode=team.streak?.streakCode||'—';
+    const streakCls=streakCode.startsWith('W')?'streak-w':streakCode.startsWith('L')?'streak-l':'';
+    const last10=(team.records?.splitRecords||[]).find(s=>s.type==='lastTen');
+    const last10Str=last10?`${last10.wins}-${last10.losses}`:'—';
+    const rs=team.runsScored??0;
+    const ra=team.runsAllowed??0;
+    const diff=rs-ra;
+    const diffStr=`${diff>=0?'+':''}${diff}`;
+    const diffCls=diff>0?'diff-pos':diff<0?'diff-neg':'';
+    const rank=team.divisionRank||'—';
+    const gb=team.gamesBack==='-'?'—':team.gamesBack;
+
+    el.innerHTML=`<div class="momentum-bar">
+      <div class="momentum-cell">
+        <span class="momentum-label">Record</span>
+        <span class="momentum-val">${w}-${l}</span>
+      </div>
+      <div class="momentum-divider"></div>
+      <div class="momentum-cell">
+        <span class="momentum-label">Streak</span>
+        <span class="momentum-val ${streakCls}">${streakCode}</span>
+      </div>
+      <div class="momentum-divider"></div>
+      <div class="momentum-cell">
+        <span class="momentum-label">Last 10</span>
+        <span class="momentum-val">${last10Str}</span>
+      </div>
+      <div class="momentum-divider"></div>
+      <div class="momentum-cell">
+        <span class="momentum-label">Run Diff</span>
+        <span class="momentum-val ${diffCls}">${diffStr}</span>
+      </div>
+      <div class="momentum-divider"></div>
+      <div class="momentum-cell">
+        <span class="momentum-label">NL West</span>
+        <span class="momentum-val">#${rank} · GB ${gb}</span>
+      </div>
+    </div>`;
+  }catch(e){
+    el.innerHTML='';
+  }
+}
+
+// ── Pitcher form (last 3 starts) ────────────────────────────────────────────
+// Called from _renderPitcherCard when S.pitcher.id is set. Renders below the
+// existing pitcher meta line.
+async function loadPitcherForm(pitcherId){
+  if(!pitcherId)return null;
+  try{
+    const r=await fetch(`/mlb/api/v1/people/${pitcherId}/stats?stats=gameLog&season=2026&group=pitching`);
+    const d=await r.json();
+    const splits=d?.stats?.[0]?.splits||[];
+    // Most recent 3, reverse-chronological
+    const last3=splits.slice(-3).reverse();
+    return last3.map(s=>{
+      const stat=s.stat||{};
+      const ip=parseFloat(stat.inningsPitched||0);
+      const er=parseInt(stat.earnedRuns||0,10);
+      const k=parseInt(stat.strikeOuts||0,10);
+      const bb=parseInt(stat.baseOnBalls||0,10);
+      // Quality indicator: ER<=2 + IP>=5 = good; ER>=5 OR IP<3 = bad; else mixed
+      let cls='pf-mixed';
+      if(er<=2&&ip>=5)cls='pf-good';
+      else if(er>=5||ip<3)cls='pf-bad';
+      const date=s.date?new Date(s.date+'T00:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'}):'';
+      return{date,ip,er,k,bb,cls};
+    });
+  }catch(e){
+    return null;
+  }
+}
+
+function _renderPitcherForm(starts){
+  if(!starts||!starts.length)return'';
+  return`<div class="dash-pitcher-form">${starts.map(s=>
+    `<div class="pf-start ${s.cls}">
+      <div class="pf-start-date">${s.date}</div>
+      <div class="pf-start-line">${s.ip} IP · ${s.er} ER</div>
+      <div class="pf-start-line">${s.k} K · ${s.bb} BB</div>
+    </div>`
+  ).join('')}</div>`;
+}
+
+// ── Projected MVP banner ────────────────────────────────────────────────────
+// Picks the player whose top bet has the highest EV (or delta as fallback)
+// and writes a templated reasoning summary based on observable factors.
+function _renderMvpBanner(){
+  const el=document.getElementById('dash-mvp-banner');
+  if(!el)return;
+
+  // Primary path: pick player whose top bet has the highest EV
+  const candidates=[];
+  (S.allPlayerBets||[]).forEach(pg=>{
+    if(pg.lowData)return;
+    const bestBet=pg.bets
+      .filter(b=>!b.insufficient&&b.edgeStrength!=='none'&&b.mcConfidence>=80)
+      .sort((a,b)=>(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100))[0];
+    if(!bestBet)return;
+    candidates.push({playerName:pg.playerName,bet:bestBet});
+  });
+
+  // Fallback: when odds aren't loaded yet, pick the player with the highest prediction score
+  if(!candidates.length){
+    const topPlayer=activeRoster()
+      .map(p=>({player:p,snap:S.players?.[p.id]}))
+      .filter(x=>x.snap&&x.snap.score!=null&&!x.snap.lowData)
+      .sort((a,b)=>(b.snap.score||0)-(a.snap.score||0))[0];
+    if(!topPlayer){el.innerHTML='';return;}
+    _renderMvpBannerNoBet(topPlayer.player.name,topPlayer.snap);
+    return;
+  }
+
+  // Sort: highest EV (or delta proxy) wins
+  candidates.sort((a,b)=>(b.bet.ev??b.bet.absDelta/100)-(a.bet.ev??a.bet.absDelta/100));
+  const mvp=candidates[0];
+  const player=activeRoster().find(p=>p.name===mvp.playerName);
+  const snap=player?S.players?.[player.id]:null;
+  const bet=mvp.bet;
+
+  // Build strength chips
+  const chips=_buildMvpChips(snap,bet);
+
+  // Build reasoning summary
+  const summary=_buildMvpSummary(mvp.playerName,snap,bet);
+
+  // Bet display
+  const evStr=bet.ev!=null?`${bet.ev>=0?'+':''}${(bet.ev*100).toFixed(1)}%`:'—';
+  const deltaStr=`${bet.delta>=0?'+':''}${bet.delta.toFixed(1)}pp`;
+  const evCls=bet.ev!=null?(bet.ev>=0?'pos':'neg'):(bet.delta>=0?'pos':'neg');
+  const score=snap?.score!=null?Math.round(snap.score):null;
+
+  el.innerHTML=`<div class="mvp-banner">
+    <div class="mvp-header">
+      <span class="mvp-tag">★ Projected MVP</span>
+      <span class="mvp-name">${mvp.playerName}</span>
+      ${score!=null?`<span class="mvp-score-badge">PS ${score}</span>`:''}
+    </div>
+    ${chips.length?`<div class="mvp-strengths">${chips.map(c=>`<span class="mvp-chip">${c}</span>`).join('')}</div>`:''}
+    <div class="mvp-summary">${summary}</div>
+    <div class="mvp-bet-row">
+      <div>
+        <div class="mvp-bet-label">Top Pick</div>
+        <div class="mvp-bet-prop">${bet.direction.toUpperCase()} ${bet.line} ${bet.prop}</div>
+      </div>
+      <div class="mvp-bet-stat">
+        <div><div class="lbl">EV</div><div class="val ${evCls}">${evStr}</div></div>
+        <div><div class="lbl">Δ</div><div class="val ${bet.delta>=0?'pos':'neg'}">${deltaStr}</div></div>
+        <div><div class="lbl">MC</div><div class="val">${bet.mcConfidence?.toFixed(0)||'—'}%</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// MVP banner fallback when odds aren't loaded — show the top-PS player without bet info
+function _renderMvpBannerNoBet(name,snap){
+  const el=document.getElementById('dash-mvp-banner');
+  if(!el)return;
+  const chips=_buildMvpChips(snap,null);
+  const summary=_buildMvpSummary(name,snap,null);
+  const score=snap?.score!=null?Math.round(snap.score):null;
+  el.innerHTML=`<div class="mvp-banner">
+    <div class="mvp-header">
+      <span class="mvp-tag">★ Projected MVP</span>
+      <span class="mvp-name">${name}</span>
+      ${score!=null?`<span class="mvp-score-badge">PS ${score}</span>`:''}
+    </div>
+    ${chips.length?`<div class="mvp-strengths">${chips.map(c=>`<span class="mvp-chip">${c}</span>`).join('')}</div>`:''}
+    <div class="mvp-summary">${summary}</div>
+    <div class="mvp-bet-row" style="opacity:0.7;">
+      <div>
+        <div class="mvp-bet-label">Top Pick</div>
+        <div class="mvp-bet-prop" style="color:#888;">Awaiting odds…</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function _buildMvpChips(snap,bet){
+  const chips=[];
+  if(snap?.order)chips.push(`Batting ${_ordinal(snap.order)}`);
+  if(snap?.st?.avg)chips.push(`AVG ${parseFloat(snap.st.avg).toFixed(3)}`);
+  if(snap?.st?.ops)chips.push(`OPS ${parseFloat(snap.st.ops).toFixed(3)}`);
+  if(bet){
+    if(bet.edgeStrength==='strong')chips.push('Strong Edge');
+    else if(bet.edgeStrength==='moderate')chips.push('Moderate Edge');
+    if(bet.mcConfidence>=90)chips.push(`MC ${bet.mcConfidence.toFixed(0)}%`);
+  }
+  return chips.slice(0,5);
+}
+
+function _buildMvpSummary(name,snap,bet){
+  const reasons=[];
+  // Park context
+  const venue=document.getElementById('stadium-select')?.value||'';
+  if(/Coors/i.test(venue))reasons.push('massive Coors Field boost');
+  else if(/Great American/i.test(venue))reasons.push('hitter-friendly Great American Ball Park');
+  else if(/Fenway/i.test(venue))reasons.push('Fenway Park dimensions favor contact hitters');
+  // Pitcher hand
+  if(S.pitcher?.hand){
+    const hand=S.pitcher.hand;
+    reasons.push(`facing ${hand}HP ${S.pitcher.name}`);
+  }
+  // Bullpen game
+  if(S.pitcher?.bullpenGame)reasons.push('bullpen day means weaker pitching matchups');
+  // Weather
+  if(S.weather?.windMph>=12){
+    const dir=S.weather.windDir||'';
+    reasons.push(`${S.weather.windMph} mph ${dir} wind`);
+  }
+  if(S.weather?.tempF>=85)reasons.push(`hot ${S.weather.tempF}°F air carries the ball`);
+  // Pitcher ERA if elevated
+  if(S.pitcher?.st?.era&&parseFloat(S.pitcher.st.era)>=4.5){
+    reasons.push(`opposing pitcher's ${parseFloat(S.pitcher.st.era).toFixed(2)} ERA`);
+  }
+  // Bet quality
+  if(bet){
+    const propPretty=`${bet.direction} ${bet.line} ${bet.prop}`;
+    const evPart=bet.ev!=null?`${bet.ev>=0?'+':''}${(bet.ev*100).toFixed(1)}% EV`:`${bet.delta.toFixed(1)}pp delta`;
+    if(reasons.length){
+      return`${name} headlines today's slate behind ${reasons.slice(0,3).join(', ')}. The model flags ${propPretty} as the highest-edge bet on the board (${evPart}).`;
+    }
+    return`${name} grades out as the top projected performer based on season form and matchup. Highest-edge bet: ${propPretty} (${evPart}).`;
+  }
+  // No-bet fallback summary
+  if(reasons.length){
+    return`${name} projects as the top performer today behind ${reasons.slice(0,3).join(', ')}. Specific prop edges will appear once odds load.`;
+  }
+  return`${name} grades out as the top projected performer based on season form and matchup.`;
+}
+
+function _ordinal(n){
+  const s=['th','st','nd','rd'],v=n%100;
+  return n+(s[(v-20)%10]||s[v]||s[0]);
+}
+
 // ── Two-week schedule (dashboard strip) ─────────────────────────────────────
 // Renders a 14-day grid (today + 13 forward) of D-backs games.
 // Off days are shown as muted cells. Final games get scores. Live games get a "LIVE" tag.
@@ -2995,17 +3247,29 @@ function _renderPitcherCard(){
     ?`<span style="background:#f39c12;color:#000;font-family:monospace;font-size:9px;font-weight:900;letter-spacing:2px;padding:2px 7px;border-radius:4px;margin-left:8px;">OPENER/BULLPEN</span>`
     :'';
   el.innerHTML=`<div class="dash-pitcher-card">
-    <div>
+    <div style="flex:1;">
       <div class="dash-pitcher-name">${S.pitcher.name}${bpBadge}</div>
       <div class="dash-pitcher-meta">${hand}HP · ERA ${era}${S.pitcher.bullpenGame?' · Expect multiple relievers':''}</div>
+      <div id="dash-pitcher-form-slot"><div class="pf-loading">Loading recent starts…</div></div>
     </div>
     <button class="dash-pitcher-btn" onclick="openModal('panel-pitcher','Pitcher Analysis')">View Stats</button>
   </div>`;
+  // Async-fetch last 3 starts and slot in
+  if(S.pitcher.id&&!S.pitcher.bullpenGame){
+    loadPitcherForm(S.pitcher.id).then(starts=>{
+      const slot=document.getElementById('dash-pitcher-form-slot');
+      if(slot)slot.innerHTML=starts?_renderPitcherForm(starts):'';
+    });
+  }else{
+    const slot=document.getElementById('dash-pitcher-form-slot');
+    if(slot)slot.innerHTML='';
+  }
 }
 
 function renderDashboard(){
   _renderGameBanner();
   _renderPitcherCard();
+  _renderMvpBanner();
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
 
@@ -4178,3 +4442,4 @@ renderGradePanel();
 _loadPitchArsenal(); // warm cache for pitch-mix matchup factor
 autoLoadNextGame(); // overwrites date/time and pulls umpire, weather, lineup
 loadTwoWeekSchedule(); // dashboard 14-day calendar strip
+loadTeamMomentum(); // dashboard team standings/streak strip
