@@ -253,51 +253,46 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   display: inline-block;
 }
 .stat-box .stat-info:hover { color: #009A8B; }
-.stat-info[data-tip]::after {
-  content: attr(data-tip);
+/* ── HTML-based stat-info tooltip (color-coded multi-line) ── */
+.stat-info .stat-tip {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   background: #16142e;
-  color: #d8d8e8;
   border: 1px solid #009A8B;
   border-radius: 6px;
   padding: 8px 10px;
-  font-family: 'Chakra Petch', monospace;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.3px;
-  text-transform: none;
-  line-height: 1.45;
-  width: 240px;
+  width: 220px;
   z-index: 1000;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.12s, visibility 0.12s;
   box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   text-align: left;
+  font-family: 'Chakra Petch', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  line-height: 1.45;
 }
-.stat-info[data-tip]::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #009A8B;
-  z-index: 1001;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.12s, visibility 0.12s;
-}
-.stat-info[data-tip]:hover::after,
-.stat-info[data-tip]:hover::before {
-  opacity: 1;
-  visibility: visible;
-}
+.stat-info:hover .stat-tip { opacity: 1; visibility: visible; }
+.stat-tip-title { color: #d8d8e8; font-weight: 600; padding-bottom: 3px; border-bottom: 1px solid #2a2740; margin-bottom: 2px; }
+.stat-tip-body  { color: #d8d8e8; }
+.stat-tip-line  { color: #fff; }
+.stat-tip-line.good { color: #2ecc71; }
+.stat-tip-line.bad  { color: #e74c3c; }
+.stat-tip-note  { color: #999; font-size: 10px; margin-top: 3px; padding-top: 3px; border-top: 1px solid #2a2740; font-style: italic; }
+
+/* Edge-aware: anchor leftmost column tooltips to left edge, rightmost to right edge,
+   so they don't get clipped by the viewport. Applies to any 3-col stats-grid. */
+.stats-grid .stat-box:nth-child(3n+1) .stat-info .stat-tip { left: 0; right: auto; transform: none; }
+.stats-grid .stat-box:nth-child(3n)   .stat-info .stat-tip { left: auto; right: 0; transform: none; }
 .stat-box .stat-val { font-size: 20px; font-weight: 900; font-family: 'Chakra Petch', monospace; color: #fff; }
 .stat-box .stat-val.good { color: #2ecc71; }
 .stat-box .stat-val.bad { color: #e74c3c; }
