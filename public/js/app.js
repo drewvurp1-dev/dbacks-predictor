@@ -3709,7 +3709,8 @@ function saveBet(key, btn){
   }
   const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
   const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
-  const bet={id:Date.now(),date,player:b._playerName||S.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore||S.lastScore,result:null,
+  const playerName=b._playerName||S.playerName;
+  const bet={id:Date.now(),date,player:playerName,playerId:_playerIdByName(playerName),opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore||S.lastScore,result:null,
     modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
     propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null};
   S.betLog.unshift(bet);
@@ -3742,12 +3743,23 @@ function autoSaveTopBets(){
   if(S.gameStatus==='Live'||S.gameStatus==='Final')return;
   // Use loaded game's officialDate; fall back to Arizona local date (UTC-7) to avoid UTC midnight rollover.
   const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
-  _getTopBets(3).forEach((b,i)=>{
+  // Stricter than the Top 3 Bets display: only auto-log bets with a STRONG edge
+  // AND |delta| ≥ 15pp. Keeps the Record clean and focused on the model's
+  // highest-conviction calls instead of every Stability≥85% recommendation.
+  const qualified=[];
+  S.allPlayerBets.forEach(pg=>{
+    if(pg.lowData)return;
+    pg.bets.forEach(b=>{
+      if(b.edgeStrength==='strong'&&(b.absDelta||0)>=15&&b.mcConfidence!=null&&b.mcConfidence>=85&&!b.insufficient)
+        qualified.push({...b,playerName:pg.playerName});
+    });
+  });
+  qualified.forEach((b,i)=>{
     const prop=`${b.direction} ${b.line} ${b.prop}`;
     if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
     const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
     const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
-    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null,
+    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,playerId:_playerIdByName(b.playerName),opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null,
       modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
       propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null});
   });
@@ -4752,6 +4764,96 @@ async function loadStatcast(playerId) {
   } catch(e) {
     document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
   }
+}
+
+// ═══════════ AUTO-GRADE PENDING BETS ══════════════════════════════════════════
+// Walks S.betLog for entries with result===null and a past game date, fetches
+// the actual MLB game log for the (player, date), and grades the bet against
+// its prop line. Bets without a propKey (legacy entries from before the field
+// was stored) are left untouched.
+
+// Map propKey → function that pulls the relevant stat out of an MLB API actual
+// stats object. Mirrors the stats returned by fetchActualStats().
+const _PROP_STAT_GETTER = {
+  batter_hits:           a => a.hits,
+  batter_total_bases:    a => a.totalBases,
+  batter_home_runs:      a => a.homeRuns,
+  batter_rbis:           a => a.rbi,
+  batter_walks:          a => a.walks,
+  batter_strikeouts:     a => a.strikeOuts,
+  batter_runs_scored:    a => a.runs,
+  batter_hits_runs_rbis: a => (a.hits||0)+(a.runs||0)+(a.rbi||0),
+};
+
+function _playerIdByName(name){
+  if(!name)return null;
+  const direct=(S.lineupRoster||[]).concat(CORBET_ROSTER).find(p=>p.name===name);
+  return direct?.id??null;
+}
+
+// Returns 'win' / 'loss' / 'push' given actual stat value, direction, and line.
+function _gradeProp(actual, direction, line){
+  if(actual==null||line==null)return null;
+  const dir=(direction||'').toLowerCase();
+  if(actual===line)return 'push';
+  if(dir==='over')  return actual>line ? 'win' : 'loss';
+  if(dir==='under') return actual<line ? 'win' : 'loss';
+  return null;
+}
+
+// Returns true if `date` (YYYY-MM-DD) is strictly before today's Arizona-local
+// date. We can't grade a bet on the day-of because the game may still be live.
+function _isPastDate(date){
+  if(!date)return false;
+  const azToday=new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
+  return date < azToday;
+}
+
+async function autoGradeBetLog(){
+  const pending=S.betLog.filter(b=>!b.result&&b.propKey&&b.line!=null&&b.direction&&_isPastDate(b.date));
+  if(!pending.length){
+    alert('No pending bets to grade (need: past date, prop key, and line).');
+    return;
+  }
+  const btns=document.querySelectorAll('.autograde-btn');
+  btns.forEach(b=>{b.textContent='⟳ Grading…';b.disabled=true;});
+
+  // Cache stats per (playerId|date) so duplicate fetches don't hammer the API
+  // when the same player has multiple bets on the same date.
+  const statCache=new Map();
+  let graded=0,skipped=0,errors=0;
+
+  for(const bet of pending){
+    const pid=bet.playerId||_playerIdByName(bet.player);
+    if(!pid){ skipped++; continue; }
+    const cacheKey=`${pid}|${bet.date}`;
+    let actual;
+    if(statCache.has(cacheKey)){
+      actual=statCache.get(cacheKey);
+    } else {
+      try{
+        actual=await fetchActualStats(pid,bet.date);
+        statCache.set(cacheKey,actual);
+      }catch(e){
+        console.error('[autograde] fetch failed for',bet.player,bet.date,e);
+        errors++; continue;
+      }
+    }
+    if(!actual||(actual.pa??0)===0){ skipped++; continue; }
+    const getter=_PROP_STAT_GETTER[bet.propKey];
+    if(!getter){ skipped++; continue; }
+    const result=_gradeProp(getter(actual),bet.direction,bet.line);
+    if(!result){ skipped++; continue; }
+    bet.result=result;
+    graded++;
+  }
+
+  if(graded>0){
+    localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
+    renderRecord();
+  }
+  btns.forEach(b=>{b.textContent='⟳ Grade';b.disabled=false;});
+  alert(`Auto-grade complete\n· Graded: ${graded}\n· Skipped (no game/0 PA/missing data): ${skipped}${errors?`\n· Errors: ${errors}`:''}`);
 }
 
 // ═══════════ CROSS-DEVICE SYNC ════════════════════════════════════════════════
