@@ -4606,7 +4606,7 @@ function drawPerfChart(log) {
   [0, 25, 50, 75, 100].forEach(v => {
     const y = pad.t + chartH - (v / 100) * chartH;
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
-    ctx.fillStyle = '#777'; ctx.font = '9px monospace'; ctx.fillText(v, 4, y + 3);
+    ctx.fillStyle = '#777'; ctx.font = "9px 'Chakra Petch', monospace"; ctx.fillText(v, 4, y + 3);
   });
 
   const xStep = chartW / (recent.length - 1);
@@ -4639,14 +4639,14 @@ function drawPerfChart(log) {
     const py = pad.t + chartH - (g.livePerf / 100) * chartH;
     ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(x, py, 3, 0, Math.PI*2); ctx.fill();
     if (i % 3 === 0) {
-      ctx.fillStyle = '#777'; ctx.font = '8px monospace';
+      ctx.fillStyle = '#777'; ctx.font = "8px 'Chakra Petch', monospace";
       ctx.fillText(g.date.slice(5), x - 10, H - 8);
     }
   });
 
   // Legend
   ctx.fillStyle = '#2ecc71'; ctx.fillRect(pad.l, 8, 12, 3);
-  ctx.fillStyle = '#888'; ctx.font = '9px monospace'; ctx.fillText('Actual', pad.l + 16, 12);
+  ctx.fillStyle = '#888'; ctx.font = "10px 'Chakra Petch', monospace"; ctx.fillText('Actual', pad.l + 16, 12);
   ctx.fillStyle = '#A71930'; ctx.fillRect(pad.l + 70, 8, 12, 3);
   ctx.fillStyle = '#888'; ctx.fillText('Predicted', pad.l + 86, 12);
 }
