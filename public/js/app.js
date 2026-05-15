@@ -2038,9 +2038,19 @@ function scoreIndividualProp(propKey){
   // Environment
   const stadOpt=document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
   const elev=parseInt(stadOpt.dataset.elev)||500;
-  const tempF=S.weather?.tempF||75;
-  const windMph=S.weather?.windMph||5;
-  const windDir=S.weather?.windDir||'calm';
+  const hasRoof=stadOpt?.dataset.roof==='1';
+  const roofClosed=hasRoof&&S.roofClosed;
+  // Closed-roof games neutralize weather: indoor temp ~72°F, no meaningful wind.
+  // Without this, e.g. a 95°F Phoenix day at Chase with the roof closed was still
+  // adding the +5 HR / +4 TB heat bump to every prop.
+  const tempF=roofClosed?72:(S.weather?.tempF||75);
+  const windMph=roofClosed?0:(S.weather?.windMph||5);
+  // Use _windDir() (which projects compass onto park CF bearing) instead of the
+  // raw compass string. Previously corbetPropScore tested S.weather.windDir==='out'
+  // directly, which is ALWAYS false for live weather (live data sets directions
+  // like "SSW", never "out"/"in") — so wind silently had zero effect on every
+  // HR/TB/runs prop on every live-weather game.
+  const windDir=roofClosed?'calm':_windDir();
   const umpAdj=S.umpire?(UMP_DB[S.umpire.fullName]?.adj||0):0;
   const protTier=S.lineupProtection?.tier;
   const rispAvg=parseFloat(S.rispStat?.avg)||null;
