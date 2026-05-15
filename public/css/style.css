@@ -1150,41 +1150,64 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .record-summary-strip .rss-sparkline { grid-column: 1 / -1; padding-left: 0; border-left: none; border-top: 1px solid #1a1730; padding-top: 8px; }
   .prop-record-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
 
-  /* Bet log: reflow 8 columns into a 2-row stacked card */
+  /* Bet log: each bet is its own card with clear hierarchy.
+     Row 1: date · player · delete
+     Row 2: prop name (full width)
+     Row 3: odds · rating · W/L/P buttons */
   #bet-log-headers { display: none !important; }
   .bet-log-item {
-    grid-template-columns: auto 1fr auto auto;
+    background: #0c0a1e;
+    border: 1px solid #1a1730;
+    border-radius: 8px;
+    padding: 10px 12px !important;
+    margin-bottom: 8px;
+    grid-template-columns: auto 1fr auto;
     grid-template-rows: auto auto auto;
-    column-gap: 8px;
-    row-gap: 4px;
-    padding: 10px 0;
-    font-size: 12px;
+    column-gap: 10px;
+    row-gap: 6px;
+    border-bottom: 1px solid #1a1730 !important;
   }
-  .bet-log-item .bli-date    { grid-row: 1; grid-column: 1; }
-  .bet-log-item .bli-player  { grid-row: 1; grid-column: 2; font-size: 11px; }
-  .bet-log-item .bli-opp     { grid-row: 1; grid-column: 3; font-size: 11px; }
-  .bet-log-item .del-btn     { grid-row: 1; grid-column: 4; font-size: 18px; padding: 0 4px; }
-  .bet-log-item .bli-prop    { grid-row: 2; grid-column: 1 / -1; }
-  .bet-log-item .bli-odds    { grid-row: 3; grid-column: 1; }
-  .bet-log-item .bli-rating  { grid-row: 3; grid-column: 2; justify-self: start; }
-  .bet-log-item .bli-result  { grid-row: 3; grid-column: 3 / -1; justify-self: end; }
+  .bet-log-item .bli-date    { grid-row: 1; grid-column: 1; font-size: 10px; color: #6a6a8a; letter-spacing: 0.5px; align-self: center; }
+  .bet-log-item .bli-player  { grid-row: 1; grid-column: 2; font-size: 12px; font-weight: 700; color: #E8DFC8; }
+  .bet-log-item .bli-opp     { display: none; } /* usually empty / "—" — redundant noise on mobile */
+  .bet-log-item .del-btn     { grid-row: 1; grid-column: 3; font-size: 20px; padding: 0 4px; align-self: center; color: #4a4560; }
+  .bet-log-item .bli-prop    { grid-row: 2; grid-column: 1 / -1; font-size: 13px; color: #ccc; line-height: 1.3; }
+  .bet-log-item .bli-odds    { grid-row: 3; grid-column: 1; font-size: 12px; color: #888; align-self: center; font-weight: 700; }
+  .bet-log-item .bli-rating  { grid-row: 3; grid-column: 2; justify-self: start; align-self: center; font-size: 9px; padding: 3px 8px; }
+  .bet-log-item .bli-result  { grid-row: 3; grid-column: 3; justify-self: end; align-self: center; gap: 5px; }
+  .bet-log-item .result-btn  { padding: 6px 10px; font-size: 11px; min-width: 32px; }
+  .bet-log-item .result-btn:not(.active) { opacity: 0.55; }
+  /* Pending bets stay at full opacity on mobile so W/L/P stays tappable —
+     the empty button row already telegraphs the pending state. */
+  .bet-log-item.bet-pending { opacity: 1; }
 
-  /* Grade log: stack header columns vertically */
+  /* Grade log: each game is its own card.
+     Row 1: date · player · outcome badge
+     Row 2: SCORE n · PERF n · model badge
+     Row 3: stat line (full width) */
   #grade-log-headers { display: none !important; }
   .grade-log-row {
-    grid-template-columns: auto auto 1fr auto;
-    grid-template-rows: auto auto;
-    row-gap: 4px;
-    column-gap: 8px;
-    padding: 10px 0;
+    background: #0c0a1e;
+    border: 1px solid #1a1730;
+    border-radius: 8px;
+    padding: 10px 12px !important;
+    margin-bottom: 8px;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto auto;
+    column-gap: 10px;
+    row-gap: 6px;
+    border-bottom: 1px solid #1a1730 !important;
   }
-  .grade-log-row > span:nth-child(1) { grid-row: 1; grid-column: 1; }
-  .grade-log-row > span:nth-child(2) { grid-row: 1; grid-column: 2; }
-  .grade-log-row > span:nth-child(3) { grid-row: 1; grid-column: 3; }
-  .grade-log-row > span:nth-child(4) { grid-row: 2; grid-column: 1 / span 2; }
-  .grade-log-row > span:nth-child(5) { grid-row: 1; grid-column: 4; }
-  .grade-log-row > span:nth-child(6) { grid-row: 2; grid-column: 3; justify-self: end; }
-  .grade-log-row > span:nth-child(7) { grid-row: 2; grid-column: 4; justify-self: end; }
+  /* spans: 1=date, 2=score, 3=player, 4=stat-line, 5=perf, 6=outcome, 7=model */
+  .grade-log-row > span:nth-child(1) { grid-row: 1; grid-column: 1; font-size: 10px; color: #6a6a8a; letter-spacing: 0.5px; align-self: center; }
+  .grade-log-row > span:nth-child(3) { grid-row: 1; grid-column: 2; font-size: 12px; font-weight: 700; color: #E8DFC8 !important; }
+  .grade-log-row > span:nth-child(6) { grid-row: 1; grid-column: 3; justify-self: end; align-self: center; }
+  .grade-log-row > span:nth-child(2) { grid-row: 2; grid-column: 1; font-size: 14px !important; font-weight: 800; align-self: center; }
+  .grade-log-row > span:nth-child(2)::before { content: 'SCORE '; font-size: 9px; color: #6a6a8a; font-weight: 600; letter-spacing: 0.5px; margin-right: 3px; }
+  .grade-log-row > span:nth-child(5) { grid-row: 2; grid-column: 2; font-size: 12px !important; color: #aaa !important; align-self: center; }
+  .grade-log-row > span:nth-child(5)::before { content: 'PERF '; font-size: 9px; color: #6a6a8a; font-weight: 600; letter-spacing: 0.5px; margin-right: 3px; }
+  .grade-log-row > span:nth-child(7) { grid-row: 2; grid-column: 3; justify-self: end; align-self: center; }
+  .grade-log-row > span:nth-child(4) { grid-row: 3; grid-column: 1 / -1; font-size: 12px; color: #ccc !important; line-height: 1.3; padding-top: 2px; border-top: 1px solid #14132c; margin-top: 2px; }
 
   /* Factor perf rows: bar drops to a new line for full-width visualization */
   .factor-perf-row { grid-template-columns: 1fr auto auto; row-gap: 4px; column-gap: 8px; }
