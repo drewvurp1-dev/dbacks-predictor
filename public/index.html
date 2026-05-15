@@ -4,10 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Snake Savant</title>
+<!-- PWA / iOS home-screen install (required for web push on iOS 16.4+) -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#07060f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Snake Savant">
+<link rel="apple-touch-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=17">
+<link rel="stylesheet" href="/css/style.css?v=18">
 </head>
 <body>
 
@@ -43,6 +50,8 @@
     </div>
     <div class="dash-setup-link">
       <button onclick="openModal('panel-setup','Setup &amp; Overrides')">⚙ Manual Setup / Overrides</button>
+      <button id="push-btn" onclick="_pushSubscribe()" style="margin-top:8px;">🔔 Enable notifications</button>
+      <button onclick="_pushTest()" style="margin-top:4px;background:transparent;border:none;color:#555;font-family:'Chakra Petch',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Send test notification</button>
     </div>
   </div>
 
@@ -427,7 +436,7 @@
   </div>
 </div>
 
-<script src="/js/app.js?v=16"></script>
+<script src="/js/app.js?v=17"></script>
 
 </body>
 </html>

@@ -1,0 +1,14 @@
+{
+  "name": "Snake Savant",
+  "short_name": "Snake Savant",
+  "description": "Arizona Diamondbacks prop bet predictions",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07060f",
+  "theme_color": "#07060f",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "any", "type": "image/x-icon" }
+  ]
+}
