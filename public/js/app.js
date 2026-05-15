@@ -1143,12 +1143,13 @@ function _renderMvpBanner(){
   const deltaStr=`${bet.delta>=0?'+':''}${bet.delta.toFixed(1)}pp`;
   const evCls=bet.ev!=null?(bet.ev>=0?'pos':'neg'):(bet.delta>=0?'pos':'neg');
   const score=snap?.score!=null?Math.round(snap.score):null;
+  const scoreColor=snap?.tier?.color||'#aaa';
 
   el.innerHTML=`<div class="mvp-banner">
     <div class="mvp-header">
       <span class="mvp-tag">★ Projected MVP</span>
       <span class="mvp-name">${mvp.playerName}</span>
-      ${score!=null?`<span class="mvp-score-badge">PS ${score}</span>`:''}
+      ${score!=null?`<div class="mvp-score-circle" style="border-color:${scoreColor}"><span class="mvp-score-num" style="color:${scoreColor}">${score}</span></div>`:''}
     </div>
     ${chips.length?`<div class="mvp-strengths">${chips.map(c=>`<span class="mvp-chip">${c}</span>`).join('')}</div>`:''}
     <div class="mvp-summary">${summary}</div>
@@ -1173,11 +1174,12 @@ function _renderMvpBannerNoBet(name,snap){
   const chips=_buildMvpChips(snap,null);
   const summary=_buildMvpSummary(name,snap,null);
   const score=snap?.score!=null?Math.round(snap.score):null;
+  const scoreColor=snap?.tier?.color||'#aaa';
   el.innerHTML=`<div class="mvp-banner">
     <div class="mvp-header">
       <span class="mvp-tag">★ Projected MVP</span>
       <span class="mvp-name">${name}</span>
-      ${score!=null?`<span class="mvp-score-badge">PS ${score}</span>`:''}
+      ${score!=null?`<div class="mvp-score-circle" style="border-color:${scoreColor}"><span class="mvp-score-num" style="color:${scoreColor}">${score}</span></div>`:''}
     </div>
     ${chips.length?`<div class="mvp-strengths">${chips.map(c=>`<span class="mvp-chip">${c}</span>`).join('')}</div>`:''}
     <div class="mvp-summary">${summary}</div>
