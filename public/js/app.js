@@ -4587,7 +4587,7 @@ async function loadStatcast(playerId) {
       statBox('GB%',     gb,     'Ground ball rate',             ''),
       statBox('FB%',     fb,     'Fly ball rate',                ''),
       statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68)),
-      statBox('Sw Len',  swLen,  'Swing length (shorter=better)',c(swLenRaw,7.4,6.8,true)),
+      statBox('Sw Len',  swLen,  'Swing length in feet — tradeoff, not categorically good or bad. <6.8: pure contact (Arraez). 6.8-7.5: balanced/league avg. 7.5-8.0: power-leaning. >8.0: elite power, high K (Judge).',''),
       statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12)),
       statBox('Blast%',  blast,  'Blast per contact',            c(blastRaw,8,3)),
     ].join('');
