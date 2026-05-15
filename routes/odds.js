@@ -26,7 +26,12 @@ router.use('/', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('X-Cache', 'HIT');
-    return res.send(_cache[cacheKey].data);
+    // Replay the rate-limit headers from when this response was originally
+    // fetched so the frontend credits badge keeps updating even on cache hits.
+    const cached = _cache[cacheKey];
+    if (cached.remaining != null) res.setHeader('X-Requests-Remaining', cached.remaining);
+    if (cached.used != null) res.setHeader('X-Requests-Used', cached.used);
+    return res.send(cached.data);
   }
 
   console.log('Odds API request:', url.replace(apiKey, 'KEY_HIDDEN'));
@@ -45,7 +50,7 @@ router.use('/', (req, res) => {
       if (used != null) res.setHeader('X-Requests-Used', used);
       // Only cache successful responses
       if (oddsRes.statusCode === 200) {
-        _cache[cacheKey] = { data, ts: now };
+        _cache[cacheKey] = { data, ts: now, remaining, used };
       }
       res.status(oddsRes.statusCode).send(data);
     });
