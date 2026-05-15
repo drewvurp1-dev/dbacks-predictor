@@ -607,12 +607,52 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .dash-game-banner { padding: 10px 12px; margin-bottom: 10px; }
   .dash-opp { font-size: 14px; }
 
-  /* Pitcher card */
-  .dash-pitcher-card { padding: 10px 12px; margin-bottom: 10px; gap: 8px; }
-  .dash-pitcher-name { font-size: 10px; }
+  /* Pitcher card: collapse 3-col grid into a single column with
+     reordered content (info → matchup → button) and a centered,
+     auto-width "View Stats" button rather than a full-width banner. */
+  .dash-pitcher-card { padding: 10px 12px; margin-bottom: 10px; gap: 8px; align-items: stretch; }
+  .dash-pitcher-name { font-size: 11px; }
+  .dash-pitcher-meta { font-size: 10px; line-height: 1.4; }
   .pitcher-card-grid { grid-template-columns: 1fr; gap: 10px; }
-  .pitcher-card-grid > .dash-pitcher-btn { align-self: stretch; justify-self: stretch; text-align: center; }
-  .bm-name { font-size: 18px; }
+  .pitcher-card-grid > .dash-pitcher-btn {
+    align-self: center;
+    justify-self: stretch;
+    text-align: center;
+    padding: 9px 14px;
+    min-height: 36px;
+    font-size: 10px;
+  }
+
+  /* Recent starts: tighter spacing, stats line wraps if needed */
+  .dash-pitcher-form { font-size: 10px; gap: 3px; margin-top: 8px; }
+  .pf-row { gap: 8px; padding: 5px 8px; flex-wrap: wrap; }
+  .pf-row-date { min-width: 30px; font-size: 9px; }
+  .pf-row-opp  { min-width: 44px; font-size: 9px; }
+  .pf-row-stats { font-size: 10px; flex: 1 1 auto; min-width: 0; }
+
+  /* Splits: drop the inline divider, let rows wrap cleanly */
+  .dash-pitcher-splits { font-size: 11px; gap: 6px; margin-top: 8px; }
+  .ps-row { gap: 8px 12px; row-gap: 4px; }
+  .ps-divider { display: none; }
+  .ps-adv { font-size: 10px; }
+  .ps-adv b { font-size: 12px; }
+  .ps-split { font-size: 11px; letter-spacing: 0.3px; }
+  .ps-split b { font-size: 12px; }
+  .ps-split.ps-active { padding: 1px 6px; }
+
+  /* Best Matchup card: smaller name + score, allow bet row to wrap */
+  .bm-card { padding: 10px 12px; gap: 4px; }
+  .bm-header { padding-bottom: 3px; margin-bottom: 1px; }
+  .bm-tag { font-size: 8px; letter-spacing: 1.8px; }
+  .bm-name-row { gap: 8px; }
+  .bm-name { font-size: 17px; line-height: 1.1; }
+  .bm-score-circle { width: 38px; height: 38px; border-width: 2.5px; }
+  .bm-score-num { font-size: 14px; }
+  .bm-line { font-size: 10px; line-height: 1.4; }
+  .bm-stat-lbl { font-size: 8px; letter-spacing: 0.5px; }
+  .bm-bet { flex-wrap: wrap; gap: 4px 10px; padding-top: 5px; margin-top: 3px; }
+  .bm-bet-prop, .bm-bet-stat { font-size: 10px; }
+  .bm-summary { font-size: 10px; margin-top: 3px; padding-top: 3px; line-height: 1.35; }
 
   /* Best bets card */
   .dash-best-bet-right { justify-content: flex-start; margin-top: 4px; }
@@ -724,6 +764,16 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .split-box .split-ops { font-size: 22px; }
   .corbet-header { padding: 12px 14px; gap: 10px; }
   .corbet-title { font-size: 12px; }
+
+  /* Pitcher card + Best Matchup: extra-tight on iPhone-SE-class widths */
+  .dash-pitcher-card { padding: 9px 10px; }
+  .pf-row { padding: 4px 6px; gap: 6px; }
+  .pf-row-stats { font-size: 9px; }
+  .bm-card { padding: 9px 10px; }
+  .bm-name { font-size: 15px; }
+  .bm-score-circle { width: 34px; height: 34px; border-width: 2px; }
+  .bm-score-num { font-size: 12px; }
+  .bm-line { font-size: 9px; }
 }
 
 /* Low plate appearance warning */
