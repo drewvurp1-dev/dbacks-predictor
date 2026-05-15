@@ -299,9 +299,9 @@ function setApiCredits(remaining) {
 const BOOK_ABBREVS={
   'DraftKings':'DK',
   'BetMGM':'MGM',
-  'FanDuel':'FD',
   'Caesars':'CZR',
   'Bet365':'365',
+  'Fanatics':'FAN',
 };
 function bookAbbrev(name){return BOOK_ABBREVS[name]||name;}
 
@@ -3210,7 +3210,12 @@ async function loadCorbet(){
       }
 
       const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
-      const propBooks='draftkings,betmgm,caesars,bet365';
+      // Pull from 5 books — DK and Fanatics post the deepest prop coverage on most
+      // games, with MGM/CZR/365 filling in mainline + select prop markets. Diagnostic
+      // testing on a Dbacks-Rockies game returned only DK + Fanatics for batter_hits
+      // even with no bookmaker filter, so adding Fanatics directly addresses missing
+      // line coverage.
+      const propBooks='draftkings,betmgm,caesars,bet365,fanatics';
       const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
       const propsText=await pr.text();
       try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
@@ -3220,7 +3225,7 @@ async function loadCorbet(){
     }
 
     // Build per-player market maps in one pass through bookmaker data.
-    // The fetch only requests DK/MGM/CZR/365, so every returned book is implicitly trusted.
+    // The fetch only requests DK/MGM/CZR/365/FAN, so every returned book is implicitly trusted.
     // Bad-price defense is the lopsided-line gate in the line picker (generateCorbetBets).
     const playerMaps={};
     activeRoster().forEach(p=>{playerMaps[p.id]={};});
