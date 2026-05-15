@@ -495,27 +495,41 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 /* ── Pitcher form snapshot (last 3 starts) ── */
 .dash-pitcher-form {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 12px;
   font-family: monospace;
   font-size: 10px;
+  justify-content: center;
 }
 .pf-start {
   background: #0c0a1e;
-  border: 1px solid #1a1730;
-  border-radius: 4px;
-  padding: 4px 7px;
+  border: 2px solid #1a1730;
+  border-radius: 6px;
+  padding: 6px 14px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  min-width: 64px;
+  align-items: center;
+  gap: 3px;
+  min-width: 110px;
+  text-align: center;
 }
-.pf-start-date { font-size: 8px; color: #6a6a8a; letter-spacing: 0.8px; text-transform: uppercase; }
-.pf-start-line { color: #ccc; font-size: 10px; }
+.pf-start-date {
+  font-size: 9px;
+  color: #6a6a8a;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #1a1730;
+  padding-bottom: 3px;
+  width: 100%;
+}
+.pf-start-line { color: #ccc; font-size: 11px; letter-spacing: 0.3px; }
 .pf-start.pf-good  { border-color: #2ecc71; }
 .pf-start.pf-bad   { border-color: #e74c3c; }
 .pf-start.pf-mixed { border-color: #f39c12; }
-.pf-loading { color: #555; font-size: 10px; padding: 6px 0 0; }
+.pf-start.pf-good  .pf-start-date { border-bottom-color: rgba(46,204,113,0.3); }
+.pf-start.pf-bad   .pf-start-date { border-bottom-color: rgba(231,76,60,0.3); }
+.pf-start.pf-mixed .pf-start-date { border-bottom-color: rgba(243,156,18,0.3); }
+.pf-loading { color: #555; font-size: 10px; padding: 6px 0 0; text-align: center; }
 
 /* ── Projected MVP banner ── */
 .mvp-banner {
@@ -555,16 +569,23 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   color: #fff;
   letter-spacing: 0.5px;
 }
-.mvp-score-badge {
+.mvp-score-circle {
   margin-left: auto;
-  background: #009A8B;
-  color: #000;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid #aaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.25);
+}
+.mvp-score-circle .mvp-score-num {
   font-family: monospace;
-  font-size: 11px;
+  font-size: 26px;
   font-weight: 900;
-  letter-spacing: 1px;
-  padding: 4px 9px;
-  border-radius: 5px;
+  letter-spacing: -0.5px;
 }
 .mvp-strengths {
   display: flex;
