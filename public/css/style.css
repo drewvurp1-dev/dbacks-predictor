@@ -1068,11 +1068,23 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .dash-best-bet-right { justify-content: flex-start; margin-top: 4px; }
   .dash-best-bet-prop { font-size: 11px; }
 
-  /* Player row header */
-  .dash-prow-header { padding: 10px 10px; gap: 8px; }
+  /* Player row header — keep the stats button visible so batter
+     stats are reachable in portrait. The inline statline is hidden
+     to make room, and the button label shortens to "STATS ›". */
+  .dash-prow-header { padding: 10px 10px; gap: 6px; }
   .dash-prow-statline { display: none; }
-  .dash-prow-more { display: none; }
-  .dash-prow-name { font-size: 9px; }
+  .dash-prow-name { font-size: 10px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .dash-prow-more {
+    padding: 7px 10px;
+    min-height: 32px;
+    font-size: 0;
+    letter-spacing: 0;
+  }
+  .dash-prow-more::before {
+    content: 'STATS ›';
+    font-size: 9px;
+    letter-spacing: 0.5px;
+  }
 
   /* Player row body — stack columns */
   .dash-prow-body { gap: 10px; padding: 10px; }
