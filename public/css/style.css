@@ -492,44 +492,69 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .momentum-divider { width: 1px; height: 26px; background: #1a1730; }
 .momentum-empty { color: #555; font-size: 11px; padding: 4px 0; }
 
-/* ── Pitcher form snapshot (last 3 starts) ── */
+/* ── Pitcher form snapshot (last 3 starts, stacked rows) ── */
 .dash-pitcher-form {
   display: flex;
-  gap: 10px;
-  margin-top: 12px;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
   font-family: monospace;
-  font-size: 10px;
-  justify-content: center;
+  font-size: 11px;
 }
-.pf-start {
+.pf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: #0c0a1e;
-  border: 2px solid #1a1730;
-  border-radius: 6px;
-  padding: 6px 14px;
+  border-left: 3px solid #1a1730;
+  border-radius: 0 4px 4px 0;
+  padding: 5px 10px 5px 8px;
+  letter-spacing: 0.3px;
+}
+.pf-row-date { color: #6a6a8a; font-size: 10px; min-width: 36px; letter-spacing: 0.6px; }
+.pf-row-opp  { color: #888; font-size: 10px; min-width: 56px; letter-spacing: 0.6px; }
+.pf-row-stats { color: #ccc; font-size: 11px; }
+.pf-row.pf-good  { border-left-color: #2ecc71; }
+.pf-row.pf-bad   { border-left-color: #e74c3c; }
+.pf-row.pf-mixed { border-left-color: #f39c12; }
+.pf-loading { color: #555; font-size: 10px; padding: 6px 0 0; }
+
+/* ── Pitcher splits (Home/Away + L/R) ── */
+.dash-pitcher-splits {
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  font-family: monospace;
+  font-size: 11px;
+}
+.ps-row {
+  display: flex;
   align-items: center;
-  gap: 3px;
-  min-width: 110px;
-  text-align: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
-.pf-start-date {
-  font-size: 9px;
+.ps-adv {
   color: #6a6a8a;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  border-bottom: 1px solid #1a1730;
-  padding-bottom: 3px;
-  width: 100%;
+  font-size: 10px;
+  letter-spacing: 0.5px;
 }
-.pf-start-line { color: #ccc; font-size: 11px; letter-spacing: 0.3px; }
-.pf-start.pf-good  { border-color: #2ecc71; }
-.pf-start.pf-bad   { border-color: #e74c3c; }
-.pf-start.pf-mixed { border-color: #f39c12; }
-.pf-start.pf-good  .pf-start-date { border-bottom-color: rgba(46,204,113,0.3); }
-.pf-start.pf-bad   .pf-start-date { border-bottom-color: rgba(231,76,60,0.3); }
-.pf-start.pf-mixed .pf-start-date { border-bottom-color: rgba(243,156,18,0.3); }
-.pf-loading { color: #555; font-size: 10px; padding: 6px 0 0; text-align: center; }
+.ps-adv b { color: #009A8B; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
+.ps-divider { width: 1px; height: 14px; background: #1a1730; }
+.ps-split {
+  color: #888;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+}
+.ps-split b { color: #ccc; font-weight: 700; }
+.ps-split.ps-active {
+  color: #f39c12;
+  background: rgba(243,156,18,0.1);
+  border: 1px solid rgba(243,156,18,0.35);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+.ps-split.ps-active b { color: #f39c12; }
 
 /* ── Projected MVP banner ── */
 .mvp-banner {

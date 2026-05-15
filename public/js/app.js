@@ -1062,7 +1062,7 @@ async function loadTeamMomentum(){
 async function loadPitcherForm(pitcherId){
   if(!pitcherId)return null;
   try{
-    const r=await fetch(`/mlb/api/v1/people/${pitcherId}/stats?stats=gameLog&season=2026&group=pitching`);
+    const r=await fetch(`/mlb/api/v1/people/${pitcherId}/stats?stats=gameLog&season=2026&group=pitching&hydrate=team`);
     const d=await r.json();
     const splits=d?.stats?.[0]?.splits||[];
     // Most recent 3, reverse-chronological
@@ -1078,8 +1078,36 @@ async function loadPitcherForm(pitcherId){
       if(er<=2&&ip>=5)cls='pf-good';
       else if(er>=5||ip<3)cls='pf-bad';
       const date=s.date?new Date(s.date+'T00:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'}):'';
-      return{date,ip,er,k,bb,cls};
+      const oppAbbr=s.opponent?.abbreviation||s.opponent?.teamCode?.toUpperCase()||'';
+      const isHome=s.isHome===true||s.isHome==='true';
+      const oppLabel=oppAbbr?(isHome?'vs '+oppAbbr:'@ '+oppAbbr):'';
+      return{date,ip,er,k,bb,cls,opp:oppLabel};
     });
+  }catch(e){
+    return null;
+  }
+}
+
+// Pull pitcher Home/Away and L/R splits in one call
+async function loadPitcherSplits(pitcherId){
+  if(!pitcherId)return null;
+  try{
+    const r=await fetch(`/mlb/api/v1/people/${pitcherId}/stats?stats=statSplits&group=pitching&season=2026&gameType=R&sitCodes=h,a,vl,vr`);
+    const d=await r.json();
+    const splits=d?.stats?.[0]?.splits||[];
+    const out={};
+    splits.forEach(s=>{
+      const code=s.split?.code;
+      if(!code)return;
+      out[code]={
+        era:s.stat?.era?parseFloat(s.stat.era):null,
+        avg:s.stat?.avg||null,
+        obp:s.stat?.obp||null,
+        slg:s.stat?.slg||null,
+        ops:s.stat?.ops?parseFloat(s.stat.ops):null,
+      };
+    });
+    return out;
   }catch(e){
     return null;
   }
@@ -1088,12 +1116,43 @@ async function loadPitcherForm(pitcherId){
 function _renderPitcherForm(starts){
   if(!starts||!starts.length)return'';
   return`<div class="dash-pitcher-form">${starts.map(s=>
-    `<div class="pf-start ${s.cls}">
-      <div class="pf-start-date">${s.date}</div>
-      <div class="pf-start-line">${s.ip} IP · ${s.er} ER</div>
-      <div class="pf-start-line">${s.k} K · ${s.bb} BB</div>
+    `<div class="pf-row ${s.cls}">
+      <span class="pf-row-date">${s.date}</span>
+      <span class="pf-row-opp">${s.opp}</span>
+      <span class="pf-row-stats">${s.ip} IP &middot; ${s.er} ER &middot; ${s.k} K &middot; ${s.bb} BB</span>
     </div>`
   ).join('')}</div>`;
+}
+
+function _renderPitcherSplits(splits,isHomeGame){
+  if(!splits)return'';
+  const sieraVal=S.pitcher?.advanced?.siera;
+  const xfipVal=S.pitcher?.advanced?.xfip;
+  const advChip=sieraVal!=null
+    ?`<span class="ps-adv">SIERA <b>${sieraVal.toFixed(2)}</b></span>`
+    :(xfipVal!=null?`<span class="ps-adv">xFIP <b>${xfipVal.toFixed(2)}</b></span>`:'');
+  const homeEra=splits.h?.era;
+  const awayEra=splits.a?.era;
+  const homeCls=isHomeGame?'ps-active':'';
+  const awayCls=!isHomeGame?'ps-active':'';
+  const homeStr=homeEra!=null?`Home <b>${homeEra.toFixed(2)}</b>`:'Home <b>—</b>';
+  const awayStr=awayEra!=null?`Away <b>${awayEra.toFixed(2)}</b>`:'Away <b>—</b>';
+  const vL=splits.vl;
+  const vR=splits.vr;
+  const vLStr=vL?`vs L <b>${vL.avg||'—'}</b>/${vL.obp||'—'}/${vL.slg||'—'}`:'vs L <b>—</b>';
+  const vRStr=vR?`vs R <b>${vR.avg||'—'}</b>/${vR.obp||'—'}/${vR.slg||'—'}`:'vs R <b>—</b>';
+  return`<div class="dash-pitcher-splits">
+    <div class="ps-row">
+      ${advChip}
+      <span class="ps-divider"></span>
+      <span class="ps-split ${homeCls}">${homeStr}</span>
+      <span class="ps-split ${awayCls}">${awayStr}</span>
+    </div>
+    <div class="ps-row">
+      <span class="ps-split">${vLStr}</span>
+      <span class="ps-split">${vRStr}</span>
+    </div>
+  </div>`;
 }
 
 // ── Projected MVP banner ────────────────────────────────────────────────────
@@ -3253,18 +3312,27 @@ function _renderPitcherCard(){
       <div class="dash-pitcher-name">${S.pitcher.name}${bpBadge}</div>
       <div class="dash-pitcher-meta">${hand}HP · ERA ${era}${S.pitcher.bullpenGame?' · Expect multiple relievers':''}</div>
       <div id="dash-pitcher-form-slot"><div class="pf-loading">Loading recent starts…</div></div>
+      <div id="dash-pitcher-splits-slot"></div>
     </div>
     <button class="dash-pitcher-btn" onclick="openModal('panel-pitcher','Pitcher Analysis')">View Stats</button>
   </div>`;
-  // Async-fetch last 3 starts and slot in
+  // Async-fetch last 3 starts + season splits and slot them in
   if(S.pitcher.id&&!S.pitcher.bullpenGame){
     loadPitcherForm(S.pitcher.id).then(starts=>{
       const slot=document.getElementById('dash-pitcher-form-slot');
       if(slot)slot.innerHTML=starts?_renderPitcherForm(starts):'';
     });
+    loadPitcherSplits(S.pitcher.id).then(splits=>{
+      const slot=document.getElementById('dash-pitcher-splits-slot');
+      // S.isHome is true when the D-backs are home — meaning the opposing pitcher is AWAY.
+      const opposingIsHome=!S.isHome;
+      if(slot)slot.innerHTML=splits?_renderPitcherSplits(splits,opposingIsHome):'';
+    });
   }else{
-    const slot=document.getElementById('dash-pitcher-form-slot');
-    if(slot)slot.innerHTML='';
+    const slotF=document.getElementById('dash-pitcher-form-slot');
+    if(slotF)slotF.innerHTML='';
+    const slotS=document.getElementById('dash-pitcher-splits-slot');
+    if(slotS)slotS.innerHTML='';
   }
 }
 
