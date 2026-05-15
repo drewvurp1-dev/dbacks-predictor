@@ -366,7 +366,7 @@ function toggleWeatherManual(){S.weatherManual=!S.weatherManual;document.getElem
 
 // ═══════════ PITCH MIX ════════════════════════════════════════════════════════
 const PITCH_TYPES=['4-Seam FB','Sinker','Cutter','Slider','Curveball','Changeup','Splitter'];
-function buildPitchMixGrid(cid,pitches){document.getElementById(cid).innerHTML=PITCH_TYPES.map(pt=>`<div class="pitch-mix-item"><span class="pitch-mix-label">${pt}</span><input type="range" min="0" max="60" value="${pitches[pt]||0}" oninput="S.pitcherPitches['${pt}']=parseInt(this.value);this.nextElementSibling.textContent=this.value+'%'" style="flex:1;accent-color:#A71930"><span style="font-size:11px;color:#ccc;font-family:monospace;min-width:28px;text-align:right">${pitches[pt]||0}%</span></div>`).join('');}
+function buildPitchMixGrid(cid,pitches){document.getElementById(cid).innerHTML=PITCH_TYPES.map(pt=>`<div class="pitch-mix-item"><span class="pitch-mix-label">${pt}</span><input type="range" min="0" max="60" value="${pitches[pt]||0}" oninput="S.pitcherPitches['${pt}']=parseInt(this.value);this.nextElementSibling.textContent=this.value+'%'" style="flex:1;accent-color:#A71930"><span style="font-size:11px;color:#ccc;font-family:\'Chakra Petch\',monospace;min-width:28px;text-align:right">${pitches[pt]||0}%</span></div>`).join('');}
 function buildPitchMixManual(){buildPitchMixGrid('pitch-mix-grid-manual',S.pitcherPitches);}
 
 // ═══════════ PLAYER LOADING ═══════════════════════════════════════════════════
@@ -438,11 +438,11 @@ function buildPredictionSummary(factors){
   // ── DRIVERS ─────────────────────────────────────────────────────────────
   const driversHTML=drivers.length?`
     <div style="margin-bottom:16px;">
-      <div style="font-size:10px;color:#2ecc71;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Key Drivers</div>
+      <div style="font-size:10px;color:#2ecc71;letter-spacing:1.5px;text-transform:uppercase;font-family:\'Chakra Petch\',monospace;margin-bottom:8px;">Key Drivers</div>
       ${drivers.map(f=>`
         <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #0e0c22;">
           <div style="flex-shrink:0;margin-right:8px;">
-            <span style="color:#2ecc71;font-weight:700;font-size:12px;font-family:monospace;">${f.label}</span>
+            <span style="color:#2ecc71;font-weight:700;font-size:12px;font-family:\'Chakra Petch\',monospace;">${f.label}</span>
             <span style="color:#888;font-size:11px;margin-left:5px;">${f.value}</span>
           </div>
           <div style="color:#aaa;font-size:11px;text-align:right;">${f.note}</div>
@@ -452,11 +452,11 @@ function buildPredictionSummary(factors){
   // ── HEADWINDS ────────────────────────────────────────────────────────────
   const headwindsHTML=headwinds.length?`
     <div style="margin-bottom:16px;">
-      <div style="font-size:10px;color:#e74c3c;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Key Headwinds</div>
+      <div style="font-size:10px;color:#e74c3c;letter-spacing:1.5px;text-transform:uppercase;font-family:\'Chakra Petch\',monospace;margin-bottom:8px;">Key Headwinds</div>
       ${headwinds.map(f=>`
         <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #0e0c22;">
           <div style="flex-shrink:0;margin-right:8px;">
-            <span style="color:#e74c3c;font-weight:700;font-size:12px;font-family:monospace;">${f.label}</span>
+            <span style="color:#e74c3c;font-weight:700;font-size:12px;font-family:\'Chakra Petch\',monospace;">${f.label}</span>
             <span style="color:#888;font-size:11px;margin-left:5px;">${f.value}</span>
           </div>
           <div style="color:#aaa;font-size:11px;text-align:right;">${f.note}</div>
@@ -493,7 +493,7 @@ function buildPredictionSummary(factors){
 
   const pitcherHTML=pitcherLines.length?`
     <div style="margin-bottom:16px;">
-      <div style="font-size:10px;color:#a855f7;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Pitcher Read — ${pn} (${hand}HP)</div>
+      <div style="font-size:10px;color:#a855f7;letter-spacing:1.5px;text-transform:uppercase;font-family:\'Chakra Petch\',monospace;margin-bottom:8px;">Pitcher Read — ${pn} (${hand}HP)</div>
       ${pitcherLines.map(l=>`<div style="font-size:12px;color:#bbb;padding:5px 0;border-bottom:1px solid #0e0c22;line-height:1.5;">${l}</div>`).join('')}
     </div>`:''
 
@@ -503,8 +503,8 @@ function buildPredictionSummary(factors){
   if(!mu||mu.ab===0){
     matchupHTML=`
       <div style="margin-bottom:16px;">
-        <div style="font-size:10px;color:#f39c12;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Career vs. ${pitcherLast}</div>
-        <div style="font-size:12px;color:#777;font-family:monospace;">${lastName} has no recorded plate appearances vs. ${pitcherLast} — first-time matchup. Prediction relies on season-level and Statcast metrics.</div>
+        <div style="font-size:10px;color:#f39c12;letter-spacing:1.5px;text-transform:uppercase;font-family:\'Chakra Petch\',monospace;margin-bottom:8px;">Career vs. ${pitcherLast}</div>
+        <div style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;">${lastName} has no recorded plate appearances vs. ${pitcherLast} — first-time matchup. Prediction relies on season-level and Statcast metrics.</div>
       </div>`;
   } else if(mu&&mu.ab>=3){
     const opsColor=mu.ops>=0.850?'#2ecc71':mu.ops<=0.620?'#e74c3c':'#f39c12';
@@ -525,13 +525,13 @@ function buildPredictionSummary(factors){
     if(mu.bb&&mu.ab>=8){const bbr=((mu.bb/mu.ab)*100).toFixed(0);if(parseInt(bbr)>=15)muNarr+=` ${lastName} draws walks at a high rate vs. ${pitcherLast} (${bbr}% BB).`;}
     matchupHTML=`
       <div style="margin-bottom:16px;">
-        <div style="font-size:10px;color:#f39c12;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Career vs. ${pitcherLast} · ${mu.ab} AB</div>
+        <div style="font-size:10px;color:#f39c12;letter-spacing:1.5px;text-transform:uppercase;font-family:\'Chakra Petch\',monospace;margin-bottom:8px;">Career vs. ${pitcherLast} · ${mu.ab} AB</div>
         <div style="display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap;">
-          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:${opsColor};">${mu.ops.toFixed(3)}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">OPS</div></div>
-          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:#ccc;">${mu.avg}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">AVG</div></div>
-          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:${(mu.hr||0)>0?'#A71930':'#ccc'};">${mu.hr||0}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">HR</div></div>
-          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:#ccc;">${mu.k||0}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">K</div></div>
-          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:monospace;color:#ccc;">${mu.bb||0}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">BB</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:${opsColor};">${mu.ops.toFixed(3)}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">OPS</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${mu.avg}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">AVG</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:${(mu.hr||0)>0?'#A71930':'#ccc'};">${mu.hr||0}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">HR</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${mu.k||0}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">K</div></div>
+          <div style="text-align:center;"><div style="font-size:20px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${mu.bb||0}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">BB</div></div>
         </div>
         <div style="font-size:12px;color:#bbb;line-height:1.5;">${muNarr}</div>
       </div>`;
@@ -578,22 +578,22 @@ function buildPredictionSummary(factors){
       const lbl=hr>0?`${h}/${hr}HR`:h>0?`${h}H`:'0';
       const dateShort=g.date?g.date.slice(5):'';
       return`<div title="${g.date||''}: ${h}H ${hr}HR ${rbi}RBI" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;background:${bg};border-radius:4px;padding:4px 2px;">
-        <div style="font-size:10px;font-weight:700;font-family:monospace;color:${fg};white-space:nowrap;">${lbl}</div>
-        <div style="font-size:8px;color:#555;font-family:monospace;white-space:nowrap;">${dateShort}</div>
+        <div style="font-size:10px;font-weight:700;font-family:\'Chakra Petch\',monospace;color:${fg};white-space:nowrap;">${lbl}</div>
+        <div style="font-size:8px;color:#555;font-family:\'Chakra Petch\',monospace;white-space:nowrap;">${dateShort}</div>
       </div>`;
     }).join('');
 
     recentHTML=`
       <div style="margin-bottom:4px;">
-        <div style="font-size:10px;color:#38bdf8;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">Last ${n} Games</div>
+        <div style="font-size:10px;color:#38bdf8;letter-spacing:1.5px;text-transform:uppercase;font-family:\'Chakra Petch\',monospace;margin-bottom:8px;">Last ${n} Games</div>
         <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${avg10}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">AVG</div></div>
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalH}/${totalAB}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">H/AB</div></div>
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:${totalHR>0?'#60a5fa':'#ccc'};">${totalHR}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">HR</div></div>
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalRBI}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">RBI</div></div>
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalBB}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">BB</div></div>
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${totalK}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">K</div></div>
-          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:monospace;color:#ccc;">${multiHit}</div><div style="font-size:9px;color:#666;font-family:monospace;margin-top:2px;">2H+</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${avg10}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">AVG</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${totalH}/${totalAB}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">H/AB</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:${totalHR>0?'#60a5fa':'#ccc'};">${totalHR}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">HR</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${totalRBI}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">RBI</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${totalBB}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">BB</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${totalK}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">K</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${multiHit}</div><div style="font-size:9px;color:#666;font-family:\'Chakra Petch\',monospace;margin-top:2px;">2H+</div></div>
         </div>
         <div style="display:flex;gap:3px;margin-bottom:10px;">${spark}</div>
         <div style="font-size:12px;color:#bbb;line-height:1.5;">${formNarr}</div>
@@ -732,7 +732,7 @@ function _renderPitcherSeasonBoxes(){
 async function loadPitcherStatcast(pitcherId){
   const el=document.getElementById('pt-statcast');
   if(!el)return;
-  el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading pitcher Statcast...</div>';
+  el.innerHTML='<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Loading pitcher Statcast...</div>';
   const pid=String(pitcherId);
 
   const safeRows=(text,label)=>{
@@ -853,13 +853,13 @@ async function loadPitcherStatcast(pitcherId){
     ].join('');
 
     if(!scRow&&!expRow&&arsenalRows.length===0){
-      el.innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">No Statcast data found for this pitcher.</div>';
+      el.innerHTML='<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">No Statcast data found for this pitcher.</div>';
     }else{
       el.innerHTML=boxes;
     }
   }catch(e){
     console.error('[PitcherStatcast] Error:',e);
-    el.innerHTML=`<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Pitcher Statcast unavailable.</div>`;
+    el.innerHTML=`<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Pitcher Statcast unavailable.</div>`;
   }
 }
 
@@ -915,7 +915,7 @@ async function loadUmpire(dv){
     if(!hp){setText('ump-empty','Umpire data not yet available.');hide('ump-spinner');show('ump-empty');return;}
     S.umpire=hp.official;
     const ut=UMP_DB[hp.official.fullName]||{tendency:'neutral',adj:0,note:'No significant zone bias on record.'};
-    document.getElementById('ump-content').innerHTML=`<div class="ump-box"><div class="ump-sub">Home Plate Umpire</div><div class="ump-name">${hp.official.fullName}</div><div class="ump-tendency ${ut.tendency}">${ut.tendency==='pitcher'?'Pitcher-Friendly':ut.tendency==='hitter'?'Hitter-Friendly':'Neutral Zone'}</div><div style="font-size:11px;color:#999;font-family:monospace;margin-top:8px;">${ut.note}</div>${ut.adj!==0?`<div style="font-size:10px;color:#999;font-family:monospace;margin-top:4px;">Est. run impact: <strong style="color:${ut.adj>0?'#2ecc71':'#e74c3c'}">${ut.adj>0?'+':''}${ut.adj} R/G</strong></div>`:''}`;
+    document.getElementById('ump-content').innerHTML=`<div class="ump-box"><div class="ump-sub">Home Plate Umpire</div><div class="ump-name">${hp.official.fullName}</div><div class="ump-tendency ${ut.tendency}">${ut.tendency==='pitcher'?'Pitcher-Friendly':ut.tendency==='hitter'?'Hitter-Friendly':'Neutral Zone'}</div><div style="font-size:11px;color:#999;font-family:\'Chakra Petch\',monospace;margin-top:8px;">${ut.note}</div>${ut.adj!==0?`<div style="font-size:10px;color:#999;font-family:\'Chakra Petch\',monospace;margin-top:4px;">Est. run impact: <strong style="color:${ut.adj>0?'#2ecc71':'#e74c3c'}">${ut.adj>0?'+':''}${ut.adj} R/G</strong></div>`:''}`;
     show('ump-content');
   }catch(e){console.warn('Umpire load failed:',e.message);setText('ump-empty','Could not load umpire data.');show('ump-empty');}
   finally{hide('ump-spinner');}
@@ -943,7 +943,7 @@ async function loadMatchupStats(){
     if(!st||ab===0){
       const pLast=S.playerName.split(' ').pop();
       const pitLast=S.pitcher.name?.split(' ').pop()||S.pitcher.name||'this pitcher';
-      document.getElementById('matchup-content').innerHTML=`<div style="font-size:11px;color:#777;font-family:monospace;">${pLast} has no recorded plate appearances vs. ${pitLast} — first-time matchup.</div>`;
+      document.getElementById('matchup-content').innerHTML=`<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;">${pLast} has no recorded plate appearances vs. ${pitLast} — first-time matchup.</div>`;
       show('matchup-content');hide('matchup-spinner');return;
     }
     const ops=parseFloat(st.ops)||0;
@@ -956,15 +956,15 @@ async function loadMatchupStats(){
     const sample=ab>=20?'Solid sample':ab>=10?'Moderate sample':'⚠ Small sample';
     document.getElementById('matchup-content').innerHTML=`
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px;">
-        <div><div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;">OPS</div><div style="font-size:26px;font-weight:900;font-family:monospace;color:${opsColor}">${st.ops}</div></div>
+        <div><div style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;text-transform:uppercase;">OPS</div><div style="font-size:26px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:${opsColor}">${st.ops}</div></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          ${[['AVG',st.avg],['OBP',st.obp],['SLG',st.slg],['AB',ab],['H',h],['HR',hr],['K',k],['BB',bb]].map(([l,v])=>`<div><div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;">${l}</div><div style="font-size:13px;font-weight:700;font-family:monospace;color:#ccc;">${v}</div></div>`).join('')}
+          ${[['AVG',st.avg],['OBP',st.obp],['SLG',st.slg],['AB',ab],['H',h],['HR',hr],['K',k],['BB',bb]].map(([l,v])=>`<div><div style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;text-transform:uppercase;">${l}</div><div style="font-size:13px;font-weight:700;font-family:\'Chakra Petch\',monospace;color:#ccc;">${v}</div></div>`).join('')}
         </div>
       </div>
-      <div style="font-size:9px;color:#777;font-family:monospace;">${sample} · ${ab} AB vs ${S.pitcher.name}</div>`;
+      <div style="font-size:9px;color:#777;font-family:\'Chakra Petch\',monospace;">${sample} · ${ab} AB vs ${S.pitcher.name}</div>`;
     show('matchup-content');
   }catch(e){
-    document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">Could not load matchup data.</div>';
+    document.getElementById('matchup-content').innerHTML='<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;">Could not load matchup data.</div>';
     show('matchup-content');
   }finally{hide('matchup-spinner');}
 }
@@ -1732,9 +1732,9 @@ async function loadLineupContext(dv){
       }).join('')+
       `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #1a1730;">
         <span class="prot-badge ${tier}">${{strong:'Strong Protection',average:'Average Protection',weak:'Weak Protection'}[tier]}</span>
-        ${avgOps?`<span style="font-size:9px;color:#888;font-family:monospace;margin-left:8px;">${avgOps.toFixed(3)} OPS (3-4-5)</span>`:''}
-        ${selectedRow?`<span style="font-size:9px;color:#999;font-family:monospace;margin-left:12px;">${S.playerName} bats ${selectedRow.order}${ordSuffix(selectedRow.order)}</span>`:`<span style="font-size:9px;color:#e74c3c;font-family:monospace;margin-left:12px;">${S.playerName} is not in today's starting lineup</span>`}
-        ${weakProtection&&nextBatter?`<div style="font-size:10px;color:#e74c3c;font-family:monospace;margin-top:6px;">⚠ ${nextBatter.name} bats behind ${playerLastName} (.${Math.round((nextBatter.avg||0)*1000)}) — pitchers may work around him</div>`:''}
+        ${avgOps?`<span style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;margin-left:8px;">${avgOps.toFixed(3)} OPS (3-4-5)</span>`:''}
+        ${selectedRow?`<span style="font-size:9px;color:#999;font-family:\'Chakra Petch\',monospace;margin-left:12px;">${S.playerName} bats ${selectedRow.order}${ordSuffix(selectedRow.order)}</span>`:`<span style="font-size:9px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;margin-left:12px;">${S.playerName} is not in today's starting lineup</span>`}
+        ${weakProtection&&nextBatter?`<div style="font-size:10px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;margin-top:6px;">⚠ ${nextBatter.name} bats behind ${playerLastName} (.${Math.round((nextBatter.avg||0)*1000)}) — pitchers may work around him</div>`:''}
       </div>`;
     show('lineup-content');
 
@@ -1958,10 +1958,10 @@ function renderFactorCards(factors, catTotals){
   const icons={positive:'▲',negative:'▼',neutral:'●'};
   const fmtRows=fs=>fs.length
     ?fs.map(f=>`<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('')
-    :'<div style="font-size:11px;color:#555;font-family:monospace;padding:4px 0;">No significant factors.</div>';
+    :'<div style="font-size:11px;color:#555;font-family:\'Chakra Petch\',monospace;padding:4px 0;">No significant factors.</div>';
   const fmtNet=n=>{
     const s=n>0?'+':'',c=n>0?'#2ecc71':n<0?'#e74c3c':'#888';
-    return`<span style="color:${c};font-weight:900;font-family:monospace;font-size:12px;letter-spacing:0;text-transform:none;">${s}${n}</span>`;
+    return`<span style="color:${c};font-weight:900;font-family:\'Chakra Petch\',monospace;font-size:12px;letter-spacing:0;text-transform:none;">${s}${n}</span>`;
   };
   ['batter','pitcher','conditions'].forEach(cat=>{
     const fs=factors.filter(f=>f.cat===cat);
@@ -2555,7 +2555,7 @@ function _renderPitchMatchup(){
   if(!pit){
     return Object.entries(S.pitcherPitches||{}).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a)
       .map(([type,pct])=>`<div class="pitch-row"><span class="pitch-label">${type}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${pct}%;background:${pct>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${pct}%</span></div>`).join('')
-      || '<div style="color:#777;font-family:monospace;font-size:11px;">No pitch mix data available.</div>';
+      || '<div style="color:#777;font-family:\'Chakra Petch\',monospace;font-size:11px;">No pitch mix data available.</div>';
   }
 
   // Compute the batter's baseline (weighted by PA per pitch type) across all pitches.
@@ -2597,7 +2597,7 @@ function _renderPitchMatchup(){
     .sort(([,a],[,b])=>(b.usage||0)-(a.usage||0));
 
   if(!pitches.length){
-    return '<div style="color:#777;font-family:monospace;font-size:11px;">No arsenal data for this pitcher.</div>';
+    return '<div style="color:#777;font-family:\'Chakra Petch\',monospace;font-size:11px;">No arsenal data for this pitcher.</div>';
   }
 
   const header = base
@@ -3352,10 +3352,10 @@ function renderCorbetBets(){
       corbetBetsMap[betKey]=b;
       if(b.insufficient)return`<div class="bet-card" style="background:#0c0a1e;border:1px solid #1a1730;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
         <div class="bet-card-header">
-          <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
+          <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
         </div>
-        <div style="font-size:10px;color:#666;font-family:monospace;margin:8px 0 10px;">⚠ Insufficient market data — fewer than 2 reliable bookmakers</div>
-        <div style="display:flex;gap:14px;font-family:monospace;font-size:11px;">
+        <div style="font-size:10px;color:#666;font-family:\'Chakra Petch\',monospace;margin:8px 0 10px;">⚠ Insufficient market data — fewer than 2 reliable bookmakers</div>
+        <div style="display:flex;gap:14px;font-family:\'Chakra Petch\',monospace;font-size:11px;">
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Over</div>
             <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.overBest?.book||'')}</span></div></div>
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Under</div>
@@ -3376,21 +3376,21 @@ function renderCorbetBets(){
       const showSave=b.edgeStrength!=='none';
       return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
-          <span style="font-size:13px;font-weight:900;font-family:monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
-          ${showSave?`<button data-bk="${betKey.replace(/"/g,'&quot;')}" onclick="saveBet(this.dataset.bk,this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
+          <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
+          ${showSave?`<button data-bk="${betKey.replace(/"/g,'&quot;')}" onclick="saveBet(this.dataset.bk,this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
         </div>
-        ${b.conflict?`<div style="background:#1a0808;border:1px solid #4a1010;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e74c3c;font-family:monospace;letter-spacing:1px;">⚠ CONFLICT — Direction contradicts Total Bases recommendation. No edge shown.</div>`:''}
+        ${b.conflict?`<div style="background:#1a0808;border:1px solid #4a1010;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;">⚠ CONFLICT — Direction contradicts Total Bases recommendation. No edge shown.</div>`:''}
         ${b.edgeStrength!=='none'
           ?`<div style="background:${dirBg};border:1px solid ${dirBorder};border-radius:8px;padding:10px 14px;margin:8px 0 12px;display:flex;justify-content:space-between;align-items:center;">
               <div>
-                <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Model Recommends</div>
-                <div style="font-size:22px;font-weight:900;font-family:monospace;color:${dirColor};letter-spacing:1px;">${b.delta>0?'▲':'▼'} ${b.direction.toUpperCase()}</div>
+                <div style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Model Recommends</div>
+                <div style="font-size:22px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:${dirColor};letter-spacing:1px;">${b.delta>0?'▲':'▼'} ${b.direction.toUpperCase()}</div>
               </div>
               <span class="edge-badge ${b.edgeStrength}">${edgeLabels[b.edgeStrength]}</span>
             </div>`
-          :`<div style="font-size:10px;color:#555;font-family:monospace;margin:6px 0 10px;">${b.conflict?'No recommendation — resolve conflict above':'Model agrees with market — no edge'}</div>`}
+          :`<div style="font-size:10px;color:#555;font-family:\'Chakra Petch\',monospace;margin:6px 0 10px;">${b.conflict?'No recommendation — resolve conflict above':'Model agrees with market — no edge'}</div>`}
         <div style="margin-bottom:22px;">
-          <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
             <span>Over ${overW}%</span><span>Under ${underW}%</span>
           </div>
           <div style="position:relative;">
@@ -3401,10 +3401,10 @@ function renderCorbetBets(){
             <div style="position:absolute;top:0;left:${markerLeft}%;width:2px;height:22px;background:rgba(255,255,255,0.9);transform:translateX(-50%);pointer-events:none;border-radius:1px;box-shadow:0 0 4px rgba(255,255,255,0.5);"></div>
           </div>
           <div style="position:relative;height:18px;margin-top:3px;">
-            <div style="position:absolute;left:${markerLeft}%;transform:translateX(-50%);font-size:8px;color:#ccc;font-family:monospace;white-space:nowrap;text-align:center;">▲ Model ${b.modelProb.toFixed(0)}%</div>
+            <div style="position:absolute;left:${markerLeft}%;transform:translateX(-50%);font-size:8px;color:#ccc;font-family:\'Chakra Petch\',monospace;white-space:nowrap;text-align:center;">▲ Model ${b.modelProb.toFixed(0)}%</div>
           </div>
         </div>
-        <div style="display:flex;gap:14px;margin:0 0 8px;flex-wrap:wrap;font-family:monospace;font-size:11px;">
+        <div style="display:flex;gap:14px;margin:0 0 8px;flex-wrap:wrap;font-family:\'Chakra Petch\',monospace;font-size:11px;">
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Over</div>
             <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.overBest?.book||'')}</span></div></div>
           <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Under</div>
@@ -3469,7 +3469,7 @@ function _renderPitcherCard(){
   const era=S.pitcher.st?.era?parseFloat(S.pitcher.st.era).toFixed(2):'—';
   const hand=S.pitcher.hand||'R';
   const bpBadge=S.pitcher.bullpenGame
-    ?`<span style="background:#f39c12;color:#000;font-family:monospace;font-size:9px;font-weight:900;letter-spacing:2px;padding:2px 7px;border-radius:4px;margin-left:8px;">OPENER/BULLPEN</span>`
+    ?`<span style="background:#f39c12;color:#000;font-family:\'Chakra Petch\',monospace;font-size:9px;font-weight:900;letter-spacing:2px;padding:2px 7px;border-radius:4px;margin-left:8px;">OPENER/BULLPEN</span>`
     :'';
   el.innerHTML=`<div class="dash-pitcher-card pitcher-card-grid">
     <div class="pitcher-left">
@@ -4195,7 +4195,7 @@ function renderStatsTab(){
   document.getElementById('stat-discipline').innerHTML=statBox('BB%',bbPct,`${ss.baseOnBalls} walks / ${pa} PA`,parseFloat(bbPct)>=10?'good':parseFloat(bbPct)<=5?'bad':'',STAT_INFO.BBPCT)+statBox('K%',kPct,`${ss.strikeOuts} Ks / ${pa} PA`,parseFloat(kPct)<=16?'good':parseFloat(kPct)>=25?'bad':'',STAT_INFO.KPCT_B)+statBox('BB/K',ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts).toFixed(2):'—','Walk to K ratio','',STAT_INFO.BBK)+statBox('IBB',ss.intentionalWalks??'0','Intentional walks','',STAT_INFO.IBB)+statBox('HBP',ss.hitByPitch??'0','Hit by pitch','',STAT_INFO.HBP)+statBox('SAC',(ss.sacBunts??0)+(ss.sacFlies??0),'Sac bunts + flies','',STAT_INFO.SAC);
   document.getElementById('stat-power').innerHTML=statBox('HR',ss.homeRuns,`${ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—'} AB/HR`,'',STAT_INFO.HR)+statBox('2B',ss.doubles,'Doubles','',STAT_INFO.D2B)+statBox('3B',ss.triples,'Triples','',STAT_INFO.D3B)+statBox('XBH',(ss.homeRuns||0)+(ss.doubles||0)+(ss.triples||0),'Extra base hits','',STAT_INFO.XBH)+statBox('RBI',ss.rbi,`${ss.leftOnBase} LOB`,'',STAT_INFO.RBI)+statBox('SB',`${ss.stolenBases}/${(ss.stolenBases||0)+(ss.caughtStealing||0)}`,'SB success','',STAT_INFO.SB);
   if(risp){const ro=((parseFloat(risp.obp)||0)+(parseFloat(risp.slg)||0)).toFixed(3);const rc=parseFloat(risp.avg)>=0.280?'#2ecc71':parseFloat(risp.avg)<=0.200?'#e74c3c':'#fff';document.getElementById('stat-risp').innerHTML=`<div class="risp-box"><div><div class="stat-label" style="margin-bottom:4px">BA w/ RISP</div><div class="risp-main" style="color:${rc}">${risp.avg??'—'}</div></div><div class="risp-detail">OBP <strong style="color:#fff">${risp.obp??'—'}</strong><br>SLG <strong style="color:#fff">${risp.slg??'—'}</strong><br>OPS <strong style="color:#fff">${ro}</strong>${risp.rbi?`<br>RBI <strong style="color:#fff">${risp.rbi}</strong>`:''}</div><div class="risp-detail">H <strong style="color:#fff">${risp.hits??'—'}</strong><br>AB <strong style="color:#fff">${risp.atBats??'—'}</strong><br>PA <strong style="color:#fff">${risp.plateAppearances??'—'}</strong><br>K <strong style="color:#fff">${risp.strikeOuts??'—'}</strong></div></div>`;}
-  else document.getElementById('stat-risp').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">RISP data not available.</div>';
+  else document.getElementById('stat-risp').innerHTML='<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;">RISP data not available.</div>';
   show('stats-content');
 }
 
@@ -4447,7 +4447,7 @@ async function renderGradePanel() {
         <div class="gg-header">
           <div>
             <div class="gg-title">${pred.date} · vs ${pred.pitcherName||'Unknown'}</div>
-            <div style="font-size:10px;color:#999;font-family:monospace;margin-top:3px;">${pred.playerName}</div>
+            <div style="font-size:10px;color:#999;font-family:\'Chakra Petch\',monospace;margin-top:3px;">${pred.playerName}</div>
           </div>
           <div class="gg-score">${pred.score}</div>
         </div>
@@ -4460,7 +4460,7 @@ async function renderGradePanel() {
         </div>
         <div style="display:flex;gap:8px;align-items:center;" id="grade-actions-${pred.id}">
           <button class="grade-btn confirm" onclick="autoGrade(${pred.id}, '${pred.playerId}', '${pred.date}')">⟳ Fetch & Grade</button>
-          <span style="font-size:10px;color:#777;font-family:monospace;">Fetches actual stats from MLB API</span>
+          <span style="font-size:10px;color:#777;font-family:\'Chakra Petch\',monospace;">Fetches actual stats from MLB API</span>
         </div>`;
       pendingEl.appendChild(div);
     }
@@ -4512,11 +4512,11 @@ async function renderGradePanel() {
       const modelClass = live.modelAccurate ? 'accurate' : 'off';
       const playerLast = g.playerName ? g.playerName.split(' ').pop() : '—';
       return `<div class="grade-log-row">
-        <span style="color:#888;font-family:monospace;font-size:11px;">${g.date}</span>
-        <span style="font-family:monospace;font-size:13px;font-weight:800;color:#A71930;">${g.score}</span>
-        <span style="color:#aaa;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${playerLast}</span>
-        <span style="color:#ccc;font-family:monospace;font-size:11px;">${g.actual.summary||`${g.actual.hits}H ${g.actual.totalBases}TB`}</span>
-        <span style="color:#888;font-family:monospace;font-size:11px;" title="Performance score">${live.perfScore}</span>
+        <span style="color:#888;font-family:\'Chakra Petch\',monospace;font-size:11px;">${g.date}</span>
+        <span style="font-family:\'Chakra Petch\',monospace;font-size:13px;font-weight:800;color:#A71930;">${g.score}</span>
+        <span style="color:#aaa;font-family:\'Chakra Petch\',monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${playerLast}</span>
+        <span style="color:#ccc;font-family:\'Chakra Petch\',monospace;font-size:11px;">${g.actual.summary||`${g.actual.hits}H ${g.actual.totalBases}TB`}</span>
+        <span style="color:#888;font-family:\'Chakra Petch\',monospace;font-size:11px;" title="Performance score">${live.perfScore}</span>
         <span class="outcome-badge ${live.outcome}">${outcomeLabels[live.outcome]||live.outcome}</span>
         <span class="model-badge ${modelClass}">${modelLabel}</span>
       </div>`;
@@ -4542,7 +4542,7 @@ async function autoGrade(predId, playerId, date) {
         removeBtn.onclick = () => removePending(predId);
         actionsEl.appendChild(removeBtn);
         const note = document.createElement('span');
-        note.style.cssText = 'font-size:10px;color:#e74c3c;font-family:monospace;';
+        note.style.cssText = 'font-size:10px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;';
         note.textContent = 'Game not found — may not have played';
         actionsEl.appendChild(note);
       }
@@ -4555,7 +4555,7 @@ async function autoGrade(predId, playerId, date) {
       if (actionsEl) {
         actionsEl.innerHTML = `
           <button class="grade-btn remove-btn" style="background:#2a1a1a;color:#e74c3c;border:1px solid #e74c3c;" onclick="removePending(${predId})">✕ Remove (didn't play)</button>
-          <span style="font-size:10px;color:#e74c3c;font-family:monospace;">Player had 0 PA — no at-bats recorded</span>`;
+          <span style="font-size:10px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;">Player had 0 PA — no at-bats recorded</span>`;
       }
       return;
     }
@@ -4571,7 +4571,7 @@ async function autoGrade(predId, playerId, date) {
     if (statsEl && !statsEl.querySelector('.raw-stats-details')) {
       const det = document.createElement('details');
       det.className = 'raw-stats-details';
-      det.style.cssText = 'grid-column:1/-1;font-size:9px;font-family:monospace;color:#555;margin-top:4px;';
+      det.style.cssText = 'grid-column:1/-1;font-size:9px;font-family:\'Chakra Petch\',monospace;color:#555;margin-top:4px;';
       det.innerHTML = `<summary style="cursor:pointer;color:#444;letter-spacing:1px;">RAW MLB API</summary><pre style="color:#555;white-space:pre-wrap;font-size:9px;margin:4px 0 0;">${JSON.stringify(actual._raw||actual,null,2)}</pre>`;
       statsEl.appendChild(det);
     }
@@ -4679,7 +4679,7 @@ function parseCSV(text) {
 }
 
 async function loadStatcast(playerId) {
-  document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div>';
+  document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Loading Statcast data...</div>';
   try {
     const [statRes, expRes, batRes, arsenalRes, battedRes] = await Promise.all([
       fetch('/savant/statcast?type=batter&year=2026'),
@@ -4791,7 +4791,7 @@ async function loadStatcast(playerId) {
     };
 
   } catch(e) {
-    document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
+    document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
   }
 }
 

@@ -79,24 +79,24 @@
             <div id="pitcher-search-results" class="search-results hidden"></div>
           </div>
         </div>
-        <div id="pitcher-spinner" class="spinner hidden"><div class="spinner-circle"></div><span style="font-size:11px;color:#888;font-family:monospace;">Loading pitcher stats...</span></div>
+        <div id="pitcher-spinner" class="spinner hidden"><div class="spinner-circle"></div><span style="font-size:11px;color:#888;font-family:\'Chakra Petch\',monospace;">Loading pitcher stats...</span></div>
         <div id="pitcher-error" class="status error hidden"></div>
         <div id="pitcher-loaded" class="hidden"></div>
         <div id="matchup-section" class="hidden" style="margin-top:12px;">
-          <div style="font-size:9px;color:#009A8B;font-family:monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">Career vs This Pitcher</div>
+          <div style="font-size:9px;color:#009A8B;font-family:\'Chakra Petch\',monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">Career vs This Pitcher</div>
           <div id="matchup-spinner" class="spinner hidden" style="padding:8px 0;"><div class="spinner-circle"></div></div>
           <div id="matchup-content" class="hidden"></div>
         </div>
         <div id="pitcher-pitch-mix" class="hidden">
-          <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix — adjust if needed</div>
+          <div style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix — adjust if needed</div>
           <div class="pitch-mix-grid" id="pitch-mix-grid"></div>
         </div>
-        <div style="margin-top:10px;"><button onclick="toggleManual()" style="background:none;border:none;color:#777;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Enter manually instead</button></div>
+        <div style="margin-top:10px;"><button onclick="toggleManual()" style="background:none;border:none;color:#777;font-family:\'Chakra Petch\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Enter manually instead</button></div>
         <div id="pitcher-manual" class="hidden" style="margin-top:12px;">
           <div class="row"><label>Name</label><input type="text" id="m-pitcher-name" placeholder="Pitcher name"></div>
           <div class="row"><label>Throws</label><div class="toggle"><button class="toggle-btn active" id="throws-R" onclick="setThrows('R')">Right</button><button class="toggle-btn" id="throws-L" onclick="setThrows('L')">Left</button></div></div>
           <div class="row"><label>ERA</label><input type="number" id="m-pitcher-era" step="0.01" placeholder="e.g. 3.45"></div>
-          <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix (approx %)</div>
+          <div style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:2px;text-transform:uppercase;margin-top:14px;margin-bottom:10px;">Pitch Mix (approx %)</div>
           <div class="pitch-mix-grid" id="pitch-mix-grid-manual"></div>
         </div>
       </div>
@@ -118,13 +118,13 @@
         <div style="margin-top:16px;">
           <div class="stats-section-title" style="margin-top:0">Home Plate Umpire</div>
           <div id="ump-spinner" class="spinner hidden" style="padding:12px 0;"><div class="spinner-circle"></div></div>
-          <div id="ump-empty" style="font-size:11px;color:#777;font-family:monospace;">Enter a game date to look up the umpire.</div>
+          <div id="ump-empty" style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;">Enter a game date to look up the umpire.</div>
           <div id="ump-content" class="hidden"></div>
         </div>
         <div style="margin-top:16px;">
           <div class="stats-section-title" style="margin-top:0">Lineup Protection (3-4-5 Spots)</div>
           <div id="lineup-spinner" class="spinner hidden" style="padding:12px 0;"><div class="spinner-circle"></div></div>
-          <div id="lineup-empty" style="font-size:11px;color:#777;font-family:monospace;">Enter a game date to load lineup context.</div>
+          <div id="lineup-empty" style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;">Enter a game date to load lineup context.</div>
           <div id="lineup-content" class="hidden"></div>
         </div>
       </div>
@@ -171,13 +171,13 @@
         </div>
         <div class="row hidden" id="roof-row"><label>Roof</label><div class="toggle"><button class="toggle-btn active" id="roof-closed" onclick="setRoof(true)">Closed</button><button class="toggle-btn" id="roof-open" onclick="setRoof(false)">Open</button></div></div>
         <div style="margin-top:12px;">
-          <button onclick="fetchWeather()" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:6px;color:#888;font-family:monospace;font-size:10px;cursor:pointer;padding:6px 14px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">⟳ Auto-fetch Weather</button>
+          <button onclick="fetchWeather()" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:6px;color:#888;font-family:\'Chakra Petch\',monospace;font-size:10px;cursor:pointer;padding:6px 14px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">⟳ Auto-fetch Weather</button>
           <div id="weather-spinner" class="spinner hidden" style="padding:10px 0;"><div class="spinner-circle"></div></div>
           <div id="weather-content" class="hidden">
             <div class="weather-auto"><div class="wa-title">Live Conditions at Stadium</div><div class="weather-grid" id="weather-grid"></div><div id="roof-rec" class="roof-recommendation hidden"></div></div>
           </div>
         </div>
-        <div style="margin-top:4px;"><button onclick="toggleWeatherManual()" style="background:none;border:none;color:#777;font-family:monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Override weather manually</button></div>
+        <div style="margin-top:4px;"><button onclick="toggleWeatherManual()" style="background:none;border:none;color:#777;font-family:\'Chakra Petch\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:underline;">Override weather manually</button></div>
         <div id="weather-manual" class="hidden" style="margin-top:10px;">
           <div class="row"><label id="temp-label">Temp: 95°F</label><input type="range" id="temp-slider" min="30" max="115" value="95" oninput="document.getElementById('temp-label').textContent='Temp: '+this.value+'°F'"></div>
           <div class="row"><label id="wind-label">Wind: 5 mph</label><div class="range-row"><input type="range" id="wind-slider" min="0" max="30" value="5" style="flex:1" oninput="document.getElementById('wind-label').textContent='Wind: '+this.value+' mph'"><select id="wind-dir" style="width:130px"><option value="calm">Calm</option><option value="out">Blowing Out</option><option value="in">Blowing In</option><option value="cross">Crosswind</option></select></div></div>
@@ -190,7 +190,7 @@
 
   <!-- ═══════════════════ RESULT ═══════════════════ -->
   <div id="panel-result" class="panel">
-    <div id="no-prediction" style="text-align:center;padding:40px;color:#777;font-family:monospace;font-size:12px;">Complete the Setup and hit Run Prediction first.</div>
+    <div id="no-prediction" style="text-align:center;padding:40px;color:#777;font-family:\'Chakra Petch\',monospace;font-size:12px;">Complete the Setup and hit Run Prediction first.</div>
     <div id="prediction-output" class="hidden">
       <div class="prediction-header" id="pred-header"></div>
       <div class="card">
@@ -203,8 +203,8 @@
                 <circle id="gauge-circle" cx="68" cy="68" r="52" fill="none" stroke="#2ecc71" stroke-width="9" stroke-dasharray="326.73" stroke-dashoffset="326.73" stroke-linecap="round" style="transition:all 0.8s ease"/>
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-                <span id="gauge-score" style="font-size:34px;font-weight:900;color:#fff;font-family:monospace;line-height:1;">—</span>
-                <span style="font-size:9px;color:#777;letter-spacing:2px;text-transform:uppercase;font-family:monospace;">/100</span>
+                <span id="gauge-score" style="font-size:34px;font-weight:900;color:#fff;font-family:\'Chakra Petch\',monospace;line-height:1;">—</span>
+                <span style="font-size:9px;color:#777;letter-spacing:2px;text-transform:uppercase;font-family:\'Chakra Petch\',monospace;">/100</span>
               </div>
             </div>
             <div id="gauge-label" class="gauge-label"></div>
@@ -212,13 +212,13 @@
           </div>
           <div style="display:flex;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #1a1730;">
             <div style="flex:1;background:#07060f;border:1px solid #1a1730;border-radius:8px;padding:10px 12px;text-align:center;">
-              <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">🏃 Batter</div>
-              <div id="mini-batter-val" style="font-size:18px;font-weight:900;font-family:monospace;color:#888;">—</div>
+              <div style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">🏃 Batter</div>
+              <div id="mini-batter-val" style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#888;">—</div>
               <div style="margin-top:7px;height:3px;background:#1a1730;border-radius:2px;overflow:hidden;"><div id="mini-batter-bar" style="height:100%;width:0%;border-radius:2px;transition:width 0.5s,background 0.5s;"></div></div>
             </div>
             <div style="flex:1;background:#07060f;border:1px solid #1a1730;border-radius:8px;padding:10px 12px;text-align:center;">
-              <div style="font-size:9px;color:#888;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">⚾ Pitcher</div>
-              <div id="mini-pitcher-val" style="font-size:18px;font-weight:900;font-family:monospace;color:#888;">—</div>
+              <div style="font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">⚾ Pitcher</div>
+              <div id="mini-pitcher-val" style="font-size:18px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#888;">—</div>
               <div style="margin-top:7px;height:3px;background:#1a1730;border-radius:2px;overflow:hidden;"><div id="mini-pitcher-bar" style="height:100%;width:0%;border-radius:2px;transition:width 0.5s,background 0.5s;"></div></div>
             </div>
           </div>
@@ -245,7 +245,7 @@
         </div>
         <div id="factors-conditions-body" class="card-body"></div>
       </div>
-      <div class="card"><div class="card-header">📝 Scouting Report</div><div class="card-body" id="prediction-summary" style="padding:14px 16px;"><div style="color:#777;font-family:monospace;font-size:11px;">Run a prediction to generate the scouting report.</div></div></div>
+      <div class="card"><div class="card-header">📝 Scouting Report</div><div class="card-body" id="prediction-summary" style="padding:14px 16px;"><div style="color:#777;font-family:\'Chakra Petch\',monospace;font-size:11px;">Run a prediction to generate the scouting report.</div></div></div>
       <div class="card"><div class="card-header">⚾ Pitch Mix</div><div class="card-body" id="pitch-display"></div></div>
       <div style="margin-top:12px;" id="result-nav-btns">
         <button class="btn-primary" onclick="closeModal();openModal('panel-corbet','CorBET Carroll');loadCorbet();" style="background:linear-gradient(135deg,#009A8B,#007a70);">View CorBET →</button>
@@ -274,7 +274,7 @@
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
-      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button class="autograde-btn" onclick="autoGradeBetLog()" style="background:none;border:1px solid #2d2616;color:#d4a017;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">⟳ Grade</button><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">☁ Sync</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:\'Chakra Petch\',monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button class="autograde-btn" onclick="autoGradeBetLog()" style="background:none;border:1px solid #2d2616;color:#d4a017;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">⟳ Grade</button><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">☁ Sync</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
         <div class="record-summary-strip">
           <div class="rss-stat"><div class="rss-label">Units</div><div class="rss-val" id="rec-units">—</div></div>
@@ -284,11 +284,11 @@
           <div class="rss-sparkline" id="rec-sparkline"></div>
         </div>
         <div class="prop-record-grid" id="rec-prop-grid"></div>
-        <div id="bet-log-headers" style="display:none;grid-template-columns:70px 90px 36px 1fr 50px 54px 96px 22px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
+        <div id="bet-log-headers" style="display:none;grid-template-columns:70px 90px 36px 1fr 50px 54px 96px 22px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:\'Chakra Petch\',monospace;text-transform:uppercase;letter-spacing:1px;">
           <span>Date</span><span>Player</span><span>Opp</span><span>Prop</span><span>Odds</span><span>Rating</span><span>Result</span><span></span>
         </div>
         <div id="bet-log"></div>
-        <div id="bet-log-empty" style="text-align:center;padding:24px;color:#777;font-family:monospace;font-size:12px;">No bets logged yet. Run predictions and save CorBET picks to build your record.</div>
+        <div id="bet-log-empty" style="text-align:center;padding:24px;color:#777;font-family:\'Chakra Petch\',monospace;font-size:12px;">No bets logged yet. Run predictions and save CorBET picks to build your record.</div>
       </div>
     </div>
   </div>
@@ -298,9 +298,9 @@
     <div class="card">
       <div class="card-header">📊 Model Calibration</div>
       <div class="card-body">
-        <div id="cal-empty" style="text-align:center;padding:24px;color:#777;font-family:monospace;font-size:12px;">Calibration data builds up as you grade bets. New bets save model probability and MC confidence — older bets without these fields are excluded.</div>
+        <div id="cal-empty" style="text-align:center;padding:24px;color:#777;font-family:\'Chakra Petch\',monospace;font-size:12px;">Calibration data builds up as you grade bets. New bets save model probability and MC confidence — older bets without these fields are excluded.</div>
         <div id="cal-content" class="hidden">
-          <div id="cal-summary" style="font-size:11px;color:#888;font-family:monospace;margin-bottom:14px;text-align:center;"></div>
+          <div id="cal-summary" style="font-size:11px;color:#888;font-family:\'Chakra Petch\',monospace;margin-bottom:14px;text-align:center;"></div>
 
           <div class="cal-section">
             <div class="cal-section-title">CALIBRATION BY PREDICTED PROBABILITY</div>
@@ -332,7 +332,7 @@
         <div id="splits-spinner" class="spinner hidden"><div class="spinner-circle"></div></div>
         <div id="splits-error" class="status error hidden"></div>
         <div id="splits-content" class="hidden"><div class="season-bar" id="season-bar"></div><div class="split-grid" id="split-grid"></div></div>
-        <div id="splits-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load splits.</div>
+        <div id="splits-empty" style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;text-align:center;padding:20px;">Select a player in Setup to load splits.</div>
       </div>
     </div>
   </div>
@@ -349,9 +349,9 @@
           <div class="stats-section-title">Plate Discipline</div><div class="stats-grid" id="stat-discipline"></div>
           <div class="stats-section-title">Power &amp; Contact</div><div class="stats-grid" id="stat-power"></div>
           <div class="stats-section-title">Runners in Scoring Position</div><div id="stat-risp"></div>
-          <div class="stats-section-title">Statcast / Advanced</div><div class="stats-grid" id="stat-statcast"><div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Loading Statcast data...</div></div>
+          <div class="stats-section-title">Statcast / Advanced</div><div class="stats-grid" id="stat-statcast"><div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Loading Statcast data...</div></div>
         </div>
-        <div id="stats-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Select a player in Setup to load stats.</div>
+        <div id="stats-empty" style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;text-align:center;padding:20px;">Select a player in Setup to load stats.</div>
       </div>
     </div>
   </div>
@@ -361,13 +361,13 @@
     <div class="card">
       <div class="card-header" id="pitcher-tab-header">📋 Pitcher Analysis</div>
       <div class="card-body">
-        <div id="pitcher-tab-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Search for a pitcher in Setup to see their full breakdown.</div>
+        <div id="pitcher-tab-empty" style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;text-align:center;padding:20px;">Search for a pitcher in Setup to see their full breakdown.</div>
         <div id="pitcher-tab-content" class="hidden">
           <div class="stats-section-title" style="margin-top:0">Season Stats</div><div class="stats-grid" id="pt-season"></div>
           <div class="stats-section-title">Pitch Mix</div><div id="pt-pitchmix"></div>
-          <div class="stats-section-title">Recent Form</div><div id="pt-recent" style="font-size:12px;color:#888;font-family:monospace;line-height:1.8;"></div>
-          <div class="stats-section-title">Workload</div><div id="pt-workload" style="font-size:12px;color:#888;font-family:monospace;line-height:1.8;"></div>
-          <div class="stats-section-title">Statcast (Pitcher)</div><div class="stats-grid" id="pt-statcast"><div style="font-size:11px;color:#777;font-family:monospace;grid-column:span 3;">Statcast data loads after pitcher is selected.</div></div>
+          <div class="stats-section-title">Recent Form</div><div id="pt-recent" style="font-size:12px;color:#888;font-family:\'Chakra Petch\',monospace;line-height:1.8;"></div>
+          <div class="stats-section-title">Workload</div><div id="pt-workload" style="font-size:12px;color:#888;font-family:\'Chakra Petch\',monospace;line-height:1.8;"></div>
+          <div class="stats-section-title">Statcast (Pitcher)</div><div class="stats-grid" id="pt-statcast"><div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Statcast data loads after pitcher is selected.</div></div>
         </div>
       </div>
     </div>
@@ -376,18 +376,18 @@
   <!-- ═══════════════════ GRADE & LEARN ═══════════════════ -->
   <div id="panel-grade" class="panel">
     <div class="card" id="grade-pending-card">
-      <div class="card-header"><span>⚡ Pending Grades</span><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;">☁ Sync</button></div>
+      <div class="card-header"><span>⚡ Pending Grades</span><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;">☁ Sync</button></div>
       <div class="card-body">
-        <div id="grade-pending-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">No predictions waiting to be graded. Run a prediction before a game and come back after to grade it.</div>
+        <div id="grade-pending-empty" style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;text-align:center;padding:20px;">No predictions waiting to be graded. Run a prediction before a game and come back after to grade it.</div>
         <div id="grade-pending-list"></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-header"><span>🧠 Model Learning</span><span id="grade-confidence" style="font-size:10px;color:#999;font-weight:400;font-family:monospace;"></span></div>
+      <div class="card-header"><span>🧠 Model Learning</span><span id="grade-confidence" style="font-size:10px;color:#999;font-weight:400;font-family:\'Chakra Petch\',monospace;"></span></div>
       <div class="card-body">
-        <div id="grade-learning-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Grade at least 5 games to start seeing model insights.</div>
+        <div id="grade-learning-empty" style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;text-align:center;padding:20px;">Grade at least 5 games to start seeing model insights.</div>
         <div id="grade-learning-content" class="hidden">
-          <div style="font-size:10px;color:#999;font-family:monospace;margin-bottom:12px;">Each factor's hit rate = % of times the player outperformed baseline when that factor fired. Model auto-adjusts weights after 15+ games.</div>
+          <div style="font-size:10px;color:#999;font-family:\'Chakra Petch\',monospace;margin-bottom:12px;">Each factor's hit rate = % of times the player outperformed baseline when that factor fired. Model auto-adjusts weights after 15+ games.</div>
           <div id="factor-performance-list"></div>
         </div>
       </div>
@@ -395,18 +395,18 @@
     <div class="card">
       <div class="card-header">📈 Prediction Score vs Actual Performance</div>
       <div class="card-body">
-        <div id="grade-chart-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">Grade games to see prediction accuracy over time.</div>
+        <div id="grade-chart-empty" style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;text-align:center;padding:20px;">Grade games to see prediction accuracy over time.</div>
         <div id="grade-chart" class="hidden">
           <canvas id="perf-canvas" width="760" height="200" style="width:100%;height:200px;"></canvas>
-          <div style="font-size:10px;color:#555;font-family:monospace;text-align:center;margin-top:4px;">Green = performance score (0–100) · Red dashed = model prediction score · Closer lines = better calibration</div>
+          <div style="font-size:10px;color:#555;font-family:\'Chakra Petch\',monospace;text-align:center;margin-top:4px;">Green = performance score (0–100) · Red dashed = model prediction score · Closer lines = better calibration</div>
         </div>
       </div>
     </div>
     <div class="card">
-      <div class="card-header"><span>📋 Graded Game Log</span><button onclick="clearGrades()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📋 Graded Game Log</span><button onclick="clearGrades()" style="background:none;border:none;color:#777;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
-        <div id="grade-log-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">No graded games yet.</div>
-        <div id="grade-log-headers" class="hidden" style="display:grid;grid-template-columns:80px 40px 90px 1fr 50px 80px 55px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
+        <div id="grade-log-empty" style="font-size:12px;color:#777;font-family:\'Chakra Petch\',monospace;text-align:center;padding:20px;">No graded games yet.</div>
+        <div id="grade-log-headers" class="hidden" style="display:grid;grid-template-columns:80px 40px 90px 1fr 50px 80px 55px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:\'Chakra Petch\',monospace;text-transform:uppercase;letter-spacing:1px;">
           <span>Date</span><span>Scr</span><span>Player</span><span>Actual Line</span><span>Perf</span><span>Outcome</span><span>Model</span>
         </div>
         <div id="grade-log"></div>
@@ -427,7 +427,7 @@
   </div>
 </div>
 
-<script src="/js/app.js?v=14"></script>
+<script src="/js/app.js?v=15"></script>
 
 </body>
 </html>
