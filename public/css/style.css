@@ -4,73 +4,73 @@ body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width:
 /* ── Header ── */
 .header { background: #000000; padding: 14px 20px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #009A8B; }
 .site-title { font-family: 'Orbitron', monospace; font-size: 20px; font-weight: 900; color: #009A8B; letter-spacing: 4px; text-transform: uppercase; }
-.header small { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.3); font-family: monospace; display: block; margin-bottom: 3px; }
+.header small { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.3); font-family: 'Chakra Petch', monospace; display: block; margin-bottom: 3px; }
 .header-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-.api-credits { font-family: monospace; font-size: 10px; color: #E8DFC8; background: rgba(0,154,139,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(0,154,139,0.3); white-space: nowrap; }
+.api-credits { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #E8DFC8; background: rgba(0,154,139,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(0,154,139,0.3); white-space: nowrap; }
 .api-credits.low { color: #f1c40f; }
 .api-credits.critical { color: #e74c3c; }
-.odds-lock-badge { font-family: monospace; font-size: 10px; color: #f1c40f; background: rgba(241,196,15,0.08); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(241,196,15,0.35); white-space: nowrap; }
+.odds-lock-badge { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #f1c40f; background: rgba(241,196,15,0.08); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(241,196,15,0.35); white-space: nowrap; }
 .dpb-soft-market { color: #f39c12; font-size: 10px; cursor: help; opacity: 0.8; }
-.header-btn { background: rgba(0,0,0,0.4); border: 1px solid #009A8B; color: #E8DFC8; font-family: monospace; font-size: 10px; letter-spacing: 2px; padding: 6px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+.header-btn { background: rgba(0,0,0,0.4); border: 1px solid #009A8B; color: #E8DFC8; font-family: 'Chakra Petch', monospace; font-size: 10px; letter-spacing: 2px; padding: 6px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: background 0.15s, color 0.15s; white-space: nowrap; }
 .header-btn:hover { background: #009A8B; color: #000; }
 
 /* ── Content & Cards ── */
 .content { padding: 18px 18px 20px; }
 .card { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
-.card-header { padding: 11px 18px; border-bottom: 1px solid #1a1730; background: #0e0c22; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #009A8B; font-family: monospace; display: flex; align-items: center; justify-content: space-between; }
+.card-header { padding: 11px 18px; border-bottom: 1px solid #1a1730; background: #0e0c22; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #009A8B; font-family: 'Chakra Petch', monospace; display: flex; align-items: center; justify-content: space-between; }
 .card-body { padding: 16px 18px; }
 .row { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 12px; margin-bottom: 12px; }
-.row label { font-size: 10px; color: #999; font-family: monospace; letter-spacing: 0.5px; text-transform: uppercase; }
-input, select, textarea { background: #07060f; border: 1px solid #1e1b3a; border-radius: 6px; color: #ddd; padding: 7px 10px; font-size: 12px; font-family: monospace; width: 100%; outline: none; }
+.row label { font-size: 10px; color: #999; font-family: 'Chakra Petch', monospace; letter-spacing: 0.5px; text-transform: uppercase; }
+input, select, textarea { background: #07060f; border: 1px solid #1e1b3a; border-radius: 6px; color: #ddd; padding: 7px 10px; font-size: 12px; font-family: 'Chakra Petch', monospace; width: 100%; outline: none; }
 input:focus, select:focus { border-color: #009A8B; }
 .toggle { display: flex; gap: 6px; }
-.toggle-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid #1e1b3a; background: transparent; color: #888; font-size: 10px; font-family: monospace; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.12s; }
+.toggle-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid #1e1b3a; background: transparent; color: #888; font-size: 10px; font-family: 'Chakra Petch', monospace; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.12s; }
 .toggle-btn.active { background: #009A8B; border-color: #009A8B; color: #fff; }
 .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .pill { background: #12102a; border: 1px solid #1e1b3a; border-radius: 8px; padding: 6px 12px; text-align: center; min-width: 68px; }
-.pill .pill-label { font-size: 9px; color: #888; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
-.pill .pill-val { font-size: 14px; font-weight: 800; font-family: monospace; }
-.pill .pill-sub { font-size: 8px; color: #2a2a3a; font-family: monospace; }
-.btn-primary { width: 100%; padding: 15px; background: linear-gradient(135deg, #009A8B, #007a70); border: none; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 700; font-family: monospace; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; margin-top: 4px; }
+.pill .pill-label { font-size: 9px; color: #888; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.pill .pill-val { font-size: 14px; font-weight: 800; font-family: 'Chakra Petch', monospace; }
+.pill .pill-sub { font-size: 8px; color: #2a2a3a; font-family: 'Chakra Petch', monospace; }
+.btn-primary { width: 100%; padding: 15px; background: linear-gradient(135deg, #009A8B, #007a70); border: none; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 700; font-family: 'Chakra Petch', monospace; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; margin-top: 4px; }
 .btn-primary:hover { opacity: 0.82; }
-.btn-secondary { width: 100%; padding: 12px; background: transparent; border: 1px solid #1e1b3a; border-radius: 10px; color: #888; font-size: 11px; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-top: 8px; }
+.btn-secondary { width: 100%; padding: 12px; background: transparent; border: 1px solid #1e1b3a; border-radius: 10px; color: #888; font-size: 11px; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-top: 8px; }
 
 /* ── Gauge ── */
 .gauge-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 18px; }
-.gauge-label { margin-top: 8px; font-size: 15px; font-weight: 800; letter-spacing: 1px; font-family: monospace; }
+.gauge-label { margin-top: 8px; font-size: 15px; font-weight: 800; letter-spacing: 1px; font-family: 'Chakra Petch', monospace; }
 .gauge-desc { font-size: 11px; color: #999; margin-top: 4px; text-align: center; max-width: 220px; line-height: 1.5; }
 
 /* ── Factor rows ── */
 .factor-row { display: grid; grid-template-columns: 14px 110px 90px 1fr; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid #0e0c22; }
 .factor-icon { font-size: 10px; padding-top: 1px; }
-.factor-label { font-size: 10px; color: #666; font-family: monospace; text-transform: uppercase; letter-spacing: 0.5px; }
-.factor-value { font-size: 12px; color: #ccc; font-family: monospace; font-weight: 700; }
+.factor-label { font-size: 10px; color: #666; font-family: 'Chakra Petch', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+.factor-value { font-size: 12px; color: #ccc; font-family: 'Chakra Petch', monospace; font-weight: 700; }
 .factor-note { font-size: 11px; color: #888; line-height: 1.4; }
 
 /* ── Splits ── */
 .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .split-box { background: #0e0c22; border: 1px solid #1a1730; border-radius: 10px; padding: 13px 15px; }
-.split-box .split-label { font-size: 9px; color: #888; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
-.split-box .split-ops { font-size: 26px; font-weight: 900; font-family: monospace; }
-.split-box .split-sub { font-size: 9px; color: #2a2a3a; font-family: monospace; margin-top: 1px; }
-.split-box .split-avg { font-size: 11px; color: #888; font-family: monospace; margin-top: 6px; }
-.season-bar { margin-bottom: 16px; padding: 12px 14px; background: #07060f; border-radius: 8px; border: 1px solid #1a1730; font-family: monospace; display: flex; gap: 20px; flex-wrap: wrap; }
+.split-box .split-label { font-size: 9px; color: #888; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.split-box .split-ops { font-size: 26px; font-weight: 900; font-family: 'Chakra Petch', monospace; }
+.split-box .split-sub { font-size: 9px; color: #2a2a3a; font-family: 'Chakra Petch', monospace; margin-top: 1px; }
+.split-box .split-avg { font-size: 11px; color: #888; font-family: 'Chakra Petch', monospace; margin-top: 6px; }
+.season-bar { margin-bottom: 16px; padding: 12px 14px; background: #07060f; border-radius: 8px; border: 1px solid #1a1730; font-family: 'Chakra Petch', monospace; display: flex; gap: 20px; flex-wrap: wrap; }
 .season-bar .s-label { font-size: 9px; color: #888; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
 .season-bar .s-val { font-size: 16px; font-weight: 800; color: #fff; }
 .season-bar .s-val.green { color: #2ecc71; }
 
 /* ── Pitch mix ── */
 .pitch-row { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
-.pitch-label { font-size: 10px; color: #666; font-family: monospace; min-width: 90px; }
+.pitch-label { font-size: 10px; color: #666; font-family: 'Chakra Petch', monospace; min-width: 90px; }
 .pitch-bar-wrap { flex: 1; background: #1a1730; border-radius: 4px; height: 5px; overflow: hidden; }
 .pitch-bar { height: 100%; border-radius: 4px; transition: width 0.6s; }
-.pitch-pct { font-size: 11px; color: #aaa; font-family: monospace; min-width: 28px; }
+.pitch-pct { font-size: 11px; color: #aaa; font-family: 'Chakra Petch', monospace; min-width: 28px; }
 
 /* ── Pitch matchup grid (Prediction Score → Pitch Mix) ── */
 .matchup-baseline {
   font-size: 10px;
   color: #aaa;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   letter-spacing: 0.5px;
   padding: 8px 4px 12px;
   border-bottom: 1px solid #1a1730;
@@ -89,7 +89,7 @@ input:focus, select:focus { border-color: #009A8B; }
 .matchup-pitch {
   font-size: 11px;
   color: #d8d8e8;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   letter-spacing: 0.3px;
 }
 .matchup-usage { display: flex; align-items: center; gap: 6px; }
@@ -105,13 +105,13 @@ input:focus, select:focus { border-color: #009A8B; }
 .matchup-usage-pct {
   font-size: 10px;
   color: #aaa;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   min-width: 28px;
   text-align: right;
 }
 .matchup-stats {
   font-size: 11px;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   letter-spacing: 0.2px;
   display: flex;
   align-items: center;
@@ -127,14 +127,14 @@ input:focus, select:focus { border-color: #009A8B; }
 .matchup-legend {
   font-size: 9px;
   color: #666;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #1a1730;
 }
 
 /* ── Status / Spinner ── */
-.status { font-size: 12px; font-family: monospace; padding: 8px 0; }
+.status { font-size: 12px; font-family: 'Chakra Petch', monospace; padding: 8px 0; }
 .status.error { color: #e74c3c; }
 .spinner { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 0; }
 .spinner-circle { width: 26px; height: 26px; border: 2.5px solid #1e1b3a; border-top-color: #009A8B; border-radius: 50%; animation: spin 0.7s linear infinite; }
@@ -146,51 +146,51 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .range-row { display: flex; align-items: center; gap: 10px; }
 .pitch-mix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
 .pitch-mix-item { display: flex; align-items: center; gap: 8px; }
-.pitch-mix-label { font-size: 10px; color: #999; font-family: monospace; min-width: 80px; }
-.prediction-header { text-align: center; margin-bottom: 6px; font-size: 12px; color: #888; font-family: monospace; }
-.stats-section-title { font-size: 10px; font-weight: 700; color: #009A8B; letter-spacing: 3px; text-transform: uppercase; font-family: monospace; margin: 18px 0 10px; }
+.pitch-mix-label { font-size: 10px; color: #999; font-family: 'Chakra Petch', monospace; min-width: 80px; }
+.prediction-header { text-align: center; margin-bottom: 6px; font-size: 12px; color: #888; font-family: 'Chakra Petch', monospace; }
+.stats-section-title { font-size: 10px; font-weight: 700; color: #009A8B; letter-spacing: 3px; text-transform: uppercase; font-family: 'Chakra Petch', monospace; margin: 18px 0 10px; }
 .stats-section-title:first-child { margin-top: 0; }
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 10px 12px; }
-.stat-box .stat-label { font-size: 9px; color: #888; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-.stat-box .stat-val { font-size: 20px; font-weight: 900; font-family: monospace; color: #fff; }
+.stat-box .stat-label { font-size: 9px; color: #888; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.stat-box .stat-val { font-size: 20px; font-weight: 900; font-family: 'Chakra Petch', monospace; color: #fff; }
 .stat-box .stat-val.good { color: #2ecc71; }
 .stat-box .stat-val.bad { color: #e74c3c; }
-.stat-box .stat-context { font-size: 9px; color: #777; font-family: monospace; margin-top: 3px; }
+.stat-box .stat-context { font-size: 9px; color: #777; font-family: 'Chakra Petch', monospace; margin-top: 3px; }
 .risp-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.risp-box .risp-main { font-size: 28px; font-weight: 900; font-family: monospace; }
-.risp-box .risp-detail { font-size: 11px; color: #888; font-family: monospace; line-height: 1.8; }
+.risp-box .risp-main { font-size: 28px; font-weight: 900; font-family: 'Chakra Petch', monospace; }
+.risp-box .risp-detail { font-size: 11px; color: #888; font-family: 'Chakra Petch', monospace; line-height: 1.8; }
 
 /* ── Search ── */
 .search-wrap { position: relative; }
 .search-results { position: absolute; top: 100%; left: 0; right: 0; background: #0e0c22; border: 1px solid #1e1b3a; border-radius: 8px; z-index: 100; max-height: 200px; overflow-y: auto; margin-top: 4px; }
-.search-result-item { padding: 9px 14px; cursor: pointer; font-family: monospace; font-size: 12px; color: #ccc; border-bottom: 1px solid #1a1730; display: flex; justify-content: space-between; align-items: center; }
+.search-result-item { padding: 9px 14px; cursor: pointer; font-family: 'Chakra Petch', monospace; font-size: 12px; color: #ccc; border-bottom: 1px solid #1a1730; display: flex; justify-content: space-between; align-items: center; }
 .search-result-item:hover { background: #1a1730; color: #fff; }
 .search-result-item .sr-pos { font-size: 10px; color: #999; }
 
 /* ── Pitcher loaded ── */
 .pitcher-loaded { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; margin-top: 8px; }
-.pitcher-loaded .pl-name { font-size: 15px; font-weight: 800; color: #fff; font-family: monospace; margin-bottom: 6px; }
-.pitcher-loaded .pl-stats { display: flex; gap: 14px; flex-wrap: wrap; font-family: monospace; font-size: 11px; color: #999; }
-.pitcher-loaded .pl-hand { font-size: 10px; color: #A71930; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.pitcher-loaded .pl-name { font-size: 15px; font-weight: 800; color: #fff; font-family: 'Chakra Petch', monospace; margin-bottom: 6px; }
+.pitcher-loaded .pl-stats { display: flex; gap: 14px; flex-wrap: wrap; font-family: 'Chakra Petch', monospace; font-size: 11px; color: #999; }
+.pitcher-loaded .pl-hand { font-size: 10px; color: #A71930; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
 
 /* ── Weather ── */
 .weather-auto { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; }
-.weather-auto .wa-title { font-size: 9px; color: #888; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+.weather-auto .wa-title { font-size: 9px; color: #888; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
 .weather-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
 .weather-cell { text-align: center; }
-.weather-cell .wc-label { font-size: 9px; color: #888; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
-.weather-cell .wc-val { font-size: 16px; font-weight: 800; font-family: monospace; color: #fff; }
-.weather-cell .wc-sub { font-size: 9px; color: #777; font-family: monospace; }
-.roof-recommendation { font-size: 11px; font-family: monospace; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
+.weather-cell .wc-label { font-size: 9px; color: #888; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.weather-cell .wc-val { font-size: 16px; font-weight: 800; font-family: 'Chakra Petch', monospace; color: #fff; }
+.weather-cell .wc-sub { font-size: 9px; color: #777; font-family: 'Chakra Petch', monospace; }
+.roof-recommendation { font-size: 11px; font-family: 'Chakra Petch', monospace; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
 .roof-recommendation.likely-closed { background: #1a1730; color: #f39c12; }
 .roof-recommendation.likely-open { background: #0a1a10; color: #2ecc71; }
 
 /* ── Umpire ── */
 .ump-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 12px 16px; }
-.ump-box .ump-name { font-size: 16px; font-weight: 800; color: #fff; font-family: monospace; margin-bottom: 4px; }
-.ump-box .ump-sub { font-size: 10px; color: #999; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
-.ump-tendency { display: inline-block; margin-top: 8px; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.ump-box .ump-name { font-size: 16px; font-weight: 800; color: #fff; font-family: 'Chakra Petch', monospace; margin-bottom: 4px; }
+.ump-box .ump-sub { font-size: 10px; color: #999; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+.ump-tendency { display: inline-block; margin-top: 8px; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: 'Chakra Petch', monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .ump-tendency.pitcher { background: #1a0a10; color: #e74c3c; }
 .ump-tendency.hitter { background: #0a1a10; color: #2ecc71; }
 .ump-tendency.neutral { background: #1a1730; color: #f39c12; }
@@ -198,38 +198,38 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .game-time-row input[type=time] { width: auto; flex: 1; }
 
 /* ── Lineup protection ── */
-.lineup-spot { display: flex; align-items: center; padding: 5px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; color: #ccc; }
+.lineup-spot { display: flex; align-items: center; padding: 5px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; color: #ccc; }
 .lineup-spot .ls-order { color: #888; min-width: 18px; font-size: 10px; }
 .lineup-spot .ls-name { flex: 1; margin: 0 8px; }
 .lineup-spot .ls-ops { font-weight: 700; font-size: 12px; }
-.lineup-spot .ls-pos { font-size: 9px; color: #555; font-family: monospace; min-width: 24px; }
-.prot-badge { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-family: monospace; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.lineup-spot .ls-pos { font-size: 9px; color: #555; font-family: 'Chakra Petch', monospace; min-width: 24px; }
+.prot-badge { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-family: 'Chakra Petch', monospace; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
 .prot-badge.strong { background: #0a1a10; color: #2ecc71; }
 .prot-badge.average { background: #1a1730; color: #888; }
 .prot-badge.weak { background: #1a0606; color: #e74c3c; }
 
 /* ── Grade panel ── */
 .factor-perf-row { display: grid; grid-template-columns: 140px 80px 1fr 60px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; }
-.factor-perf-name { font-size: 11px; color: #888; font-family: monospace; }
-.factor-perf-rate { font-size: 13px; font-weight: 800; font-family: monospace; }
+.factor-perf-name { font-size: 11px; color: #888; font-family: 'Chakra Petch', monospace; }
+.factor-perf-rate { font-size: 13px; font-weight: 800; font-family: 'Chakra Petch', monospace; }
 .factor-perf-bar-wrap { background: #1a1730; border-radius: 4px; height: 6px; overflow: hidden; }
 .factor-perf-bar { height: 100%; border-radius: 4px; transition: width 0.6s; }
-.factor-perf-weight { font-size: 10px; color: #999; font-family: monospace; text-align: right; }
+.factor-perf-weight { font-size: 10px; color: #999; font-family: 'Chakra Petch', monospace; text-align: right; }
 .grade-game-card { background: #0e0c22; border: 1px solid #1a1730; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
 .grade-game-card .gg-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
-.grade-game-card .gg-title { font-size: 13px; font-weight: 700; color: #fff; font-family: monospace; }
-.grade-game-card .gg-score { font-size: 22px; font-weight: 900; font-family: monospace; color: #009A8B; }
-.grade-game-card .gg-factors { font-size: 10px; color: #888; font-family: monospace; margin-bottom: 12px; line-height: 1.8; }
+.grade-game-card .gg-title { font-size: 13px; font-weight: 700; color: #fff; font-family: 'Chakra Petch', monospace; }
+.grade-game-card .gg-score { font-size: 22px; font-weight: 900; font-family: 'Chakra Petch', monospace; color: #009A8B; }
+.grade-game-card .gg-factors { font-size: 10px; color: #888; font-family: 'Chakra Petch', monospace; margin-bottom: 12px; line-height: 1.8; }
 .grade-game-card .gg-stat-line { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .grade-stat { text-align: center; background: #07060f; border: 1px solid #1a1730; border-radius: 6px; padding: 6px 10px; min-width: 50px; }
-.grade-stat .gs-label { font-size: 9px; color: #888; font-family: monospace; text-transform: uppercase; margin-bottom: 2px; }
-.grade-stat .gs-val { font-size: 16px; font-weight: 800; font-family: monospace; color: #fff; }
+.grade-stat .gs-label { font-size: 9px; color: #888; font-family: 'Chakra Petch', monospace; text-transform: uppercase; margin-bottom: 2px; }
+.grade-stat .gs-val { font-size: 16px; font-weight: 800; font-family: 'Chakra Petch', monospace; color: #fff; }
 .grade-stat .gs-val.loading { color: #777; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
-.grade-btn { padding: 8px 16px; border-radius: 6px; border: none; font-family: monospace; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: opacity 0.15s; }
+.grade-btn { padding: 8px 16px; border-radius: 6px; border: none; font-family: 'Chakra Petch', monospace; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: opacity 0.15s; }
 .grade-btn.confirm { background: linear-gradient(135deg, #1a5a10, #0d3a08); color: #2ecc71; }
 .grade-btn.confirm:hover { opacity: 0.82; }
-.grade-log-row { display: grid; grid-template-columns: 80px 40px 90px 1fr 50px 80px 55px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; }
+.grade-log-row { display: grid; grid-template-columns: 80px 40px 90px 1fr 50px 80px 55px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
 .outcome-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-align: center; }
 .outcome-badge.great  { background: #0d3a0d; color: #2ecc71; }
 .outcome-badge.good   { background: #1a3a10; color: #a8e063; }
@@ -242,9 +242,9 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 
 /* ── Probability bar (CorBET) ── */
 .prob-bar-wrap { background: #1a1730; border-radius: 6px; height: 22px; overflow: hidden; display: flex; }
-.prob-bar-over { background: linear-gradient(90deg,#1a5a10,#2ecc71); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-family: monospace; font-weight: 700; color: rgba(255,255,255,0.9); transition: width 0.6s; min-width: 24px; }
-.prob-bar-under { background: linear-gradient(90deg,#e74c3c,#8b0000); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-family: monospace; font-weight: 700; color: rgba(255,255,255,0.9); transition: width 0.6s; min-width: 24px; }
-.edge-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.prob-bar-over { background: linear-gradient(90deg,#1a5a10,#2ecc71); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-family: 'Chakra Petch', monospace; font-weight: 700; color: rgba(255,255,255,0.9); transition: width 0.6s; min-width: 24px; }
+.prob-bar-under { background: linear-gradient(90deg,#e74c3c,#8b0000); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-family: 'Chakra Petch', monospace; font-weight: 700; color: rgba(255,255,255,0.9); transition: width 0.6s; min-width: 24px; }
+.edge-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-family: 'Chakra Petch', monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .edge-badge.strong { background: #0a2a05; color: #2ecc71; border: 1px solid #1a4a10; }
 .edge-badge.moderate { background: #2a2000; color: #f39c12; border: 1px solid #3a2a00; }
 .edge-badge.small { background: #1a1730; color: #888; border: 1px solid #2a2550; }
@@ -253,56 +253,56 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .corbet-header { background: linear-gradient(135deg, #001a18, #002822); border: 1px solid #009A8B; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
 .corbet-logo { font-size: 22px; }
 .corbet-title { font-size: 14px; font-weight: 900; color: #009A8B; font-family: 'Orbitron', monospace; letter-spacing: 1px; }
-.corbet-sub { font-size: 10px; color: #2a7a60; font-family: monospace; margin-top: 2px; }
+.corbet-sub { font-size: 10px; color: #2a7a60; font-family: 'Chakra Petch', monospace; margin-top: 2px; }
 .bet-card { border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; border: 1px solid; position: relative; overflow: hidden; }
 .bet-card.green { background: #061a06; border-color: #1a4a10; }
 .bet-card.yellow { background: #1a1406; border-color: #3a2a00; }
 .bet-card.red { background: #1a0606; border-color: #3a1010; }
 .bet-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.bet-rating { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: monospace; padding: 3px 8px; border-radius: 4px; }
+.bet-rating { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: 'Chakra Petch', monospace; padding: 3px 8px; border-radius: 4px; }
 .bet-rating.green { background: #0d3a0d; color: #2ecc71; }
 .bet-rating.yellow { background: #2a2000; color: #f39c12; }
 .bet-rating.red { background: #2a0808; color: #e74c3c; }
-.bet-prop { font-size: 16px; font-weight: 900; font-family: monospace; }
+.bet-prop { font-size: 16px; font-weight: 900; font-family: 'Chakra Petch', monospace; }
 .bet-prop.green { color: #2ecc71; }
 .bet-prop.yellow { color: #f39c12; }
 .bet-prop.red { color: #e74c3c; }
-.bet-odds { font-size: 12px; font-family: monospace; color: #888; margin-top: 2px; }
+.bet-odds { font-size: 12px; font-family: 'Chakra Petch', monospace; color: #888; margin-top: 2px; }
 .bet-reasoning { font-size: 11px; color: #999; margin-top: 6px; line-height: 1.5; }
 .bet-books { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.bet-book { font-size: 9px; font-family: monospace; color: #777; background: #0e0c22; padding: 2px 7px; border-radius: 3px; border: 1px solid #1a1730; }
-.corbet-loading { text-align: center; padding: 24px; color: #009A8B; font-family: monospace; font-size: 12px; }
-.corbet-empty { text-align: center; padding: 24px; color: #777; font-family: monospace; font-size: 12px; }
+.bet-book { font-size: 9px; font-family: 'Chakra Petch', monospace; color: #777; background: #0e0c22; padding: 2px 7px; border-radius: 3px; border: 1px solid #1a1730; }
+.corbet-loading { text-align: center; padding: 24px; color: #009A8B; font-family: 'Chakra Petch', monospace; font-size: 12px; }
+.corbet-empty { text-align: center; padding: 24px; color: #777; font-family: 'Chakra Petch', monospace; font-size: 12px; }
 #corbet-player-filter { display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:#0c0a1e; border:1px solid #1a1730; border-radius:10px; padding:10px 14px; margin-bottom:12px; }
-#corbet-player-filter .cpf-label { flex-basis:100%; font-size:9px; color:#555; font-family:monospace; letter-spacing:2px; text-transform:uppercase; margin-bottom:2px; }
-#corbet-player-filter label { display:flex; align-items:center; gap:5px; font-family:monospace; font-size:11px; color:#aaa; cursor:pointer; padding:3px 8px; border-radius:5px; border:1px solid #1a1730; background:#0e0c22; }
+#corbet-player-filter .cpf-label { flex-basis:100%; font-size:9px; color:#555; font-family: 'Chakra Petch', monospace; letter-spacing:2px; text-transform:uppercase; margin-bottom:2px; }
+#corbet-player-filter label { display:flex; align-items:center; gap:5px; font-family: 'Chakra Petch', monospace; font-size:11px; color:#aaa; cursor:pointer; padding:3px 8px; border-radius:5px; border:1px solid #1a1730; background:#0e0c22; }
 #corbet-player-filter input[type="checkbox"] { accent-color:#009A8B; cursor:pointer; }
 
 /* ── Record tracker ── */
 .record-summary-strip { display: grid; grid-template-columns: repeat(4, max-content) 1fr; gap: 18px; align-items: center; padding: 12px 16px; background: #0a0820; border: 1px solid #1a1730; border-radius: 10px; margin-bottom: 12px; }
 .rss-stat { text-align: left; }
-.rss-label { font-size: 8px; color: #666; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
-.rss-val { font-size: 17px; font-family: monospace; color: #ccc; font-weight: 700; line-height: 1; }
+.rss-label { font-size: 8px; color: #666; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+.rss-val { font-size: 17px; font-family: 'Chakra Petch', monospace; color: #ccc; font-weight: 700; line-height: 1; }
 .rss-val.pos { color: #2ecc71; }
 .rss-val.neg { color: #e74c3c; }
 .rss-sparkline { min-width: 0; align-self: stretch; display: flex; align-items: center; padding-left: 8px; border-left: 1px solid #1a1730; }
-.rss-sparkline-empty { font-size: 9px; color: #555; font-family: monospace; letter-spacing: 1px; text-transform: uppercase; }
+.rss-sparkline-empty { font-size: 9px; color: #555; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; }
 
 .prop-record-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
 .prop-cell { background: #0a0820; border: 1px solid #1a1730; border-radius: 8px; padding: 9px 10px; text-align: center; }
 .prop-cell.pos { border-color: #1a4a10; background: #061a06; }
 .prop-cell.neg { border-color: #3a1010; background: #1a0606; }
 .prop-cell.empty { opacity: 0.45; }
-.pc-label { font-size: 9px; color: #666; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+.pc-label { font-size: 9px; color: #666; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
 .prop-cell.pos .pc-label { color: #2a5a20; }
 .prop-cell.neg .pc-label { color: #5a2020; }
-.pc-record { font-size: 16px; font-family: monospace; font-weight: 700; color: #ccc; line-height: 1; }
+.pc-record { font-size: 16px; font-family: 'Chakra Petch', monospace; font-weight: 700; color: #ccc; line-height: 1; }
 .prop-cell.pos .pc-record { color: #2ecc71; }
 .prop-cell.neg .pc-record { color: #e74c3c; }
-.pc-roi { font-size: 9px; font-family: monospace; color: #888; margin-top: 3px; letter-spacing: 1px; }
+.pc-roi { font-size: 9px; font-family: 'Chakra Petch', monospace; color: #888; margin-top: 3px; letter-spacing: 1px; }
 .prop-cell.pos .pc-roi { color: #2ecc71; }
 .prop-cell.neg .pc-roi { color: #e74c3c; }
-.bet-log-item { display: grid; grid-template-columns: 70px 90px 36px 1fr 50px 54px 96px 22px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; font-family: monospace; font-size: 11px; }
+.bet-log-item { display: grid; grid-template-columns: 70px 90px 36px 1fr 50px 54px 96px 22px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
 .bet-log-item.bet-pending { opacity: 0.55; }
 .bet-log-item .bli-date { color: #888; }
 .bet-log-item .bli-player { color: #E8DFC8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
@@ -313,7 +313,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .bet-log-item .bli-result { display: flex; gap: 3px; }
 .del-btn { background: none; border: none; color: #2a2540; font-size: 15px; cursor: pointer; padding: 0; line-height: 1; transition: color 0.12s; }
 .del-btn:hover { color: #e74c3c; }
-.result-btn { font-size: 9px; font-family: monospace; padding: 3px 7px; border-radius: 4px; border: 1px solid; cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.result-btn { font-size: 9px; font-family: 'Chakra Petch', monospace; padding: 3px 7px; border-radius: 4px; border: 1px solid; cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 .result-btn.win { background: #061a06; border-color: #1a4a10; color: #2ecc71; }
 .result-btn.loss { background: #1a0606; border-color: #3a1010; color: #e74c3c; }
 .result-btn.push { background: #1a1730; border-color: #2a2550; color: #888; }
@@ -331,24 +331,24 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 
 /* ── Dashboard main ── */
 .dash-game-banner { background: #000; border: 1px solid #009A8B; border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
-.dash-banner-empty { color: #444; font-family: monospace; font-size: 11px; }
+.dash-banner-empty { color: #444; font-family: 'Chakra Petch', monospace; font-size: 11px; }
 .dash-opp { font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 900; color: #E8DFC8; letter-spacing: 2px; margin-bottom: 3px; }
-.dash-game-meta { font-size: 10px; color: #777; font-family: monospace; }
-.dash-game-weather { font-size: 10px; color: #009A8B; font-family: monospace; margin-top: 3px; }
-.dash-ump { font-size: 10px; color: #888; font-family: monospace; margin-top: 2px; }
+.dash-game-meta { font-size: 10px; color: #777; font-family: 'Chakra Petch', monospace; }
+.dash-game-weather { font-size: 10px; color: #009A8B; font-family: 'Chakra Petch', monospace; margin-top: 3px; }
+.dash-ump { font-size: 10px; color: #888; font-family: 'Chakra Petch', monospace; margin-top: 2px; }
 .dash-pitcher-card { background: #0c0a1e; border: 1px solid #009A8B; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
 .dash-pitcher-name { font-family: 'Orbitron', monospace; font-size: 12px; color: #E8DFC8; font-weight: 800; letter-spacing: 0.5px; }
-.dash-pitcher-meta { font-family: monospace; font-size: 10px; color: #888; margin-top: 3px; }
-.dash-pitcher-btn { font-family: monospace; font-size: 10px; color: #009A8B; background: transparent; border: 1px solid #009A8B; padding: 6px 12px; border-radius: 5px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+.dash-pitcher-meta { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #888; margin-top: 3px; }
+.dash-pitcher-btn { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #009A8B; background: transparent; border: 1px solid #009A8B; padding: 6px 12px; border-radius: 5px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
 .dash-pitcher-btn:hover { background: #009A8B; color: #000; }
 .dash-best-bet-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #1a1730; gap: 10px; }
 .dash-best-bet-row:last-child { border-bottom: none; }
 .dash-best-bet-left { flex: 1; }
-.dash-best-bet-player { font-size: 9px; color: #009A8B; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+.dash-best-bet-player { font-size: 9px; color: #009A8B; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
 .dash-best-bet-prop { font-size: 13px; font-weight: 800; color: #E8DFC8; font-family: Georgia, serif; }
 .dash-best-bet-right { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; }
-.dash-badge { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 4px; padding: 2px 6px; font-family: monospace; font-size: 9px; color: #009A8B; white-space: nowrap; }
-.dash-empty { font-family: monospace; font-size: 11px; color: #555; padding: 8px 0; }
+.dash-badge { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 4px; padding: 2px 6px; font-family: 'Chakra Petch', monospace; font-size: 9px; color: #009A8B; white-space: nowrap; }
+.dash-empty { font-family: 'Chakra Petch', monospace; font-size: 11px; color: #555; padding: 8px 0; }
 /* ── Collapsible player lineup rows ── */
 #dash-player-cards { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; margin-bottom: 20px; }
 
@@ -357,8 +357,8 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-prow-header:hover { background: #13102e; }
 .dash-prow-order { font-family: 'Orbitron', monospace; font-size: 12px; color: #009A8B; font-weight: 900; min-width: 20px; text-align: center; }
 .dash-prow-name { font-family: 'Orbitron', monospace; font-size: 10px; color: #E8DFC8; font-weight: 800; flex: 1; letter-spacing: 0.5px; }
-.dash-prow-statline { font-family: monospace; font-size: 10px; color: #888; white-space: nowrap; }
-.dash-prow-more { background: transparent; border: 1px solid #1a1730; color: #009A8B; font-family: monospace; font-size: 9px; padding: 4px 9px; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: background 0.12s, color 0.12s; }
+.dash-prow-statline { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #888; white-space: nowrap; }
+.dash-prow-more { background: transparent; border: 1px solid #1a1730; color: #009A8B; font-family: 'Chakra Petch', monospace; font-size: 9px; padding: 4px 9px; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: background 0.12s, color 0.12s; }
 .dash-prow-more:hover { background: #009A8B; color: #000; }
 .dash-prow-arrow { font-size: 10px; color: #555; min-width: 14px; text-align: right; }
 
@@ -369,14 +369,14 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 /* Left: score gauge */
 .dpb-left { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 76px; }
 .dpb-gauge { width: 58px; height: 58px; border-radius: 50%; border: 3px solid #aaa; display: flex; align-items: center; justify-content: center; }
-.dpb-gauge-score { font-family: monospace; font-size: 20px; font-weight: 900; }
-.dpb-tier { font-family: monospace; font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 1px; text-align: center; line-height: 1.3; }
-.dpb-details-btn { background: transparent; border: 1px solid #1a1730; color: #888; font-family: monospace; font-size: 8px; padding: 5px 9px; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: border-color 0.12s, color 0.12s; }
+.dpb-gauge-score { font-family: 'Chakra Petch', monospace; font-size: 20px; font-weight: 900; }
+.dpb-tier { font-family: 'Chakra Petch', monospace; font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 1px; text-align: center; line-height: 1.3; }
+.dpb-details-btn { background: transparent; border: 1px solid #1a1730; color: #888; font-family: 'Chakra Petch', monospace; font-size: 8px; padding: 5px 9px; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: border-color 0.12s, color 0.12s; }
 .dpb-details-btn:hover { color: #E8DFC8; border-color: #009A8B; }
 
 /* Center: bets table — condensed (shrinks to content) */
 .dpb-center { flex: 0 1 auto; min-width: 240px; max-width: 360px; }
-.dpb-bets-table { width: auto; border-collapse: collapse; font-family: monospace; font-size: 10px; }
+.dpb-bets-table { width: auto; border-collapse: collapse; font-family: 'Chakra Petch', monospace; font-size: 10px; }
 .dpb-bets-table td { padding: 4px 6px; vertical-align: middle; white-space: nowrap; }
 .dpb-bets-table tr:not(:last-child) td { border-bottom: 1px solid #1a1730; }
 .dpb-icon-star     { color: #f1c40f; font-size: 13px; }
@@ -387,23 +387,23 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dpb-delta { font-weight: 700; text-align: right; padding-left: 8px; }
 .dpb-odds  { color: #009A8B; text-align: right; white-space: nowrap; padding-left: 8px; }
 .dpb-book  { font-size: 8px; background: #1a1730; padding: 1px 4px; border-radius: 3px; color: #888; margin-left: 4px; }
-.dpb-more-bets { display: block; width: 100%; margin-top: 8px; background: transparent; border: 1px solid #1a1730; color: #009A8B; font-family: monospace; font-size: 9px; padding: 7px; border-radius: 4px; cursor: pointer; text-align: center; transition: background 0.12s, color 0.12s; }
+.dpb-more-bets { display: block; width: 100%; margin-top: 8px; background: transparent; border: 1px solid #1a1730; color: #009A8B; font-family: 'Chakra Petch', monospace; font-size: 9px; padding: 7px; border-radius: 4px; cursor: pointer; text-align: center; transition: background 0.12s, color 0.12s; }
 .dpb-more-bets:hover { background: #009A8B; color: #000; }
-.dpb-no-edge { font-family: monospace; font-size: 10px; color: #555; padding: 8px 0; }
+.dpb-no-edge { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #555; padding: 8px 0; }
 
 /* Right: stacked context cards (matchup + recent form) */
 .dpb-right { flex: 1 1 180px; min-width: 170px; display: flex; flex-direction: column; gap: 8px; }
 .dpb-mini-card { background: #0a0818; border: 1px solid #1a1730; border-radius: 6px; padding: 8px 10px; }
 .dpb-mini-head { font-family: 'Orbitron', monospace; font-size: 9px; color: #009A8B; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
-.dpb-mini-row { font-family: monospace; font-size: 10px; color: #E8DFC8; line-height: 1.5; }
-.dpb-mini-empty { font-family: monospace; font-size: 9px; color: #555; font-style: italic; }
+.dpb-mini-row { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #E8DFC8; line-height: 1.5; }
+.dpb-mini-empty { font-family: 'Chakra Petch', monospace; font-size: 9px; color: #555; font-style: italic; }
 
 /* Lineup analysis bar */
-.dpb-lineup-analysis { width: 100%; font-family: monospace; font-size: 9px; color: #666; padding: 8px 0 2px; border-top: 1px solid #1a1730; letter-spacing: 0.5px; text-transform: uppercase; }
+.dpb-lineup-analysis { width: 100%; font-family: 'Chakra Petch', monospace; font-size: 9px; color: #666; padding: 8px 0 2px; border-top: 1px solid #1a1730; letter-spacing: 0.5px; text-transform: uppercase; }
 .dash-setup-link { text-align: center; padding: 12px 0; border-top: 1px solid #1a1730; margin-top: 8px; }
-.dash-setup-link button { background: none; border: none; color: #444; font-family: monospace; font-size: 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; text-decoration: underline; }
+.dash-setup-link button { background: none; border: none; color: #444; font-family: 'Chakra Petch', monospace; font-size: 10px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; text-decoration: underline; }
 .dash-setup-link button:hover { color: #888; }
-.dash-player-header { font-size: 11px; font-weight: 900; font-family: monospace; color: #009A8B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #1a1730; }
+.dash-player-header { font-size: 11px; font-weight: 900; font-family: 'Chakra Petch', monospace; color: #009A8B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #1a1730; }
 
 /* ── Mobile ── */
 @media (max-width: 560px) {
@@ -452,14 +452,14 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 }
 
 /* Low plate appearance warning */
-.low-data-badge { font-family: monospace; font-size: 8px; color: #f39c12; background: rgba(243,156,18,0.12); border: 1px solid rgba(243,156,18,0.4); border-radius: 3px; padding: 1px 5px; margin-left: 5px; vertical-align: middle; letter-spacing: 0.5px; white-space: nowrap; }
-.low-data-warning { font-family: monospace; font-size: 10px; color: #f39c12; background: rgba(243,156,18,0.07); border: 1px solid rgba(243,156,18,0.3); border-radius: 5px; padding: 6px 10px; margin-bottom: 8px; }
+.low-data-badge { font-family: 'Chakra Petch', monospace; font-size: 8px; color: #f39c12; background: rgba(243,156,18,0.12); border: 1px solid rgba(243,156,18,0.4); border-radius: 3px; padding: 1px 5px; margin-left: 5px; vertical-align: middle; letter-spacing: 0.5px; white-space: nowrap; }
+.low-data-warning { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #f39c12; background: rgba(243,156,18,0.07); border: 1px solid rgba(243,156,18,0.3); border-radius: 5px; padding: 6px 10px; margin-bottom: 8px; }
 
 /* Model Calibration view */
 .cal-section { margin-bottom: 20px; }
-.cal-section-title { font-family: monospace; font-size: 10px; letter-spacing: 1.5px; color: #888; margin-bottom: 4px; }
-.cal-section-note { font-family: monospace; font-size: 9px; color: #555; margin-bottom: 8px; }
-.cal-table { font-family: monospace; font-size: 11px; }
+.cal-section-title { font-family: 'Chakra Petch', monospace; font-size: 10px; letter-spacing: 1.5px; color: #888; margin-bottom: 4px; }
+.cal-section-note { font-family: 'Chakra Petch', monospace; font-size: 9px; color: #555; margin-bottom: 8px; }
+.cal-table { font-family: 'Chakra Petch', monospace; font-size: 11px; }
 .cal-row { display: grid; padding: 6px 8px; border-bottom: 1px solid #1a1730; align-items: center; gap: 8px; }
 .cal-row.cal-header { color: #666; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #2a2750; }
 .cal-row.cal-empty-row { color: #555; font-style: italic; padding: 12px 8px; }
@@ -478,7 +478,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   border-radius: 8px;
   padding: 8px 14px;
   margin-bottom: 12px;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 11px;
   flex-wrap: wrap;
 }
@@ -498,7 +498,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   flex-direction: column;
   gap: 4px;
   margin-top: 10px;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 11px;
 }
 .pf-row {
@@ -521,38 +521,38 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 
 /* ── Pitcher splits (Home/Away + L/R) ── */
 .dash-pitcher-splits {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-family: monospace;
-  font-size: 11px;
+  gap: 6px;
+  font-family: 'Chakra Petch', monospace;
+  font-size: 13px;
 }
 .ps-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 .ps-adv {
   color: #6a6a8a;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.5px;
 }
-.ps-adv b { color: #009A8B; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
-.ps-divider { width: 1px; height: 14px; background: #1a1730; }
+.ps-adv b { color: #009A8B; font-size: 14px; font-weight: 700; letter-spacing: 0.3px; }
+.ps-divider { width: 1px; height: 16px; background: #1a1730; }
 .ps-split {
   color: #888;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.4px;
 }
-.ps-split b { color: #ccc; font-weight: 700; }
+.ps-split b { color: #ccc; font-weight: 700; font-size: 13px; }
 .ps-split.ps-active {
   color: #f39c12;
   background: rgba(243,156,18,0.1);
   border: 1px solid rgba(243,156,18,0.35);
   border-radius: 3px;
-  padding: 1px 6px;
+  padding: 2px 8px;
 }
 .ps-split.ps-active b { color: #f39c12; }
 
@@ -577,12 +577,12 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 11px;
   justify-content: center;
 }
 .bm-empty {
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 10px;
   color: #555;
   align-self: center;
@@ -620,7 +620,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   background: rgba(0,0,0,0.25);
 }
 .bm-score-num {
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 16px;
   font-weight: 900;
 }
@@ -689,7 +689,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   margin-bottom: 8px;
 }
 .mvp-tag {
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 2px;
@@ -716,7 +716,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   background: rgba(0,0,0,0.25);
 }
 .mvp-score-circle .mvp-score-num {
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 26px;
   font-weight: 900;
   letter-spacing: -0.5px;
@@ -728,7 +728,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   margin-bottom: 8px;
 }
 .mvp-chip {
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 10px;
   background: rgba(0,154,139,0.12);
   border: 1px solid rgba(0,154,139,0.3);
@@ -752,7 +752,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   border: 1px solid #1a1730;
   border-radius: 6px;
   padding: 8px 12px;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
 }
 .mvp-bet-label {
   font-size: 9px;
@@ -785,7 +785,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   border-radius: 6px;
   padding: 6px 5px;
   min-height: 78px;
-  font-family: monospace;
+  font-family: 'Chakra Petch', monospace;
   font-size: 10px;
   display: flex;
   flex-direction: column;
