@@ -1361,7 +1361,7 @@ function _renderMvpBanner(){
       <div class="mvp-bet-stat">
         <div><div class="lbl">EV</div><div class="val ${evCls}">${evStr}</div></div>
         <div><div class="lbl">Δ</div><div class="val ${bet.delta>=0?'pos':'neg'}">${deltaStr}</div></div>
-        <div><div class="lbl">MC</div><div class="val">${bet.mcConfidence?.toFixed(0)||'—'}%</div></div>
+        <div><div class="lbl" title="Edge stability % — not win probability">STAB</div><div class="val">${bet.mcConfidence?.toFixed(0)||'—'}%</div></div>
       </div>
     </div>
   </div>`;
@@ -1400,7 +1400,7 @@ function _buildMvpChips(snap,bet){
   if(bet){
     if(bet.edgeStrength==='strong')chips.push('Strong Edge');
     else if(bet.edgeStrength==='moderate')chips.push('Moderate Edge');
-    if(bet.mcConfidence>=90)chips.push(`MC ${bet.mcConfidence.toFixed(0)}%`);
+    if(bet.mcConfidence>=90)chips.push(`Stab ${bet.mcConfidence.toFixed(0)}%`);
   }
   return chips.slice(0,5);
 }
@@ -2038,9 +2038,19 @@ function scoreIndividualProp(propKey){
   // Environment
   const stadOpt=document.getElementById('stadium-select').options[document.getElementById('stadium-select').selectedIndex];
   const elev=parseInt(stadOpt.dataset.elev)||500;
-  const tempF=S.weather?.tempF||75;
-  const windMph=S.weather?.windMph||5;
-  const windDir=S.weather?.windDir||'calm';
+  const hasRoof=stadOpt?.dataset.roof==='1';
+  const roofClosed=hasRoof&&S.roofClosed;
+  // Closed-roof games neutralize weather: indoor temp ~72°F, no meaningful wind.
+  // Without this, e.g. a 95°F Phoenix day at Chase with the roof closed was still
+  // adding the +5 HR / +4 TB heat bump to every prop.
+  const tempF=roofClosed?72:(S.weather?.tempF||75);
+  const windMph=roofClosed?0:(S.weather?.windMph||5);
+  // Use _windDir() (which projects compass onto park CF bearing) instead of the
+  // raw compass string. Previously corbetPropScore tested S.weather.windDir==='out'
+  // directly, which is ALWAYS false for live weather (live data sets directions
+  // like "SSW", never "out"/"in") — so wind silently had zero effect on every
+  // HR/TB/runs prop on every live-weather game.
+  const windDir=roofClosed?'calm':_windDir();
   const umpAdj=S.umpire?(UMP_DB[S.umpire.fullName]?.adj||0):0;
   const protTier=S.lineupProtection?.tier;
   const rispAvg=parseFloat(S.rispStat?.avg)||null;
@@ -2293,10 +2303,14 @@ function _gamePAs(){
   // Run environment: more baserunners = more PAs across the order. Apply as a
   // multiplier on the base PA so each spot scales proportionally with team PAs.
   if(!S.pitcher?.bullpenGame){
-    const{hitF,hrF,hasRoof}=_parkFactors();
+    const{hitF,hasRoof}=_parkFactors();
     const rfClosed=hasRoof&&S.roofClosed;
-    // Park run factor — hits dominate baserunner production, HRs round it out.
-    const parkRunF=rfClosed?1.0:(hitF*0.7+hrF*0.3);
+    // Park run factor — pure hitF (hits drive baserunners and PAs). hrF was
+    // previously blended in (0.3 weight) but that triple-counted park HR effects:
+    // park already enters via calcPrediction's score factor and again as a direct
+    // ±5pp prop adjustment in modelProbability. Pure hitF keeps the run-environment
+    // signal without compounding HR effects three ways.
+    const parkRunF=rfClosed?1.0:hitF;
     // WHIP delta — league avg ~1.30. Elite 1.00 → -3% PAs, poor 1.50 → +2% PAs.
     const whip=parseFloat(S.pitcher?.st?.whip);
     const pitcherPaF=isFinite(whip)?1.0+(whip-1.30)*0.10:1.0;
@@ -2812,7 +2826,11 @@ function modelProbability(propKey,line,score){
   {const{hrF,hitF,elev:pElev,hasRoof}=_parkFactors();const rfClosed=hasRoof&&S.roofClosed;
   if(!rfClosed){
     if(propKey==='batter_home_runs'&&pElev<=4000)
-      p+=Math.max(-8,Math.min(8,Math.round((hrF-1.0)*60)));
+      // Direct HR park bump capped at ±5pp (was ±8). The same hrF signal already
+      // enters via calcPrediction's score (which feeds lerp3 anchors), so the
+      // direct bump should only capture the prop-specific delta on top of the
+      // score channel — not the full park effect twice.
+      p+=Math.max(-5,Math.min(5,Math.round((hrF-1.0)*60)));
     else if(['batter_hits','batter_total_bases','batter_hits_runs_rbis'].includes(propKey))
       p+=Math.max(-5,Math.min(5,Math.round((hitF-1.0)*40)));
     else if(propKey==='batter_strikeouts')
@@ -3500,7 +3518,7 @@ function renderDashboard(){
         </div>
         <div class="dash-best-bet-right">
           <span class="dash-badge">${fmtOdds(b.direction.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price)}</span>
-          <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
+          <span class="dash-badge" title="Edge stability % — not win probability">Stab ${b.mcConfidence.toFixed(0)}%</span>
           <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
         </div>
       </div>`).join('')
@@ -3993,7 +4011,7 @@ function renderCalibration(){
   };
   const mcBuckets=_calBucketize(settled.filter(b=>b.mcConfidence!=null),mcBucket);
   const mcOrder=['<70%','70–84%','85%+ (Top)'];
-  const mcHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span>MC Range</span><span>Count</span><span>Wins</span><span>Hit Rate</span><span>ROI</span></div>`;
+  const mcHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span>Stab Range</span><span>Count</span><span>Wins</span><span>Hit Rate</span><span>ROI</span></div>`;
   let mcRows='';
   mcOrder.forEach(k=>{
     const bs=mcBuckets.get(k);
