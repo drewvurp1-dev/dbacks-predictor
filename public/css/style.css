@@ -573,12 +573,12 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   background: linear-gradient(135deg, rgba(243,156,18,0.06) 0%, rgba(0,154,139,0.04) 100%);
   border: 1px solid rgba(243,156,18,0.4);
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
   font-family: monospace;
-  font-size: 12px;
+  font-size: 11px;
   justify-content: center;
 }
 .bm-empty {
@@ -590,17 +590,24 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   width: 100%;
 }
 .bm-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  text-align: center;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(243,156,18,0.18);
+  margin-bottom: 2px;
 }
 .bm-tag {
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 1.8px;
+  letter-spacing: 2.4px;
   color: #f39c12;
   text-transform: uppercase;
+}
+.bm-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 1px;
 }
 .bm-score-circle {
   width: 44px;
@@ -619,20 +626,30 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 }
 .bm-name {
   font-family: Georgia, serif;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.3px;
-  margin-bottom: 2px;
+  line-height: 1;
 }
 .bm-line {
   color: #ccc;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.3px;
-  line-height: 1.45;
+  line-height: 1.3;
 }
 .bm-line b { color: #fff; font-weight: 700; }
-.bm-stat-lbl { color: #6a6a8a; font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; margin-right: 5px; }
+.bm-stat-lbl { color: #6a6a8a; font-size: 9px; letter-spacing: 0.6px; text-transform: uppercase; margin-right: 4px; }
+.bm-summary {
+  color: #f39c12;
+  font-size: 10px;
+  font-style: italic;
+  letter-spacing: 0.3px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(243,156,18,0.18);
+  line-height: 1.3;
+}
 .bm-career { color: #ccc; }
 .bm-bet {
   margin-top: 4px;
