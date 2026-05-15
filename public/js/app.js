@@ -726,7 +726,7 @@ function _renderPitcherSeasonBoxes(){
   const kbbC=!isNaN(kbbNum)?(kbbNum>=15?'good':kbbNum<=8?'bad':''):'';
   const hr9Num=parseFloat(hr9);
   const hr9C=!isNaN(hr9Num)?(hr9Num<=0.9?'good':hr9Num>=1.5?'bad':''):'';
-  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average'],['FIP',fip,fipC,'Fielding independent (strips luck)'],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB'],['SIERA',sieraDisplay,sieraC,'Skill-based ERA: K, BB, batted-ball mix'],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP'],['K-BB%',kbb,kbbC,'Skill gap — best K predictor'],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP'],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate'],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate'],['IP',ip,'','Innings pitched'],['K/9',k9,'','Strikeouts per 9'],['GS',st.gamesStarted||'—','','Games started']].map(([l,v,c,ctx])=>`<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v}</div><div class="stat-context">${ctx}</div></div>`).join('');
+  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average',STAT_INFO.ERA],['FIP',fip,fipC,'Fielding independent (strips luck)',STAT_INFO.FIP],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB',STAT_INFO.XFIP],['SIERA',sieraDisplay,sieraC,'Skill-based ERA: K, BB, batted-ball mix',STAT_INFO.SIERA],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP',STAT_INFO.WHIP],['K-BB%',kbb,kbbC,'Skill gap — best K predictor',STAT_INFO.KBBPCT],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP',STAT_INFO.HR9],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate',STAT_INFO.KPCT_P],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate',STAT_INFO.BBPCT_P],['IP',ip,'','Innings pitched',STAT_INFO.IP],['K/9',k9,'','Strikeouts per 9',STAT_INFO.K9],['GS',st.gamesStarted||'—','','Games started',STAT_INFO.GS]].map(([l,v,c,ctx,info])=>statBox(l,v,ctx,c,info)).join('');
 }
 
 async function loadPitcherStatcast(pitcherId){
@@ -840,16 +840,16 @@ async function loadPitcherStatcast(pitcherId){
     }
 
     const boxes=[
-      statBox('Whiff%',    whiffPct,     'Whiff rate per pitch',       whiffC),
-      statBox('K%',        kPct,         'Strikeout rate',             kC),
-      statBox('Put Away%', putAway,      '2-strike put-away rate',     putAwayC),
-      statBox('GB%',       gbPct,        'Ground ball rate',           gbC),
-      statBox('FB%',       fbPct,        'Fly ball rate',              ''),
-      statBox('Barrel% vs',brlAgainst,   'Barrels allowed',            brlC),
-      statBox('HH% vs',   hhAgainst,    'Hard contact allowed',       hhC),
-      statBox('Avg EV vs',avgEVAgainst, 'Avg exit velo against',      ''),
-      statBox('xwOBA vs', xwobaPct,     'Expected wOBA against',      ''),
-      statBox('xERA',     xERAVal,      'Expected ERA',               xeraC),
+      statBox('Whiff%',    whiffPct,     'Whiff rate per pitch',       whiffC,   STAT_INFO.WHIFF_P),
+      statBox('K%',        kPct,         'Strikeout rate',             kC,       STAT_INFO.KPCT_P),
+      statBox('Put Away%', putAway,      '2-strike put-away rate',     putAwayC, STAT_INFO.PUTAWAY),
+      statBox('GB%',       gbPct,        'Ground ball rate',           gbC,      STAT_INFO.GB_P),
+      statBox('FB%',       fbPct,        'Fly ball rate',              '',       STAT_INFO.FB_P),
+      statBox('Barrel% vs',brlAgainst,   'Barrels allowed',            brlC,     STAT_INFO.BARREL_VS),
+      statBox('HH% vs',   hhAgainst,    'Hard contact allowed',       hhC,      STAT_INFO.HH_VS),
+      statBox('Avg EV vs',avgEVAgainst, 'Avg exit velo against',      '',       STAT_INFO.EV_VS),
+      statBox('xwOBA vs', xwobaPct,     'Expected wOBA against',      '',       STAT_INFO.XWOBA_VS),
+      statBox('xERA',     xERAVal,      'Expected ERA',               xeraC,    STAT_INFO.XERA),
     ].join('');
 
     if(!scRow&&!expRow&&arsenalRows.length===0){
@@ -3576,7 +3576,7 @@ function renderDashboard(){
           ?`${evLine}<br><span style="font-size:9px;opacity:0.7">${deltaLine}</span>`
           :deltaLine;
         const softMarketBadge=b.marketConfidence==='low'
-          ?' <span class="dpb-soft-market" title="Asymmetric market — devigging less reliable; EV is more uncertain">⚠</span>'
+          ?' <span class="dpb-soft-market" data-tip="Soft / asymmetric market — the over and under odds are unbalanced (often only one side posted, or an unusually wide spread). Devigging math assumes a balanced two-sided market, so the EV% number here is less reliable than usual. The bet may still be sharp, but treat the exact EV with extra skepticism.">⚠</span>'
           :'';
         return`<tr>
           <td>${icon}</td>
@@ -4083,6 +4083,69 @@ function statBox(l,v,ctx,c,info){
   const infoIcon=info?` <span class="stat-info" data-tip="${info.replace(/"/g,'&quot;').replace(/</g,'&lt;')}">ⓘ</span>`:'';
   return`<div class="stat-box"><div class="stat-label">${l}${infoIcon}</div><div class="stat-val${c?' '+c:''}">${v??'—'}</div>${ctx?`<div class="stat-context">${ctx}</div>`:''}</div>`;
 }
+
+// League-context strings for stat ⓘ tooltips.
+// Format: "Good ≥X · Avg ~Y · Poor ≤Z\nLeague avg: ~Y" — terse, scannable.
+const STAT_INFO = {
+  // ── Batter slash ──
+  BA:    'Batting average (H ÷ AB)\nGood ≥.290 · Avg ~.245 · Poor ≤.220\nLeague avg: ~.245',
+  OBP:   'On-base % (H+BB+HBP ÷ PA)\nGood ≥.360 · Avg ~.315 · Poor ≤.290\nLeague avg: ~.315',
+  SLG:   'Slugging % (TB ÷ AB)\nGood ≥.470 · Avg ~.400 · Poor ≤.350\nLeague avg: ~.400',
+  OPS:   'On-base + slugging\nGood ≥.830 · Avg ~.715 · Poor ≤.640\nLeague avg: ~.715 · Elite ≥.900',
+  BABIP: 'BA on balls in play\nGood ≥.340 · Avg ~.295 · Poor ≤.270\nLeague avg: ~.295. Above .340 may signal luck; below .270 often signals bad luck.',
+  ABHR:  'At-bats per home run (lower = more power)\nElite ≤18 · Good 18-25 · Avg 30-40 · Weak 50+',
+  // ── Batter discipline ──
+  BBPCT: 'Walk rate (BB ÷ PA)\nGood ≥10% · Avg ~8.5% · Poor ≤6%\nLeague avg: ~8.5% · Elite eye 12%+',
+  KPCT_B:'Strikeout rate (K ÷ PA) — lower is better\nGood ≤16% · Avg ~22% · Poor ≥25%\nLeague avg: ~22%',
+  BBK:   'BB/K ratio — plate discipline\nGood ≥0.50 · Avg ~0.40 · Elite ≥0.80\nLeague avg: ~0.40',
+  IBB:   'Intentional walks — context stat. Common for sluggers with weak protection.',
+  HBP:   'Hit by pitch — context stat. League leaders typically reach 15-25/yr.',
+  SAC:   'Sacrifice bunts + sac flies — context stat (lineup-role driven).',
+  // ── Batter power ──
+  HR:    'Home runs (counting stat)\nAvg starter: 15-25/yr · Slugger: 35+ · Elite: 45+',
+  D2B:   'Doubles\nAvg starter: 20-30/yr · Strong: 35+',
+  D3B:   'Triples (rare)\nMost players: 1-3/yr · 5+ shows speed/gap power',
+  XBH:   'Extra-base hits (HR + 2B + 3B)\nAvg starter: 45-55/yr · Elite: 75+',
+  RBI:   'Runs batted in (lineup-spot dependent)\nAvg starter: 60-80 · Strong: 90+ · Elite: 100+',
+  SB:    'Stolen bases\nAvg starter: 5-10 · Speed threat: 20+ · Elite: 30+',
+  // ── Batter Statcast ──
+  XWOBA: 'Expected wOBA — quality-of-contact offensive value\nGood ≥.360 · Avg ~.320 · Poor ≤.300\nLeague avg: ~.320',
+  XBA:   'Expected BA from EV + launch angle\nGood ≥.280 · Avg ~.245 · Poor ≤.220\nLeague avg: ~.245',
+  XSLG:  'Expected SLG from EV + launch angle\nGood ≥.480 · Avg ~.405 · Poor ≤.360\nLeague avg: ~.405',
+  BARREL_B:'Barrel rate (optimal EV+LA combo)\nGood ≥10% · Avg ~7% · Poor ≤4%\nLeague avg: ~7%',
+  HH_B:  'Hard-hit rate — % of batted balls 95+ mph\nGood ≥45% · Avg ~38% · Poor ≤35%\nLeague avg: ~38%',
+  EV_B:  'Average exit velocity\nGood ≥92 mph · Avg ~88.5 · Poor ≤86\nLeague avg: ~88.5 mph',
+  SWEET: 'Sweet-spot % — contact in 8-32° launch angle\nGood ≥40% · Avg ~33% · Poor ≤28%\nLeague avg: ~33%',
+  WHIFF_B:'Whiff rate (whiffs ÷ swings) — lower is better\nGood ≤20% · Avg ~25% · Poor ≥30%\nLeague avg: ~25%',
+  GB_B:  'Ground-ball rate\nLeague avg: ~43%. Higher GB = more singles, fewer XBH.',
+  FB_B:  'Fly-ball rate\nLeague avg: ~36%. Higher FB = more HR potential but more outs.',
+  BATSPD:'Bat speed (Statcast 2024+)\nGood ≥75 mph · Avg ~71 · Slow ≤68\nLeague avg: ~71 mph',
+  SQDUP: 'Squared-up % per contact (Statcast 2024+)\nGood ≥22% · Avg ~17% · Poor ≤12%\nLeague avg: ~17%',
+  BLAST: 'Blast % — squared-up + fast swing combo\nGood ≥8% · Avg ~5% · Poor ≤3%\nLeague avg: ~5%',
+  // ── Pitcher Statcast (vs hitters) ──
+  WHIFF_P:'Whiff rate per pitch — higher is better for pitcher\nGood ≥30% · Avg ~25% · Poor ≤20%\nLeague avg: ~25%',
+  KPCT_P:'Strikeout rate (K ÷ batters faced)\nGood ≥25% · Avg ~22% · Poor ≤18%\nLeague avg: ~22% · Elite ≥30%',
+  PUTAWAY:'Put-away % — Ks per 2-strike pitch\nGood ≥22% · Avg ~18% · Poor ≤15%\nLeague avg: ~18%',
+  GB_P:  'Ground-ball rate induced — higher = fewer XBH\nGood ≥50% · Avg ~43% · Poor ≤38%\nLeague avg: ~43%',
+  FB_P:  'Fly-ball rate induced — lower is better for pitcher\nLeague avg: ~36%',
+  BARREL_VS:'Barrels allowed — lower is better\nGood ≤4% · Avg ~7% · Poor ≥10%\nLeague avg: ~7%',
+  HH_VS: 'Hard contact allowed (95+ mph EV)\nGood ≤35% · Avg ~38% · Poor ≥45%\nLeague avg: ~38%',
+  EV_VS: 'Avg exit velo allowed\nGood ≤86 mph · Avg ~88.5 · Poor ≥92\nLeague avg: ~88.5 mph',
+  XWOBA_VS:'Expected wOBA against — quality of contact allowed\nGood ≤.300 · Avg ~.320 · Poor ≥.360\nLeague avg: ~.320',
+  XERA:  'Expected ERA from EV/LA allowed\nGood ≤3.50 · Avg ~4.20 · Poor ≥5.00\nLeague avg: ~4.20',
+  // ── Pitcher season ──
+  ERA:   'Earned run average (ER × 9 ÷ IP)\nGood ≤3.50 · Avg ~4.20 · Poor ≥5.00\nLeague avg: ~4.20 · Ace ≤3.00',
+  FIP:   'Fielding-independent pitching — strips defense/luck\nGood ≤3.50 · Avg ~4.20 · Poor ≥4.50\nLeague avg: ~4.20. Better predictor than ERA.',
+  XFIP:  'FIP normalized to league HR/FB rate\nGood ≤3.50 · Avg ~4.20 · Poor ≥4.50\nLeague avg: ~4.20. Strips out HR luck.',
+  SIERA: 'Skill-Interactive ERA — uses K, BB, batted-ball mix\nGood ≤3.50 · Avg ~4.20 · Poor ≥4.50\nLeague avg: ~4.20. Most predictive ERA estimator.',
+  WHIP:  'Walks + hits per inning pitched\nGood ≤1.10 · Avg ~1.30 · Poor ≥1.40\nLeague avg: ~1.30 · Elite ≤1.00',
+  KBBPCT:'K-BB% — strikeout rate minus walk rate\nGood ≥15% · Avg ~13% · Elite ≥20%\nLeague avg: ~13%. Strongest single-stat K predictor.',
+  HR9:   'Home runs allowed per 9 IP\nGood ≤0.90 · Avg ~1.20 · Poor ≥1.50\nLeague avg: ~1.20',
+  BBPCT_P:'Walk rate (BB ÷ batters faced)\nGood ≤6% · Avg ~8.5% · Poor ≥10%\nLeague avg: ~8.5%',
+  IP:    'Innings pitched — counting stat (role-dependent).',
+  K9:    'Strikeouts per 9 IP\nGood ≥9.0 · Avg ~8.5 · Elite ≥11.0\nLeague avg: ~8.5',
+  GS:    'Games started — counting stat.',
+};
 function pct(n,d){if(!n||!d||d===0)return'—';return((n/d)*100).toFixed(1)+'%';}
 function renderStatsTab(){
   hide('stats-spinner');hide('stats-empty');
@@ -4091,9 +4154,9 @@ function renderStatsTab(){
   if(!ss){showStatsError('No season stats.');return;}
   const pa=ss.plateAppearances||1;
   const bbPct=pct(ss.baseOnBalls,pa),kPct=pct(ss.strikeOuts,pa);
-  document.getElementById('stat-slash').innerHTML=statBox('BA',ss.avg,`${ss.hits}H / ${ss.atBats}AB`,'')+statBox('OBP',ss.obp,`${ss.baseOnBalls}BB`,'')+statBox('SLG',ss.slg,`${ss.totalBases}TB`,'')+statBox('OPS',ss.ops,'OBP + SLG',parseFloat(ss.ops)>=0.850?'good':parseFloat(ss.ops)<=0.680?'bad':'')+statBox('BABIP',ss.babip,'Balls in play avg',parseFloat(ss.babip)>=0.340?'good':parseFloat(ss.babip)<=0.270?'bad':'')+statBox('AB/HR',ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—','At-bats per HR','');
-  document.getElementById('stat-discipline').innerHTML=statBox('BB%',bbPct,`${ss.baseOnBalls} walks / ${pa} PA`,parseFloat(bbPct)>=10?'good':parseFloat(bbPct)<=5?'bad':'')+statBox('K%',kPct,`${ss.strikeOuts} Ks / ${pa} PA`,parseFloat(kPct)<=16?'good':parseFloat(kPct)>=25?'bad':'')+statBox('BB/K',ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts).toFixed(2):'—','Walk to K ratio','')+statBox('IBB',ss.intentionalWalks??'0','Intentional walks','')+statBox('HBP',ss.hitByPitch??'0','Hit by pitch','')+statBox('SAC',(ss.sacBunts??0)+(ss.sacFlies??0),'Sac bunts + flies','');
-  document.getElementById('stat-power').innerHTML=statBox('HR',ss.homeRuns,`${ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—'} AB/HR`,'')+statBox('2B',ss.doubles,'Doubles','')+statBox('3B',ss.triples,'Triples','')+statBox('XBH',(ss.homeRuns||0)+(ss.doubles||0)+(ss.triples||0),'Extra base hits','')+statBox('RBI',ss.rbi,`${ss.leftOnBase} LOB`,'')+statBox('SB',`${ss.stolenBases}/${(ss.stolenBases||0)+(ss.caughtStealing||0)}`,'SB success','');
+  document.getElementById('stat-slash').innerHTML=statBox('BA',ss.avg,`${ss.hits}H / ${ss.atBats}AB`,'',STAT_INFO.BA)+statBox('OBP',ss.obp,`${ss.baseOnBalls}BB`,'',STAT_INFO.OBP)+statBox('SLG',ss.slg,`${ss.totalBases}TB`,'',STAT_INFO.SLG)+statBox('OPS',ss.ops,'OBP + SLG',parseFloat(ss.ops)>=0.850?'good':parseFloat(ss.ops)<=0.680?'bad':'',STAT_INFO.OPS)+statBox('BABIP',ss.babip,'Balls in play avg',parseFloat(ss.babip)>=0.340?'good':parseFloat(ss.babip)<=0.270?'bad':'',STAT_INFO.BABIP)+statBox('AB/HR',ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—','At-bats per HR','',STAT_INFO.ABHR);
+  document.getElementById('stat-discipline').innerHTML=statBox('BB%',bbPct,`${ss.baseOnBalls} walks / ${pa} PA`,parseFloat(bbPct)>=10?'good':parseFloat(bbPct)<=5?'bad':'',STAT_INFO.BBPCT)+statBox('K%',kPct,`${ss.strikeOuts} Ks / ${pa} PA`,parseFloat(kPct)<=16?'good':parseFloat(kPct)>=25?'bad':'',STAT_INFO.KPCT_B)+statBox('BB/K',ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts).toFixed(2):'—','Walk to K ratio','',STAT_INFO.BBK)+statBox('IBB',ss.intentionalWalks??'0','Intentional walks','',STAT_INFO.IBB)+statBox('HBP',ss.hitByPitch??'0','Hit by pitch','',STAT_INFO.HBP)+statBox('SAC',(ss.sacBunts??0)+(ss.sacFlies??0),'Sac bunts + flies','',STAT_INFO.SAC);
+  document.getElementById('stat-power').innerHTML=statBox('HR',ss.homeRuns,`${ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—'} AB/HR`,'',STAT_INFO.HR)+statBox('2B',ss.doubles,'Doubles','',STAT_INFO.D2B)+statBox('3B',ss.triples,'Triples','',STAT_INFO.D3B)+statBox('XBH',(ss.homeRuns||0)+(ss.doubles||0)+(ss.triples||0),'Extra base hits','',STAT_INFO.XBH)+statBox('RBI',ss.rbi,`${ss.leftOnBase} LOB`,'',STAT_INFO.RBI)+statBox('SB',`${ss.stolenBases}/${(ss.stolenBases||0)+(ss.caughtStealing||0)}`,'SB success','',STAT_INFO.SB);
   if(risp){const ro=((parseFloat(risp.obp)||0)+(parseFloat(risp.slg)||0)).toFixed(3);const rc=parseFloat(risp.avg)>=0.280?'#2ecc71':parseFloat(risp.avg)<=0.200?'#e74c3c':'#fff';document.getElementById('stat-risp').innerHTML=`<div class="risp-box"><div><div class="stat-label" style="margin-bottom:4px">BA w/ RISP</div><div class="risp-main" style="color:${rc}">${risp.avg??'—'}</div></div><div class="risp-detail">OBP <strong style="color:#fff">${risp.obp??'—'}</strong><br>SLG <strong style="color:#fff">${risp.slg??'—'}</strong><br>OPS <strong style="color:#fff">${ro}</strong>${risp.rbi?`<br>RBI <strong style="color:#fff">${risp.rbi}</strong>`:''}</div><div class="risp-detail">H <strong style="color:#fff">${risp.hits??'—'}</strong><br>AB <strong style="color:#fff">${risp.atBats??'—'}</strong><br>PA <strong style="color:#fff">${risp.plateAppearances??'—'}</strong><br>K <strong style="color:#fff">${risp.strikeOuts??'—'}</strong></div></div>`;}
   else document.getElementById('stat-risp').innerHTML='<div style="font-size:11px;color:#777;font-family:monospace;">RISP data not available.</div>';
   show('stats-content');
@@ -4645,20 +4708,20 @@ async function loadStatcast(playerId) {
     const fb    = fmtPct(fbRaw);
 
     document.getElementById('stat-statcast').innerHTML = [
-      statBox('xwOBA',   xwoba,  'Expected weighted OBA',        c(xwobaRaw,0.360,0.300)),
-      statBox('xBA',     xba,    'Expected batting average',     c(xbaRaw,0.280,0.220)),
-      statBox('xSLG',    xslg,   'Expected slugging %',          c(xslgRaw,0.480,0.360)),
-      statBox('Barrel%', brl,    'Barrel rate',                  c(brlRaw,10,4)),
-      statBox('HH Rate', hhRate, 'Hard-hit rate (95+ mph EV)',   c(hhRaw,45,35)),
-      statBox('Avg EV',  avgEV,  'Avg exit velocity',            c(avgEVRaw,92,86)),
-      statBox('Sweet Sp%',sweetSp,'Sweet spot contact %',        c(sweetSpRaw,40,28)),
-      statBox('Whiff%',  whiff,  'Whiff rate per swing',         c(whiffRaw,30,20,true)),
-      statBox('GB%',     gb,     'Ground ball rate',             ''),
-      statBox('FB%',     fb,     'Fly ball rate',                ''),
-      statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68)),
+      statBox('xwOBA',   xwoba,  'Expected weighted OBA',        c(xwobaRaw,0.360,0.300), STAT_INFO.XWOBA),
+      statBox('xBA',     xba,    'Expected batting average',     c(xbaRaw,0.280,0.220),   STAT_INFO.XBA),
+      statBox('xSLG',    xslg,   'Expected slugging %',          c(xslgRaw,0.480,0.360),  STAT_INFO.XSLG),
+      statBox('Barrel%', brl,    'Barrel rate',                  c(brlRaw,10,4),          STAT_INFO.BARREL_B),
+      statBox('HH Rate', hhRate, 'Hard-hit rate (95+ mph EV)',   c(hhRaw,45,35),          STAT_INFO.HH_B),
+      statBox('Avg EV',  avgEV,  'Avg exit velocity',            c(avgEVRaw,92,86),       STAT_INFO.EV_B),
+      statBox('Sweet Sp%',sweetSp,'Sweet spot contact %',        c(sweetSpRaw,40,28),     STAT_INFO.SWEET),
+      statBox('Whiff%',  whiff,  'Whiff rate per swing',         c(whiffRaw,30,20,true),  STAT_INFO.WHIFF_B),
+      statBox('GB%',     gb,     'Ground ball rate',             '',                      STAT_INFO.GB_B),
+      statBox('FB%',     fb,     'Fly ball rate',                '',                      STAT_INFO.FB_B),
+      statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68),      STAT_INFO.BATSPD),
       statBox('Sw Len',  swLen,  '',  '',  'Swing length in feet — tradeoff, not categorically good or bad. <6.8: pure contact (Arraez). 6.8-7.5: balanced/league avg. 7.5-8.0: power-leaning. >8.0: elite power, high K (Judge).'),
-      statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12)),
-      statBox('Blast%',  blast,  'Blast per contact',            c(blastRaw,8,3)),
+      statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12),       STAT_INFO.SQDUP),
+      statBox('Blast%',  blast,  'Blast per contact',            c(blastRaw,8,3),         STAT_INFO.BLAST),
     ].join('');
 
     S.statcast = {
