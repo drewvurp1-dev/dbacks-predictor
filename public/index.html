@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="stylesheet" href="/css/style.css?v=13">
 </head>
 <body>
 
@@ -274,7 +274,7 @@
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
-      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">☁ Sync</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
         <div class="record-summary-strip">
           <div class="rss-stat"><div class="rss-label">Units</div><div class="rss-val" id="rec-units">—</div></div>
@@ -376,7 +376,7 @@
   <!-- ═══════════════════ GRADE & LEARN ═══════════════════ -->
   <div id="panel-grade" class="panel">
     <div class="card" id="grade-pending-card">
-      <div class="card-header">⚡ Pending Grades</div>
+      <div class="card-header"><span>⚡ Pending Grades</span><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;">☁ Sync</button></div>
       <div class="card-body">
         <div id="grade-pending-empty" style="font-size:12px;color:#777;font-family:monospace;text-align:center;padding:20px;">No predictions waiting to be graded. Run a prediction before a game and come back after to grade it.</div>
         <div id="grade-pending-list"></div>
@@ -427,7 +427,7 @@
   </div>
 </div>
 
-<script src="/js/app.js"></script>
+<script src="/js/app.js?v=11"></script>
 
 </body>
 </html>

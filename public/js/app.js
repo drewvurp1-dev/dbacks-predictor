@@ -4754,6 +4754,131 @@ async function loadStatcast(playerId) {
   }
 }
 
+// ═══════════ CROSS-DEVICE SYNC ════════════════════════════════════════════════
+
+const SYNC_KEY_STORAGE = 'corbetSyncKey';
+const SYNC_LAST_TS_KEY = 'corbetLastSync';
+
+function _getSyncKey(){ return localStorage.getItem(SYNC_KEY_STORAGE)||''; }
+function _setSyncKey(k){ localStorage.setItem(SYNC_KEY_STORAGE,k); }
+
+// Union two arrays by .id. For bet-log duplicates prefer entry with result set;
+// for pending duplicates prefer graded=true. Remote items seed the map first so
+// local writes that set a result always win when both exist.
+function _mergeById(local, remote){
+  const map=new Map();
+  (remote||[]).forEach(item=>map.set(item.id, item));
+  (local||[]).forEach(item=>{
+    const existing=map.get(item.id);
+    if(!existing){map.set(item.id,item);return;}
+    if(item.result&&!existing.result){map.set(item.id,item);return;}
+    if(item.graded&&!existing.graded){map.set(item.id,item);return;}
+  });
+  return Array.from(map.values());
+}
+
+// Recompute factorPerf from scratch off the merged gradeLog so there's no
+// double-counting if both devices graded the same pending entry.
+function _computeFactorPerf(gradeLog){
+  const perf={};
+  (gradeLog||[]).forEach(entry=>{
+    if(!entry.factors||!entry.grade)return;
+    const actuallyGood=entry.grade.actuallyGood;
+    entry.factors.forEach(f=>{
+      if(!perf[f.label])perf[f.label]={fires:0,hits:0,totalPerf:0};
+      perf[f.label].fires++;
+      perf[f.label].totalPerf+=(entry.grade.perfScore||0);
+      const pos=f.impact==='positive';
+      if((pos&&actuallyGood)||(!pos&&!actuallyGood))perf[f.label].hits++;
+    });
+  });
+  return perf;
+}
+
+// Recompute weights from merged factorPerf (mirrors autoAdjustWeights logic).
+function _computeWeights(perf, gameCount){
+  const weights={...DEFAULT_WEIGHTS};
+  if(gameCount<15)return weights;
+  const ALPHA=20;
+  Object.entries(perf).forEach(([factor,data])=>{
+    if(data.fires<10)return;
+    const defaultW=DEFAULT_WEIGHTS[factor];
+    if(!defaultW)return;
+    const postRate=(data.hits+ALPHA/2)/(data.fires+ALPHA);
+    let mult=1+(postRate-0.5)*0.6;
+    mult=Math.max(0.7,Math.min(1.3,mult));
+    weights[factor]=Math.round(defaultW*mult*10)/10;
+  });
+  return weights;
+}
+
+function _setSyncBtnState(text,disabled){
+  document.querySelectorAll('.sync-btn').forEach(btn=>{
+    btn.textContent=text;
+    btn.disabled=disabled;
+  });
+}
+
+async function syncRecord(){
+  let key=_getSyncKey();
+  if(!key){
+    key=(prompt('Enter your sync passphrase (must match SYNC_KEY on Railway):')||'').trim();
+    if(!key)return;
+    _setSyncKey(key);
+  }
+  _setSyncBtnState('⟳ Syncing…',true);
+  try{
+    // 1. Pull server state
+    const getRes=await fetch('/api/sync',{headers:{'X-Sync-Key':key}});
+    if(!getRes.ok){
+      if(getRes.status===401){
+        _setSyncKey('');
+        _setSyncBtnState('☁ Sync',false);
+        alert('Wrong passphrase — cleared. Tap Sync again to re-enter.');
+        return;
+      }
+      const body=await getRes.json().catch(()=>({}));
+      throw new Error(body.error||`Server ${getRes.status}`);
+    }
+    const remote=await getRes.json();
+
+    // 2. Merge
+    const mergedBetLog=_mergeById(S.betLog,remote.betLog).sort((a,b)=>b.id-a.id);
+    const mergedGradeLog=_mergeById(getGradeLog(),remote.gradeLog).sort((a,b)=>b.id-a.id);
+    const mergedPending=_mergeById(getPending(),remote.pending);
+    const mergedFactorPerf=_computeFactorPerf(mergedGradeLog);
+    const mergedWeights=_computeWeights(mergedFactorPerf,mergedGradeLog.length);
+
+    // 3. Push merged state back
+    const postRes=await fetch('/api/sync',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Sync-Key':key},
+      body:JSON.stringify({betLog:mergedBetLog,gradeLog:mergedGradeLog,factorPerf:mergedFactorPerf,factorWeights:mergedWeights,pending:mergedPending}),
+    });
+    if(!postRes.ok)throw new Error(`Push failed ${postRes.status}`);
+
+    // 4. Commit to local state
+    S.betLog=mergedBetLog;
+    localStorage.setItem('corbetRecord',JSON.stringify(mergedBetLog));
+    saveGradeLog(mergedGradeLog);
+    saveFactorPerf(mergedFactorPerf);
+    saveFactorWeights(mergedWeights);
+    savePending(mergedPending);
+    localStorage.setItem(SYNC_LAST_TS_KEY,new Date().toISOString());
+
+    // 5. Re-render
+    renderRecord();
+    renderGradePanel();
+
+    const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    _setSyncBtnState(`✓ ${t}`,false);
+  }catch(err){
+    console.error('[sync]',err);
+    _setSyncBtnState('☁ Sync',false);
+    alert('Sync failed: '+err.message);
+  }
+}
+
 // ═══════════ UTILS ════════════════════════════════════════════════════════════
 function show(id){document.getElementById(id)?.classList.remove('hidden');}
 function hide(id){document.getElementById(id)?.classList.add('hidden');}
