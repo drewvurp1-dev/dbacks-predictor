@@ -218,7 +218,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   content: attr(data-tip);
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  right: 0;
   background: #16142e;
   color: #d8d8e8;
   border: 1px solid #009A8B;
@@ -230,7 +230,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   letter-spacing: 0.3px;
   text-transform: none;
   line-height: 1.45;
-  width: 280px;
+  width: min(280px, calc(100vw - 32px));
   z-index: 1000;
   pointer-events: none;
   opacity: 0;
@@ -997,15 +997,6 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
      "X games graded · building confidence") onto a second line instead of
      overflowing the card on narrow screens. */
   .card-header { padding: 10px 12px; font-size: 9px; letter-spacing: 2px; flex-wrap: wrap; row-gap: 4px; column-gap: 8px; }
-
-  /* Card header info-button tooltip: anchor right so it spreads to the LEFT
-     of the icon instead of pushing past the viewport edge, and cap width to
-     fit inside the screen. */
-  .hdr-info[data-tip]::after {
-    left: auto;
-    right: 0;
-    width: min(280px, calc(100vw - 32px));
-  }
 
   /* Pitch-mix matchup row: drop the stats line (BA · SLG · K% · wOBA · PA)
      onto its own row below the pitch name + usage bar so it has the full
