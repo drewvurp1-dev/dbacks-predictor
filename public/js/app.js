@@ -1208,6 +1208,28 @@ function _renderBestMatchup(){
     if(top.mu.k)extras.push(`${top.mu.k} K`);
     careerLine=`<div class="bm-line bm-career"><span class="bm-stat-lbl">Career vs ${S.pitcher.name.split(' ').pop()}</span> <b>${sample}</b>${extras.length?' · '+extras.join(', '):''}</div>`;
   }
+  // Last 7 games recent form (most-recent-first array)
+  let recentLine='';
+  const log=top.snap?.recentGameLog||[];
+  if(log.length){
+    const last7=log.slice(0,7);
+    let h=0,ab=0,hr=0,bb=0,k=0;
+    last7.forEach(g=>{
+      h+=parseInt(g.stat?.hits||0);
+      ab+=parseInt(g.stat?.atBats||0);
+      hr+=parseInt(g.stat?.homeRuns||0);
+      bb+=parseInt(g.stat?.baseOnBalls||0);
+      k+=parseInt(g.stat?.strikeOuts||0);
+    });
+    if(ab>0){
+      const avg=(h/ab).toFixed(3).replace(/^0\./,'.');
+      const extras=[];
+      if(hr)extras.push(`${hr} HR`);
+      if(bb)extras.push(`${bb} BB`);
+      if(k)extras.push(`${k} K`);
+      recentLine=`<div class="bm-line"><span class="bm-stat-lbl">Last ${last7.length}G</span> <b>${h}-for-${ab}</b> (${avg})${extras.length?' · '+extras.join(', '):''}</div>`;
+    }
+  }
   // Top bet for this player (if odds loaded)
   let betLine='';
   const pgBets=(S.allPlayerBets||[]).find(pg=>pg.playerName===top.player.name);
@@ -1230,6 +1252,7 @@ function _renderBestMatchup(){
     </div>
     <div class="bm-name">${top.player.name}</div>
     <div class="bm-line">${handLine}</div>
+    ${recentLine}
     ${careerLine}
     ${betLine}
   </div>`;
