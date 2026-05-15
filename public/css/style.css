@@ -61,8 +61,10 @@ body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width:
 
 /* ── Content & Cards ── */
 .content { padding: 18px 18px 20px; }
-.card { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
-.card-header { padding: 11px 18px; border-bottom: 1px solid #1a1730; background: #0e0c22; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #009A8B; font-family: 'Chakra Petch', monospace; display: flex; align-items: center; justify-content: space-between; }
+/* overflow: visible so absolute-positioned ⓘ tooltips can escape the card.
+   Header gets explicit top-radius to keep the rounded corners crisp. */
+.card { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 12px; overflow: visible; margin-bottom: 16px; }
+.card-header { padding: 11px 18px; border-bottom: 1px solid #1a1730; background: #0e0c22; border-radius: 12px 12px 0 0; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #009A8B; font-family: 'Chakra Petch', monospace; display: flex; align-items: center; justify-content: space-between; }
 .card-body { padding: 16px 18px; }
 .row { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 12px; margin-bottom: 12px; }
 .row label { font-size: 10px; color: #999; font-family: 'Chakra Petch', monospace; letter-spacing: 0.5px; text-transform: uppercase; }
@@ -293,6 +295,12 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
    so they don't get clipped by the viewport. Applies to any 3-col stats-grid. */
 .stats-grid .stat-box:nth-child(3n+1) .stat-info .stat-tip { left: 0; right: auto; transform: none; }
 .stats-grid .stat-box:nth-child(3n)   .stat-info .stat-tip { left: auto; right: 0; transform: none; }
+/* First row of any stats-grid: flip tooltip BELOW the icon so it can't be
+   clipped by the top of the viewport (or anything above the card). */
+.stats-grid .stat-box:nth-child(-n+3) .stat-info .stat-tip {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
 .stat-box .stat-val { font-size: 20px; font-weight: 900; font-family: 'Chakra Petch', monospace; color: #fff; }
 .stat-box .stat-val.good { color: #2ecc71; }
 .stat-box .stat-val.bad { color: #e74c3c; }
