@@ -2303,10 +2303,14 @@ function _gamePAs(){
   // Run environment: more baserunners = more PAs across the order. Apply as a
   // multiplier on the base PA so each spot scales proportionally with team PAs.
   if(!S.pitcher?.bullpenGame){
-    const{hitF,hrF,hasRoof}=_parkFactors();
+    const{hitF,hasRoof}=_parkFactors();
     const rfClosed=hasRoof&&S.roofClosed;
-    // Park run factor — hits dominate baserunner production, HRs round it out.
-    const parkRunF=rfClosed?1.0:(hitF*0.7+hrF*0.3);
+    // Park run factor — pure hitF (hits drive baserunners and PAs). hrF was
+    // previously blended in (0.3 weight) but that triple-counted park HR effects:
+    // park already enters via calcPrediction's score factor and again as a direct
+    // ±5pp prop adjustment in modelProbability. Pure hitF keeps the run-environment
+    // signal without compounding HR effects three ways.
+    const parkRunF=rfClosed?1.0:hitF;
     // WHIP delta — league avg ~1.30. Elite 1.00 → -3% PAs, poor 1.50 → +2% PAs.
     const whip=parseFloat(S.pitcher?.st?.whip);
     const pitcherPaF=isFinite(whip)?1.0+(whip-1.30)*0.10:1.0;
@@ -2822,7 +2826,11 @@ function modelProbability(propKey,line,score){
   {const{hrF,hitF,elev:pElev,hasRoof}=_parkFactors();const rfClosed=hasRoof&&S.roofClosed;
   if(!rfClosed){
     if(propKey==='batter_home_runs'&&pElev<=4000)
-      p+=Math.max(-8,Math.min(8,Math.round((hrF-1.0)*60)));
+      // Direct HR park bump capped at ±5pp (was ±8). The same hrF signal already
+      // enters via calcPrediction's score (which feeds lerp3 anchors), so the
+      // direct bump should only capture the prop-specific delta on top of the
+      // score channel — not the full park effect twice.
+      p+=Math.max(-5,Math.min(5,Math.round((hrF-1.0)*60)));
     else if(['batter_hits','batter_total_bases','batter_hits_runs_rbis'].includes(propKey))
       p+=Math.max(-5,Math.min(5,Math.round((hitF-1.0)*40)));
     else if(propKey==='batter_strikeouts')
