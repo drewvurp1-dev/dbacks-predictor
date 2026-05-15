@@ -4052,7 +4052,13 @@ function renderSplitsTab(){
 // ═══════════ ADVANCED STATS ════════════════════════════════════════════════════
 function showStatsLoading(){show('stats-spinner');hide('stats-error');hide('stats-content');hide('stats-empty');}
 function showStatsError(m){hide('stats-spinner');setText('stats-error','⚠ '+m);show('stats-error');}
-function statBox(l,v,ctx,c){return`<div class="stat-box"><div class="stat-label">${l}</div><div class="stat-val${c?' '+c:''}">${v??'—'}</div>${ctx?`<div class="stat-context">${ctx}</div>`:''}</div>`;}
+function statBox(l,v,ctx,c,info){
+  // Long-form info (5th arg) shows as a hover tooltip on an ⓘ icon next to the
+  // label so the box stays compact. Short-form ctx (3rd arg) still renders as
+  // visible context text under the value.
+  const infoIcon=info?` <span class="stat-info" title="${info.replace(/"/g,'&quot;')}">ⓘ</span>`:'';
+  return`<div class="stat-box"><div class="stat-label">${l}${infoIcon}</div><div class="stat-val${c?' '+c:''}">${v??'—'}</div>${ctx?`<div class="stat-context">${ctx}</div>`:''}</div>`;
+}
 function pct(n,d){if(!n||!d||d===0)return'—';return((n/d)*100).toFixed(1)+'%';}
 function renderStatsTab(){
   hide('stats-spinner');hide('stats-empty');
@@ -4626,7 +4632,7 @@ async function loadStatcast(playerId) {
       statBox('GB%',     gb,     'Ground ball rate',             ''),
       statBox('FB%',     fb,     'Fly ball rate',                ''),
       statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68)),
-      statBox('Sw Len',  swLen,  'Swing length in feet — tradeoff, not categorically good or bad. <6.8: pure contact (Arraez). 6.8-7.5: balanced/league avg. 7.5-8.0: power-leaning. >8.0: elite power, high K (Judge).',''),
+      statBox('Sw Len',  swLen,  '',  '',  'Swing length in feet — tradeoff, not categorically good or bad. <6.8: pure contact (Arraez). 6.8-7.5: balanced/league avg. 7.5-8.0: power-leaning. >8.0: elite power, high K (Judge).'),
       statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12)),
       statBox('Blast%',  blast,  'Blast per contact',            c(blastRaw,8,3)),
     ].join('');
