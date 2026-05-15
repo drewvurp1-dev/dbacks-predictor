@@ -14,6 +14,7 @@ app.use('/savant',     require('./routes/savant'));
 app.use('/fangraphs',  require('./routes/fangraphs'));
 app.use('/pitch-arsenal', require('./routes/arsenal'));
 app.use('/api/sync',   require('./routes/sync'));
+app.use('/api/push',   require('./routes/push'));
 
 // Auto-refresh pitch arsenal on startup if data is missing or older than 24h.
 // The daily launchd cron is the primary refresh mechanism; this is a safety net
