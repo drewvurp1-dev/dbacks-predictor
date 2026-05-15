@@ -3448,12 +3448,36 @@ function _renderGameBanner(){
   const venue=document.getElementById('stadium-select')?.value||'';
   const umpName=S.umpire?.fullName||S.umpire?.name||'';
   if(!opp&&!S.pitcher){el.innerHTML='<div class="dash-banner-empty">Loading game data…</div>';return;}
+  // Field-relative wind direction (uses the active stadium's CF bearing)
+  const wf=_windFieldRelative();
+  const wfColor=wf?(wf.kind==='out'?'#2ecc71':wf.kind==='in'?'#e74c3c':'#888'):null;
+  const wfTag=wf?` <span style="color:${wfColor};">→ ${wf.label}</span>`:'';
   el.innerHTML=`
     ${opp?`<div class="dash-opp">vs ${opp}</div>`:''}
     <div class="dash-game-meta">${[date,time,venue].filter(Boolean).join(' · ')}</div>
-    ${S.weather?`<div class="dash-game-weather">${S.weather.tempF}°F · ${S.weather.desc}${S.weather.windMph?' · '+S.weather.windMph+' mph '+S.weather.windDir:''}</div>`:''}
+    ${S.weather?`<div class="dash-game-weather">${S.weather.tempF}°F · ${S.weather.desc}${S.weather.windMph?' · '+S.weather.windMph+' mph '+S.weather.windDir+wfTag:''}</div>`:''}
     ${umpName?`<div class="dash-ump">HP Umpire: ${umpName}</div>`:''}
   `;
+}
+
+// Translate the current compass-direction wind into a field-relative bucket
+// (Out to CF/RF/LF, In from CF/RF/LF, Cross to 1B/3B) using the active
+// stadium's center-field bearing. Returns null when calm or unknown.
+function _windFieldRelative(){
+  const compass=S.weather?.windDir;
+  const mph=S.weather?.windMph||0;
+  if(!compass||compass==='calm'||mph<3)return null;
+  const fromDeg=_COMPASS_DEGS[compass];
+  if(fromDeg==null)return null;
+  const sel=document.getElementById('stadium-select');
+  const opt=sel?.options[sel?.selectedIndex];
+  const cfBearing=parseInt(opt?.dataset.cf)||45;
+  const toDeg=(fromDeg+180)%360;
+  const rel=(toDeg-cfBearing+360)%360;
+  const sectors=['Out to CF','Out to RF','Cross to 1B','In from RF','In from CF','In from LF','Cross to 3B','Out to LF'];
+  const label=sectors[Math.round(rel/45)%8];
+  const kind=label.startsWith('Out')?'out':label.startsWith('In')?'in':'cross';
+  return {label,kind};
 }
 
 function _renderPitcherCard(){
