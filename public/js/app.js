@@ -1803,9 +1803,9 @@ function calcPrediction(){
   if(S.splits){
     const hand=S.pitcher?.hand||S.pitcherThrows;
     const hs=hand==='L'?S.splits.vl:S.splits.vr;
-    if(hs?.ops){const a=(hs.ops-0.750)*70;add(`vs ${hand}HP`,hs.ops.toFixed(3)+' OPS',a,`${a>0?'Hits well':'Struggles'} vs ${hand==='L'?'lefties':'righties'} this season`);}
+    if(hs?.ops){const a=(hs.ops-0.720)*70;add(`vs ${hand}HP`,hs.ops.toFixed(3)+' OPS',a,`${a>0?'Hits well':'Struggles'} vs ${hand==='L'?'lefties':'righties'} this season`);}
     const ls=S.isHome?S.splits.h:S.splits.a;
-    if(ls?.ops){const a=(ls.ops-0.750)*35;add(S.isHome?'Home':'Away',ls.ops.toFixed(3)+' OPS',a,`OPS ${ls.ops.toFixed(3)} ${S.isHome?'at home':'on the road'}`);}
+    if(ls?.ops){const a=(ls.ops-0.720)*35;add(S.isHome?'Home':'Away',ls.ops.toFixed(3)+' OPS',a,`OPS ${ls.ops.toFixed(3)} ${S.isHome?'at home':'on the road'}`);}
   }
   if(S.pitcher?.st){
     const era=parseFloat(S.pitcher.st.era);
@@ -1846,7 +1846,7 @@ function calcPrediction(){
   if(S.matchupStats&&S.matchupStats.ab>=5){
     const{ops,ab}=S.matchupStats;
     const weight=ab>=20?1.0:ab>=10?0.6:0.3;
-    const adj=Math.max(-6,Math.min(6,Math.round((ops-0.750)*50*weight)));
+    const adj=Math.max(-6,Math.min(6,Math.round((ops-0.720)*50*weight)));
     if(adj!==0)add('vs Pitcher (career)',ops.toFixed(3)+' OPS ('+ab+'AB)',adj,
       ops>=0.950?'Owns this pitcher — dominant career numbers':
       ops>=0.800?'Strong career numbers vs this arm':
@@ -2068,24 +2068,24 @@ function scoreIndividualProp(propKey){
   const rispAvg=parseFloat(S.rispStat?.avg)||null;
 
   if(propKey==='batter_hits'){
-    if(avg!=null)        score+=(avg-0.265)*150;
-    if(babip!=null)      score+=(babip-0.300)*80;
-    if(kPct!=null)       score-=(kPct-20)*0.5;
-    if(handOps)          score+=(handOps-0.750)*35;
+    if(avg!=null)        score+=(avg-0.247)*150;
+    if(babip!=null)      score+=(babip-0.291)*80;
+    if(kPct!=null)       score-=(kPct-22)*0.5;
+    if(handOps)          score+=(handOps-0.720)*35;
     if(pWhip!=null)      score-=(pWhip-1.25)*20;
     if(pKPct!=null)      score-=(pKPct-22)*0.4;
     if(whiff!=null)      score-=(whiff-22)*0.35;
     if(hhRate!=null)     score+=(hhRate-40)*0.15;
-    if(mu&&muW>0)        score+=(parseFloat(mu.avg||0)-0.265)*80*muW;
+    if(mu&&muW>0)        score+=(parseFloat(mu.avg||0)-0.247)*80*muW;
   }
   else if(propKey==='batter_total_bases'){
-    if(slg!=null)        score+=(slg-0.420)*100;
-    if(xwoba!=null)      score+=(xwoba-0.340)*80;
+    if(slg!=null)        score+=(slg-0.405)*100;
+    if(xwoba!=null)      score+=(xwoba-0.315)*80;
     if(brl!=null)        score+=(brl-8)*0.7;
     if(hhRate!=null)     score+=(hhRate-40)*0.2;
     if(pEra!=null)       score-=(pEra-4.00)*3;
-    if(handOps)          score+=(handOps-0.750)*30;
-    if(mu&&muW>0)        score+=(parseFloat(mu.slg||0)-0.420)*60*muW;
+    if(handOps)          score+=(handOps-0.720)*30;
+    if(mu&&muW>0)        score+=(parseFloat(mu.slg||0)-0.405)*60*muW;
     if(gbPct!=null&&gbPct>=55) score-=(gbPct-55)*0.4; // heavy GB = fewer extra bases
     if(fbPct!=null&&fbPct>=45) score+=(fbPct-45)*0.5; // high FB = more extra bases
     if(tempF>=90)        score+=4;
@@ -2096,11 +2096,11 @@ function scoreIndividualProp(propKey){
   }
   else if(propKey==='batter_home_runs'){
     if(brl!=null)        score+=(brl-8)*1.5;
-    if(xwoba!=null)      score+=(xwoba-0.340)*70;
+    if(xwoba!=null)      score+=(xwoba-0.315)*70;
     if(abPerHR!=null)    score-=(abPerHR-28)*0.5;
     if(hhRate!=null)     score+=(hhRate-40)*0.3;
     if(pEra!=null)       score-=(pEra-4.00)*5;
-    if(handOps)          score+=(handOps-0.750)*25;
+    if(handOps)          score+=(handOps-0.720)*25;
     if(mu&&muW>0&&mu.hr!=null) score+=(mu.hr/Math.max(mu.ab,1))*300*muW;
     if(gbPct!=null&&gbPct>=55) score-=(gbPct-55)*0.6; // ground balls don't leave the yard
     if(fbPct!=null&&fbPct>=45) score+=(fbPct-45)*0.7; // fly balls = HR opportunities
@@ -2111,17 +2111,17 @@ function scoreIndividualProp(propKey){
     else if(windDir==='in'&&windMph>=8) score-=windMph*0.5;
   }
   else if(propKey==='batter_rbis'){
-    if(rispAvg!=null)    score+=(rispAvg-0.255)*120;
-    if(slg!=null)        score+=(slg-0.420)*60;
+    if(rispAvg!=null)    score+=(rispAvg-0.244)*120;
+    if(slg!=null)        score+=(slg-0.405)*60;
     if(protTier==='strong') score+=5;
     else if(protTier==='weak') score-=5;
     if(pEra!=null)       score-=(pEra-4.00)*3.5;
-    if(mu&&muW>0)        score+=(mu.ops-0.750)*35*muW;
+    if(mu&&muW>0)        score+=(mu.ops-0.720)*35*muW;
     if(tempF>=90||elev>4000) score+=3;
   }
   else if(propKey==='batter_walks'){
     if(bbPct!=null)      score+=(bbPct-9)*3;
-    if(obp!=null)        score+=(obp-0.340)*70;
+    if(obp!=null)        score+=(obp-0.318)*70;
     if(pBBPct!=null)     score+=(pBBPct-7)*2.5;
     if(umpAdj>0)         score+=umpAdj*2.5;
     else if(umpAdj<0)    score+=umpAdj*2;
@@ -2136,7 +2136,7 @@ function scoreIndividualProp(propKey){
     else if(tempF<=60)   score+=1;
   }
   else if(propKey==='batter_strikeouts'){
-    if(kPct!=null)       score+=(kPct-18)*1.8;
+    if(kPct!=null)       score+=(kPct-22)*1.8;
     if(pKPct!=null)      score+=(pKPct-20)*1.5;
     if(whiff!=null)      score+=(whiff-22)*1.0;
     const breakingBall=(S.pitcherPitches?.['Slider']||0)+(S.pitcherPitches?.['Curveball']||0);
@@ -2151,24 +2151,24 @@ function scoreIndividualProp(propKey){
     else if(tempF>=90)   score-=1;
   }
   else if(propKey==='batter_runs_scored'){
-    if(obp!=null)        score+=(obp-0.330)*80;
+    if(obp!=null)        score+=(obp-0.318)*80;
     if(pWhip!=null)      score-=(pWhip-1.25)*15;
     if(pBBPct!=null)     score+=(pBBPct-7)*1.5;
-    if(handOps)          score+=(handOps-0.750)*25;
-    if(mu&&muW>0)        score+=(parseFloat(mu.obp||0)-0.330)*40*muW;
+    if(handOps)          score+=(handOps-0.720)*25;
+    if(mu&&muW>0)        score+=(parseFloat(mu.obp||0)-0.318)*40*muW;
     if(tempF>=90)        score+=2;
     if(elev>4000)        score+=4;
     else if(elev>2000)   score+=2;
     if(windDir==='out'&&windMph>=8) score+=windMph*0.15;
   }
   else if(propKey==='batter_hits_runs_rbis'){
-    if(avg!=null)        score+=(avg-0.265)*120;
-    if(obp!=null)        score+=(obp-0.330)*60;
-    if(slg!=null)        score+=(slg-0.420)*60;
-    if(rispAvg!=null)    score+=(rispAvg-0.255)*50;
+    if(avg!=null)        score+=(avg-0.247)*120;
+    if(obp!=null)        score+=(obp-0.318)*60;
+    if(slg!=null)        score+=(slg-0.405)*60;
+    if(rispAvg!=null)    score+=(rispAvg-0.244)*50;
     if(pEra!=null)       score-=(pEra-4.00)*3;
-    if(handOps)          score+=(handOps-0.750)*30;
-    if(mu&&muW>0)        score+=(mu.ops-0.750)*50*muW;
+    if(handOps)          score+=(handOps-0.720)*30;
+    if(mu&&muW>0)        score+=(mu.ops-0.720)*50*muW;
     if(tempF>=90)        score+=3;
     if(elev>4000)        score+=6;
     else if(elev>2000)   score+=2;
@@ -2425,6 +2425,22 @@ function _shrunkRate(numerator,denominator,leagueAvg,priorN){
   if(!denominator||denominator<=0)return leagueAvg;
   const n=denominator;
   return (numerator + priorN*leagueAvg) / (n + priorN);
+}
+
+// P(X ≥ k) where X ~ Binomial(n, p). Used by walks/K props to compute the
+// probability of clearing a half-integer line over `gamePAs` independent
+// plate appearances. The previous formula hardcoded "P(over 1.5)" for every
+// line > 0.5 — a 2.5-line bet was being graded as if it were a 1.5 line.
+function _binomGE(n, p, k) {
+  if (k <= 0) return 1;
+  if (k > n) return 0;
+  let cdf = 0;
+  let binom = 1; // C(n, 0) = 1
+  for (let i = 0; i < k; i++) {
+    cdf += binom * Math.pow(p, i) * Math.pow(1 - p, n - i);
+    binom = binom * (n - i) / (i + 1);
+  }
+  return Math.max(0, Math.min(1, 1 - cdf));
 }
 
 // Extract the full stat payload from a MLB Stats API statSplits row. Includes
@@ -2761,9 +2777,9 @@ function modelProbability(propKey,line,score){
     // 40% listed / 60% reliever pool.
     if(S.pitcher?.bullpenGame) pBBF=pBBF*0.4+0.085*0.6;
     const blended=bbF*0.6+pBBF*0.4;
-    const rateBase=line<=0.5
-      ?(1-Math.pow(1-blended,gamePAs))*100
-      :(()=>{const p0=Math.pow(1-blended,gamePAs),p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);return(1-p0-p1)*100;})();
+    // P(walks ≥ k) over gamePAs Bernoulli trials. k = smallest integer > line,
+    // so line=0.5→k=1, line=1.5→k=2, line=2.5→k=3, etc.
+    const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
     const scoreBase=lerp3(score,20,18,50,30,80,48);
     p=scoreBase*0.6+rateBase*0.4;
   }
@@ -2789,9 +2805,8 @@ function modelProbability(propKey,line,score){
     const mu=_pitchMatchupFactor();
     const matchupK = mu ? Math.max(-0.04,Math.min(0.04,(mu.kDeltaPp/100)*0.5)) : 0;
     const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj+matchupK);
-    const rateBase=line<=0.5
-      ?(1-Math.pow(1-blended,gamePAs))*100
-      :(()=>{const p0=Math.pow(1-blended,gamePAs),p1=gamePAs*blended*Math.pow(1-blended,gamePAs-1);return(1-p0-p1)*100;})();
+    // P(strikeouts ≥ k) over gamePAs Bernoulli trials. Generalized for any line.
+    const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
     const scoreBase=lerp3(score,20,28,50,48,80,68);
     p=scoreBase*0.6+rateBase*0.4;
   }
@@ -3780,14 +3795,19 @@ function autoSaveTopBets(){
   // Use loaded game's officialDate; fall back to Arizona local date (UTC-7) to avoid UTC midnight rollover.
   const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   // Stricter than the Top 3 Bets display: only auto-log bets with a STRONG edge
-  // AND |delta| ≥ 15pp. Keeps the Record clean and focused on the model's
-  // highest-conviction calls instead of every Stability≥85% recommendation.
+  // AND high conviction. "Strong" can be reached via EV ≥ 0.12 OR absDelta ≥ 10
+  // (whichever applies given odds availability), so the conviction gate also
+  // needs both forms: EV ≥ 0.18 OR absDelta ≥ 15pp. Otherwise an EV-strong
+  // bet with small delta (e.g. +0.15 EV at +200 with only 8pp delta) would be
+  // silently skipped despite being a high-conviction call.
   const qualified=[];
   S.allPlayerBets.forEach(pg=>{
     if(pg.lowData)return;
     pg.bets.forEach(b=>{
-      if(b.edgeStrength==='strong'&&(b.absDelta||0)>=15&&b.mcConfidence!=null&&b.mcConfidence>=85&&!b.insufficient)
-        qualified.push({...b,playerName:pg.playerName});
+      if(b.edgeStrength!=='strong')return;
+      if(b.mcConfidence==null||b.mcConfidence<85||b.insufficient)return;
+      const passesConviction = (b.ev!=null && b.ev>=0.18) || (b.absDelta||0)>=15;
+      if(passesConviction) qualified.push({...b,playerName:pg.playerName});
     });
   });
   qualified.forEach((b,i)=>{
@@ -4966,9 +4986,22 @@ async function autoGradeBetLog(){
         errors++; continue;
       }
     }
-    if(!actual||(actual.pa??0)===0){ skipped++; continue; }
+    if(!actual){ skipped++; continue; }
     const getter=_PROP_STAT_GETTER[bet.propKey];
     if(!getter){ skipped++; continue; }
+    // 0-PA games: player didn't appear. Sportsbooks usually void these (push),
+    // but the audit case is clearer for Under bets — 0 < any line ≥ 0.5 is a
+    // clean numeric win. Resolve Under as win, skip Over (let user manually
+    // mark push or remove, since most books void rather than grading a loss).
+    if ((actual.pa ?? 0) === 0) {
+      if ((bet.direction || '').toLowerCase() === 'under' && bet.line >= 0.5) {
+        bet.result = 'win';
+        graded++;
+      } else {
+        skipped++;
+      }
+      continue;
+    }
     const result=_gradeProp(getter(actual),bet.direction,bet.line);
     if(!result){ skipped++; continue; }
     bet.result=result;
