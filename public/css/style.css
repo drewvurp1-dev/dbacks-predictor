@@ -1007,6 +1007,22 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
     width: min(280px, calc(100vw - 32px));
   }
 
+  /* Pitch-mix matchup row: drop the stats line (BA · SLG · K% · wOBA · PA)
+     onto its own row below the pitch name + usage bar so it has the full
+     card width and doesn't wrap mid-slash-line. */
+  .matchup-row {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 4px;
+  }
+  .matchup-row .matchup-stats {
+    grid-column: 1 / -1;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    font-size: 11px;
+  }
+  .matchup-row .matchup-sample { margin-left: auto; }
+
   /* CorBET player filter: keep player names on one line and pin the checkbox
      to a small native size so it doesn't dominate the label. */
   #corbet-player-filter { gap: 6px; padding: 8px 10px; }
