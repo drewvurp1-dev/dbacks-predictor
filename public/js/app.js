@@ -1361,7 +1361,7 @@ function _renderMvpBanner(){
       <div class="mvp-bet-stat">
         <div><div class="lbl">EV</div><div class="val ${evCls}">${evStr}</div></div>
         <div><div class="lbl">Δ</div><div class="val ${bet.delta>=0?'pos':'neg'}">${deltaStr}</div></div>
-        <div><div class="lbl">MC</div><div class="val">${bet.mcConfidence?.toFixed(0)||'—'}%</div></div>
+        <div><div class="lbl" title="Edge stability % — not win probability">STAB</div><div class="val">${bet.mcConfidence?.toFixed(0)||'—'}%</div></div>
       </div>
     </div>
   </div>`;
@@ -1400,7 +1400,7 @@ function _buildMvpChips(snap,bet){
   if(bet){
     if(bet.edgeStrength==='strong')chips.push('Strong Edge');
     else if(bet.edgeStrength==='moderate')chips.push('Moderate Edge');
-    if(bet.mcConfidence>=90)chips.push(`MC ${bet.mcConfidence.toFixed(0)}%`);
+    if(bet.mcConfidence>=90)chips.push(`Stab ${bet.mcConfidence.toFixed(0)}%`);
   }
   return chips.slice(0,5);
 }
@@ -3518,7 +3518,7 @@ function renderDashboard(){
         </div>
         <div class="dash-best-bet-right">
           <span class="dash-badge">${fmtOdds(b.direction.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price)}</span>
-          <span class="dash-badge">MC ${b.mcConfidence.toFixed(0)}%</span>
+          <span class="dash-badge" title="Edge stability % — not win probability">Stab ${b.mcConfidence.toFixed(0)}%</span>
           <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
         </div>
       </div>`).join('')
@@ -4011,7 +4011,7 @@ function renderCalibration(){
   };
   const mcBuckets=_calBucketize(settled.filter(b=>b.mcConfidence!=null),mcBucket);
   const mcOrder=['<70%','70–84%','85%+ (Top)'];
-  const mcHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span>MC Range</span><span>Count</span><span>Wins</span><span>Hit Rate</span><span>ROI</span></div>`;
+  const mcHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span>Stab Range</span><span>Count</span><span>Wins</span><span>Hit Rate</span><span>ROI</span></div>`;
   let mcRows='';
   mcOrder.forEach(k=>{
     const bs=mcBuckets.get(k);

@@ -153,6 +153,50 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat-box { background: #07060f; border: 1px solid #1a1730; border-radius: 8px; padding: 10px 12px; }
 .stat-box .stat-label { font-size: 9px; color: #888; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.hdr-info {
+  color: #6a6a8a;
+  font-size: 11px;
+  cursor: help;
+  margin-left: 6px;
+  transition: color 0.12s;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.hdr-info:hover { color: #009A8B; }
+.hdr-info[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #16142e;
+  color: #d8d8e8;
+  border: 1px solid #009A8B;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: 'Chakra Petch', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  line-height: 1.45;
+  width: 280px;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s, visibility 0.12s;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  white-space: normal;
+  text-align: left;
+}
+.hdr-info[data-tip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 .stat-box .stat-info {
   color: #555;
   font-size: 10px;
