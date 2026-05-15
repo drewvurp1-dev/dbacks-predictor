@@ -4075,76 +4075,93 @@ function renderSplitsTab(){
 // ═══════════ ADVANCED STATS ════════════════════════════════════════════════════
 function showStatsLoading(){show('stats-spinner');hide('stats-error');hide('stats-content');hide('stats-empty');}
 function showStatsError(m){hide('stats-spinner');setText('stats-error','⚠ '+m);show('stats-error');}
+// Renders the structured ⓘ tooltip from a STAT_INFO object.
+// Accepts: { title, body, good, avg, bad, note } (all optional)
+// Legacy: a plain string is rendered as a single body line.
+function _renderStatTip(info){
+  if(!info)return'';
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines=[];
+  if(typeof info==='string'){
+    lines.push(`<span class="stat-tip-body">${esc(info)}</span>`);
+  } else {
+    if(info.title) lines.push(`<span class="stat-tip-title">${esc(info.title)}</span>`);
+    if(info.body)  lines.push(`<span class="stat-tip-body">${esc(info.body)}</span>`);
+    if(info.good)  lines.push(`<span class="stat-tip-line good">Good: ${esc(info.good)}</span>`);
+    if(info.avg)   lines.push(`<span class="stat-tip-line">Avg: ${esc(info.avg)}</span>`);
+    if(info.bad)   lines.push(`<span class="stat-tip-line bad">Bad: ${esc(info.bad)}</span>`);
+    if(info.note)  lines.push(`<span class="stat-tip-note">${esc(info.note)}</span>`);
+  }
+  return ` <span class="stat-info">ⓘ<span class="stat-tip">${lines.join('')}</span></span>`;
+}
 function statBox(l,v,ctx,c,info){
-  // Long-form info (5th arg) shows as a hover tooltip on an ⓘ icon next to the
-  // label so the box stays compact. Short-form ctx (3rd arg) still renders as
-  // visible context text under the value.
-  // Uses data-tip for an instant CSS tooltip (HTML title has a 1-2s delay).
-  const infoIcon=info?` <span class="stat-info" data-tip="${info.replace(/"/g,'&quot;').replace(/</g,'&lt;')}">ⓘ</span>`:'';
-  return`<div class="stat-box"><div class="stat-label">${l}${infoIcon}</div><div class="stat-val${c?' '+c:''}">${v??'—'}</div>${ctx?`<div class="stat-context">${ctx}</div>`:''}</div>`;
+  // 5th arg `info` shows on ⓘ hover (object with good/avg/bad lines, or a free-form string).
+  // 3rd arg `ctx` is the small visible context line under the value.
+  return`<div class="stat-box"><div class="stat-label">${l}${_renderStatTip(info)}</div><div class="stat-val${c?' '+c:''}">${v??'—'}</div>${ctx?`<div class="stat-context">${ctx}</div>`:''}</div>`;
 }
 
-// League-context strings for stat ⓘ tooltips.
-// Format: "Good ≥X · Avg ~Y · Poor ≤Z\nLeague avg: ~Y" — terse, scannable.
+// League-context tooltips for stat ⓘ icons.
+// Object shape: { title, good, avg, bad, note?, body? } — body is for stats
+// that don't have clean good/bad thresholds (counting stats, tradeoffs).
 const STAT_INFO = {
   // ── Batter slash ──
-  BA:    'Batting average (H ÷ AB)\nGood ≥.290 · Avg ~.245 · Poor ≤.220\nLeague avg: ~.245',
-  OBP:   'On-base % (H+BB+HBP ÷ PA)\nGood ≥.360 · Avg ~.315 · Poor ≤.290\nLeague avg: ~.315',
-  SLG:   'Slugging % (TB ÷ AB)\nGood ≥.470 · Avg ~.400 · Poor ≤.350\nLeague avg: ~.400',
-  OPS:   'On-base + slugging\nGood ≥.830 · Avg ~.715 · Poor ≤.640\nLeague avg: ~.715 · Elite ≥.900',
-  BABIP: 'BA on balls in play\nGood ≥.340 · Avg ~.295 · Poor ≤.270\nLeague avg: ~.295. Above .340 may signal luck; below .270 often signals bad luck.',
-  ABHR:  'At-bats per home run (lower = more power)\nElite ≤18 · Good 18-25 · Avg 30-40 · Weak 50+',
+  BA:    { title:'Batting Avg (H ÷ AB)',           good:'≥ .290',   avg:'~ .245',  bad:'≤ .220' },
+  OBP:   { title:'On-Base % (H+BB+HBP ÷ PA)',      good:'≥ .360',   avg:'~ .315',  bad:'≤ .290' },
+  SLG:   { title:'Slugging % (TB ÷ AB)',           good:'≥ .470',   avg:'~ .400',  bad:'≤ .350' },
+  OPS:   { title:'On-base + Slugging',             good:'≥ .830',   avg:'~ .715',  bad:'≤ .640', note:'Elite ≥ .900' },
+  BABIP: { title:'BA on Balls in Play',            good:'≥ .340',   avg:'~ .295',  bad:'≤ .270', note:'Above .340 may signal luck; below .270, bad luck' },
+  ABHR:  { title:'At-bats per HR (lower = power)', good:'≤ 18',     avg:'30 – 40', bad:'50+',    note:'Elite power: ≤ 15' },
   // ── Batter discipline ──
-  BBPCT: 'Walk rate (BB ÷ PA)\nGood ≥10% · Avg ~8.5% · Poor ≤6%\nLeague avg: ~8.5% · Elite eye 12%+',
-  KPCT_B:'Strikeout rate (K ÷ PA) — lower is better\nGood ≤16% · Avg ~22% · Poor ≥25%\nLeague avg: ~22%',
-  BBK:   'BB/K ratio — plate discipline\nGood ≥0.50 · Avg ~0.40 · Elite ≥0.80\nLeague avg: ~0.40',
-  IBB:   'Intentional walks — context stat. Common for sluggers with weak protection.',
-  HBP:   'Hit by pitch — context stat. League leaders typically reach 15-25/yr.',
-  SAC:   'Sacrifice bunts + sac flies — context stat (lineup-role driven).',
+  BBPCT: { title:'Walk Rate (BB ÷ PA)',            good:'≥ 10%',    avg:'~ 8.5%',  bad:'≤ 6%',   note:'Elite eye: 12%+' },
+  KPCT_B:{ title:'Strikeout Rate (K ÷ PA)',        good:'≤ 16%',    avg:'~ 22%',   bad:'≥ 25%',  note:'Lower is better' },
+  BBK:   { title:'BB/K Ratio — plate discipline',  good:'≥ 0.50',   avg:'~ 0.40',  bad:'≤ 0.25', note:'Elite: ≥ 0.80' },
+  IBB:   { title:'Intentional Walks',              body:'Context stat — common for sluggers with weak protection behind them.' },
+  HBP:   { title:'Hit By Pitch',                   body:'Context stat — league leaders typically reach 15–25/yr.' },
+  SAC:   { title:'Sacrifice Bunts + Flies',        body:'Context stat — lineup-role driven.' },
   // ── Batter power ──
-  HR:    'Home runs (counting stat)\nAvg starter: 15-25/yr · Slugger: 35+ · Elite: 45+',
-  D2B:   'Doubles\nAvg starter: 20-30/yr · Strong: 35+',
-  D3B:   'Triples (rare)\nMost players: 1-3/yr · 5+ shows speed/gap power',
-  XBH:   'Extra-base hits (HR + 2B + 3B)\nAvg starter: 45-55/yr · Elite: 75+',
-  RBI:   'Runs batted in (lineup-spot dependent)\nAvg starter: 60-80 · Strong: 90+ · Elite: 100+',
-  SB:    'Stolen bases\nAvg starter: 5-10 · Speed threat: 20+ · Elite: 30+',
+  HR:    { title:'Home Runs',                      good:'35+ (slugger)', avg:'15 – 25', bad:'< 10',  note:'Elite: 45+ per season' },
+  D2B:   { title:'Doubles',                        good:'≥ 35',     avg:'20 – 30', bad:'< 15' },
+  D3B:   { title:'Triples (rare)',                 body:'Most players: 1–3/yr. 5+ indicates speed/gap power.' },
+  XBH:   { title:'Extra-Base Hits (HR+2B+3B)',     good:'≥ 75',     avg:'45 – 55', bad:'< 30',  note:'Elite: 75+' },
+  RBI:   { title:'Runs Batted In',                 good:'≥ 90',     avg:'60 – 80', bad:'< 40',  note:'Lineup-spot dependent · Elite: 100+' },
+  SB:    { title:'Stolen Bases',                   good:'≥ 20',     avg:'5 – 10',  bad:'< 3',   note:'Elite: 30+' },
   // ── Batter Statcast ──
-  XWOBA: 'Expected wOBA — quality-of-contact offensive value\nGood ≥.360 · Avg ~.320 · Poor ≤.300\nLeague avg: ~.320',
-  XBA:   'Expected BA from EV + launch angle\nGood ≥.280 · Avg ~.245 · Poor ≤.220\nLeague avg: ~.245',
-  XSLG:  'Expected SLG from EV + launch angle\nGood ≥.480 · Avg ~.405 · Poor ≤.360\nLeague avg: ~.405',
-  BARREL_B:'Barrel rate (optimal EV+LA combo)\nGood ≥10% · Avg ~7% · Poor ≤4%\nLeague avg: ~7%',
-  HH_B:  'Hard-hit rate — % of batted balls 95+ mph\nGood ≥45% · Avg ~38% · Poor ≤35%\nLeague avg: ~38%',
-  EV_B:  'Average exit velocity\nGood ≥92 mph · Avg ~88.5 · Poor ≤86\nLeague avg: ~88.5 mph',
-  SWEET: 'Sweet-spot % — contact in 8-32° launch angle\nGood ≥40% · Avg ~33% · Poor ≤28%\nLeague avg: ~33%',
-  WHIFF_B:'Whiff rate (whiffs ÷ swings) — lower is better\nGood ≤20% · Avg ~25% · Poor ≥30%\nLeague avg: ~25%',
-  GB_B:  'Ground-ball rate\nLeague avg: ~43%. Higher GB = more singles, fewer XBH.',
-  FB_B:  'Fly-ball rate\nLeague avg: ~36%. Higher FB = more HR potential but more outs.',
-  BATSPD:'Bat speed (Statcast 2024+)\nGood ≥75 mph · Avg ~71 · Slow ≤68\nLeague avg: ~71 mph',
-  SQDUP: 'Squared-up % per contact (Statcast 2024+)\nGood ≥22% · Avg ~17% · Poor ≤12%\nLeague avg: ~17%',
-  BLAST: 'Blast % — squared-up + fast swing combo\nGood ≥8% · Avg ~5% · Poor ≤3%\nLeague avg: ~5%',
+  XWOBA: { title:'xwOBA — quality-of-contact offense', good:'≥ .360', avg:'~ .320', bad:'≤ .300' },
+  XBA:   { title:'xBA — expected BA from EV + LA',     good:'≥ .280', avg:'~ .245', bad:'≤ .220' },
+  XSLG:  { title:'xSLG — expected SLG from EV + LA',   good:'≥ .480', avg:'~ .405', bad:'≤ .360' },
+  BARREL_B:{ title:'Barrel Rate (optimal EV + LA)',    good:'≥ 10%',  avg:'~ 7%',   bad:'≤ 4%' },
+  HH_B:  { title:'Hard-Hit Rate (95+ mph EV)',         good:'≥ 45%',  avg:'~ 38%',  bad:'≤ 35%' },
+  EV_B:  { title:'Average Exit Velocity',              good:'≥ 92 mph', avg:'~ 88.5 mph', bad:'≤ 86 mph' },
+  SWEET: { title:'Sweet-Spot % (8–32° launch angle)',  good:'≥ 40%',  avg:'~ 33%',  bad:'≤ 28%' },
+  WHIFF_B:{ title:'Whiff Rate (whiffs ÷ swings)',      good:'≤ 20%',  avg:'~ 25%',  bad:'≥ 30%', note:'Lower is better' },
+  GB_B:  { title:'Ground-Ball Rate',                   body:'League avg: ~43%. Higher GB = more singles, fewer XBH.' },
+  FB_B:  { title:'Fly-Ball Rate',                      body:'League avg: ~36%. Higher FB = more HR potential but more outs.' },
+  BATSPD:{ title:'Bat Speed (Statcast 2024+)',         good:'≥ 75 mph', avg:'~ 71 mph', bad:'≤ 68 mph' },
+  SQDUP: { title:'Squared-Up % per Contact',           good:'≥ 22%',  avg:'~ 17%',  bad:'≤ 12%' },
+  BLAST: { title:'Blast % — squared-up + fast swing',  good:'≥ 8%',   avg:'~ 5%',   bad:'≤ 3%' },
   // ── Pitcher Statcast (vs hitters) ──
-  WHIFF_P:'Whiff rate per pitch — higher is better for pitcher\nGood ≥30% · Avg ~25% · Poor ≤20%\nLeague avg: ~25%',
-  KPCT_P:'Strikeout rate (K ÷ batters faced)\nGood ≥25% · Avg ~22% · Poor ≤18%\nLeague avg: ~22% · Elite ≥30%',
-  PUTAWAY:'Put-away % — Ks per 2-strike pitch\nGood ≥22% · Avg ~18% · Poor ≤15%\nLeague avg: ~18%',
-  GB_P:  'Ground-ball rate induced — higher = fewer XBH\nGood ≥50% · Avg ~43% · Poor ≤38%\nLeague avg: ~43%',
-  FB_P:  'Fly-ball rate induced — lower is better for pitcher\nLeague avg: ~36%',
-  BARREL_VS:'Barrels allowed — lower is better\nGood ≤4% · Avg ~7% · Poor ≥10%\nLeague avg: ~7%',
-  HH_VS: 'Hard contact allowed (95+ mph EV)\nGood ≤35% · Avg ~38% · Poor ≥45%\nLeague avg: ~38%',
-  EV_VS: 'Avg exit velo allowed\nGood ≤86 mph · Avg ~88.5 · Poor ≥92\nLeague avg: ~88.5 mph',
-  XWOBA_VS:'Expected wOBA against — quality of contact allowed\nGood ≤.300 · Avg ~.320 · Poor ≥.360\nLeague avg: ~.320',
-  XERA:  'Expected ERA from EV/LA allowed\nGood ≤3.50 · Avg ~4.20 · Poor ≥5.00\nLeague avg: ~4.20',
+  WHIFF_P:{ title:'Whiff Rate per Pitch',          good:'≥ 30%',     avg:'~ 25%',     bad:'≤ 20%',     note:'Higher is better for pitcher' },
+  KPCT_P:{ title:'Strikeout Rate (K ÷ BF)',        good:'≥ 25%',     avg:'~ 22%',     bad:'≤ 18%',     note:'Elite: ≥ 30%' },
+  PUTAWAY:{ title:'Put-Away % (K per 2-strike pitch)', good:'≥ 22%', avg:'~ 18%',     bad:'≤ 15%' },
+  GB_P:  { title:'Ground-Ball Rate Induced',       good:'≥ 50%',     avg:'~ 43%',     bad:'≤ 38%',     note:'Higher = fewer XBH' },
+  FB_P:  { title:'Fly-Ball Rate Induced',          body:'League avg: ~36%. Lower is better for pitcher.' },
+  BARREL_VS:{ title:'Barrels Allowed',             good:'≤ 4%',      avg:'~ 7%',      bad:'≥ 10%',     note:'Lower is better' },
+  HH_VS: { title:'Hard Contact Allowed (95+ mph)', good:'≤ 35%',     avg:'~ 38%',     bad:'≥ 45%' },
+  EV_VS: { title:'Avg Exit Velo Allowed',          good:'≤ 86 mph',  avg:'~ 88.5 mph', bad:'≥ 92 mph' },
+  XWOBA_VS:{ title:'xwOBA Against',                good:'≤ .300',    avg:'~ .320',    bad:'≥ .360' },
+  XERA:  { title:'xERA — Expected ERA from EV/LA', good:'≤ 3.50',    avg:'~ 4.20',    bad:'≥ 5.00' },
   // ── Pitcher season ──
-  ERA:   'Earned run average (ER × 9 ÷ IP)\nGood ≤3.50 · Avg ~4.20 · Poor ≥5.00\nLeague avg: ~4.20 · Ace ≤3.00',
-  FIP:   'Fielding-independent pitching — strips defense/luck\nGood ≤3.50 · Avg ~4.20 · Poor ≥4.50\nLeague avg: ~4.20. Better predictor than ERA.',
-  XFIP:  'FIP normalized to league HR/FB rate\nGood ≤3.50 · Avg ~4.20 · Poor ≥4.50\nLeague avg: ~4.20. Strips out HR luck.',
-  SIERA: 'Skill-Interactive ERA — uses K, BB, batted-ball mix\nGood ≤3.50 · Avg ~4.20 · Poor ≥4.50\nLeague avg: ~4.20. Most predictive ERA estimator.',
-  WHIP:  'Walks + hits per inning pitched\nGood ≤1.10 · Avg ~1.30 · Poor ≥1.40\nLeague avg: ~1.30 · Elite ≤1.00',
-  KBBPCT:'K-BB% — strikeout rate minus walk rate\nGood ≥15% · Avg ~13% · Elite ≥20%\nLeague avg: ~13%. Strongest single-stat K predictor.',
-  HR9:   'Home runs allowed per 9 IP\nGood ≤0.90 · Avg ~1.20 · Poor ≥1.50\nLeague avg: ~1.20',
-  BBPCT_P:'Walk rate (BB ÷ batters faced)\nGood ≤6% · Avg ~8.5% · Poor ≥10%\nLeague avg: ~8.5%',
-  IP:    'Innings pitched — counting stat (role-dependent).',
-  K9:    'Strikeouts per 9 IP\nGood ≥9.0 · Avg ~8.5 · Elite ≥11.0\nLeague avg: ~8.5',
-  GS:    'Games started — counting stat.',
+  ERA:   { title:'Earned Run Average (ER × 9 ÷ IP)', good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 5.00', note:'Ace: ≤ 3.00' },
+  FIP:   { title:'FIP — Fielding-Independent Pitching', good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 4.50', note:'Strips defense/luck — better than ERA' },
+  XFIP:  { title:'xFIP — FIP w/ league HR/FB rate',  good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 4.50', note:'Strips out HR luck' },
+  SIERA: { title:'SIERA — Skill-Interactive ERA',    good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 4.50', note:'Most predictive ERA estimator' },
+  WHIP:  { title:'Walks + Hits per IP',              good:'≤ 1.10', avg:'~ 1.30', bad:'≥ 1.40', note:'Elite: ≤ 1.00' },
+  KBBPCT:{ title:'K-BB % — strikeout minus walk rate', good:'≥ 15%', avg:'~ 13%', bad:'≤ 8%',  note:'Strongest single-stat K predictor · Elite: ≥ 20%' },
+  HR9:   { title:'Home Runs Allowed per 9 IP',       good:'≤ 0.90', avg:'~ 1.20', bad:'≥ 1.50' },
+  BBPCT_P:{ title:'Walk Rate (BB ÷ BF)',             good:'≤ 6%',   avg:'~ 8.5%', bad:'≥ 10%' },
+  IP:    { title:'Innings Pitched',                  body:'Counting stat — role-dependent (starter vs reliever).' },
+  K9:    { title:'Strikeouts per 9 IP',              good:'≥ 9.0',  avg:'~ 8.5',  bad:'≤ 6.5', note:'Elite: ≥ 11.0' },
+  GS:    { title:'Games Started',                    body:'Counting stat.' },
 };
 function pct(n,d){if(!n||!d||d===0)return'—';return((n/d)*100).toFixed(1)+'%';}
 function renderStatsTab(){
@@ -4719,7 +4736,7 @@ async function loadStatcast(playerId) {
       statBox('GB%',     gb,     'Ground ball rate',             '',                      STAT_INFO.GB_B),
       statBox('FB%',     fb,     'Fly ball rate',                '',                      STAT_INFO.FB_B),
       statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68),      STAT_INFO.BATSPD),
-      statBox('Sw Len',  swLen,  '',  '',  'Swing length in feet — tradeoff, not categorically good or bad. <6.8: pure contact (Arraez). 6.8-7.5: balanced/league avg. 7.5-8.0: power-leaning. >8.0: elite power, high K (Judge).'),
+      statBox('Sw Len',  swLen,  '',  '',  { title:'Swing Length (feet)', body:'Tradeoff stat — not categorically good or bad. <6.8: pure contact (Arraez). 6.8 – 7.5: balanced / league avg. 7.5 – 8.0: power-leaning. >8.0: elite power, high K (Judge).' }),
       statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12),       STAT_INFO.SQDUP),
       statBox('Blast%',  blast,  'Blast per contact',            c(blastRaw,8,3),         STAT_INFO.BLAST),
     ].join('');
