@@ -998,6 +998,15 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
      overflowing the card on narrow screens. */
   .card-header { padding: 10px 12px; font-size: 9px; letter-spacing: 2px; flex-wrap: wrap; row-gap: 4px; column-gap: 8px; }
 
+  /* Card header info-button tooltip: anchor right so it spreads to the LEFT
+     of the icon instead of pushing past the viewport edge, and cap width to
+     fit inside the screen. */
+  .hdr-info[data-tip]::after {
+    left: auto;
+    right: 0;
+    width: min(280px, calc(100vw - 32px));
+  }
+
   /* CorBET player filter: keep player names on one line and pin the checkbox
      to a small native size so it doesn't dominate the label. */
   #corbet-player-filter { gap: 6px; padding: 8px 10px; }
