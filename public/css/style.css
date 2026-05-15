@@ -556,7 +556,96 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 }
 .ps-split.ps-active b { color: #f39c12; }
 
-/* ── Projected MVP banner ── */
+/* ── Pitcher card 3-column grid (left info / matchup / View Stats button) ── */
+.pitcher-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: stretch;
+}
+.pitcher-left { min-width: 0; }
+.pitcher-matchup { min-width: 0; display: flex; }
+.pitcher-card-grid > .dash-pitcher-btn { align-self: center; }
+
+/* ── Best Matchup card ── */
+.bm-card {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(243,156,18,0.06) 0%, rgba(0,154,139,0.04) 100%);
+  border: 1px solid rgba(243,156,18,0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: monospace;
+  font-size: 11px;
+}
+.bm-empty {
+  font-family: monospace;
+  font-size: 10px;
+  color: #555;
+  align-self: center;
+  text-align: center;
+  width: 100%;
+}
+.bm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bm-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  color: #f39c12;
+  text-transform: uppercase;
+}
+.bm-score-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid #aaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.25);
+}
+.bm-score-num {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 900;
+}
+.bm-name {
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+.bm-line {
+  color: #ccc;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+.bm-line b { color: #fff; font-weight: 700; }
+.bm-stat-lbl { color: #6a6a8a; font-size: 9px; letter-spacing: 0.6px; text-transform: uppercase; margin-right: 4px; }
+.bm-career { color: #ccc; }
+.bm-bet {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed #1a1730;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.bm-bet-prop { font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+.bm-bet-stat { font-size: 11px; font-weight: 700; }
+.bm-bet-stat.pos { color: #2ecc71; }
+.bm-bet-stat.neg { color: #e74c3c; }
+
+/* ── (LEGACY) Projected MVP banner CSS — no longer used ── */
 .mvp-banner {
   background: linear-gradient(135deg, rgba(0,154,139,0.12) 0%, rgba(243,156,18,0.08) 100%);
   border: 1px solid #009A8B;

@@ -1155,9 +1155,88 @@ function _renderPitcherSplits(splits,isHomeGame){
   </div>`;
 }
 
-// ── Projected MVP banner ────────────────────────────────────────────────────
-// Picks the player whose top bet has the highest EV (or delta as fallback)
-// and writes a templated reasoning summary based on observable factors.
+// ── Best Matchup card (inside pitcher card) ─────────────────────────────────
+// Picks the D-backs hitter with the strongest combined edge against tonight's
+// pitcher: 70% vs-handedness OPS this season + 30% career line vs this exact
+// pitcher (when sample ≥ 5 AB, otherwise hand-split fully).
+function _renderBestMatchup(){
+  const el=document.getElementById('dash-best-matchup-slot');
+  if(!el)return;
+  if(!S.pitcher||!S.players){el.innerHTML='';return;}
+  const hand=S.pitcher.hand||'R';
+  const candidates=activeRoster()
+    .map(p=>{
+      const snap=S.players?.[p.id];
+      if(!snap||snap.lowData)return null;
+      const handSplit=hand==='L'?snap.splits?.vl:snap.splits?.vr;
+      const handOps=handSplit?.ops?(typeof handSplit.ops==='number'?handSplit.ops:parseFloat(handSplit.ops)):null;
+      const mu=snap.matchupStats;
+      const muOps=mu?.ops||null;
+      const muAb=mu?.ab||0;
+      // Combined matchup score: 70% vs-hand, 30% vs-pitcher (or full hand weight if no sample)
+      let mScore=null;
+      if(handOps!=null){
+        if(muOps!=null&&muAb>=5){
+          mScore=handOps*0.7+muOps*0.3;
+        }else{
+          mScore=handOps;
+        }
+      }
+      return{player:p,snap,handSplit,handOps,mu,muAb,mScore};
+    })
+    .filter(c=>c&&c.mScore!=null)
+    .sort((a,b)=>b.mScore-a.mScore);
+
+  if(!candidates.length){
+    el.innerHTML=`<div class="bm-empty">Loading matchup…</div>`;
+    return;
+  }
+  const top=candidates[0];
+  const score=top.snap?.score!=null?Math.round(top.snap.score):null;
+  const scoreColor=top.snap?.tier?.color||'#aaa';
+  const oppHand=hand;
+  const handLine=top.handSplit
+    ?`<span class="bm-stat-lbl">vs ${oppHand}HP</span> <b>${top.handSplit.avg||'—'}</b>/${top.handSplit.obp||'—'}/${top.handSplit.slg||'—'}`
+    :`<span class="bm-stat-lbl">vs ${oppHand}HP</span> <b>—</b>`;
+  // Career vs this pitcher (only if sample is meaningful)
+  let careerLine='';
+  if(top.mu&&top.muAb>=3){
+    const sample=`${top.mu.h}-for-${top.muAb}`;
+    const extras=[];
+    if(top.mu.hr)extras.push(`${top.mu.hr} HR`);
+    if(top.mu.bb)extras.push(`${top.mu.bb} BB`);
+    if(top.mu.k)extras.push(`${top.mu.k} K`);
+    careerLine=`<div class="bm-line bm-career"><span class="bm-stat-lbl">Career vs ${S.pitcher.name.split(' ').pop()}</span> <b>${sample}</b>${extras.length?' · '+extras.join(', '):''}</div>`;
+  }
+  // Top bet for this player (if odds loaded)
+  let betLine='';
+  const pgBets=(S.allPlayerBets||[]).find(pg=>pg.playerName===top.player.name);
+  const bestBet=pgBets?.bets
+    ?.filter(b=>!b.insufficient&&b.edgeStrength!=='none')
+    ?.sort((a,b)=>(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100))?.[0];
+  if(bestBet){
+    const evStr=bestBet.ev!=null?`${bestBet.ev>=0?'+':''}${(bestBet.ev*100).toFixed(1)}%`:'—';
+    const evCls=bestBet.ev!=null?(bestBet.ev>=0?'pos':'neg'):'pos';
+    betLine=`<div class="bm-bet">
+      <div class="bm-bet-prop">${bestBet.direction.toUpperCase()} ${bestBet.line} ${bestBet.prop}</div>
+      <div class="bm-bet-stat ${evCls}">EV ${evStr}</div>
+    </div>`;
+  }
+
+  el.innerHTML=`<div class="bm-card">
+    <div class="bm-header">
+      <span class="bm-tag">★ Best Matchup</span>
+      ${score!=null?`<div class="bm-score-circle" style="border-color:${scoreColor}"><span class="bm-score-num" style="color:${scoreColor}">${score}</span></div>`:''}
+    </div>
+    <div class="bm-name">${top.player.name}</div>
+    <div class="bm-line">${handLine}</div>
+    ${careerLine}
+    ${betLine}
+  </div>`;
+}
+
+// ── (LEGACY) Projected MVP banner — replaced by Best Matchup card above ─────
+// Kept around in case we want to re-enable it. Currently not called.
 function _renderMvpBanner(){
   const el=document.getElementById('dash-mvp-banner');
   if(!el)return;
@@ -3307,13 +3386,14 @@ function _renderPitcherCard(){
   const bpBadge=S.pitcher.bullpenGame
     ?`<span style="background:#f39c12;color:#000;font-family:monospace;font-size:9px;font-weight:900;letter-spacing:2px;padding:2px 7px;border-radius:4px;margin-left:8px;">OPENER/BULLPEN</span>`
     :'';
-  el.innerHTML=`<div class="dash-pitcher-card">
-    <div style="flex:1;">
+  el.innerHTML=`<div class="dash-pitcher-card pitcher-card-grid">
+    <div class="pitcher-left">
       <div class="dash-pitcher-name">${S.pitcher.name}${bpBadge}</div>
       <div class="dash-pitcher-meta">${hand}HP · ERA ${era}${S.pitcher.bullpenGame?' · Expect multiple relievers':''}</div>
       <div id="dash-pitcher-form-slot"><div class="pf-loading">Loading recent starts…</div></div>
       <div id="dash-pitcher-splits-slot"></div>
     </div>
+    <div id="dash-best-matchup-slot" class="pitcher-matchup"></div>
     <button class="dash-pitcher-btn" onclick="openModal('panel-pitcher','Pitcher Analysis')">View Stats</button>
   </div>`;
   // Async-fetch last 3 starts + season splits and slot them in
@@ -3339,7 +3419,7 @@ function _renderPitcherCard(){
 function renderDashboard(){
   _renderGameBanner();
   _renderPitcherCard();
-  _renderMvpBanner();
+  _renderBestMatchup();
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
 
