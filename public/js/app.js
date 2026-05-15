@@ -1787,7 +1787,19 @@ function updateWeatherForTime(){if(S.weather)fetchWeather();const h=parseInt((do
 function calcPrediction(){
   let score=50;const factors=[];
   let batScore=0,pitScore=0,conScore=0;
-  const add=(l,v,adj,n,cat='batter')=>{score+=adj;if(cat==='batter')batScore+=adj;else if(cat==='pitcher')pitScore+=adj;else conScore+=adj;factors.push({label:l,value:v,adj,impact:adj>2?'positive':adj<-2?'negative':'neutral',note:n,cat});};
+  // Load learned weights once per prediction. The ratio currentWeight/defaultWeight
+  // scales each factor's raw adj — at defaults the ratio is 1.0 (no change), and
+  // after autoAdjustWeights tunes a weight, the score reflects that learning.
+  const _weights=getFactorWeights();
+  const add=(l,v,rawAdj,n,cat='batter')=>{
+    const d=DEFAULT_WEIGHTS[l];
+    const w=_weights[l];
+    const mult=(d!=null&&w!=null&&d!==0)?(w/d):1.0;
+    const adj=rawAdj*mult;
+    score+=adj;
+    if(cat==='batter')batScore+=adj;else if(cat==='pitcher')pitScore+=adj;else conScore+=adj;
+    factors.push({label:l,value:v,adj,impact:adj>2?'positive':adj<-2?'negative':'neutral',note:n,cat});
+  };
   if(S.splits){
     const hand=S.pitcher?.hand||S.pitcherThrows;
     const hs=hand==='L'?S.splits.vl:S.splits.vr;
@@ -1874,7 +1886,7 @@ function calcPrediction(){
       if(pWhiff>=28)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',-4,'Elite whiff rate — dominant swing-and-miss stuff','pitcher');
       else if(pWhiff<=16)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',3,'Low pitcher whiff rate — hitter-friendly contact','pitcher');
     }
-    if(gbPct!=null&&gbPct>=50)add('GB%',gbPct.toFixed(1)+'%',-2,'Ground ball pitcher — limits extra-base power','pitcher');
+    if(gbPct!=null&&gbPct>=50)add('Pitcher GB%',gbPct.toFixed(1)+'%',-2,'Ground ball pitcher — limits extra-base power','pitcher');
     if(pXwoba!=null){
       if(pXwoba<=0.280)add('xwOBA vs',pXwoba.toFixed(3),-3,'Elite expected wOBA suppression','pitcher');
       else if(pXwoba>=0.370)add('xwOBA vs',pXwoba.toFixed(3),3,'High xwOBA allowed — hitter-friendly profile','pitcher');
@@ -4226,22 +4238,59 @@ function renderStatsTab(){
 // ═══════════ GRADING & LEARNING SYSTEM ══════════════════════════════════════
 
 // Default factor weights — these get adjusted by the learning system
+// Default weight per factor label. Each weight represents the typical |adj|
+// magnitude when that factor fires at default sensitivity. calcPrediction
+// multiplies every factor's adj by (currentWeight / defaultWeight) so when
+// autoAdjustWeights nudges a weight up or down, the actual score moves with it.
+//
+// Labels MUST match the strings passed to add() in calcPrediction — a typo
+// silently drops the multiplier (mult = 1.0) and the factor never learns.
 const DEFAULT_WEIGHTS = {
-  'vs LHP': 70, 'vs RHP': 70, 'Home': 35, 'Away': 35,
-  'Day Game': 25, 'Night Game': 25, 'RISP': 20,
-  'Pitcher ERA': 4, 'High K%': -4, 'Low K%': 3,
-  'Short Rest': 3, 'Extra Rest': -2, 'High Prev PC': 2, 'Bullpen Game': 7,
-  'BB%': 3, 'K%': -3, 'Heat': 4, 'Cold': -4,
-  'Wind Out': 1, 'Wind In': -1, 'Roof Closed': -2,
-  'Altitude': 8, 'Elevation': 3, 'Red-Eye': -6, 'Same-Day Travel': -3,
-  'Umpire': 1, 'Barrel%': 4, 'Hard-Hit%': 3, 'Whiff%': 3, 'xwOBA': 4,
-  'xBA': 3, 'xSLG': 3,
-  'Sweet Spot%': 2, 'Bat Speed': 2, 'Squared-Up%': 2, 'Blast%': 2,
-  'GB%': -2, 'FB%': 2,
-  'vs Pitcher Career': 6,
-  'Crosswind': -2, 'Humidity': -1,
-  'Pitcher xwOBA Against': 3, 'Pitcher xERA': 4, 'Pitcher Whiff%': 3,
-  'Lineup Protection': 3,
+  // Batter splits — adj = (ops − 0.750) × weight
+  'vs LHP': 70, 'vs RHP': 70,
+  'Home':   35, 'Away':   35,
+
+  // Career matchup vs current pitcher — adj capped ±6
+  'vs Pitcher (career)': 50,
+
+  // Opposing pitcher headline metric — adj = (era − 4.00) × weight (one fires per game)
+  'Pitcher SIERA': 4, 'Pitcher xFIP': 4, 'Pitcher FIP': 4, 'Pitcher ERA': 4,
+
+  // Pitcher regression / quality flags (flat adj)
+  'Unlucky Pitcher': -2, 'Lucky Pitcher':  2,
+  'Elite K-BB%':     -4, 'Poor K-BB%':     3,
+  'HR-prone':         3, 'HR Suppressor': -2,
+
+  // Pitcher rest / workload (flat)
+  'Short Rest': 3, 'Extra Rest': -2,
+  'High Prev PC': 2, 'Bullpen Game': 7,
+
+  // Batter plate discipline (flat)
+  'BB%': 3, 'K%': -3,
+
+  // Batter Statcast (single label used for both directions — weight scales magnitude symmetrically)
+  'Whiff%': 3, 'xwOBA': 4, 'GB%': -2, 'FB%': 2,
+
+  // Pitcher Statcast
+  'Pitcher Whiff%': 3, 'Pitcher GB%': -2, 'xwOBA vs': 3,
+
+  // Weather (Heat/Cold flat; wind uses mph-scaled coefficient inside add — weight=1 keeps default)
+  'Heat': 4, 'Cold': -4,
+  'Wind Out': 1, 'Wind In': -1,
+  'Crosswind': -2, 'High Humidity': -1, 'Roof Closed': -2,
+
+  // Park
+  'Altitude': 8, 'Elevation': 3,
+  'Hitter Park': 1, 'Pitcher Park': 1,
+
+  // Travel
+  'Red-Eye': -6, 'Same-Day Travel': -3,
+
+  // Umpire (weight=1 means apply UMP_DB adj as-is)
+  'Umpire': 1,
+
+  // Lineup protection
+  'Protection': 3,
 };
 
 // Storage keys
@@ -4271,7 +4320,10 @@ function savePredictionForGrading(prediction, overridePlayerId = null) {
     playerName: prediction.playerName,
     playerId: String(overridePlayerId ?? S.playerId ?? ''),
     pitcherName: prediction.pitcherName,
-    factors: prediction.factors.map(f => ({ label: f.label, impact: f.impact, value: f.value })),
+    // Persist adj so updateFactorPerf can credit hits by actual sign instead of
+    // the magnitude-thresholded impact label (which buckets every |adj|≤2 as
+    // 'neutral' and was silently miscounting them as negative).
+    factors: prediction.factors.map(f => ({ label: f.label, impact: f.impact, value: f.value, adj: f.adj })),
     graded: false,
   };
   // One card per player — replace any existing entry for this player regardless
@@ -4355,16 +4407,38 @@ function gradePerformance(actual, predScore) {
   return { perfScore, outcome, modelAccurate, modelExpectedGood, actuallyGood };
 }
 
-// Update factor performance stats after grading
+// Update factor performance stats after grading.
+//
+// Hit-rate semantics: a "hit" means the factor pushed the score in the
+// direction the actual outcome went. Positive-adj factor + good performance
+// = hit; negative-adj factor + poor performance = hit; everything else
+// (including zero-adj factors) = no hit, but still a fire.
+//
+// We use the stored `adj` sign rather than the magnitude-thresholded `impact`
+// label. The old impact-based check treated every |adj|≤2 as 'neutral' and
+// then in the conditional treated 'neutral' as 'negative' — so every small
+// factor (Crosswind −2, Roof Closed −2, High Humidity −1, Lucky/Unlucky
+// Pitcher ±2, Same-Day Travel −3, HR Suppressor −2, FB% +2, Extra Rest −2,
+// High Prev PC +2, weak Lineup Protection, etc.) was silently miscounted as
+// a "negative factor" and earned a phantom hit whenever the player did
+// poorly. For older pending entries that lack `adj`, fall back to the
+// impact label to preserve historical (biased) behavior rather than
+// dropping the data.
 function updateFactorPerf(factors, actual, gradeResult) {
   const perf = getFactorPerf();
+  const perfGood = gradeResult.actuallyGood;
   factors.forEach(f => {
     if (!perf[f.label]) perf[f.label] = { fires: 0, hits: 0, totalPerf: 0 };
     perf[f.label].fires++;
     perf[f.label].totalPerf += gradeResult.perfScore;
-    // A "hit" = when positive factor fired AND performance was good, OR negative factor fired AND performance was poor
-    const factorPositive = f.impact === 'positive';
-    const perfGood = gradeResult.actuallyGood;
+    let factorPositive;
+    if (typeof f.adj === 'number') {
+      if (f.adj === 0) return; // factor fired but didn't move the score — no hit either way
+      factorPositive = f.adj > 0;
+    } else {
+      // Legacy entry without persisted adj — fall back to impact label
+      factorPositive = f.impact === 'positive';
+    }
     if ((factorPositive && perfGood) || (!factorPositive && !perfGood)) perf[f.label].hits++;
   });
   saveFactorPerf(perf);
