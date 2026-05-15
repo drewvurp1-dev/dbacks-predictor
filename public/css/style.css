@@ -983,9 +983,23 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   body { padding-bottom: 30px; padding-bottom: max(30px, env(safe-area-inset-bottom)); }
   .content { padding: 10px; }
 
-  /* Prevent iOS auto-zoom when focusing form fields (font-size must be ≥ 16px) */
-  input, select, textarea { font-size: 16px; padding: 9px 11px; }
+  /* Prevent iOS auto-zoom when focusing form fields (font-size must be ≥ 16px).
+     Exclude checkbox/radio/range — they don't trigger the zoom and inheriting
+     padding bloats them (e.g. CorBET filter checkboxes pushing names off-row,
+     weather sliders losing their padding:0). */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  select,
+  textarea { font-size: 16px; padding: 9px 11px; }
   .toggle-btn { padding: 8px 14px; font-size: 11px; }
+
+  /* Card headers wrap their tail content (pending count, action buttons,
+     "X games graded · building confidence") onto a second line instead of
+     overflowing the card on narrow screens. */
+  .card-header { padding: 10px 12px; font-size: 9px; letter-spacing: 2px; flex-wrap: wrap; row-gap: 4px; column-gap: 8px; }
+
+  /* CorBET player filter: keep each player name on a single line so labels
+     stay readable; flex container already wraps to new rows. */
+  #corbet-player-filter label { white-space: nowrap; padding: 4px 8px; }
 
   /* Form rows stack: label above field for full-width inputs */
   .row { grid-template-columns: 1fr; gap: 6px; margin-bottom: 14px; }
@@ -994,7 +1008,6 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   /* Cards */
   .card { margin-bottom: 12px; border-radius: 10px; }
   .card-body { padding: 14px 12px; }
-  .card-header { padding: 10px 12px; font-size: 9px; letter-spacing: 2px; }
 
   /* Grids reflow */
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
