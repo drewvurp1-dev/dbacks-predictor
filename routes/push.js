@@ -131,6 +131,22 @@ router.post('/test', requireKey, async (req, res) => {
   }
 });
 
+// Manual triggers for the scheduled jobs. Useful for testing without waiting
+// for the 5-min cron tick or for the lineup to actually post.
+router.post('/run-cron', requireKey, async (req, res) => {
+  try {
+    const { checkLineup, checkFirstPitch } = require('../cron');
+    const job = req.query.job;
+    if (job === 'lineup')      await checkLineup();
+    else if (job === 't30')    await checkFirstPitch();
+    else { await checkLineup(); await checkFirstPitch(); }
+    res.json({ ok: true, ran: job || 'both' });
+  } catch (err) {
+    console.error('[push] run-cron error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Exposed for the scheduler in server.js to use directly.
 async function sendToAll(payload) {
   if (!VAPID_PUBLIC || !VAPID_PRIVATE || !process.env.DATABASE_URL) return { sent: 0, skipped: 'unconfigured' };
