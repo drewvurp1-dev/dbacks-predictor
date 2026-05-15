@@ -43,5 +43,9 @@ function maybeRefreshArsenal() {
 }
 maybeRefreshArsenal();
 
+// Schedule lineup + T-30 push notifications (no-op if VAPID keys / DATABASE_URL
+// aren't set, so dev environments without push configured stay quiet).
+require('./cron').start();
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`D-backs Predictor running on port ${PORT}`));
