@@ -4056,7 +4056,8 @@ function statBox(l,v,ctx,c,info){
   // Long-form info (5th arg) shows as a hover tooltip on an ⓘ icon next to the
   // label so the box stays compact. Short-form ctx (3rd arg) still renders as
   // visible context text under the value.
-  const infoIcon=info?` <span class="stat-info" title="${info.replace(/"/g,'&quot;')}">ⓘ</span>`:'';
+  // Uses data-tip for an instant CSS tooltip (HTML title has a 1-2s delay).
+  const infoIcon=info?` <span class="stat-info" data-tip="${info.replace(/"/g,'&quot;').replace(/</g,'&lt;')}">ⓘ</span>`:'';
   return`<div class="stat-box"><div class="stat-label">${l}${infoIcon}</div><div class="stat-val${c?' '+c:''}">${v??'—'}</div>${ctx?`<div class="stat-context">${ctx}</div>`:''}</div>`;
 }
 function pct(n,d){if(!n||!d||d===0)return'—';return((n/d)*100).toFixed(1)+'%';}
