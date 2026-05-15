@@ -3768,13 +3768,21 @@ function autoSaveTopBets(){
 
 function autoRegisterGradePredictions() {
   if (!S.players) return;
+  // Don't seed Pending Grades until the actual lineup is posted. Before then
+  // we'd be registering speculative cards for players who may not even start
+  // (Vargas, Gurriel splits, etc.). loadLineupContext() sets S.lineupRoster
+  // only when the MLB API confirms a starting lineup for the day.
+  if (!S.lineupRoster || S.lineupRoster.length === 0) return;
   const date = document.getElementById('game-date').value
     || new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   const pitcherName = S.pitcher?.name || '';
   const idBase = Date.now();
   let idOffset = 0;
+  // Only register players who are in the confirmed lineup, not the full roster
+  const lineupIds = new Set(S.lineupRoster.map(p => String(p.id)));
   Object.entries(S.players).forEach(([playerId, snap]) => {
     if (!snap.score || !snap.factors) return;
+    if (!lineupIds.has(String(playerId))) return;
     savePredictionForGrading({
       _id: idBase + idOffset++,
       score: snap.score,
@@ -4237,16 +4245,37 @@ function savePredictionForGrading(prediction, overridePlayerId = null) {
     score: prediction.score,
     tier: prediction.tier?.label || prediction.tier || '',
     playerName: prediction.playerName,
-    playerId: overridePlayerId ?? S.playerId,
+    playerId: String(overridePlayerId ?? S.playerId ?? ''),
     pitcherName: prediction.pitcherName,
     factors: prediction.factors.map(f => ({ label: f.label, impact: f.impact, value: f.value })),
     graded: false,
   };
-  // One card per player — replace any existing entry for this player regardless of date
-  const existingIdx = pending.findIndex(p => p.playerId === entry.playerId);
+  // One card per player — replace any existing entry for this player regardless
+  // of date. Coerce both sides to String to defeat legacy entries that stored
+  // playerId as a number, which would otherwise duplicate via === mismatch.
+  const existingIdx = pending.findIndex(p => String(p.playerId) === entry.playerId);
   if (existingIdx >= 0) pending[existingIdx] = entry;
   else pending.unshift(entry);
   savePending(pending.slice(0, 50)); // keep last 50 (7–8 players × ~6 days)
+}
+
+// One-time cleanup: legacy pending data may contain stale entries from before
+// playerId types were normalized, leaving multiple cards per player. Keep the
+// most recent (lowest array index since pending is newest-first) per playerId.
+function dedupePending() {
+  const pending = getPending();
+  const seen = new Set();
+  const cleaned = [];
+  for (const entry of pending) {
+    const key = String(entry.playerId ?? entry.playerName ?? entry.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push(entry);
+  }
+  if (cleaned.length !== pending.length) {
+    console.log(`[pending] removed ${pending.length - cleaned.length} duplicate(s)`);
+    savePending(cleaned);
+  }
 }
 
 // Fetch actual Carroll stats for a given date from MLB API
@@ -4961,6 +4990,7 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
 document.getElementById('game-date').value=new Date().toISOString().split('T')[0]; // fallback until API responds
 onStadiumChange();
 loadPlayer();
+dedupePending(); // remove legacy duplicate Pending Grade cards
 renderRecord();
 renderGradePanel();
 _initSyncBtnLabel(); // "↑ Push" on desktop, "↓ Pull" on mobile
