@@ -293,6 +293,12 @@
           <div class="rss-sparkline" id="rec-sparkline"></div>
         </div>
         <div class="prop-record-grid" id="rec-prop-grid"></div>
+        <div class="rec-sort-bar">
+          <span class="rec-sort-label">Sort by:</span>
+          <button class="rec-sort-btn" data-sk="date" onclick="setRecordSort('date')">Date</button>
+          <button class="rec-sort-btn" data-sk="player" onclick="setRecordSort('player')">Player</button>
+          <button class="rec-sort-btn" data-sk="prop" onclick="setRecordSort('prop')">Prop</button>
+        </div>
         <div id="bet-log-headers" style="display:none;grid-template-columns:70px 90px 36px 1fr 50px 54px 96px 22px;gap:8px;padding:4px 0 8px;border-bottom:1px solid #1a1730;font-size:9px;color:#777;font-family:'Chakra Petch',monospace;text-transform:uppercase;letter-spacing:1px;">
           <span>Date</span><span>Player</span><span>Opp</span><span>Prop</span><span>Odds</span><span>Rating</span><span>Result</span><span></span>
         </div>
@@ -436,7 +442,7 @@
   </div>
 </div>
 
-<script src="/js/app.js?v=22"></script>
+<script src="/js/app.js?v=23"></script>
 
 </body>
 </html>
