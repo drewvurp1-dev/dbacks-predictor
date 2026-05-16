@@ -2588,23 +2588,30 @@ function _renderPitchMatchup(){
       || '<div style="color:#777;font-family:\'Chakra Petch\',monospace;font-size:11px;">No pitch mix data available.</div>';
   }
 
-  // Compute the batter's baseline (weighted by PA per pitch type) across all pitches.
-  // Used to color individual rows as good/bad vs this batter's average.
-  let bBA=0,bSLG=0,bK=0,bWoba=0,bWhiff=0,bPA=0;
+  // Compute the batter's baseline. Use MLB API season stats for BA/SLG/K% — they're
+  // accurate full-season numbers. The Statcast pitch-arsenal data only covers pitch types
+  // with ≥25 PA, which skews the weighted average high (harder pitches get excluded).
+  // wOBA isn't in the MLB API so we still derive it from the Statcast-weighted average.
+  let bWoba=0,bWhiff=0,bPA=0;
   if(bat){
     for(const pt in bat.pitches){
       const r=bat.pitches[pt];
       const w=r.pa||0;
       if(!w)continue;
-      if(r.ba!=null)    bBA+=r.ba*w;
-      if(r.slg!=null)   bSLG+=r.slg*w;
-      if(r.k_pct!=null) bK+=r.k_pct*w;
       if(r.woba!=null)  bWoba+=r.woba*w;
       if(r.whiff!=null) bWhiff+=r.whiff*w;
       bPA+=w;
     }
   }
-  const base = bPA>0 ? {ba:bBA/bPA,slg:bSLG/bPA,k:bK/bPA,woba:bWoba/bPA,whiff:bWhiff/bPA} : null;
+  const ss=S.seasonStat;
+  const ssPA=ss?.plateAppearances||0;
+  const base = bPA>0 ? {
+    ba:   ss?.avg  ? parseFloat(ss.avg)  : bPA>0 ? null : null,
+    slg:  ss?.slg  ? parseFloat(ss.slg)  : null,
+    k:    ssPA>0   ? (ss.strikeOuts/ssPA)*100 : null,
+    woba: bWoba/bPA,
+    whiff:bWhiff/bPA,
+  } : null;
 
   // Color helpers — "good" means good for the batter.
   //   higherBetter=true:  green if val > base by ≥thresh, red if val < base - thresh
