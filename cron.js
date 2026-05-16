@@ -72,14 +72,6 @@ async function checkLineup() {
   try {
     const game = await fetchTodayGame();
     if (!game || !isPlayableGame(game)) return;
-
-    // Skip until we're within 4 hours of first pitch — no point hammering the
-    // API all morning when lineups won't post until a couple hours out.
-    if (game.gameDate) {
-      const minsUntil = (new Date(game.gameDate) - new Date()) / 60000;
-      if (minsUntil > 240) return;
-    }
-
     const isHome = game.teams?.home?.team?.id === DBACKS_TEAM_ID;
     const players = (isHome ? game.lineups?.homePlayers : game.lineups?.awayPlayers) || [];
     if (!players.length) return;                         // not posted yet
@@ -150,9 +142,9 @@ function start() {
     console.log('[cron] missing DATABASE_URL or VAPID keys — scheduler not started');
     return;
   }
-  cron.schedule('* * * * *',   checkLineup);      // every minute — gated to 4h before first pitch
-  cron.schedule('*/5 * * * *', checkFirstPitch);  // every 5 min — 10-min window is wide enough
-  console.log('[cron] scheduled lineup (every 1 min) + T-30 (every 5 min) jobs');
+  cron.schedule('*/5 * * * *', checkLineup);
+  cron.schedule('*/5 * * * *', checkFirstPitch);
+  console.log('[cron] scheduled lineup + T-30 jobs (every 5 minutes)');
 }
 
 module.exports = { start, checkLineup, checkFirstPitch };
