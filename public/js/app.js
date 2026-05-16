@@ -3897,8 +3897,18 @@ function _propKeyForBet(b){
 // Cumulative-profit sparkline. Renders an inline SVG polyline, oldest → newest.
 function _renderPLSparkline(graded){
   if(!graded.length)return'<div class="rss-sparkline-empty">No graded bets yet</div>';
+  // Caller passes any order (a sync-pull populates S.betLog from the server,
+  // which may not be newest-first). Sort chronologically here so the curve is
+  // always left-to-right oldest→newest. YYYY-MM-DD lex-sorts correctly;
+  // tiebreak by id so same-day grades stay stable.
+  const sorted=[...graded].sort((a,b)=>{
+    const ad=a.date||'',bd=b.date||'';
+    if(ad<bd)return-1;
+    if(ad>bd)return 1;
+    return(a.id||0)-(b.id||0);
+  });
   let cum=0;const points=[0];
-  graded.forEach(b=>{
+  sorted.forEach(b=>{
     if(b.result==='win'){const o=b.odds;cum+=o>0?o/100:100/Math.abs(o);}
     else if(b.result==='loss'){cum-=1;}
     points.push(cum);
@@ -3990,8 +4000,8 @@ function renderRecord(){
   document.getElementById('rec-hitrate').textContent=hitRate;
   document.getElementById('rec-overall').textContent=`${allW}-${allL}`;
 
-  // Sparkline — log is stored newest-first, so reverse for chronological order
-  const graded=log.filter(b=>b.result&&b.result!=='push').slice().reverse();
+  // Sparkline — helper sorts chronologically internally
+  const graded=log.filter(b=>b.result&&b.result!=='push');
   document.getElementById('rec-sparkline').innerHTML=_renderPLSparkline(graded);
 
   // Pending
@@ -4028,7 +4038,7 @@ function renderRecord(){
     <div class="bet-log-item${b.result?'':' bet-pending'}">
       <span class="bli-date">${b.date}</span>
       <span class="bli-player">${b.player||'—'}</span>
-      <span class="bli-opp">${b.opponent||'—'}</span>
+      <span class="bli-opp">${b.opponent||''}</span>
       <span class="bli-prop">${b.prop}</span>
       <span class="bli-odds">${b.odds>0?'+':''}${b.odds??'—'}</span>
       <span class="bli-rating" style="background:${ratingBg[b.rating]||'#1a1730'};color:${ratingColors[b.rating]||'#777'}">${b.rating||'—'}</span>
