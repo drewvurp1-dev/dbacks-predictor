@@ -3367,6 +3367,7 @@ async function loadCorbet(){
     show('corbet-bets');
     renderDashboard();
     autoRegisterGradePredictions();
+    autoSaveAtFirstPitch();
   }catch(e){
     hide('corbet-loading');
     setText('corbet-error','⚠ '+e.message);
@@ -3575,11 +3576,11 @@ function renderDashboard(){
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
 
-  // Top 3 bets — only when props are available
+  // Top 5 bets — only when props are available
   if(S.allPlayerBets&&S.allPlayerBets.length){
-    const top3=_getTopBets(3);
-    document.getElementById('dash-best-bets').innerHTML=top3.length
-      ?top3.map(b=>`<div class="dash-best-bet-row">
+    const topBets=_getTopBets(5);
+    document.getElementById('dash-best-bets').innerHTML=topBets.length
+      ?topBets.map(b=>`<div class="dash-best-bet-row">
         <div class="dash-best-bet-left">
           <div class="dash-best-bet-player">${b.playerName}</div>
           <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
@@ -3597,9 +3598,9 @@ function renderDashboard(){
   const betsMap={};
   (S.allPlayerBets||[]).forEach(pg=>{betsMap[pg.playerName]=pg;});
 
-  // Pre-compute top-3 set so star icons can be applied per bet row.
-  // Shared helper ensures lowData filter matches the Top 3 panel and autoSaveTopBets.
-  const top3Keys=new Set(_getTopBets(3).map(b=>`${b.playerName}_${b.propKey}_${b.direction}`));
+  // Pre-compute top-5 set so star icons can be applied per bet row.
+  // Shared helper ensures lowData filter matches the Top 5 panel.
+  const topBetsKeys=new Set(_getTopBets(5).map(b=>`${b.playerName}_${b.propKey}_${b.direction}`));
 
   const orderedRoster=[...activeRoster()].sort((a,b)=>{
     const oa=S.players?.[a.id]?.order??99;
@@ -3625,7 +3626,7 @@ function renderDashboard(){
     if(visibleBets.length){
       const rows=visibleBets.map(b=>{
         const key=`${player.name}_${b.propKey}_${b.direction}`;
-        const icon=top3Keys.has(key)
+        const icon=topBetsKeys.has(key)
           ?'<span class="dpb-icon-star">★</span>'
           :b.edgeStrength==='strong'
             ?'<span class="dpb-icon-strong">●</span>'
@@ -3818,6 +3819,42 @@ function _getTopBets(n=3){
     if(filtered.length>=n)break;
   }
   return filtered;
+}
+
+// Once-per-game snapshot: at first pitch (current time ≥ scheduled gameDate),
+// auto-save the top 8 bets into the Record. Tracked by gamePk in localStorage
+// so reloading the dashboard mid-game or post-final doesn't re-save.
+function autoSaveAtFirstPitch(){
+  if(!S.allPlayerBets||!S.gameDate||!S.gamePk)return;
+  const now=Date.now();
+  const firstPitchMs=new Date(S.gameDate).getTime();
+  if(isNaN(firstPitchMs)||now<firstPitchMs)return;
+  let saved;
+  try{saved=JSON.parse(localStorage.getItem('autoSavedGamePks')||'[]');}
+  catch(e){saved=[];}
+  if(saved.includes(S.gamePk))return;
+  const top=_getTopBets(8);
+  if(!top.length)return;
+  const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
+  let added=0;
+  top.forEach((b,i)=>{
+    const prop=`${b.direction} ${b.line} ${b.prop}`;
+    if(S.betLog.some(x=>x.date===date&&x.prop===prop&&x.player===b.playerName))return;
+    const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
+    const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
+    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,playerId:_playerIdByName(b.playerName),opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null,
+      modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
+      propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null});
+    added++;
+  });
+  saved.push(S.gamePk);
+  // Cap the saved-gamePks list to avoid unbounded growth (well past a season)
+  if(saved.length>500)saved.splice(0,saved.length-500);
+  localStorage.setItem('autoSavedGamePks',JSON.stringify(saved));
+  if(added){
+    localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
+    renderRecord();
+  }
 }
 
 function autoRegisterGradePredictions() {
