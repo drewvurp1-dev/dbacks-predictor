@@ -5325,6 +5325,40 @@ function show(id){document.getElementById(id)?.classList.remove('hidden');}
 function hide(id){document.getElementById(id)?.classList.add('hidden');}
 function setText(id,t){const el=document.getElementById(id);if(el)el.textContent=t;}
 
+// ── Soft-market tooltip (fixed-position, avoids stacking-context issues on mobile) ──
+(function(){
+  let tip=null, activeEl=null;
+  function getOrCreate(){
+    if(!tip){tip=document.createElement('div');tip.id='soft-market-tip';document.body.appendChild(tip);}
+    return tip;
+  }
+  function show(el){
+    const t=getOrCreate();
+    t.textContent=el.dataset.tip;
+    // Position above the badge, clamped to viewport edges
+    const r=el.getBoundingClientRect();
+    const w=Math.min(260,window.innerWidth-24);
+    t.style.width=w+'px';
+    let left=r.left+r.width/2-w/2;
+    left=Math.max(12,Math.min(left,window.innerWidth-w-12));
+    const top=r.top-8; // will be shifted up by the element's own height via transform
+    t.style.left=left+'px';
+    t.style.top=(r.top+window.scrollY)+'px';
+    t.style.transform='translateY(calc(-100% - 8px))';
+    document.body.appendChild(t);
+    activeEl=el;
+  }
+  function dismiss(){
+    tip?.remove();tip=null;activeEl=null;
+  }
+  document.addEventListener('click',function(e){
+    const badge=e.target.closest('.dpb-soft-market[data-tip]');
+    if(badge){e.stopPropagation();if(activeEl===badge){dismiss();}else{show(badge);}return;}
+    if(activeEl)dismiss();
+  },true);
+  document.addEventListener('scroll',dismiss,{passive:true,capture:true});
+})();
+
 // ═══════════ INIT ══════════════════════════════════════════════════════════════
 document.getElementById('game-date').value=new Date().toISOString().split('T')[0]; // fallback until API responds
 onStadiumChange();
