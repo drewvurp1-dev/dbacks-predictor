@@ -5367,12 +5367,35 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
   function dismiss(){
     tip?.remove();tip=null;activeEl=null;
   }
+  // Track whether the tooltip is currently hover-driven so a tap (which fires
+  // mouseenter then click on touch devices) doesn't immediately toggle it off.
+  let hoverShown=false;
   document.addEventListener('click',function(e){
     const badge=e.target.closest('.dpb-soft-market[data-tip]');
-    if(badge){e.stopPropagation();if(activeEl===badge){dismiss();}else{show(badge);}return;}
+    if(badge){
+      e.stopPropagation();
+      if(activeEl===badge&&!hoverShown){dismiss();}
+      else{show(badge);hoverShown=false;}
+      return;
+    }
     if(activeEl)dismiss();
   },true);
-  document.addEventListener('scroll',dismiss,{passive:true,capture:true});
+  document.addEventListener('mouseover',function(e){
+    const badge=e.target.closest('.dpb-soft-market[data-tip]');
+    if(!badge||activeEl===badge)return;
+    show(badge);
+    hoverShown=true;
+  });
+  document.addEventListener('mouseout',function(e){
+    if(!hoverShown||!activeEl)return;
+    const badge=e.target.closest('.dpb-soft-market[data-tip]');
+    if(badge!==activeEl)return;
+    // Ignore mouseout into a child element of the badge
+    if(badge.contains(e.relatedTarget))return;
+    dismiss();
+    hoverShown=false;
+  });
+  document.addEventListener('scroll',()=>{dismiss();hoverShown=false;},{passive:true,capture:true});
 })();
 
 // ═══════════ INIT ══════════════════════════════════════════════════════════════
