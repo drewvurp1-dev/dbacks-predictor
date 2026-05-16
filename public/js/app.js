@@ -38,7 +38,7 @@ const CORBET_ROSTER = [
   { name: 'Geraldo Perdomo',  id: '669701' },
   { name: 'Ildemaro Vargas',  id: '545121' },
   { name: 'Lourdes Gurriel',  id: '666971' },
-  { name: 'Nolan Arenado',    id: '680776' },
+  { name: 'Nolan Arenado',    id: '571448' },
 ];
 // Returns the live lineup roster when available, otherwise the hardcoded fallback
 function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
