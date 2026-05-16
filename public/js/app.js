@@ -3794,7 +3794,23 @@ function _getTopBets(n=3){
     });
   });
   qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
-  return qualified.slice(0,n);
+  // Hits O/U 1.5 and TB O/U 1.5 on the same player are highly correlated; if
+  // both qualify, keep only the better-EV side so the next-best independent
+  // bet can take the other slot.
+  const HITS_TB=new Set(['batter_hits','batter_total_bases']);
+  const seenHitsTb=new Map();
+  const filtered=[];
+  for(const b of qualified){
+    if(HITS_TB.has(b.propKey)){
+      const k=`${b.playerName}|${b.line}|${b.direction}`;
+      const other=b.propKey==='batter_hits'?'batter_total_bases':'batter_hits';
+      if(seenHitsTb.get(k)===other)continue;
+      seenHitsTb.set(k,b.propKey);
+    }
+    filtered.push(b);
+    if(filtered.length>=n)break;
+  }
+  return filtered;
 }
 
 function autoSaveTopBets(){
