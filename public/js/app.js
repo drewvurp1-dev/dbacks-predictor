@@ -11,6 +11,10 @@ const S = {
   lineupRoster:null,
   recentGameLog:null,
   lastScore:null, lastPrediction:null,
+  recordSort: (()=>{
+    try{const s=JSON.parse(localStorage.getItem('corbetRecordSort'));if(s&&s.key&&s.dir)return s;}catch(e){}
+    return{key:'date',dir:'desc'};
+  })(),
   betLog: (()=>{
     const log=JSON.parse(localStorage.getItem('corbetRecord')||'[]');
     // Repair any duplicate IDs from a prior bug where autoSaveTopBets used the same Date.now() timestamp
@@ -3362,7 +3366,6 @@ async function loadCorbet(){
     renderCorbetBets();
     show('corbet-bets');
     renderDashboard();
-    autoSaveTopBets();
     autoRegisterGradePredictions();
   }catch(e){
     hide('corbet-loading');
@@ -3758,13 +3761,17 @@ function _recentFormHtml(snap){
 // ═══════════ BET RECORD ════════════════════════════════════════════════════════
 function saveBet(key, btn){
   const b=S.corbetBetsMap?.[key];
-  if(!b)return;
-  const p=S.lastPrediction;
-  const date=p?.date||new Date().toISOString().split('T')[0];
+  if(!b){
+    if(btn){btn.textContent='⚠ Not found';btn.style.color='#e74c3c';setTimeout(()=>{btn.textContent='+ Save';btn.style.color='';},1800);}
+    return;
+  }
+  // Use the loaded game's date (same source as the rest of the dashboard) so
+  // the opponent captured from S.opposingTeamAbbr lines up with the date stored.
+  // Arizona-local fallback avoids a UTC midnight rollover.
+  const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   const prop=`${b.direction} ${b.line} ${b.prop}`;
-  // Prevent duplicate saves for same date + prop
-  if(S.betLog.some(x=>x.date===date&&x.prop===prop)){
-    if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save to Record';},1800);}
+  if(S.betLog.some(x=>x.date===date&&x.prop===prop&&(x.player===(b._playerName||S.playerName)))){
+    if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save';},1800);}
     return;
   }
   const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
@@ -3776,7 +3783,7 @@ function saveBet(key, btn){
   S.betLog.unshift(bet);
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
   renderRecord();
-  if(btn){btn.textContent='✓ Saved!';btn.style.color='#2ecc71';setTimeout(()=>{btn.textContent='+ Save to Record';btn.style.color='';},2000);}
+  if(btn){btn.textContent='✓ Saved!';btn.style.color='#2ecc71';setTimeout(()=>{btn.textContent='+ Save';btn.style.color='';},2000);}
 }
 
 // Single source of truth for "top N bets". All three callers (dashboard panel,
@@ -3811,40 +3818,6 @@ function _getTopBets(n=3){
     if(filtered.length>=n)break;
   }
   return filtered;
-}
-
-function autoSaveTopBets(){
-  if(!S.allPlayerBets)return;
-  // Don't modify the pre-game picks once first pitch has passed
-  if(S.gameStatus==='Live'||S.gameStatus==='Final')return;
-  // Use loaded game's officialDate; fall back to Arizona local date (UTC-7) to avoid UTC midnight rollover.
-  const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
-  // Stricter than the Top 3 Bets display: only auto-log bets with a STRONG edge
-  // AND high conviction. "Strong" can be reached via EV ≥ 0.12 OR absDelta ≥ 10
-  // (whichever applies given odds availability), so the conviction gate also
-  // needs both forms: EV ≥ 0.18 OR absDelta ≥ 15pp. Otherwise an EV-strong
-  // bet with small delta (e.g. +0.15 EV at +200 with only 8pp delta) would be
-  // silently skipped despite being a high-conviction call.
-  const qualified=[];
-  S.allPlayerBets.forEach(pg=>{
-    if(pg.lowData)return;
-    pg.bets.forEach(b=>{
-      if(b.edgeStrength!=='strong')return;
-      if(b.mcConfidence==null||b.mcConfidence<85||b.insufficient)return;
-      const passesConviction = (b.ev!=null && b.ev>=0.18) || (b.absDelta||0)>=15;
-      if(passesConviction) qualified.push({...b,playerName:pg.playerName});
-    });
-  });
-  qualified.forEach((b,i)=>{
-    const prop=`${b.direction} ${b.line} ${b.prop}`;
-    if(S.betLog.some(x=>x.date===date&&x.prop===prop))return;
-    const rating=b.edgeStrength==='strong'?'green':b.edgeStrength==='moderate'?'yellow':'red';
-    const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
-    S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,playerId:_playerIdByName(b.playerName),opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null,
-      modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
-      propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null});
-  });
-  localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
 }
 
 function autoRegisterGradePredictions() {
@@ -3945,8 +3918,46 @@ function _renderPLSparkline(graded){
   </svg>`;
 }
 
+function setRecordSort(key){
+  const cur=S.recordSort||{key:'date',dir:'desc'};
+  // Toggle direction if same key is re-tapped; otherwise switch key and use
+  // sensible default (desc for date — newest first; asc for player/prop — A→Z).
+  if(cur.key===key)cur.dir=cur.dir==='asc'?'desc':'asc';
+  else{cur.key=key;cur.dir=key==='date'?'desc':'asc';}
+  S.recordSort={key:cur.key,dir:cur.dir};
+  localStorage.setItem('corbetRecordSort',JSON.stringify(S.recordSort));
+  renderRecord();
+}
+
+function _sortBetLog(log){
+  const{key,dir}=S.recordSort||{key:'date',dir:'desc'};
+  const mult=dir==='asc'?1:-1;
+  const getVal=b=>{
+    if(key==='player')return(b.player||'').toLowerCase();
+    if(key==='prop')return(b.prop||'').toLowerCase();
+    return b.date||'';
+  };
+  return[...log].sort((a,b)=>{
+    const av=getVal(a),bv=getVal(b);
+    if(av<bv)return-1*mult;
+    if(av>bv)return 1*mult;
+    return(b.id||0)-(a.id||0);
+  });
+}
+
 function renderRecord(){
+  // Raw log preserves insertion order (newest-first) — used for aggregates and
+  // the sparkline (which expects chronological order via .reverse()).
   const log=S.betLog;
+  // Reflect the active sort key on the toolbar buttons
+  const sk=S.recordSort?.key||'date';
+  const sd=S.recordSort?.dir||'desc';
+  document.querySelectorAll('.rec-sort-btn').forEach(btn=>{
+    const k=btn.dataset.sk;
+    btn.classList.toggle('active',k===sk);
+    const base=k.charAt(0).toUpperCase()+k.slice(1);
+    btn.textContent=k===sk?`${base} ${sd==='asc'?'↑':'↓'}`:base;
+  });
 
   // Per-prop + overall aggregates
   const propStats={};
@@ -4013,7 +4024,7 @@ function renderRecord(){
   }
   headers.style.display='grid';
   hide('bet-log-empty');
-  document.getElementById('bet-log').innerHTML=log.map(b=>`
+  document.getElementById('bet-log').innerHTML=_sortBetLog(log).map(b=>`
     <div class="bet-log-item${b.result?'':' bet-pending'}">
       <span class="bli-date">${b.date}</span>
       <span class="bli-player">${b.player||'—'}</span>

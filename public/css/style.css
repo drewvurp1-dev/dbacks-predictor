@@ -435,6 +435,11 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .pc-roi { font-size: 9px; font-family: 'Chakra Petch', monospace; color: #888; margin-top: 3px; letter-spacing: 1px; }
 .prop-cell.pos .pc-roi { color: #2ecc71; }
 .prop-cell.neg .pc-roi { color: #e74c3c; }
+.rec-sort-bar { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-family: 'Chakra Petch', monospace; }
+.rec-sort-label { font-size: 9px; color: #777; letter-spacing: 1px; text-transform: uppercase; margin-right: 2px; }
+.rec-sort-btn { background: #0e0c22; border: 1px solid #1e1b3a; color: #888; font-family: 'Chakra Petch', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+.rec-sort-btn:hover { color: #ccc; border-color: #2a2750; }
+.rec-sort-btn.active { background: #1a1730; color: #E8DFC8; border-color: #009A8B; }
 .bet-log-item { display: grid; grid-template-columns: 70px 90px 36px 1fr 50px 54px 96px 22px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
 .bet-log-item.bet-pending { opacity: 0.55; }
 .bet-log-item .bli-date { color: #888; }
