@@ -38,7 +38,7 @@ const CORBET_ROSTER = [
   { name: 'Geraldo Perdomo',  id: '669701' },
   { name: 'Ildemaro Vargas',  id: '545121' },
   { name: 'Lourdes Gurriel',  id: '666971' },
-  { name: 'Nolan Arenado',    id: '680776' },
+  { name: 'Nolan Arenado',    id: '571448' },
 ];
 // Returns the live lineup roster when available, otherwise the hardcoded fallback
 function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
@@ -4649,7 +4649,7 @@ async function renderGradePanel() {
       div.innerHTML = `
         <div class="gg-header">
           <div>
-            <div class="gg-title">${pred.date} · vs ${pred.pitcherName||'Unknown'}</div>
+            <div class="gg-title">${pred.date} · Full Game · ${pred.pitcherName||'Unknown'} (SP)</div>
             <div style="font-size:10px;color:#999;font-family:\'Chakra Petch\',monospace;margin-top:3px;">${pred.playerName}</div>
           </div>
           <div class="gg-score">${pred.score}</div>
