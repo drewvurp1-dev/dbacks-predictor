@@ -685,8 +685,8 @@ async function selectPitcher(id,name){
 function renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip,kbb,hr9){
   hide('pitcher-tab-empty');show('pitcher-tab-content');
   document.getElementById('pitcher-tab-header').textContent=`📋 ${name} · Pitcher Analysis`;
-  const eraC=era<3.25?'good':era>5.0?'bad':'';
-  const whipC=whip<1.1?'good':whip>1.4?'bad':'';
+  const eraC=era<=3.50?'good':era>=5.00?'bad':'';
+  const whipC=whip<=1.10?'good':whip>=1.40?'bad':'';
   const fipNum=parseFloat(fip);
   const fipC=!isNaN(fipNum)?(fipNum<3.50?'good':fipNum>4.50?'bad':''):'';
   _renderPitcherSeasonBoxes();
@@ -712,8 +712,8 @@ function _renderPitcherSeasonBoxes(){
   const fip=p.advanced?.fip!=null?p.advanced.fip.toFixed(2):'—';
   const kbb=p.advanced?.kbbPct!=null?p.advanced.kbbPct.toFixed(1)+'%':'—';
   const hr9=p.advanced?.hr9!=null?p.advanced.hr9.toFixed(2):'—';
-  const eraC=era<3.25?'good':era>5.0?'bad':'';
-  const whipC=whip<1.1?'good':whip>1.4?'bad':'';
+  const eraC=era<=3.50?'good':era>=5.00?'bad':'';
+  const whipC=whip<=1.10?'good':whip>=1.40?'bad':'';
   const fipNum=parseFloat(fip);
   const fipC=!isNaN(fipNum)?(fipNum<3.50?'good':fipNum>4.50?'bad':''):'';
   const xfipNum=p.advanced?.xfip;
@@ -726,7 +726,7 @@ function _renderPitcherSeasonBoxes(){
   const kbbC=!isNaN(kbbNum)?(kbbNum>=15?'good':kbbNum<=8?'bad':''):'';
   const hr9Num=parseFloat(hr9);
   const hr9C=!isNaN(hr9Num)?(hr9Num<=0.9?'good':hr9Num>=1.5?'bad':''):'';
-  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average',STAT_INFO.ERA],['FIP',fip,fipC,'Fielding independent (strips luck)',STAT_INFO.FIP],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB',STAT_INFO.XFIP],['SIERA',sieraDisplay,sieraC,'Skill-based ERA: K, BB, batted-ball mix',STAT_INFO.SIERA],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP',STAT_INFO.WHIP],['K-BB%',kbb,kbbC,'Skill gap — best K predictor',STAT_INFO.KBBPCT],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP',STAT_INFO.HR9],['K%',kPct,parseFloat(kPct)>=25?'good':'','Strikeout rate',STAT_INFO.KPCT_P],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate',STAT_INFO.BBPCT_P],['IP',ip,'','Innings pitched',STAT_INFO.IP],['K/9',k9,'','Strikeouts per 9',STAT_INFO.K9],['GS',st.gamesStarted||'—','','Games started',STAT_INFO.GS]].map(([l,v,c,ctx,info])=>statBox(l,v,ctx,c,info)).join('');
+  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average',STAT_INFO.ERA],['FIP',fip,fipC,'Fielding independent (strips luck)',STAT_INFO.FIP],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB',STAT_INFO.XFIP],['SIERA',sieraDisplay,sieraC,'Skill-based ERA: K, BB, batted-ball mix',STAT_INFO.SIERA],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP',STAT_INFO.WHIP],['K-BB%',kbb,kbbC,'Skill gap — best K predictor',STAT_INFO.KBBPCT],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP',STAT_INFO.HR9],['K%',kPct,parseFloat(kPct)>=25?'good':parseFloat(kPct)<=18?'bad':'','Strikeout rate',STAT_INFO.KPCT_P],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate',STAT_INFO.BBPCT_P],['IP',ip,'','Innings pitched',STAT_INFO.IP],['K/9',k9,'','Strikeouts per 9',STAT_INFO.K9],['GS',st.gamesStarted||'—','','Games started',STAT_INFO.GS]].map(([l,v,c,ctx,info])=>statBox(l,v,ctx,c,info)).join('');
 }
 
 async function loadPitcherStatcast(pitcherId){
@@ -813,13 +813,15 @@ async function loadPitcherStatcast(pitcherId){
     const xwobaPct     = fmtVal(xwobaRaw,3);
     const xERAVal      = fmtVal(xeraRaw,2);
 
-    const whiffC  = whiffPct!=='—'?(parseFloat(whiffPct)>=28?'good':parseFloat(whiffPct)<=18?'bad':''):'';
-    const kC      = kPct!=='—'?(parseFloat(kPct)>=28?'good':parseFloat(kPct)<=18?'bad':''):'';
-    const putAwayC= putAway!=='—'?(parseFloat(putAway)>=33?'good':parseFloat(putAway)<=20?'bad':''):'';
-    const gbC     = gbPct!=='—'?(parseFloat(gbPct)>=50?'good':''):'';
-    const brlC    = brlAgainst!=='—'?(parseFloat(brlAgainst)<=5?'good':parseFloat(brlAgainst)>=12?'bad':''):'';
-    const hhC     = hhAgainst!=='—'?(parseFloat(hhAgainst)<=35?'good':parseFloat(hhAgainst)>=48?'bad':''):'';
-    const xeraC   = xERAVal!=='—'?(parseFloat(xERAVal)<=3.25?'good':parseFloat(xERAVal)>=4.50?'bad':''):'';
+    // Color thresholds must match STAT_INFO entries below (otherwise the box
+     // color contradicts what the tooltip says is good/avg/bad).
+    const whiffC  = whiffPct!=='—'?(parseFloat(whiffPct)>=30?'good':parseFloat(whiffPct)<=20?'bad':''):'';
+    const kC      = kPct!=='—'?(parseFloat(kPct)>=25?'good':parseFloat(kPct)<=18?'bad':''):'';
+    const putAwayC= putAway!=='—'?(parseFloat(putAway)>=22?'good':parseFloat(putAway)<=15?'bad':''):'';
+    const gbC     = gbPct!=='—'?(parseFloat(gbPct)>=50?'good':parseFloat(gbPct)<=38?'bad':''):'';
+    const brlC    = brlAgainst!=='—'?(parseFloat(brlAgainst)<=4?'good':parseFloat(brlAgainst)>=10?'bad':''):'';
+    const hhC     = hhAgainst!=='—'?(parseFloat(hhAgainst)<=35?'good':parseFloat(hhAgainst)>=45?'bad':''):'';
+    const xeraC   = xERAVal!=='—'?(parseFloat(xERAVal)<=3.50?'good':parseFloat(xERAVal)>=5.00?'bad':''):'';
 
     S.pitcherStatcast={
       whiff:    parseFloat(whiffRaw)||null,
@@ -4247,8 +4249,24 @@ function renderStatsTab(){
   if(!ss){showStatsError('No season stats.');return;}
   const pa=ss.plateAppearances||1;
   const bbPct=pct(ss.baseOnBalls,pa),kPct=pct(ss.strikeOuts,pa);
-  document.getElementById('stat-slash').innerHTML=statBox('BA',ss.avg,`${ss.hits}H / ${ss.atBats}AB`,'',STAT_INFO.BA)+statBox('OBP',ss.obp,`${ss.baseOnBalls}BB`,'',STAT_INFO.OBP)+statBox('SLG',ss.slg,`${ss.totalBases}TB`,'',STAT_INFO.SLG)+statBox('OPS',ss.ops,'OBP + SLG',parseFloat(ss.ops)>=0.850?'good':parseFloat(ss.ops)<=0.680?'bad':'',STAT_INFO.OPS)+statBox('BABIP',ss.babip,'Balls in play avg',parseFloat(ss.babip)>=0.340?'good':parseFloat(ss.babip)<=0.270?'bad':'',STAT_INFO.BABIP)+statBox('AB/HR',ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—','At-bats per HR','',STAT_INFO.ABHR);
-  document.getElementById('stat-discipline').innerHTML=statBox('BB%',bbPct,`${ss.baseOnBalls} walks / ${pa} PA`,parseFloat(bbPct)>=10?'good':parseFloat(bbPct)<=5?'bad':'',STAT_INFO.BBPCT)+statBox('K%',kPct,`${ss.strikeOuts} Ks / ${pa} PA`,parseFloat(kPct)<=16?'good':parseFloat(kPct)>=25?'bad':'',STAT_INFO.KPCT_B)+statBox('BB/K',ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts).toFixed(2):'—','Walk to K ratio','',STAT_INFO.BBK)+statBox('IBB',ss.intentionalWalks??'0','Intentional walks','',STAT_INFO.IBB)+statBox('HBP',ss.hitByPitch??'0','Hit by pitch','',STAT_INFO.HBP)+statBox('SAC',(ss.sacBunts??0)+(ss.sacFlies??0),'Sac bunts + flies','',STAT_INFO.SAC);
+  // Color thresholds aligned with STAT_INFO so the box color matches the tooltip.
+  // AB/HR is inverted (lower = better) — guard against missing value with the ternary head.
+  const _v=x=>parseFloat(x), _abhrC=(()=>{const v=ss.atBatsPerHomeRun?_v(ss.atBatsPerHomeRun):null;return v==null?'':(v<=18?'good':v>=50?'bad':'');})();
+  document.getElementById('stat-slash').innerHTML=
+    statBox('BA',   ss.avg,   `${ss.hits}H / ${ss.atBats}AB`, _v(ss.avg)>=0.290?'good':_v(ss.avg)<=0.220?'bad':'', STAT_INFO.BA)+
+    statBox('OBP',  ss.obp,   `${ss.baseOnBalls}BB`,          _v(ss.obp)>=0.360?'good':_v(ss.obp)<=0.290?'bad':'', STAT_INFO.OBP)+
+    statBox('SLG',  ss.slg,   `${ss.totalBases}TB`,           _v(ss.slg)>=0.470?'good':_v(ss.slg)<=0.350?'bad':'', STAT_INFO.SLG)+
+    statBox('OPS',  ss.ops,   'OBP + SLG',                    _v(ss.ops)>=0.830?'good':_v(ss.ops)<=0.640?'bad':'', STAT_INFO.OPS)+
+    statBox('BABIP',ss.babip, 'Balls in play avg',            _v(ss.babip)>=0.340?'good':_v(ss.babip)<=0.270?'bad':'', STAT_INFO.BABIP)+
+    statBox('AB/HR',ss.atBatsPerHomeRun?_v(ss.atBatsPerHomeRun).toFixed(1):'—', 'At-bats per HR', _abhrC, STAT_INFO.ABHR);
+  const _bbkRaw=ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts):null;
+  document.getElementById('stat-discipline').innerHTML=
+    statBox('BB%', bbPct, `${ss.baseOnBalls} walks / ${pa} PA`, parseFloat(bbPct)>=10?'good':parseFloat(bbPct)<=6?'bad':'', STAT_INFO.BBPCT)+
+    statBox('K%',  kPct,  `${ss.strikeOuts} Ks / ${pa} PA`,    parseFloat(kPct)<=16?'good':parseFloat(kPct)>=25?'bad':'', STAT_INFO.KPCT_B)+
+    statBox('BB/K',_bbkRaw!=null?_bbkRaw.toFixed(2):'—', 'Walk to K ratio', _bbkRaw==null?'':(_bbkRaw>=0.50?'good':_bbkRaw<=0.25?'bad':''), STAT_INFO.BBK)+
+    statBox('IBB', ss.intentionalWalks??'0', 'Intentional walks', '', STAT_INFO.IBB)+
+    statBox('HBP', ss.hitByPitch??'0',       'Hit by pitch',      '', STAT_INFO.HBP)+
+    statBox('SAC', (ss.sacBunts??0)+(ss.sacFlies??0), 'Sac bunts + flies', '', STAT_INFO.SAC);
   document.getElementById('stat-power').innerHTML=statBox('HR',ss.homeRuns,`${ss.atBatsPerHomeRun?parseFloat(ss.atBatsPerHomeRun).toFixed(1):'—'} AB/HR`,'',STAT_INFO.HR)+statBox('2B',ss.doubles,'Doubles','',STAT_INFO.D2B)+statBox('3B',ss.triples,'Triples','',STAT_INFO.D3B)+statBox('XBH',(ss.homeRuns||0)+(ss.doubles||0)+(ss.triples||0),'Extra base hits','',STAT_INFO.XBH)+statBox('RBI',ss.rbi,`${ss.leftOnBase} LOB`,'',STAT_INFO.RBI)+statBox('SB',`${ss.stolenBases}/${(ss.stolenBases||0)+(ss.caughtStealing||0)}`,'SB success','',STAT_INFO.SB);
   if(risp){const ro=((parseFloat(risp.obp)||0)+(parseFloat(risp.slg)||0)).toFixed(3);const rc=parseFloat(risp.avg)>=0.280?'#2ecc71':parseFloat(risp.avg)<=0.200?'#e74c3c':'#fff';document.getElementById('stat-risp').innerHTML=`<div class="risp-box"><div><div class="stat-label" style="margin-bottom:4px">BA w/ RISP</div><div class="risp-main" style="color:${rc}">${risp.avg??'—'}</div></div><div class="risp-detail">OBP <strong style="color:#fff">${risp.obp??'—'}</strong><br>SLG <strong style="color:#fff">${risp.slg??'—'}</strong><br>OPS <strong style="color:#fff">${ro}</strong>${risp.rbi?`<br>RBI <strong style="color:#fff">${risp.rbi}</strong>`:''}</div><div class="risp-detail">H <strong style="color:#fff">${risp.hits??'—'}</strong><br>AB <strong style="color:#fff">${risp.atBats??'—'}</strong><br>PA <strong style="color:#fff">${risp.plateAppearances??'—'}</strong><br>K <strong style="color:#fff">${risp.strikeOuts??'—'}</strong></div></div>`;}
   else document.getElementById('stat-risp').innerHTML='<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;">RISP data not available.</div>';
