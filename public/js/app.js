@@ -4428,6 +4428,73 @@ async function fetchActualStats(playerId, date) {
   };
 }
 
+// Recompute factorPerf from scratch off the current gradeLog. Called after an
+// entry is edited or deleted so stale fires/hits from the removed (or changed)
+// entry don't linger in the per-factor stats. Mirrors the per-factor
+// accumulation inside updateFactorPerf so the two stay in sync.
+function _rebuildFactorPerf() {
+  const perf = {};
+  for (const entry of getGradeLog()) {
+    if (!entry.factors || !entry.grade) continue;
+    const perfGood = entry.grade.actuallyGood;
+    for (const f of entry.factors) {
+      if (!perf[f.label]) perf[f.label] = { fires: 0, hits: 0, totalPerf: 0 };
+      perf[f.label].fires++;
+      perf[f.label].totalPerf += (entry.grade.perfScore || 0);
+      let factorPositive;
+      if (typeof f.adj === 'number') {
+        if (f.adj === 0) continue;
+        factorPositive = f.adj > 0;
+      } else {
+        factorPositive = f.impact === 'positive';
+      }
+      if ((factorPositive && perfGood) || (!factorPositive && !perfGood)) perf[f.label].hits++;
+    }
+  }
+  saveFactorPerf(perf);
+}
+
+// Remove a graded entry. Used when MLB API returns wrong stats or the user
+// wants to redo a prediction from scratch.
+function deleteGradeEntry(id) {
+  if (!confirm('Remove this graded entry from the log? This also recomputes the factor-performance stats.')) return;
+  const log = getGradeLog().filter(g => g.id !== id);
+  saveGradeLog(log);
+  _rebuildFactorPerf();
+  renderGradePanel();
+}
+
+// Edit the actual-stats payload for a graded entry. Lets the user correct
+// rows where MLB API returned wrong info (DH split miscounted, doubleheader
+// games swapped, etc.). Re-runs gradePerformance and rebuilds factorPerf so
+// the outcome label + Model Learning stats reflect the corrected values.
+function editGradeEntry(id) {
+  const log = getGradeLog();
+  const entry = log.find(g => g.id === id);
+  if (!entry) return;
+  const a = entry.actual || {};
+  const current = `${a.hits||0},${a.totalBases||0},${a.homeRuns||0},${a.walks||0},${a.strikeOuts||0},${a.rbi||0},${a.runs||0}`;
+  const input = prompt(
+    `Edit actual stats for ${entry.playerName} on ${entry.date}\n\n` +
+    `Format: H,TB,HR,BB,K,RBI,R\n` +
+    `Current: ${current}\n\nEnter new values (comma-separated):`,
+    current
+  );
+  if (input == null) return;
+  const parts = input.split(',').map(s => parseInt(s.trim(), 10));
+  if (parts.length !== 7 || parts.some(n => isNaN(n) || n < 0)) {
+    alert('Invalid input — need 7 non-negative integers (H,TB,HR,BB,K,RBI,R).');
+    return;
+  }
+  const [hits, totalBases, homeRuns, walks, strikeOuts, rbi, runs] = parts;
+  entry.actual = { ...a, hits, totalBases, homeRuns, walks, strikeOuts, rbi, runs,
+    summary: `${hits}-${a.atBats||hits}${walks?', '+walks+' BB':''}${strikeOuts?', '+strikeOuts+' K':''}` };
+  entry.grade = gradePerformance(entry.actual, entry.score);
+  saveGradeLog(log);
+  _rebuildFactorPerf();
+  renderGradePanel();
+}
+
 // Grade a performance — returns outcome category
 function gradePerformance(actual, predScore) {
   // wOBA-calibrated weights. TB captures hit quality without double-counting raw hits.
@@ -4655,6 +4722,10 @@ async function renderGradePanel() {
         <span style="color:#888;font-family:\'Chakra Petch\',monospace;font-size:11px;" title="Performance score">${live.perfScore}</span>
         <span class="outcome-badge ${live.outcome}">${outcomeLabels[live.outcome]||live.outcome}</span>
         <span class="model-badge ${modelClass}">${modelLabel}</span>
+        <span class="grade-row-actions">
+          <button class="grade-row-edit" onclick="editGradeEntry(${g.id})" title="Edit stats (MLB API correction)">✎</button>
+          <button class="grade-row-del" onclick="deleteGradeEntry(${g.id})" title="Remove from log">×</button>
+        </span>
       </div>`;
     }).join('');
   }

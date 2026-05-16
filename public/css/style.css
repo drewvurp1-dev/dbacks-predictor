@@ -378,7 +378,13 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .grade-btn { padding: 8px 16px; border-radius: 6px; border: none; font-family: 'Chakra Petch', monospace; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: opacity 0.15s; }
 .grade-btn.confirm { background: linear-gradient(135deg, #1a5a10, #0d3a08); color: #2ecc71; }
 .grade-btn.confirm:hover { opacity: 0.82; }
-.grade-log-row { display: grid; grid-template-columns: 80px 40px 90px 1fr 50px 80px 55px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
+.grade-log-row { display: grid; grid-template-columns: 80px 40px 90px 1fr 50px 80px 55px auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
+.grade-row-actions { display: flex; gap: 2px; align-items: center; }
+.grade-row-edit, .grade-row-del { background: none; border: none; font-family: 'Chakra Petch', monospace; cursor: pointer; padding: 2px 6px; line-height: 1; transition: color 0.12s; }
+.grade-row-edit { color: #2a2540; font-size: 13px; }
+.grade-row-edit:hover { color: #009A8B; }
+.grade-row-del { color: #2a2540; font-size: 15px; }
+.grade-row-del:hover { color: #e74c3c; }
 .outcome-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-align: center; }
 .outcome-badge.great  { background: #0d3a0d; color: #2ecc71; }
 .outcome-badge.good   { background: #1a3a10; color: #a8e063; }
@@ -1209,6 +1215,9 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .grade-log-row > span:nth-child(5)::before { content: 'PERF '; font-size: 9px; color: #6a6a8a; font-weight: 600; letter-spacing: 0.5px; margin-right: 3px; }
   .grade-log-row > span:nth-child(7) { grid-row: 2; grid-column: 3; justify-self: end; align-self: center; }
   .grade-log-row > span:nth-child(4) { grid-row: 3; grid-column: 1 / -1; font-size: 12px; color: #ccc !important; line-height: 1.3; padding-top: 2px; border-top: 1px solid #14132c; margin-top: 2px; }
+  /* Edit/Delete actions: thin row at the very bottom of the card, right-aligned. */
+  .grade-log-row .grade-row-actions { grid-row: 4; grid-column: 1 / -1; justify-self: end; align-self: center; margin-top: -2px; }
+  .grade-log-row .grade-row-edit, .grade-log-row .grade-row-del { padding: 4px 10px; min-width: 32px; font-size: 14px; }
 
   /* Factor perf rows: bar drops to a new line for full-width visualization */
   .factor-perf-row { grid-template-columns: 1fr auto; row-gap: 4px; column-gap: 8px; }
