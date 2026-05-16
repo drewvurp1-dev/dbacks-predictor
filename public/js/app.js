@@ -33,7 +33,7 @@ const S = {
 
 const CORBET_ROSTER = [
   { name: 'Corbin Carroll',   id: '682998' },
-  { name: 'Ketel Marte',      id: '660162' },
+  { name: 'Ketel Marte',      id: '606466' },
   { name: 'Gabriel Moreno',   id: '668804' },
   { name: 'Geraldo Perdomo',  id: '669701' },
   { name: 'Ildemaro Vargas',  id: '545121' },
