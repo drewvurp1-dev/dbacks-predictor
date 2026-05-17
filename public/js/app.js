@@ -863,6 +863,29 @@ async function loadPitcherStatcast(pitcherId){
     }else{
       el.innerHTML=boxes;
     }
+
+    // Update S.pitcherPitches with real Statcast usage so the Pitcher Stats tab
+    // and scoring both use actual pitch mix instead of the generic hand default.
+    // Sweeper/slurve fold into Slider/Splitter since PITCH_TYPES doesn't split them.
+    const CODE_TO_TYPE={FF:'4-Seam FB',SI:'Sinker',FC:'Cutter',SL:'Slider',ST:'Slider',SV:'Slider',CU:'Curveball',KC:'Curveball',CH:'Changeup',FS:'Splitter',FO:'Splitter'};
+    const arsenalPit=S.pitchArsenal?.pitchers?.[pid];
+    const newMix=Object.fromEntries(PITCH_TYPES.map(t=>[t,0]));
+    if(arsenalPit){
+      for(const[code,data] of Object.entries(arsenalPit.pitches)){
+        const type=CODE_TO_TYPE[code];
+        if(type)newMix[type]=Math.round((newMix[type]||0)+(data.usage||0));
+      }
+    }else if(arsenalRows.length){
+      for(const r of arsenalRows){
+        const type=CODE_TO_TYPE[r.pitch_type];
+        if(type)newMix[type]=Math.round((newMix[type]||0)+parseFloat(r.pitch_usage||0));
+      }
+    }
+    if(Object.values(newMix).some(v=>v>0)){
+      Object.assign(S.pitcherPitches,newMix);
+      buildPitchMixGrid('pitch-mix-grid',S.pitcherPitches);
+      document.getElementById('pt-pitchmix').innerHTML=PITCH_TYPES.map(pt=>{const p=S.pitcherPitches[pt]||0;if(!p)return'';return`<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;}).join('');
+    }
   }catch(e){
     console.error('[PitcherStatcast] Error:',e);
     el.innerHTML=`<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Pitcher Statcast unavailable.</div>`;
