@@ -3054,7 +3054,10 @@ function generateCorbetBets(score,factors,rawMarketMap){
       // Reject alt-ladder rungs (one side >85% raw implied) — books post these
       // as ladders for HRR/HR markets, and devig produces phantom 95% edges.
       const sideShare=rO/(rO+rU);
-      if(sideShare>0.85||sideShare<0.15)continue;
+      if(sideShare>0.85||sideShare<0.15){
+        console.log('[props]',propKey,'line',l,'rejected: sideShare='+sideShare.toFixed(2),'over='+rO.toFixed(1)+'% under='+rU.toFixed(1)+'%');
+        continue;
+      }
       const imbalance=Math.abs(sideShare-0.5);
       if(imbalance<minImbalance){minImbalance=imbalance;effectiveLine=l;}
     }
@@ -3064,6 +3067,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
     const overBest=mkt.overBestByLine[line]||null;
     const underBest=mkt.underBestByLine[line]||null;
     if(!calcOver?.length||!calcUnder?.length){
+      console.log('[props]',propKey,'line',line,'insufficient: over='+calcOver.length+' under='+calcUnder.length,'effectiveLine='+effectiveLine,'allLines=',[...allLines].join(','));
       results.push({prop:PROP_NAMES[propKey],propKey,line,insufficient:true,
         overBest,underBest,edgeStrength:'none',absDelta:0});
       return;
@@ -3071,7 +3075,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
     const dv=devig(calcOver,calcUnder);
     if(!dv)return;
     const modelProb=modelProbability(propKey,line,score);
-    if(modelProb===null)return;
+    if(modelProb===null){console.log('[props]',propKey,'line',line,'modelProb null');return;}
 
     const delta=modelProb-dv.overProb;
     const absDelta=Math.abs(delta);
@@ -3290,6 +3294,11 @@ async function loadCorbet(){
     // Build per-player market maps in one pass through bookmaker data.
     // The fetch only requests DK/MGM/CZR/365/FAN, so every returned book is implicitly trusted.
     // Bad-price defense is the lopsided-line gate in the line picker (generateCorbetBets).
+    // Log which books/markets were returned so we can see what's available.
+    (propData.bookmakers||[]).forEach(book=>{
+      const mkts=(book.markets||[]).map(m=>m.key+'('+m.outcomes.length+')');
+      console.log('[props]',book.title,'markets:',mkts.join(', ')||'none');
+    });
     const playerMaps={};
     activeRoster().forEach(p=>{playerMaps[p.id]={};});
     (propData.bookmakers||[]).forEach(book=>{
@@ -3357,6 +3366,32 @@ async function loadCorbet(){
         });
       });
     });
+
+    // Expose raw market data for browser-console debugging.
+    // Call debugProps() in the console to see per-player market summaries.
+    window._debugPlayerMaps=playerMaps;
+    window._debugPropData=propData;
+    window.debugProps=function(){
+      const PROP_KEYS=['batter_hits','batter_total_bases','batter_home_runs','batter_rbis',
+        'batter_walks','batter_strikeouts','batter_runs_scored','batter_hits_runs_rbis'];
+      activeRoster().forEach(p=>{
+        const mm=playerMaps[p.id]||{};
+        console.group(p.name+' ('+p.id+')');
+        PROP_KEYS.forEach(k=>{
+          const m=mm[k];
+          if(!m){console.log(k+': no data');return;}
+          const lines=new Set([...Object.keys(m.overByLine||{}),...Object.keys(m.underByLine||{})]);
+          if(!lines.size){console.log(k+': no lines');return;}
+          lines.forEach(l=>{
+            const ov=(m.overByLine[l]||[]).join('/');
+            const un=(m.underByLine[l]||[]).join('/');
+            console.log(k+' @'+l+' over=['+ov+'] under=['+un+'] books='+JSON.stringify(m.books));
+          });
+        });
+        console.groupEnd();
+      });
+    };
+    console.log('[props] Market map built — call debugProps() in console to inspect per-player lines');
 
     // Generate bets for each roster player — game context (pitcher, weather, etc.) stays in S
     const allPlayerBets=[];
