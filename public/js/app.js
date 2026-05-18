@@ -3341,6 +3341,11 @@ async function loadCorbet(){
       }
     }
 
+    // Register pending grade entries as soon as predictions exist, regardless of
+    // whether props are still being offered. This way games that ended (or where
+    // sportsbooks pulled props before we visited) still create gradeable cards.
+    autoRegisterGradePredictions();
+
     if(allPlayerBets.reduce((s,pg)=>s+pg.bets.length,0)===0){
       hide('corbet-loading');show('corbet-no-props');
       document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Player props not yet posted for this game — check back tonight or tomorrow morning.</div>';
@@ -3356,7 +3361,6 @@ async function loadCorbet(){
     show('corbet-bets');
     renderDashboard();
     autoSaveTopBets();
-    autoRegisterGradePredictions();
   }catch(e){
     hide('corbet-loading');
     setText('corbet-error','⚠ '+e.message);
@@ -4436,24 +4440,31 @@ function savePredictionForGrading(prediction, overridePlayerId = null) {
     factors: prediction.factors.map(f => ({ label: f.label, impact: f.impact, value: f.value, adj: f.adj })),
     graded: false,
   };
-  // One card per player — replace any existing entry for this player regardless
-  // of date. Coerce both sides to String to defeat legacy entries that stored
-  // playerId as a number, which would otherwise duplicate via === mismatch.
-  const existingIdx = pending.findIndex(p => String(p.playerId) === entry.playerId);
+  // One card per (player, date) — re-running a prediction for the same player on
+  // the same day refreshes that card, but predictions on different days each get
+  // their own pending entry and persist until graded. Coerce playerId to String
+  // to defeat legacy entries that stored it numerically.
+  const existingIdx = pending.findIndex(p =>
+    String(p.playerId) === entry.playerId && p.date === entry.date
+  );
   if (existingIdx >= 0) pending[existingIdx] = entry;
   else pending.unshift(entry);
-  savePending(pending.slice(0, 50)); // keep last 50 (7–8 players × ~6 days)
+  // Cap at 500 (≈8 players × 60 days) to keep localStorage bounded while never
+  // pruning entries the user could realistically still want to grade.
+  savePending(pending.slice(0, 500));
 }
 
-// One-time cleanup: legacy pending data may contain stale entries from before
-// playerId types were normalized, leaving multiple cards per player. Keep the
-// most recent (lowest array index since pending is newest-first) per playerId.
+// Cleanup duplicate pending entries from repeated prediction runs. Dedup key is
+// (playerId, date) so each player keeps one card per game day — entries from
+// different days are preserved so the user can grade past games whenever they
+// catch up. Newest-first array order means lowest index wins (most recent run).
 function dedupePending() {
   const pending = getPending();
   const seen = new Set();
   const cleaned = [];
   for (const entry of pending) {
-    const key = String(entry.playerId ?? entry.playerName ?? entry.id);
+    const pid = String(entry.playerId ?? entry.playerName ?? entry.id);
+    const key = `${pid}|${entry.date || ''}`;
     if (seen.has(key)) continue;
     seen.add(key);
     cleaned.push(entry);
