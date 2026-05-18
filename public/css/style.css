@@ -1278,3 +1278,67 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .bm-score-num { font-size: 12px; }
   .bm-line { font-size: 9px; }
 }
+
+/* ═══════════════════ AGENTS PANEL (Corbin × Carol) ═══════════════════ */
+.agents-header { background: linear-gradient(135deg, #0a1a22, #0e1218); border: 1px solid #1e3340; border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.agents-header-left { flex: 1; min-width: 200px; }
+.agents-title { font-size: 14px; font-weight: 900; color: #5fc8e0; font-family: 'Orbitron', monospace; letter-spacing: 1.5px; }
+.agents-sub { font-size: 10px; color: #4a7a90; font-family: 'Chakra Petch', monospace; margin-top: 2px; }
+.agents-run-btn { background: linear-gradient(135deg, #1a8aa0, #156a80); border: none; border-radius: 8px; color: #fff; font-size: 11px; font-weight: 700; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; padding: 10px 18px; transition: opacity 0.15s; }
+.agents-run-btn:hover { opacity: 0.85; }
+.agents-run-btn:disabled { background: #2a2a3a; cursor: not-allowed; color: #777; }
+
+.agents-context { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-family: 'Chakra Petch', monospace; font-size: 10px; color: #888; line-height: 1.5; }
+.agents-context strong { color: #aaa; }
+.agents-status { background: #0c1a22; border: 1px solid #1a3340; border-radius: 8px; padding: 8px 14px; margin-bottom: 10px; font-family: 'Chakra Petch', monospace; font-size: 10px; color: #5fc8e0; letter-spacing: 1.5px; text-transform: uppercase; }
+
+.agent-card { margin-bottom: 10px; }
+.agent-badge { display: inline-block; font-family: 'Orbitron', monospace; font-size: 9px; font-weight: 900; letter-spacing: 2px; padding: 3px 8px; border-radius: 4px; margin-right: 8px; }
+.agent-badge.corbin { background: #003a4a; color: #5fc8e0; border: 1px solid #1e5466; }
+.agent-badge.carol { background: #3a2e08; color: #d4a017; border: 1px solid #5a4818; }
+.agent-state { font-size: 9px; color: #777; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; font-weight: 400; }
+.agent-state.working { color: #d4a017; animation: pulse 1.5s infinite; }
+.agent-state.done { color: #4ade80; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.agent-tools { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; max-height: 240px; overflow-y: auto; }
+.agent-tool-item { background: #07060f; border: 1px solid #1a1730; border-radius: 5px; padding: 5px 9px; font-family: 'Chakra Petch', monospace; font-size: 10px; color: #888; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.agent-tool-item .tool-name { color: #5fc8e0; font-weight: 600; }
+.agent-tool-item .tool-input { color: #666; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; flex: 1; }
+.agent-tool-item .tool-result { color: #888; font-size: 9px; }
+.agent-tool-item.error { border-color: #5a1818; }
+.agent-tool-item.error .tool-result { color: #ef4444; }
+
+.agent-text { font-family: 'Chakra Petch', monospace; font-size: 12px; color: #ccc; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; }
+.agent-text:empty { display: none; }
+
+.agent-report { margin-top: 12px; padding-top: 12px; border-top: 1px solid #1a1730; }
+.agent-report-title { font-size: 10px; color: #5fc8e0; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; font-weight: 700; }
+.agent-prob-card { background: #07060f; border: 1px solid #1e3340; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.agent-prob-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.agent-prob-name { font-family: 'Chakra Petch', monospace; font-size: 13px; color: #fff; font-weight: 700; }
+.agent-prob-confidence { font-family: 'Chakra Petch', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; }
+.agent-prob-confidence.high { background: #0a3a1e; color: #4ade80; }
+.agent-prob-confidence.medium { background: #3a2e08; color: #d4a017; }
+.agent-prob-confidence.low { background: #2a1818; color: #f87171; }
+.agent-prob-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+.agent-prob-cell { background: #0c0a1e; border-radius: 4px; padding: 5px 6px; text-align: center; }
+.agent-prob-cell .pcell-label { font-size: 8px; color: #666; font-family: 'Chakra Petch', monospace; letter-spacing: 1px; text-transform: uppercase; }
+.agent-prob-cell .pcell-val { font-size: 13px; color: #fff; font-family: 'Chakra Petch', monospace; font-weight: 700; margin-top: 1px; }
+.agent-prob-rationale { font-size: 11px; color: #999; font-family: 'Chakra Petch', monospace; line-height: 1.6; margin-top: 6px; }
+
+.agent-bet-card { background: linear-gradient(135deg, #0a1f14, #0e2a18); border: 1px solid #1a4a2a; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.agent-bet-rank { display: inline-block; background: #d4a017; color: #07060f; font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 900; padding: 3px 9px; border-radius: 4px; margin-right: 8px; }
+.agent-bet-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.agent-bet-player { font-family: 'Chakra Petch', monospace; font-size: 14px; font-weight: 700; color: #fff; }
+.agent-bet-prop { font-family: 'Chakra Petch', monospace; font-size: 11px; color: #aaa; }
+.agent-bet-ev { background: #003a1e; color: #4ade80; font-family: 'Chakra Petch', monospace; font-size: 14px; font-weight: 900; padding: 4px 10px; border-radius: 5px; letter-spacing: 1px; }
+.agent-bet-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0; font-family: 'Chakra Petch', monospace; }
+.agent-bet-meta-cell { background: #07060f; border-radius: 4px; padding: 5px 7px; text-align: center; }
+.agent-bet-meta-cell .bm-label { font-size: 8px; color: #666; letter-spacing: 1px; text-transform: uppercase; }
+.agent-bet-meta-cell .bm-val { font-size: 12px; color: #ccc; font-weight: 700; margin-top: 1px; }
+.agent-bet-reasoning { font-size: 11px; color: #bbb; line-height: 1.6; font-family: 'Chakra Petch', monospace; }
+.agent-bet-books { font-size: 9px; color: #777; font-family: 'Chakra Petch', monospace; margin-top: 4px; letter-spacing: 0.5px; }
+
+.agent-bet-summary { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-family: 'Chakra Petch', monospace; font-size: 11px; color: #aaa; line-height: 1.6; }
+.agent-bet-summary strong { color: #5fc8e0; }
