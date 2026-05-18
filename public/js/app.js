@@ -5222,86 +5222,69 @@ function _setSyncKey(k){ localStorage.setItem(SYNC_KEY_STORAGE,k); }
 function _isMobileDevice(){
   return window.matchMedia('(pointer: coarse) and (max-width: 768px)').matches;
 }
-function _syncDirection(){ return _isMobileDevice() ? 'pull' : 'push'; }
-function _syncIdleLabel(){ return _isMobileDevice() ? '↓ Pull' : '↑ Push'; }
-
-function _setSyncBtnState(text,disabled){
-  document.querySelectorAll('.sync-btn').forEach(btn=>{
-    btn.textContent=text;
-    btn.disabled=disabled;
-  });
+function _setSyncBtnState(cls,text,disabled){
+  document.querySelectorAll('.'+cls).forEach(btn=>{btn.textContent=text;btn.disabled=disabled;});
 }
+function _initSyncBtnLabel(){} // no-op — buttons now have fixed labels
 
-// Set button text on init so the user sees what direction tap will trigger.
-function _initSyncBtnLabel(){
-  _setSyncBtnState(_syncIdleLabel(), false);
-}
-
-async function syncRecord(){
+async function _getSyncKeyPrompted(){
   let key=_getSyncKey();
   if(!key){
     key=(prompt('Enter your sync passphrase (must match SYNC_KEY on Railway):')||'').trim();
-    if(!key)return;
+    if(!key)return null;
     _setSyncKey(key);
   }
-  const direction=_syncDirection();
-  _setSyncBtnState(direction==='push'?'⟳ Pushing…':'⟳ Pulling…',true);
+  return key;
+}
+
+async function pushRecord(){
+  const key=await _getSyncKeyPrompted();
+  if(!key)return;
+  _setSyncBtnState('sync-btn-push','⟳ Pushing…',true);
   try{
-    if(direction==='pull'){
-      // MOBILE: overwrite local with server state. Anything edited on this
-      // device since the last desktop push is discarded — by design.
-      const res=await fetch('/api/sync',{headers:{'X-Sync-Key':key}});
-      if(!res.ok){
-        if(res.status===401){
-          _setSyncKey('');
-          _setSyncBtnState(_syncIdleLabel(),false);
-          alert('Wrong passphrase — cleared. Tap Pull again to re-enter.');
-          return;
-        }
-        const body=await res.json().catch(()=>({}));
-        throw new Error(body.error||`Server ${res.status}`);
-      }
-      const remote=await res.json();
-      S.betLog=remote.betLog||[];
-      localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
-      saveGradeLog(remote.gradeLog||[]);
-      saveFactorPerf(remote.factorPerf||{});
-      saveFactorWeights(remote.factorWeights||{});
-      savePending(remote.pending||[]);
-    } else {
-      // DESKTOP: overwrite server with local state. Desktop is the source of
-      // truth — next time mobile pulls, it'll match what's here.
-      const payload={
-        betLog:S.betLog,
-        gradeLog:getGradeLog(),
-        factorPerf:getFactorPerf(),
-        factorWeights:getFactorWeights(),
-        pending:getPending(),
-      };
-      const res=await fetch('/api/sync',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-Sync-Key':key},
-        body:JSON.stringify(payload),
-      });
-      if(!res.ok){
-        if(res.status===401){
-          _setSyncKey('');
-          _setSyncBtnState(_syncIdleLabel(),false);
-          alert('Wrong passphrase — cleared. Tap Push again to re-enter.');
-          return;
-        }
-        throw new Error(`Server ${res.status}`);
-      }
+    const payload={betLog:S.betLog,gradeLog:getGradeLog(),factorPerf:getFactorPerf(),factorWeights:getFactorWeights(),pending:getPending()};
+    const res=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Key':key},body:JSON.stringify(payload)});
+    if(!res.ok){
+      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-push','↑ Push',false);alert('Wrong passphrase — cleared. Tap Push again to re-enter.');return;}
+      throw new Error(`Server ${res.status}`);
     }
+    localStorage.setItem(SYNC_LAST_TS_KEY,new Date().toISOString());
+    const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    _setSyncBtnState('sync-btn-push',`✓ ${t}`,false);
+  }catch(err){
+    console.error('[sync push]',err);
+    _setSyncBtnState('sync-btn-push','↑ Push',false);
+    alert('Push failed: '+err.message);
+  }
+}
+
+async function pullRecord(){
+  const key=await _getSyncKeyPrompted();
+  if(!key)return;
+  _setSyncBtnState('sync-btn-pull','⟳ Pulling…',true);
+  try{
+    const res=await fetch('/api/sync',{headers:{'X-Sync-Key':key}});
+    if(!res.ok){
+      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-pull','↓ Pull',false);alert('Wrong passphrase — cleared. Tap Pull again to re-enter.');return;}
+      const body=await res.json().catch(()=>({}));
+      throw new Error(body.error||`Server ${res.status}`);
+    }
+    const remote=await res.json();
+    S.betLog=remote.betLog||[];
+    localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
+    saveGradeLog(remote.gradeLog||[]);
+    saveFactorPerf(remote.factorPerf||{});
+    saveFactorWeights(remote.factorWeights||{});
+    savePending(remote.pending||[]);
     localStorage.setItem(SYNC_LAST_TS_KEY,new Date().toISOString());
     renderRecord();
     renderGradePanel();
     const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    _setSyncBtnState(`✓ ${t}`,false);
+    _setSyncBtnState('sync-btn-pull',`✓ ${t}`,false);
   }catch(err){
-    console.error('[sync]',err);
-    _setSyncBtnState(_syncIdleLabel(),false);
-    alert('Sync failed: '+err.message);
+    console.error('[sync pull]',err);
+    _setSyncBtnState('sync-btn-pull','↓ Pull',false);
+    alert('Pull failed: '+err.message);
   }
 }
 
