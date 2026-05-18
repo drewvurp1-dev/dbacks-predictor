@@ -283,8 +283,59 @@
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
-      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:'Chakra Petch',monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button class="autograde-btn" onclick="autoGradeBetLog()" style="background:none;border:1px solid #2d2616;color:#d4a017;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">⟳ Grade</button><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">☁ Sync</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:'Chakra Petch',monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button class="autograde-btn" onclick="autoGradeBetLog()" style="background:none;border:1px solid #2d2616;color:#d4a017;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">⟳ Grade</button><button onclick="toggleAddBetForm()" id="add-bet-toggle" style="background:none;border:1px solid #1e2d3a;color:#5bc0de;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">+ Add</button><button class="sync-btn-push" onclick="pushRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:4px;">↑ Push</button><button class="sync-btn-pull" onclick="pullRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">↓ Pull</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
+        <div id="add-bet-form" class="add-bet-form hidden">
+          <div class="abf-row">
+            <div class="abf-field">
+              <label class="abf-label">Date</label>
+              <input type="date" id="abf-date" class="abf-input">
+            </div>
+            <div class="abf-field abf-grow">
+              <label class="abf-label">Player</label>
+              <input type="text" id="abf-player" class="abf-input" list="abf-player-list" placeholder="Player name" autocomplete="off">
+              <datalist id="abf-player-list"></datalist>
+            </div>
+          </div>
+          <div class="abf-row">
+            <div class="abf-field">
+              <label class="abf-label">Prop</label>
+              <select id="abf-prop" class="abf-input">
+                <option value="batter_hits">Hits</option>
+                <option value="batter_total_bases">Total Bases</option>
+                <option value="batter_home_runs">Home Runs</option>
+                <option value="batter_rbis">RBI</option>
+                <option value="batter_walks">Walks</option>
+                <option value="batter_strikeouts">Strikeouts</option>
+                <option value="batter_runs_scored">Runs</option>
+                <option value="batter_hits_runs_rbis">H+R+RBI</option>
+              </select>
+            </div>
+            <div class="abf-field">
+              <label class="abf-label">Line</label>
+              <input type="number" id="abf-line" class="abf-input abf-line" step="0.5" min="0.5" placeholder="1.5">
+            </div>
+            <div class="abf-field">
+              <label class="abf-label">Direction</label>
+              <div class="abf-toggle">
+                <button id="abf-over" class="abf-toggle-btn active" onclick="abfSetDir('Over')">Over</button>
+                <button id="abf-under" class="abf-toggle-btn" onclick="abfSetDir('Under')">Under</button>
+              </div>
+            </div>
+          </div>
+          <div class="abf-row abf-row-bottom">
+            <div class="abf-field abf-grow">
+              <label class="abf-label">Result <span style="color:#555;font-weight:400;">(optional)</span></label>
+              <div class="abf-toggle">
+                <button id="abf-win" class="abf-toggle-btn abf-win" onclick="abfSetResult('win')">Win</button>
+                <button id="abf-loss" class="abf-toggle-btn abf-loss" onclick="abfSetResult('loss')">Loss</button>
+                <button id="abf-push" class="abf-toggle-btn abf-push-btn" onclick="abfSetResult('push')">Push</button>
+                <button id="abf-none" class="abf-toggle-btn active" onclick="abfSetResult(null)">TBD</button>
+              </div>
+            </div>
+            <button class="abf-save-btn" onclick="addManualBet()">Save Bet</button>
+          </div>
+        </div>
         <div class="record-summary-strip">
           <div class="rss-stat"><div class="rss-label">Units</div><div class="rss-val" id="rec-units">—</div></div>
           <div class="rss-stat"><div class="rss-label">ROI</div><div class="rss-val" id="rec-roi">—</div></div>
@@ -385,7 +436,7 @@
   <!-- ═══════════════════ GRADE & LEARN ═══════════════════ -->
   <div id="panel-grade" class="panel">
     <div class="card" id="grade-pending-card">
-      <div class="card-header"><span>⚡ Pending Grades</span><button class="sync-btn" onclick="syncRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;">☁ Sync</button></div>
+      <div class="card-header"><span>⚡ Pending Grades</span><button class="sync-btn-push" onclick="pushRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:4px;">↑ Push</button><button class="sync-btn-pull" onclick="pullRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;">↓ Pull</button></div>
       <div class="card-body">
         <div id="grade-pending-empty" style="font-size:12px;color:#777;font-family:'Chakra Petch',monospace;text-align:center;padding:20px;">No predictions waiting to be graded. Run a prediction before a game and come back after to grade it.</div>
         <div id="grade-pending-list"></div>

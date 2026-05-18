@@ -475,6 +475,26 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .result-btn.active { opacity: 1; }
 .result-btn:not(.active) { opacity: 0.4; }
 
+/* ── Manual bet form ── */
+.add-bet-form { padding: 12px 0 16px; border-bottom: 1px solid #1a1730; margin-bottom: 14px; }
+.abf-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+.abf-row-bottom { margin-bottom: 0; }
+.abf-field { display: flex; flex-direction: column; gap: 4px; }
+.abf-field.abf-grow { flex: 1; min-width: 120px; }
+.abf-label { font-family: 'Chakra Petch', monospace; font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; }
+.abf-input { background: #0e0c22; border: 1px solid #2a2550; border-radius: 5px; color: #E8DFC8; font-family: 'Chakra Petch', monospace; font-size: 12px; padding: 6px 8px; outline: none; }
+.abf-input:focus { border-color: #009A8B; }
+.abf-input option { background: #0e0c22; }
+.abf-line { width: 72px; }
+.abf-toggle { display: flex; gap: 4px; }
+.abf-toggle-btn { background: #0e0c22; border: 1px solid #2a2550; color: #666; font-family: 'Chakra Petch', monospace; font-size: 10px; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; transition: all 0.12s; }
+.abf-toggle-btn.active { background: #1a1a40; border-color: #009A8B; color: #009A8B; }
+.abf-toggle-btn.abf-win.active { background: #061a06; border-color: #1a4a10; color: #2ecc71; }
+.abf-toggle-btn.abf-loss.active { background: #1a0606; border-color: #3a1010; color: #e74c3c; }
+.abf-toggle-btn.abf-push-btn.active { background: #1a1730; border-color: #2a2550; color: #aaa; }
+.abf-save-btn { background: #009A8B; border: none; color: #07060f; font-family: 'Chakra Petch', monospace; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; padding: 8px 18px; border-radius: 5px; cursor: pointer; white-space: nowrap; align-self: flex-end; transition: opacity 0.12s; }
+.abf-save-btn:hover { opacity: 0.85; }
+
 /* ── Modal system ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 1000; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; padding: 20px; }
 .modal-overlay.hidden { display: none; }
