@@ -3367,6 +3367,33 @@ async function loadCorbet(){
       });
     });
 
+    // Visible "which books returned data" indicator so user can see coverage
+    // without opening the browser console.
+    const _REQUESTED_BOOKS=[
+      {key:'draftkings',title:'DraftKings'},
+      {key:'betmgm',title:'BetMGM'},
+      {key:'caesars',title:'Caesars'},
+      {key:'bet365',title:'Bet365'},
+      {key:'fanatics',title:'Fanatics'},
+    ];
+    const _booksWithData=new Set();
+    Object.values(playerMaps).forEach(pm=>{
+      Object.values(pm).forEach(mkt=>{
+        (mkt.calcBooks||new Set()).forEach(t=>_booksWithData.add(t));
+      });
+    });
+    const _booksReturned=_REQUESTED_BOOKS.filter(b=>_booksWithData.has(b.title));
+    const _booksMissing=_REQUESTED_BOOKS.filter(b=>!_booksWithData.has(b.title));
+    const _statusEl=document.getElementById('corbet-books-status');
+    if(_statusEl){
+      const ok=_booksReturned.map(b=>b.title).join(', ')||'none';
+      const miss=_booksMissing.map(b=>b.title).join(', ');
+      _statusEl.innerHTML=
+        `<span style="color:#2ecc71;">● With props:</span> ${ok}`+
+        (miss?`  <span style="color:#666;">○ No props returned:</span> <span style="color:#888;">${miss}</span>`:'');
+      _statusEl.classList.remove('hidden');
+    }
+
     // Expose raw market data for browser-console debugging.
     // Call debugProps() in the console to see per-player market summaries.
     window._debugPlayerMaps=playerMaps;
