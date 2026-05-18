@@ -3519,9 +3519,12 @@ function renderCorbetBets(){
                    b.edgeStrength==='moderate'?'background:#1a1406;border-color:#3a2a00':
                    'background:#0c0a1e;border-color:#1a1730';
       const showSave=b.edgeStrength!=='none';
+      const _softBadge=(b.marketConfidence==='low'||b.marketConfidence==='medium')
+        ?` <span class="dpb-soft-market" data-tip="Thinly traded / soft market — fewer books have posted this line, so the over/under prices are more asymmetric than usual. The EV estimate is less precise, but soft lines are often early-market opportunities before the price moves to consensus. Treat the exact EV% with extra skepticism.">⚠</span>`
+        :'';
       return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
-          <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span></span>
+          <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span>${_softBadge}</span>
           ${showSave?`<button data-bk="${betKey.replace(/"/g,'&quot;')}" onclick="saveBet(this.dataset.bk,this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
         </div>
         ${b.conflict?`<div style="background:#1a0808;border:1px solid #4a1010;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;">⚠ CONFLICT — Direction contradicts Total Bases recommendation. No edge shown.</div>`:''}
@@ -3685,17 +3688,21 @@ function renderDashboard(){
   if(S.allPlayerBets&&S.allPlayerBets.length){
     const topBets=_getTopBets(5);
     document.getElementById('dash-best-bets').innerHTML=topBets.length
-      ?topBets.map(b=>`<div class="dash-best-bet-row">
+      ?topBets.map(b=>{
+        const _tb_softBadge=(b.marketConfidence==='low'||b.marketConfidence==='medium')
+          ?` <span class="dpb-soft-market" data-tip="Thinly traded / soft market — fewer books have posted this line, so the over/under prices are more asymmetric than usual. The EV estimate is less precise, but soft lines are often early-market opportunities before the price moves to consensus. Treat the exact EV% with extra skepticism.">⚠</span>`
+          :'';
+        return`<div class="dash-best-bet-row">
         <div class="dash-best-bet-left">
           <div class="dash-best-bet-player">${b.playerName}</div>
-          <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}</div>
+          <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}${_tb_softBadge}</div>
         </div>
         <div class="dash-best-bet-right">
           <span class="dash-badge">${fmtOdds(b.direction.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price)}</span>
           <span class="dash-badge" title="Edge stability % — not win probability">Stab ${b.mcConfidence.toFixed(0)}%</span>
           <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
         </div>
-      </div>`).join('')
+      </div>`;}).join('')
       :'<div class="dash-empty">No bets meet the 85% MC threshold today.</div>';
   }
 
@@ -5584,9 +5591,10 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
     t.style.width=w+'px';
     let left=r.left+r.width/2-w/2;
     left=Math.max(12,Math.min(left,window.innerWidth-w-12));
-    const top=r.top-8; // will be shifted up by the element's own height via transform
     t.style.left=left+'px';
-    t.style.top=(r.top+window.scrollY)+'px';
+    // position:fixed means top is viewport-relative; r.top already is, so
+    // do NOT add window.scrollY (that pushes the tip off-screen when scrolled).
+    t.style.top=r.top+'px';
     t.style.transform='translateY(calc(-100% - 8px))';
     document.body.appendChild(t);
     activeEl=el;
