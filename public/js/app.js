@@ -3314,7 +3314,12 @@ async function loadCorbet(){
           if(!m.books.includes(book.title))m.books.push(book.title);
           market.outcomes
             .filter(o=>{
-              const d=(o.description||o.name||'').toLowerCase().trim();
+              // Standard format: description = player name, name = "Over"/"Under"
+              // Some books (Fanatics) put the player name in `name` (e.g. "Ketel Marte - Over")
+              // with no description. Pick whichever field is not a bare direction keyword.
+              const rawDesc=(o.description||'').toLowerCase().trim();
+              const rawName=(o.name||'').toLowerCase().trim();
+              const d=(rawDesc&&rawDesc!=='over'&&rawDesc!=='under')?rawDesc:rawName;
               if(!d.includes(pLast))return false;
               // Strict full-name match avoids cross-player collisions
               // (e.g. "Ildemaro Vargas" vs "Kenneth Vargas").
@@ -3324,7 +3329,15 @@ async function loadCorbet(){
               return abbrevRe.test(d);
             })
             .forEach(o=>{
-              const dir=o.name.toLowerCase();
+              const rawName=(o.name||'').toLowerCase();
+              const rawDesc=(o.description||'').toLowerCase().trim();
+              // Extract direction: prefer a bare "over"/"under" in either field;
+              // fall back to word-boundary search for books that embed it in a
+              // compound string like "Ketel Marte - Over".
+              const dir=(rawName==='over'||rawName==='under')?rawName:
+                        (rawDesc==='over'||rawDesc==='under')?rawDesc:
+                        /\bover\b/.test(rawName)?'over':
+                        /\bunder\b/.test(rawName)?'under':rawName;
               const price=o.price;
               const line=o.point||0.5;
               if(dir==='over'){
@@ -3337,6 +3350,8 @@ async function loadCorbet(){
                   m.underBestByLine[line]={price,book:book.title};
                 (m.underByLine[line]=m.underByLine[line]||[]).push(price);
                 m.calcBooks.add(book.title);
+              }else{
+                console.warn('[odds] unrecognized direction for',book.title,market.key,'—',JSON.stringify({name:o.name,desc:o.description}));
               }
             });
         });
@@ -3375,6 +3390,11 @@ async function loadCorbet(){
       }
     }
 
+    // Register pending grade entries as soon as predictions exist, regardless of
+    // whether props are still being offered. This way games that ended (or where
+    // sportsbooks pulled props before we visited) still create gradeable cards.
+    autoRegisterGradePredictions();
+
     if(allPlayerBets.reduce((s,pg)=>s+pg.bets.length,0)===0){
       hide('corbet-loading');show('corbet-no-props');
       document.getElementById('dash-best-bets').innerHTML='<div class="dash-empty">Player props not yet posted for this game — check back tonight or tomorrow morning.</div>';
@@ -3389,7 +3409,6 @@ async function loadCorbet(){
     renderCorbetBets();
     show('corbet-bets');
     renderDashboard();
-    autoRegisterGradePredictions();
     autoSaveAtFirstPitch();
   }catch(e){
     hide('corbet-loading');
@@ -3931,6 +3950,78 @@ function clearRecord(){
   renderRecord();
 }
 
+// ── Manual bet entry ──────────────────────────────────────────────────────────
+
+const _MANUAL_PROP_LABELS={
+  batter_hits:'Hits',batter_total_bases:'Total Bases',batter_home_runs:'Home Runs',
+  batter_rbis:'RBI',batter_walks:'Walks',batter_strikeouts:'Strikeouts',
+  batter_runs_scored:'Runs',batter_hits_runs_rbis:'H+R+RBI',
+};
+
+function toggleAddBetForm(){
+  const form=document.getElementById('add-bet-form');
+  const btn=document.getElementById('add-bet-toggle');
+  const isHidden=form.classList.contains('hidden');
+  form.classList.toggle('hidden',!isHidden);
+  if(btn)btn.style.color=isHidden?'#2ecc71':'#5bc0de';
+  if(isHidden){
+    // Default date to today AZ (UTC-7)
+    const azToday=new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
+    document.getElementById('abf-date').value=azToday;
+    // Populate player datalist from current roster
+    const dl=document.getElementById('abf-player-list');
+    if(dl)dl.innerHTML=activeRoster().map(p=>`<option value="${p.name}">`).join('');
+    document.getElementById('abf-player').focus();
+  }
+}
+
+function abfSetDir(dir){
+  document.getElementById('abf-over').classList.toggle('active',dir==='Over');
+  document.getElementById('abf-under').classList.toggle('active',dir==='Under');
+}
+
+function abfSetResult(result){
+  ['win','loss','push'].forEach(r=>document.getElementById(`abf-${r}`)?.classList.toggle('active',r===result));
+  document.getElementById('abf-none')?.classList.toggle('active',result===null);
+}
+
+function addManualBet(){
+  const date=document.getElementById('abf-date').value;
+  const player=document.getElementById('abf-player').value.trim();
+  const propKey=document.getElementById('abf-prop').value;
+  const lineRaw=document.getElementById('abf-line').value;
+  const lineVal=parseFloat(lineRaw);
+  const dir=document.getElementById('abf-over')?.classList.contains('active')?'Over':'Under';
+  const resultBtns=['win','loss','push'].filter(r=>document.getElementById(`abf-${r}`)?.classList.contains('active'));
+  const result=resultBtns[0]||null;
+
+  if(!date){alert('Please enter a date.');return;}
+  if(!player){alert('Please enter a player name.');return;}
+  if(isNaN(lineVal)||lineVal<=0){alert('Please enter a valid line (e.g. 1.5).');return;}
+
+  const propLabel=_MANUAL_PROP_LABELS[propKey]||propKey;
+  const prop=`${dir} ${lineVal} ${propLabel}`;
+
+  if(S.betLog.some(x=>x.date===date&&x.prop===prop&&x.player===player)){
+    alert('This bet is already in your record.');return;
+  }
+
+  S.betLog.unshift({
+    id:Date.now(),date,player,playerId:_playerIdByName(player)||null,
+    opponent:'',prop,propKey,direction:dir,line:lineVal,
+    odds:null,rating:null,score:null,result,
+    modelProb:null,mcConfidence:null,marketOverProb:null,ev:null,
+  });
+  localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
+  renderRecord();
+  // Reset for next entry (keep date and prop selected)
+  document.getElementById('abf-player').value='';
+  document.getElementById('abf-line').value='';
+  abfSetDir('Over');
+  abfSetResult(null);
+  document.getElementById('abf-player').focus();
+}
+
 // Display order for per-prop record cards.
 const _RECORD_PROP_ORDER=['batter_hits','batter_total_bases','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts','batter_walks','batter_hits_runs_rbis'];
 const _RECORD_PROP_SHORT={
@@ -4468,24 +4559,31 @@ function savePredictionForGrading(prediction, overridePlayerId = null) {
     factors: prediction.factors.map(f => ({ label: f.label, impact: f.impact, value: f.value, adj: f.adj })),
     graded: false,
   };
-  // One card per player — replace any existing entry for this player regardless
-  // of date. Coerce both sides to String to defeat legacy entries that stored
-  // playerId as a number, which would otherwise duplicate via === mismatch.
-  const existingIdx = pending.findIndex(p => String(p.playerId) === entry.playerId);
+  // One card per (player, date) — re-running a prediction for the same player on
+  // the same day refreshes that card, but predictions on different days each get
+  // their own pending entry and persist until graded. Coerce playerId to String
+  // to defeat legacy entries that stored it numerically.
+  const existingIdx = pending.findIndex(p =>
+    String(p.playerId) === entry.playerId && p.date === entry.date
+  );
   if (existingIdx >= 0) pending[existingIdx] = entry;
   else pending.unshift(entry);
-  savePending(pending.slice(0, 50)); // keep last 50 (7–8 players × ~6 days)
+  // Cap at 500 (≈8 players × 60 days) to keep localStorage bounded while never
+  // pruning entries the user could realistically still want to grade.
+  savePending(pending.slice(0, 500));
 }
 
-// One-time cleanup: legacy pending data may contain stale entries from before
-// playerId types were normalized, leaving multiple cards per player. Keep the
-// most recent (lowest array index since pending is newest-first) per playerId.
+// Cleanup duplicate pending entries from repeated prediction runs. Dedup key is
+// (playerId, date) so each player keeps one card per game day — entries from
+// different days are preserved so the user can grade past games whenever they
+// catch up. Newest-first array order means lowest index wins (most recent run).
 function dedupePending() {
   const pending = getPending();
   const seen = new Set();
   const cleaned = [];
   for (const entry of pending) {
-    const key = String(entry.playerId ?? entry.playerName ?? entry.id);
+    const pid = String(entry.playerId ?? entry.playerName ?? entry.id);
+    const key = `${pid}|${entry.date || ''}`;
     if (seen.has(key)) continue;
     seen.add(key);
     cleaned.push(entry);
@@ -5225,7 +5323,7 @@ function _isMobileDevice(){
 function _setSyncBtnState(cls,text,disabled){
   document.querySelectorAll('.'+cls).forEach(btn=>{btn.textContent=text;btn.disabled=disabled;});
 }
-function _initSyncBtnLabel(){} // no-op — buttons now have fixed labels
+function _initSyncBtnLabel(){}
 
 async function _getSyncKeyPrompted(){
   let key=_getSyncKey();
@@ -5245,12 +5343,13 @@ async function pushRecord(){
     const payload={betLog:S.betLog,gradeLog:getGradeLog(),factorPerf:getFactorPerf(),factorWeights:getFactorWeights(),pending:getPending()};
     const res=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Key':key},body:JSON.stringify(payload)});
     if(!res.ok){
-      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-push','↑ Push',false);alert('Wrong passphrase — cleared. Tap Push again to re-enter.');return;}
+      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-push','↑ Push',false);alert('Wrong passphrase — cleared.');return;}
       throw new Error(`Server ${res.status}`);
     }
     localStorage.setItem(SYNC_LAST_TS_KEY,new Date().toISOString());
     const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     _setSyncBtnState('sync-btn-push',`✓ ${t}`,false);
+    setTimeout(()=>_setSyncBtnState('sync-btn-push','↑ Push',false),3000);
   }catch(err){
     console.error('[sync push]',err);
     _setSyncBtnState('sync-btn-push','↑ Push',false);
@@ -5265,7 +5364,7 @@ async function pullRecord(){
   try{
     const res=await fetch('/api/sync',{headers:{'X-Sync-Key':key}});
     if(!res.ok){
-      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-pull','↓ Pull',false);alert('Wrong passphrase — cleared. Tap Pull again to re-enter.');return;}
+      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-pull','↓ Pull',false);alert('Wrong passphrase — cleared.');return;}
       const body=await res.json().catch(()=>({}));
       throw new Error(body.error||`Server ${res.status}`);
     }
@@ -5281,6 +5380,7 @@ async function pullRecord(){
     renderGradePanel();
     const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     _setSyncBtnState('sync-btn-pull',`✓ ${t}`,false);
+    setTimeout(()=>_setSyncBtnState('sync-btn-pull','↓ Pull',false),3000);
   }catch(err){
     console.error('[sync pull]',err);
     _setSyncBtnState('sync-btn-pull','↓ Pull',false);
