@@ -3366,6 +3366,7 @@ async function loadCorbet(){
 
     // Visible "which books returned data" indicator so user can see coverage
     // without opening the browser console.
+    // Three states: returned-with-dbacks > returned-without-dbacks > not-returned.
     const _REQUESTED_BOOKS=[
       {key:'draftkings',title:'DraftKings'},
       {key:'betmgm',title:'BetMGM'},
@@ -3373,21 +3374,24 @@ async function loadCorbet(){
       {key:'bet365',title:'Bet365'},
       {key:'fanatics',title:'Fanatics'},
     ];
-    const _booksWithData=new Set();
+    const _booksWithDbacks=new Set();
     Object.values(playerMaps).forEach(pm=>{
       Object.values(pm).forEach(mkt=>{
-        (mkt.calcBooks||new Set()).forEach(t=>_booksWithData.add(t));
+        (mkt.calcBooks||new Set()).forEach(t=>_booksWithDbacks.add(t));
       });
     });
-    const _booksReturned=_REQUESTED_BOOKS.filter(b=>_booksWithData.has(b.title));
-    const _booksMissing=_REQUESTED_BOOKS.filter(b=>!_booksWithData.has(b.title));
+    // Books the API actually returned (for any team/player on this game)
+    const _booksInResponse=new Set((propData.bookmakers||[]).map(b=>b.title));
+    const _withDbacks=_REQUESTED_BOOKS.filter(b=>_booksWithDbacks.has(b.title));
+    const _returnedNoDbacks=_REQUESTED_BOOKS.filter(b=>_booksInResponse.has(b.title)&&!_booksWithDbacks.has(b.title));
+    const _notReturned=_REQUESTED_BOOKS.filter(b=>!_booksInResponse.has(b.title));
     const _statusEl=document.getElementById('corbet-books-status');
     if(_statusEl){
-      const ok=_booksReturned.map(b=>b.title).join(', ')||'none';
-      const miss=_booksMissing.map(b=>b.title).join(', ');
-      _statusEl.innerHTML=
-        `<span style="color:#2ecc71;">● With props:</span> ${ok}`+
-        (miss?`  <span style="color:#666;">○ No props returned:</span> <span style="color:#888;">${miss}</span>`:'');
+      const parts=[];
+      if(_withDbacks.length) parts.push(`<span style="color:#2ecc71;">● With Dbacks props:</span> ${_withDbacks.map(b=>b.title).join(', ')}`);
+      if(_returnedNoDbacks.length) parts.push(`<span style="color:#f39c12;">◐ Returned (no Dbacks):</span> <span style="color:#aaa;">${_returnedNoDbacks.map(b=>b.title).join(', ')}</span>`);
+      if(_notReturned.length) parts.push(`<span style="color:#e74c3c;">○ Not in API response:</span> <span style="color:#888;">${_notReturned.map(b=>b.title).join(', ')}</span>`);
+      _statusEl.innerHTML=parts.join('<br>');
       _statusEl.classList.remove('hidden');
     }
 
