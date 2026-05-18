@@ -3277,13 +3277,10 @@ async function loadCorbet(){
       }
 
       const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
-      // Pull from 5 books — DK and Fanatics post the deepest prop coverage on most
-      // games, with MGM/CZR/365 filling in mainline + select prop markets. Diagnostic
-      // testing on a Dbacks-Rockies game returned only DK + Fanatics for batter_hits
-      // even with no bookmaker filter, so adding Fanatics directly addresses missing
-      // line coverage.
       const propBooks='draftkings,betmgm,caesars,bet365,fanatics';
-      const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american`);
+      // regions=us,us2 is required for Bet365 and Caesars to return US market prices.
+      // Without it the API silently omits those books even when they're in the bookmakers list.
+      const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american&regions=us,us2`);
       const propsText=await pr.text();
       try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
       if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
