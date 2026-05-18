@@ -304,8 +304,17 @@ const BOOK_ABBREVS={
   'DraftKings':'DK',
   'BetMGM':'MGM',
   'Caesars':'CZR',
-  'Bet365':'365',
   'Fanatics':'FAN',
+  'Hard Rock Bet':'HR',
+  'Hard Rock Bet (OH)':'HR',
+  'theScore Bet':'ESPN',
+  'BetRivers':'RIV',
+  'Bally Bet':'BALLY',
+  'betPARX':'PARX',
+  'Bovada':'BOV',
+  'Fliff':'FLIFF',
+  'BetOnline.ag':'BOL',
+  'ReBet':'REB',
 };
 function bookAbbrev(name){return BOOK_ABBREVS[name]||name;}
 
