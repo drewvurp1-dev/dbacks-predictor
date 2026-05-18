@@ -3314,7 +3314,12 @@ async function loadCorbet(){
           if(!m.books.includes(book.title))m.books.push(book.title);
           market.outcomes
             .filter(o=>{
-              const d=(o.description||o.name||'').toLowerCase().trim();
+              // Standard format: description = player name, name = "Over"/"Under"
+              // Some books (Fanatics) put the player name in `name` (e.g. "Ketel Marte - Over")
+              // with no description. Pick whichever field is not a bare direction keyword.
+              const rawDesc=(o.description||'').toLowerCase().trim();
+              const rawName=(o.name||'').toLowerCase().trim();
+              const d=(rawDesc&&rawDesc!=='over'&&rawDesc!=='under')?rawDesc:rawName;
               if(!d.includes(pLast))return false;
               // Strict full-name match avoids cross-player collisions
               // (e.g. "Ildemaro Vargas" vs "Kenneth Vargas").
@@ -3324,7 +3329,15 @@ async function loadCorbet(){
               return abbrevRe.test(d);
             })
             .forEach(o=>{
-              const dir=o.name.toLowerCase();
+              const rawName=(o.name||'').toLowerCase();
+              const rawDesc=(o.description||'').toLowerCase().trim();
+              // Extract direction: prefer a bare "over"/"under" in either field;
+              // fall back to word-boundary search for books that embed it in a
+              // compound string like "Ketel Marte - Over".
+              const dir=(rawName==='over'||rawName==='under')?rawName:
+                        (rawDesc==='over'||rawDesc==='under')?rawDesc:
+                        /\bover\b/.test(rawName)?'over':
+                        /\bunder\b/.test(rawName)?'under':rawName;
               const price=o.price;
               const line=o.point||0.5;
               if(dir==='over'){
@@ -3337,6 +3350,8 @@ async function loadCorbet(){
                   m.underBestByLine[line]={price,book:book.title};
                 (m.underByLine[line]=m.underByLine[line]||[]).push(price);
                 m.calcBooks.add(book.title);
+              }else{
+                console.warn('[odds] unrecognized direction for',book.title,market.key,'—',JSON.stringify({name:o.name,desc:o.description}));
               }
             });
         });
