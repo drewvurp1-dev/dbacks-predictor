@@ -3277,10 +3277,11 @@ async function loadCorbet(){
       }
 
       const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
-      const propBooks='draftkings,betmgm,caesars,bet365,fanatics';
-      // regions=us,us2 is required for Bet365 and Caesars to return US market prices.
-      // Without it the API silently omits those books even when they're in the bookmakers list.
-      const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?bookmakers=${propBooks}&markets=${propMarkets}&oddsFormat=american&regions=us,us2`);
+      // No bookmaker filter — let the API return every book that offers these
+      // prop markets. The outcome-matching step downstream only keeps D-backs
+      // outcomes anyway, so extra books in the response are harmless and let
+      // us see exactly which books the Odds API actually feeds props from.
+      const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?markets=${propMarkets}&oddsFormat=american&regions=us,us2`);
       const propsText=await pr.text();
       try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
       if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
@@ -3365,32 +3366,23 @@ async function loadCorbet(){
     });
 
     // Visible "which books returned data" indicator so user can see coverage
-    // without opening the browser console.
-    // Three states: returned-with-dbacks > returned-without-dbacks > not-returned.
-    const _REQUESTED_BOOKS=[
-      {key:'draftkings',title:'DraftKings'},
-      {key:'betmgm',title:'BetMGM'},
-      {key:'caesars',title:'Caesars'},
-      {key:'bet365',title:'Bet365'},
-      {key:'fanatics',title:'Fanatics'},
-    ];
+    // without opening the browser console. Shows every book the API returned
+    // for these prop markets — split by whether D-backs outcomes were matched.
     const _booksWithDbacks=new Set();
     Object.values(playerMaps).forEach(pm=>{
       Object.values(pm).forEach(mkt=>{
         (mkt.calcBooks||new Set()).forEach(t=>_booksWithDbacks.add(t));
       });
     });
-    // Books the API actually returned (for any team/player on this game)
-    const _booksInResponse=new Set((propData.bookmakers||[]).map(b=>b.title));
-    const _withDbacks=_REQUESTED_BOOKS.filter(b=>_booksWithDbacks.has(b.title));
-    const _returnedNoDbacks=_REQUESTED_BOOKS.filter(b=>_booksInResponse.has(b.title)&&!_booksWithDbacks.has(b.title));
-    const _notReturned=_REQUESTED_BOOKS.filter(b=>!_booksInResponse.has(b.title));
+    const _allBooksInResponse=(propData.bookmakers||[]).map(b=>b.title);
+    const _withDbacks=_allBooksInResponse.filter(t=>_booksWithDbacks.has(t));
+    const _withoutDbacks=_allBooksInResponse.filter(t=>!_booksWithDbacks.has(t));
     const _statusEl=document.getElementById('corbet-books-status');
     if(_statusEl){
       const parts=[];
-      if(_withDbacks.length) parts.push(`<span style="color:#2ecc71;">● With Dbacks props:</span> ${_withDbacks.map(b=>b.title).join(', ')}`);
-      if(_returnedNoDbacks.length) parts.push(`<span style="color:#f39c12;">◐ Returned (no Dbacks):</span> <span style="color:#aaa;">${_returnedNoDbacks.map(b=>b.title).join(', ')}</span>`);
-      if(_notReturned.length) parts.push(`<span style="color:#e74c3c;">○ Not in API response:</span> <span style="color:#888;">${_notReturned.map(b=>b.title).join(', ')}</span>`);
+      if(_withDbacks.length) parts.push(`<span style="color:#2ecc71;">● With Dbacks props:</span> ${_withDbacks.join(', ')}`);
+      if(_withoutDbacks.length) parts.push(`<span style="color:#f39c12;">◐ Returned, no Dbacks outcomes:</span> <span style="color:#aaa;">${_withoutDbacks.join(', ')}</span>`);
+      if(!_allBooksInResponse.length) parts.push(`<span style="color:#e74c3c;">○ API returned no books for these prop markets</span>`);
       _statusEl.innerHTML=parts.join('<br>');
       _statusEl.classList.remove('hidden');
     }
