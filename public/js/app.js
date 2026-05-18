@@ -308,14 +308,10 @@ const BOOK_ABBREVS={
   'Hard Rock Bet':'HR',
   'Hard Rock Bet (OH)':'HR',
   'theScore Bet':'ESPN',
-  'BetRivers':'RIV',
-  'Bally Bet':'BALLY',
-  'betPARX':'PARX',
-  'Bovada':'BOV',
-  'Fliff':'FLIFF',
-  'BetOnline.ag':'BOL',
-  'ReBet':'REB',
 };
+// Only these books contribute to devig calc, best-price tracking, and the
+// status banner. Books outside the set are filtered out before processing.
+const ALLOWED_BOOKS=new Set(Object.keys(BOOK_ABBREVS));
 function bookAbbrev(name){return BOOK_ABBREVS[name]||name;}
 
 // ═══════════ ODDS LOCK ════════════════════════════════════════════════════════
@@ -3301,14 +3297,15 @@ async function loadCorbet(){
     // Build per-player market maps in one pass through bookmaker data.
     // The fetch only requests DK/MGM/CZR/365/FAN, so every returned book is implicitly trusted.
     // Bad-price defense is the lopsided-line gate in the line picker (generateCorbetBets).
-    // Log which books/markets were returned so we can see what's available.
-    (propData.bookmakers||[]).forEach(book=>{
+    // Filter to the user's allowed book set before any processing.
+    const _allowedBookmakers=(propData.bookmakers||[]).filter(b=>ALLOWED_BOOKS.has(b.title));
+    _allowedBookmakers.forEach(book=>{
       const mkts=(book.markets||[]).map(m=>m.key+'('+m.outcomes.length+')');
       console.log('[props]',book.title,'markets:',mkts.join(', ')||'none');
     });
     const playerMaps={};
     activeRoster().forEach(p=>{playerMaps[p.id]={};});
-    (propData.bookmakers||[]).forEach(book=>{
+    _allowedBookmakers.forEach(book=>{
       (book.markets||[]).forEach(market=>{
         if(!PROP_NAMES[market.key])return;
         activeRoster().forEach(player=>{
@@ -3383,15 +3380,17 @@ async function loadCorbet(){
         (mkt.calcBooks||new Set()).forEach(t=>_booksWithDbacks.add(t));
       });
     });
-    const _allBooksInResponse=(propData.bookmakers||[]).map(b=>b.title);
-    const _withDbacks=_allBooksInResponse.filter(t=>_booksWithDbacks.has(t));
-    const _withoutDbacks=_allBooksInResponse.filter(t=>!_booksWithDbacks.has(t));
+    const _allowedTitles=_allowedBookmakers.map(b=>b.title);
+    const _withDbacks=_allowedTitles.filter(t=>_booksWithDbacks.has(t));
+    const _withoutDbacks=_allowedTitles.filter(t=>!_booksWithDbacks.has(t));
+    const _allowedSet=new Set(ALLOWED_BOOKS);
+    const _notReturned=[..._allowedSet].filter(t=>!_allowedTitles.includes(t));
     const _statusEl=document.getElementById('corbet-books-status');
     if(_statusEl){
       const parts=[];
       if(_withDbacks.length) parts.push(`<span style="color:#2ecc71;">● With Dbacks props:</span> ${_withDbacks.join(', ')}`);
       if(_withoutDbacks.length) parts.push(`<span style="color:#f39c12;">◐ Returned, no Dbacks outcomes:</span> <span style="color:#aaa;">${_withoutDbacks.join(', ')}</span>`);
-      if(!_allBooksInResponse.length) parts.push(`<span style="color:#e74c3c;">○ API returned no books for these prop markets</span>`);
+      if(_notReturned.length) parts.push(`<span style="color:#888;">○ Not in API response:</span> <span style="color:#666;">${_notReturned.join(', ')}</span>`);
       _statusEl.innerHTML=parts.join('<br>');
       _statusEl.classList.remove('hidden');
     }
