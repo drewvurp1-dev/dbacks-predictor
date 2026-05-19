@@ -5648,3 +5648,496 @@ _loadPitchArsenal(); // warm cache for pitch-mix matchup factor
 autoLoadNextGame(); // overwrites date/time and pulls umpire, weather, lineup
 loadTwoWeekSchedule(); // dashboard 14-day calendar strip
 loadTeamMomentum(); // dashboard team standings/streak strip
+
+// ═══════════════════════ CORBIN × CAROL AGENTS ═══════════════════════
+// Multi-agent collaboration: Corbin (stat savant) produces calibrated
+// probabilities, Carol (prop bet expert) compares to live odds and ranks
+// edges. Streamed over SSE so tool calls and text render live.
+
+const _agentsState = { running: false, corbinText: '', carolText: '', corbinReport: null, carolReport: null, cachedData: null };
+
+function renderAgentsPanel() {
+  // Populate the context block from current setup state
+  const date = document.getElementById('game-date')?.value;
+  const stadSel = document.getElementById('stadium-select');
+  const stadium = stadSel?.value;
+  const opt = stadSel?.options[stadSel?.selectedIndex];
+  const isHome = document.getElementById('loc-home')?.classList.contains('active');
+  const pitcher = S.pitcher;
+  const players = S.players ? Object.values(S.players) : [];
+  const dbacks = 'Arizona Diamondbacks';
+  const opponent = S.opponent || (isHome ? 'opponent' : 'opponent');
+  const away = isHome ? opponent : dbacks;
+  const home = isHome ? dbacks : opponent;
+
+  document.getElementById('agents-context').innerHTML = `
+    <strong>${away}</strong> @ <strong>${home}</strong>
+    ${date ? ` · ${date}` : ''}
+    ${stadium ? ` · ${stadium}` : ''}
+    ${pitcher?.name ? `<br>Opposing pitcher: <strong>${pitcher.name}</strong> (${pitcher.hand || '?'}HP)` : ''}
+    ${players.length ? `<br>Hitters to analyze: ${players.map(p => p.name).join(', ')}` : ''}
+  `;
+
+  _checkCachedAnalysis();
+}
+
+async function _checkCachedAnalysis() {
+  try {
+    const r = await fetch('/api/agents/cached');
+    const data = await r.json();
+    if (data.cached) _loadCachedAnalysis(data);
+  } catch (e) { /* no cache or network error — silent */ }
+}
+
+function _loadCachedAnalysis(data) {
+  _agentsState.cachedData = data;
+
+  const ts = data.createdAt
+    ? new Date(data.createdAt).toLocaleTimeString('en-US', { timeZone: 'America/Phoenix', hour: 'numeric', minute: '2-digit' })
+    : 'earlier today';
+  document.getElementById('agents-cache-info').innerHTML =
+    `Analysis from <strong>${ts} AZ</strong> · loaded from cache · hit Watch Replay to see step-by-step`;
+  document.getElementById('agents-cache-banner').classList.remove('hidden');
+  document.getElementById('agents-run-btn').textContent = '↺ Re-run (~$0.50)';
+
+  _applyInstantCache(data);
+}
+
+function _applyInstantCache(data) {
+  // Corbin
+  _setAgentState('corbin', 'done', 'done');
+  let pending = null;
+  for (const entry of (data.corbinLog || [])) {
+    if (entry.event === 'tool_use') {
+      pending = _addAgentToolCall('corbin', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && pending) {
+      const r = pending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) pending.classList.add('error'); }
+      pending = null;
+    }
+  }
+  document.getElementById('corbin-text').textContent = data.corbinText || '';
+  _agentsState.corbinText = data.corbinText || '';
+  _agentsState.corbinReport = data.corbinReport;
+  if (data.corbinReport) _renderCorbinReport(data.corbinReport);
+
+  // Carol
+  _setAgentState('carol', 'done', 'done');
+  pending = null;
+  for (const entry of (data.carolLog || [])) {
+    if (entry.event === 'tool_use') {
+      pending = _addAgentToolCall('carol', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && pending) {
+      const r = pending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) pending.classList.add('error'); }
+      pending = null;
+    }
+  }
+  document.getElementById('carol-text').textContent = data.carolText || '';
+  _agentsState.carolText = data.carolText || '';
+  _agentsState.carolReport = data.carolReport;
+  if (data.carolReport) _renderCarolReport(data.carolReport);
+}
+
+async function _replayCachedAnalysis() {
+  const data = _agentsState.cachedData;
+  if (!data) return;
+  const btn = document.getElementById('agents-replay-btn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Replaying…';
+
+  // Clear content but keep banner visible
+  ['corbin', 'carol'].forEach(a => {
+    document.getElementById(`${a}-tools`).innerHTML = '';
+    document.getElementById(`${a}-text`).textContent = '';
+    document.getElementById(`${a}-report`)?.classList.add('hidden');
+    document.getElementById(`${a}-bets`)?.classList.add('hidden');
+    _setAgentState(a, 'idle', '');
+  });
+  _agentsState.corbinText = '';
+  _agentsState.carolText = '';
+
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+
+  // ── Corbin phase ──
+  _setAgentState('corbin', 'working…', 'working');
+  document.getElementById('agents-status').textContent = 'Corbin is analyzing matchup…';
+  document.getElementById('agents-status').classList.remove('hidden');
+  let corbinPending = null;
+  for (const entry of (data.corbinLog || [])) {
+    if (entry.event === 'tool_use') {
+      await delay(180);
+      corbinPending = _addAgentToolCall('corbin', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && corbinPending) {
+      await delay(80);
+      const r = corbinPending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) corbinPending.classList.add('error'); }
+      corbinPending = null;
+    }
+  }
+  await delay(300);
+  document.getElementById('corbin-text').textContent = data.corbinText || '';
+  _agentsState.corbinText = data.corbinText || '';
+  _agentsState.corbinReport = data.corbinReport;
+  if (data.corbinReport) _renderCorbinReport(data.corbinReport);
+  _setAgentState('corbin', 'done', 'done');
+
+  // ── Carol phase ──
+  await delay(400);
+  _setAgentState('carol', 'working…', 'working');
+  document.getElementById('agents-status').textContent = 'Carol is hunting edges…';
+  let carolPending = null;
+  for (const entry of (data.carolLog || [])) {
+    if (entry.event === 'tool_use') {
+      await delay(180);
+      carolPending = _addAgentToolCall('carol', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && carolPending) {
+      await delay(80);
+      const r = carolPending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) carolPending.classList.add('error'); }
+      carolPending = null;
+    }
+  }
+  await delay(300);
+  document.getElementById('carol-text').textContent = data.carolText || '';
+  _agentsState.carolText = data.carolText || '';
+  _agentsState.carolReport = data.carolReport;
+  if (data.carolReport) _renderCarolReport(data.carolReport);
+  _setAgentState('carol', 'done', 'done');
+
+  document.getElementById('agents-status').textContent = 'Replay complete.';
+  setTimeout(() => document.getElementById('agents-status')?.classList.add('hidden'), 2000);
+  btn.disabled = false;
+  btn.textContent = '▶ Watch Replay';
+}
+
+function _setAgentState(agent, label, cls) {
+  const el = document.getElementById(`${agent}-state`);
+  if (!el) return;
+  el.textContent = label;
+  el.className = `agent-state ${cls || ''}`;
+}
+
+function _addAgentToolCall(agent, name, input) {
+  const el = document.getElementById(`${agent}-tools`);
+  if (!el) return null;
+  const item = document.createElement('div');
+  item.className = 'agent-tool-item';
+  const inputStr = JSON.stringify(input).replace(/[{}"]/g, '').slice(0, 80);
+  item.innerHTML = `
+    <span><span class="tool-name">${name}</span><span class="tool-input"> ${inputStr}</span></span>
+    <span class="tool-result">…</span>
+  `;
+  el.appendChild(item);
+  el.scrollTop = el.scrollHeight;
+  return item;
+}
+
+function _setAgentToolResult(agent, summary) {
+  const el = document.getElementById(`${agent}-tools`);
+  if (!el || !el.lastChild) return;
+  const resultEl = el.lastChild.querySelector('.tool-result');
+  if (resultEl) {
+    resultEl.textContent = summary;
+    if (summary.startsWith('error')) el.lastChild.classList.add('error');
+  }
+}
+
+function _appendAgentText(agent, text) {
+  const el = document.getElementById(`${agent}-text`);
+  if (!el) return;
+  el.textContent += text;
+  el.scrollTop = el.scrollHeight;
+}
+
+function _resetAgentUI() {
+  ['corbin', 'carol'].forEach(a => {
+    document.getElementById(`${a}-tools`).innerHTML = '';
+    document.getElementById(`${a}-text`).textContent = '';
+    document.getElementById(`${a}-report`)?.classList.add('hidden');
+    document.getElementById(`${a}-bets`)?.classList.add('hidden');
+    _setAgentState(a, 'idle', '');
+  });
+  document.getElementById('agents-error')?.classList.add('hidden');
+  document.getElementById('agents-cache-banner')?.classList.add('hidden');
+  _agentsState.corbinText = '';
+  _agentsState.carolText = '';
+  _agentsState.corbinReport = null;
+  _agentsState.carolReport = null;
+}
+
+function _extractJsonBlock(text) {
+  // Find ```json ... ``` block. Take the LAST one in case the agent included examples.
+  const matches = [...text.matchAll(/```json\s*([\s\S]*?)```/g)];
+  if (!matches.length) return null;
+  const raw = matches[matches.length - 1][1].trim();
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to parse agent JSON block:', e);
+    return null;
+  }
+}
+
+function _renderCorbinReport(report) {
+  const el = document.getElementById('corbin-report');
+  if (!el || !report) return;
+  const players = report.players || [];
+  let html = '<div class="agent-report-title">Probability Estimates</div>';
+  for (const p of players) {
+    const pr = p.probabilities || {};
+    const cells = [
+      ['1H', pr['1h']], ['2H', pr['2h']],
+      ['1TB', pr['1tb']], ['2TB', pr['2tb']],
+      ['1HR', pr['1hr']], ['1R', pr['1r']],
+      ['1RBI', pr['1rbi']], ['H+R+RBI', pr['1h1r1rbi']],
+    ].filter(([_, v]) => v != null);
+    html += `
+      <div class="agent-prob-card">
+        <div class="agent-prob-header">
+          <span class="agent-prob-name">${p.name}${p.lineup_spot ? ` · #${p.lineup_spot}` : ''}</span>
+          <span class="agent-prob-confidence ${p.confidence || 'medium'}">${p.confidence || 'medium'}</span>
+        </div>
+        <div class="agent-prob-grid">
+          ${cells.map(([label, v]) => `
+            <div class="agent-prob-cell">
+              <div class="pcell-label">${label}</div>
+              <div class="pcell-val">${(v * 100).toFixed(0)}%</div>
+            </div>
+          `).join('')}
+        </div>
+        ${p.rationale ? `<div class="agent-prob-rationale">${p.rationale}</div>` : ''}
+      </div>
+    `;
+  }
+  // Pitchers
+  for (const pit of (report.pitchers || [])) {
+    const pr = pit.probabilities || {};
+    const cells = Object.entries(pr).map(([k, v]) => [k.replace(/_/g, ' '), v]);
+    html += `
+      <div class="agent-prob-card">
+        <div class="agent-prob-header">
+          <span class="agent-prob-name">${pit.name} · P</span>
+        </div>
+        <div class="agent-prob-grid">
+          ${cells.map(([label, v]) => `
+            <div class="agent-prob-cell">
+              <div class="pcell-label">${label}</div>
+              <div class="pcell-val">${(v * 100).toFixed(0)}%</div>
+            </div>
+          `).join('')}
+        </div>
+        ${pit.rationale ? `<div class="agent-prob-rationale">${pit.rationale}</div>` : ''}
+      </div>
+    `;
+  }
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
+function _renderCarolReport(report) {
+  const el = document.getElementById('carol-bets');
+  if (!el || !report) return;
+  const bets = report.bets || [];
+  let html = '<div class="agent-report-title">Highest-EV Plays</div>';
+  for (const b of bets) {
+    html += `
+      <div class="agent-bet-card">
+        <div class="agent-bet-header">
+          <div>
+            <span class="agent-bet-rank">#${b.rank || '?'}</span>
+            <span class="agent-bet-player">${b.player || '?'}</span>
+            <span class="agent-bet-prop">${b.side || ''} ${b.line ?? ''} · ${(b.market || '').replace(/_/g, ' ')}</span>
+          </div>
+          <span class="agent-bet-ev">+${(b.ev_pct ?? 0).toFixed(1)}% EV</span>
+        </div>
+        <div class="agent-bet-meta">
+          <div class="agent-bet-meta-cell">
+            <div class="bm-label">Best Price</div>
+            <div class="bm-val">${b.best_price > 0 ? '+' : ''}${b.best_price ?? '?'}</div>
+          </div>
+          <div class="agent-bet-meta-cell">
+            <div class="bm-label">Book</div>
+            <div class="bm-val">${(b.best_book || '?').toUpperCase().slice(0, 5)}</div>
+          </div>
+          <div class="agent-bet-meta-cell">
+            <div class="bm-label">Edge</div>
+            <div class="bm-val">${(b.edge_pct ?? 0).toFixed(1)}%</div>
+          </div>
+          <div class="agent-bet-meta-cell">
+            <div class="bm-label">Units</div>
+            <div class="bm-val">${(b.recommended_units ?? 0).toFixed(2)}u</div>
+          </div>
+        </div>
+        ${b.reasoning ? `<div class="agent-bet-reasoning">${b.reasoning}</div>` : ''}
+        ${b.books_summary ? `<div class="agent-bet-books">${b.books_summary}</div>` : ''}
+      </div>
+    `;
+  }
+  const s = report.summary || {};
+  if (s.bets_recommended != null || s.best_play_summary) {
+    html += `
+      <div class="agent-bet-summary">
+        <strong>${s.bets_recommended ?? bets.length} bets recommended</strong>
+        ${s.total_bets_analyzed ? ` from ${s.total_bets_analyzed} analyzed` : ''}
+        ${s.portfolio_kelly_total ? ` · portfolio Kelly: ${(s.portfolio_kelly_total * 100).toFixed(1)}%` : ''}
+        ${s.best_play_summary ? `<br>${s.best_play_summary}` : ''}
+      </div>
+    `;
+  }
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
+function _buildAgentPayload() {
+  const date = document.getElementById('game-date')?.value;
+  const stadSel = document.getElementById('stadium-select');
+  const stadium = stadSel?.value;
+  const opt = stadSel?.options[stadSel?.selectedIndex];
+  const lat = opt?.dataset.lat ? parseFloat(opt.dataset.lat) : null;
+  const lon = opt?.dataset.lon ? parseFloat(opt.dataset.lon) : null;
+  const isHome = document.getElementById('loc-home')?.classList.contains('active');
+  const dbacks = 'Arizona Diamondbacks';
+  const opponent = S.opponent || 'TBD';
+  const awayTeam = isHome ? opponent : dbacks;
+  const homeTeam = isHome ? dbacks : opponent;
+
+  const players = S.players
+    ? Object.values(S.players).map(p => ({
+        name: p.name,
+        id: p.id,
+        bats: p.bats,
+        lineupSpot: p.order,
+      }))
+    : [];
+
+  const pitchers = S.pitcher?.name
+    ? [{ name: S.pitcher.name, id: S.pitcher.id, throws: S.pitcher.hand }]
+    : [];
+
+  return { date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers };
+}
+
+async function runAgents() {
+  if (_agentsState.running) return;
+
+  const date = document.getElementById('game-date')?.value;
+  if (!date) {
+    alert('Set a game date in Setup first.');
+    return;
+  }
+
+  _agentsState.running = true;
+  _resetAgentUI();
+  const btn = document.getElementById('agents-run-btn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Running…';
+  document.getElementById('agents-status').classList.remove('hidden');
+  document.getElementById('agents-status').textContent = 'Connecting to agents…';
+  _setAgentState('corbin', 'queued', '');
+
+  const payload = _buildAgentPayload();
+
+  try {
+    const r = await fetch('/api/agents/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) {
+      const errText = await r.text();
+      throw new Error(`HTTP ${r.status}: ${errText.slice(0, 200)}`);
+    }
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const chunks = buf.split('\n\n');
+      buf = chunks.pop();
+      for (const chunk of chunks) {
+        if (!chunk.trim()) continue;
+        const lines = chunk.split('\n');
+        let event = 'message', data = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) event = line.slice(7).trim();
+          else if (line.startsWith('data: ')) data += line.slice(6);
+        }
+        let parsed = null;
+        try { parsed = data ? JSON.parse(data) : {}; } catch (e) { continue; }
+        _handleAgentEvent(event, parsed);
+      }
+    }
+  } catch (e) {
+    document.getElementById('agents-error').textContent = `Error: ${e.message}`;
+    document.getElementById('agents-error').classList.remove('hidden');
+    _setAgentState('corbin', 'error', '');
+    _setAgentState('carol', 'error', '');
+  } finally {
+    _agentsState.running = false;
+    btn.disabled = false;
+    btn.textContent = '▶ Run Again';
+    document.getElementById('agents-status').classList.add('hidden');
+  }
+}
+
+function _handleAgentEvent(event, data) {
+  switch (event) {
+    case 'phase':
+      if (data.phase === 'corbin_starting') {
+        _setAgentState('corbin', 'working…', 'working');
+        document.getElementById('agents-status').textContent = 'Corbin is analyzing matchup…';
+      } else if (data.phase === 'carol_starting') {
+        // Try to parse Corbin's JSON now
+        _agentsState.corbinReport = _extractJsonBlock(_agentsState.corbinText);
+        if (_agentsState.corbinReport) _renderCorbinReport(_agentsState.corbinReport);
+        _setAgentState('carol', 'working…', 'working');
+        document.getElementById('agents-status').textContent = 'Carol is hunting edges…';
+      }
+      break;
+    case 'tool_use':
+      _addAgentToolCall(data.agent, data.name, data.input);
+      break;
+    case 'tool_result':
+      _setAgentToolResult(data.agent, data.summary);
+      break;
+    case 'text':
+      if (data.agent === 'corbin') _agentsState.corbinText += data.text;
+      else _agentsState.carolText += data.text;
+      _appendAgentText(data.agent, data.text);
+      break;
+    case 'agent_done':
+      _setAgentState(data.agent, 'done', 'done');
+      if (data.agent === 'corbin') {
+        _agentsState.corbinReport = _extractJsonBlock(_agentsState.corbinText);
+        if (_agentsState.corbinReport) _renderCorbinReport(_agentsState.corbinReport);
+      } else if (data.agent === 'carol') {
+        _agentsState.carolReport = _extractJsonBlock(_agentsState.carolText);
+        if (_agentsState.carolReport) _renderCarolReport(_agentsState.carolReport);
+      }
+      break;
+    case 'done':
+      document.getElementById('agents-status').textContent = 'Analysis complete.';
+      setTimeout(() => document.getElementById('agents-status')?.classList.add('hidden'), 2000);
+      break;
+    case 'error':
+      document.getElementById('agents-error').textContent = `Agent error: ${data.message || 'unknown'}`;
+      document.getElementById('agents-error').classList.remove('hidden');
+      break;
+  }
+}
+
+// Deep-link: if notification was tapped with ?panel=agents, open the panel automatically
+(function () {
+  const p = new URLSearchParams(location.search);
+  if (p.get('panel') === 'agents') {
+    window.addEventListener('DOMContentLoaded', () => {
+      openModal('panel-agents', 'Corbin & Carol');
+      renderAgentsPanel();
+    });
+  }
+})();

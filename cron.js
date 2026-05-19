@@ -26,6 +26,23 @@ function pool() {
         PRIMARY KEY (game_pk, type)
       )
     `).catch(err => console.error('[cron] table init failed:', err.message));
+    _pool.query(`
+      CREATE TABLE IF NOT EXISTS agent_cache (
+        game_pk       TEXT PRIMARY KEY,
+        corbin_report JSONB,
+        carol_report  JSONB,
+        corbin_text   TEXT,
+        carol_text    TEXT,
+        corbin_log    JSONB,
+        carol_log     JSONB,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `).catch(err => console.error('[cron] agent_cache table init failed:', err.message));
+    // Migrations for existing installs that have the old 4-column table
+    for (const col of ['corbin_text TEXT', 'carol_text TEXT', 'corbin_log JSONB', 'carol_log JSONB']) {
+      _pool.query(`ALTER TABLE agent_cache ADD COLUMN IF NOT EXISTS ${col}`)
+        .catch(() => {});
+    }
   }
   return _pool;
 }
@@ -68,6 +85,75 @@ function isPlayableGame(game) {
   return true;
 }
 
+// In-memory fallback for agent_cache when DATABASE_URL is not configured.
+const _agentCacheMem = new Map();
+
+async function triggerAgentAnalysis(game) {
+  if (!process.env.ANTHROPIC_API_KEY) return;
+  const gamePk = String(game.gamePk);
+
+  if (_agentCacheMem.has(gamePk)) return;
+  if (pool()) {
+    try {
+      const { rowCount } = await pool().query(
+        'SELECT 1 FROM agent_cache WHERE game_pk = $1', [gamePk]
+      );
+      if (rowCount > 0) return;
+    } catch (e) {
+      console.warn('[cron] agent_cache check failed:', e.message);
+    }
+  }
+
+  const awayTeam = game.teams?.away?.team?.teamName || 'Away';
+  const homeTeam = game.teams?.home?.team?.teamName || 'Home';
+  const stadium  = game.venue?.name || '';
+  const coords   = game.venue?.location?.defaultCoordinates || {};
+  const date     = game.gameDate ? game.gameDate.split('T')[0] : azDate();
+
+  const homePlayers = (game.lineups?.homePlayers || []).slice(0, 9);
+  const awayPlayers = (game.lineups?.awayPlayers || []).slice(0, 9);
+  const players = [...homePlayers, ...awayPlayers].map((p, i) => ({
+    name: p.fullName || [p.firstName, p.lastName].filter(Boolean).join(' '),
+    bats: p.batSide?.code,
+    lineupSpot: i < 9 ? i + 1 : i - 8,
+  })).filter(p => p.name);
+
+  const pitchers = [
+    game.teams?.home?.probablePitcher
+      ? { ...game.teams.home.probablePitcher, teamName: homeTeam } : null,
+    game.teams?.away?.probablePitcher
+      ? { ...game.teams.away.probablePitcher, teamName: awayTeam } : null,
+  ].filter(Boolean).map(p => ({
+    name: p.fullName,
+    throws: p.pitchHand?.code,
+    team: p.teamName,
+  }));
+
+  console.log('[cron] starting agent analysis for game', gamePk);
+  const { runAgentAnalysis } = require('./routes/agents');
+  const { corbinReport, carolReport, corbinText, carolText, corbinLog, carolLog } = await runAgentAnalysis({
+    date, awayTeam, homeTeam, stadium,
+    lat: coords.latitude, lon: coords.longitude,
+    players, pitchers,
+  });
+
+  _agentCacheMem.set(gamePk, { corbinReport, carolReport, corbinText, carolText, corbinLog, carolLog });
+  if (pool()) {
+    await pool().query(`
+      INSERT INTO agent_cache (game_pk, corbin_report, carol_report, corbin_text, carol_text, corbin_log, carol_log)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (game_pk) DO UPDATE SET
+        corbin_report = $2, carol_report = $3,
+        corbin_text = $4, carol_text = $5,
+        corbin_log = $6, carol_log = $7,
+        created_at = now()
+    `, [gamePk, JSON.stringify(corbinReport), JSON.stringify(carolReport),
+        corbinText || '', carolText || '',
+        JSON.stringify(corbinLog || []), JSON.stringify(carolLog || [])]);
+  }
+  console.log('[cron] agent analysis cached for game', gamePk);
+}
+
 async function checkLineup() {
   try {
     const game = await fetchTodayGame();
@@ -87,13 +173,17 @@ async function checkLineup() {
       .filter(Boolean)
       .join(' · ');
 
+    const analysisNote = process.env.ANTHROPIC_API_KEY ? ' — bet analysis starting' : '';
     const result = await sendToAll({
       title: '🐍 D-backs lineup posted',
-      body: `vs ${pitcherName} (${oppAbbr}) — ${topFive}`,
-      url: '/',
+      body: `vs ${pitcherName} (${oppAbbr}) — ${topFive}${analysisNote}`,
+      url: '/?panel=agents',
       tag: `lineup-${game.gamePk}`,
     });
     console.log(`[cron] lineup notification: sent=${result.sent} pruned=${result.removed}`);
+    triggerAgentAnalysis(game).catch(err =>
+      console.warn('[cron] agent analysis failed:', err.message)
+    );
   } catch (err) {
     console.error('[cron] checkLineup error:', err.message);
   }
@@ -121,10 +211,36 @@ async function checkFirstPitch() {
       timeZone: 'America/Phoenix', hour: 'numeric', minute: '2-digit',
     });
 
+    let topBets = '';
+    try {
+      const gamePk = String(game.gamePk);
+      let carolReport = _agentCacheMem.get(gamePk)?.carolReport;
+      if (!carolReport && pool()) {
+        const { rows } = await pool().query(
+          'SELECT carol_report FROM agent_cache WHERE game_pk = $1', [gamePk]
+        );
+        carolReport = rows[0]?.carol_report || null;
+      }
+      if (carolReport) {
+        const parsed = typeof carolReport === 'string' ? JSON.parse(carolReport) : carolReport;
+        const top = (parsed.bets || []).slice(0, 2);
+        if (top.length) {
+          topBets = ' · ' + top.map(b => {
+            const lastName = (b.player || '').split(' ').pop();
+            const mkt = (b.market || '').replace(/^(batter|pitcher)_/, '');
+            const ev = typeof b.ev_pct === 'number' ? ` +${b.ev_pct.toFixed(1)}%` : '';
+            return `${lastName} ${mkt}${ev}`;
+          }).join(', ');
+        }
+      }
+    } catch (e) {
+      console.warn('[cron] bet cache lookup failed:', e.message);
+    }
+
     const result = await sendToAll({
       title: '⚾ First pitch in 30 min',
-      body: `vs ${pitcherName} (${oppAbbr}) · ${azTime} AZ — tap to see CorBET picks`,
-      url: '/',
+      body: `vs ${pitcherName} (${oppAbbr}) · ${azTime} AZ${topBets}`,
+      url: '/?panel=agents',
       tag: `t30-${game.gamePk}`,
     });
     console.log(`[cron] T-30 notification: sent=${result.sent} pruned=${result.removed}`);
