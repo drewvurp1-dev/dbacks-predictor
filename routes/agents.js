@@ -854,6 +854,71 @@ function summarizeResult(result) {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+//  PROGRAMMATIC API  —  used by the cron for background analysis
+// ════════════════════════════════════════════════════════════════════════
+
+function buildCorbinPrompt({ date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers }) {
+  return `Analyze the matchup and produce calibrated probabilities for prop-bet outcomes.
+
+**Game:** ${awayTeam} @ ${homeTeam}
+**Date:** ${date}
+**Stadium:** ${stadium || 'unknown'}
+${lat && lon ? `**Stadium coords:** ${lat}, ${lon}` : ''}
+
+**Target hitters:**
+${(players || []).map(p => `- ${p.name}${p.bats ? ` (Bats ${p.bats})` : ''}${p.lineupSpot ? `, lineup spot ${p.lineupSpot}` : ''}`).join('\n') || '(none specified — analyze the most relevant hitters from both lineups)'}
+
+**Starting pitchers:**
+${(pitchers || []).map(p => `- ${p.name}${p.throws ? ` (Throws ${p.throws})` : ''}${p.team ? `, ${p.team}` : ''}`).join('\n') || '(look up if needed)'}
+
+Run your full workflow. End with the CORBIN_REPORT JSON block.`;
+}
+
+function buildCarolPrompt({ date, awayTeam, homeTeam, corbinText }) {
+  return `Corbin has finished his statistical analysis. Below is his full report. Find the highest-EV prop bets on the board.
+
+**Game:** ${awayTeam} @ ${homeTeam}
+**Date:** ${date}
+
+---
+${corbinText}
+---
+
+Use get_game_events to find the event_id for this game (date ${date}), then get_player_props for that event_id. Compare every relevant line to Corbin's probabilities, line-shop across books, and rank by EV. Output the CAROL_REPORT JSON block.`;
+}
+
+function extractJsonBlock(text) {
+  const matches = [...text.matchAll(/```json\s*([\s\S]*?)\s*```/g)];
+  if (!matches.length) return null;
+  try { return JSON.parse(matches[matches.length - 1][1]); } catch { return null; }
+}
+
+async function runAgentAnalysis({ date, awayTeam, homeTeam, stadium, players, pitchers, lat, lon }) {
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
+  const client = new Anthropic();
+  const noop = () => {};
+
+  const corbinText = await runAgent({
+    client, name: 'corbin', systemPrompt: CORBIN_SYSTEM, tools: CORBIN_TOOLS,
+    userMessage: buildCorbinPrompt({ date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers }),
+    send: noop,
+  });
+
+  const carolText = await runAgent({
+    client, name: 'carol', systemPrompt: CAROL_SYSTEM, tools: CAROL_TOOLS,
+    userMessage: buildCarolPrompt({ date, awayTeam, homeTeam, corbinText }),
+    send: noop,
+  });
+
+  return {
+    corbinReport: extractJsonBlock(corbinText),
+    carolReport: extractJsonBlock(carolText),
+    corbinText,
+    carolText,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════
 //  ROUTE  —  POST /api/agents/analyze  →  SSE stream
 // ════════════════════════════════════════════════════════════════════════
 
@@ -883,50 +948,24 @@ router.post('/analyze', async (req, res) => {
     // ─── Phase 1: Corbin builds the statistical model ───
     send('phase', { phase: 'corbin_starting' });
 
-    const corbinPrompt = `Analyze the matchup and produce calibrated probabilities for prop-bet outcomes.
-
-**Game:** ${awayTeam} @ ${homeTeam}
-**Date:** ${date}
-**Stadium:** ${stadium || 'unknown'}
-${lat && lon ? `**Stadium coords:** ${lat}, ${lon}` : ''}
-
-**Target hitters:**
-${(players || []).map(p => `- ${p.name}${p.bats ? ` (Bats ${p.bats})` : ''}${p.lineupSpot ? `, lineup spot ${p.lineupSpot}` : ''}`).join('\n') || '(none specified — analyze the most relevant hitters from both lineups)'}
-
-**Starting pitchers:**
-${(pitchers || []).map(p => `- ${p.name}${p.throws ? ` (Throws ${p.throws})` : ''}${p.team ? `, ${p.team}` : ''}`).join('\n') || '(look up if needed)'}
-
-Run your full workflow. End with the CORBIN_REPORT JSON block.`;
-
     const corbinText = await runAgent({
       client,
       name: 'corbin',
       systemPrompt: CORBIN_SYSTEM,
       tools: CORBIN_TOOLS,
-      userMessage: corbinPrompt,
+      userMessage: buildCorbinPrompt({ date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers }),
       send,
     });
 
     // ─── Phase 2: Carol hunts edges ───
     send('phase', { phase: 'carol_starting' });
 
-    const carolPrompt = `Corbin has finished his statistical analysis. Below is his full report. Find the highest-EV prop bets on the board.
-
-**Game:** ${awayTeam} @ ${homeTeam}
-**Date:** ${date}
-
----
-${corbinText}
----
-
-Use get_game_events to find the event_id for this game (date ${date}), then get_player_props for that event_id. Compare every relevant line to Corbin's probabilities, line-shop across books, and rank by EV. Output the CAROL_REPORT JSON block.`;
-
     await runAgent({
       client,
       name: 'carol',
       systemPrompt: CAROL_SYSTEM,
       tools: CAROL_TOOLS,
-      userMessage: carolPrompt,
+      userMessage: buildCarolPrompt({ date, awayTeam, homeTeam, corbinText }),
       send,
     });
 
@@ -940,3 +979,4 @@ Use get_game_events to find the event_id for this game (date ${date}), then get_
 });
 
 module.exports = router;
+module.exports.runAgentAnalysis = runAgentAnalysis;
