@@ -2800,7 +2800,7 @@ function modelProbability(propKey,line,score){
     p+=_ttopBonus();
     // Barrel% is the single strongest predictor of HR rate — drives HR/PA. Moved
     // out of calcPrediction so it only affects power-relevant props. Cap ±4pp.
-    if(S.statcast?.brl!=null) p+=Math.max(-4,Math.min(4,(S.statcast.brl-8)*0.5));
+    if(S.statcast?.brl!=null) p+=Math.max(-2,Math.min(2,(S.statcast.brl-8)*0.25));
     // HR rate is per-PA, so extra PAs lift HR probability proportionally — but the
     // base prob is small (~14%), so the absolute pp swing is modest. Cap ±2pp.
     p+=Math.max(-2,Math.min(2,paDelta*5));
@@ -3913,7 +3913,8 @@ function _getTopBets(n=3){
         qualified.push({...b,playerName:pg.playerName});
     });
   });
-  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  const _rankEv=b=>(b.ev??b.absDelta/100)*(b.propKey==='batter_home_runs'?0.7:1);
+  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||_rankEv(b)-_rankEv(a)||(b.mcConfidence||0)-(a.mcConfidence||0));
   // Hits O/U 1.5 and TB O/U 1.5 on the same player are highly correlated; if
   // both qualify, keep only the better-EV side so the next-best independent
   // bet can take the other slot.
