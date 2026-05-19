@@ -462,7 +462,9 @@ const CAROL_TOOLS = [
 const CORBIN_SYSTEM = `You are CORBIN — Snake Savant's resident baseball stat savant. You are a world-class quantitative baseball analyst who knows every facet of modern statistical evaluation, from rate-stat stabilization thresholds to high-leverage Statcast contact metrics.
 
 ## YOUR JOB
-Given a game (date, teams, starting pitchers, target hitters), produce calibrated probability estimates for prop-bet-relevant outcomes:
+**SCOPE: Arizona Diamondbacks hitters ONLY.** You analyze D-backs hitters against the opposing pitcher. Do NOT analyze or produce probabilities for opposing-team hitters. Also analyze both starting pitchers (for pitcher prop markets).
+
+For each **D-backs hitter**, produce calibrated probability estimates for:
 - P(1+ hit), P(2+ hits)
 - P(1+ total base), P(2+ total bases), P(3+ total bases)
 - P(1+ HR)
@@ -628,7 +630,9 @@ Write your reasoning freely in markdown BEFORE the JSON block. The JSON is what 
 const CAROL_SYSTEM = `You are CAROL — Snake Savant's prop-bet edge hunter. You take statistically calibrated probability estimates from Corbin (the stat savant) and compare them to live sportsbook lines to surface the highest-value bets on the board.
 
 ## YOUR JOB
-For each prop the market is offering, compute:
+**SCOPE: Arizona Diamondbacks hitters ONLY.** Only compute EV and recommend bets for D-backs players. Ignore props for players on the opposing team entirely — do not include them in `bets` or `skipped`.
+
+For each **D-backs player prop** the market is offering, compute:
 1. **Implied probability** from the offered American odds
 2. **No-vig fair probability** when both sides are available (proper market consensus)
 3. **Edge** = Corbin's probability − no-vig probability
@@ -704,7 +708,7 @@ At American odds with your true probability P:
 1. The user message will include CORBIN_REPORT (his structured probabilities). Read it carefully.
 2. Call \`get_game_events\` with the game date to find the right event_id.
 3. Call \`get_player_props\` for that event_id. Pull the relevant markets.
-4. For each player in Corbin's report:
+4. For each **D-backs player** in Corbin's report (skip any non-D-backs player):
    - For each prop market available, compute: implied prob (best price), no-vig fair prob (using both sides), edge vs Corbin's probability, EV at best price, Kelly fraction.
    - Identify which book offers the best price (line-shop).
 5. Filter to bets meeting ALL criteria:
@@ -901,6 +905,7 @@ router.get('/cached', async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════
 
 function buildCorbinPrompt({ date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers }) {
+  const dbacksTeam = [awayTeam, homeTeam].find(t => /arizona|d-?backs/i.test(t)) || 'Arizona Diamondbacks';
   return `Analyze the matchup and produce calibrated probabilities for prop-bet outcomes.
 
 **Game:** ${awayTeam} @ ${homeTeam}
@@ -908,26 +913,31 @@ function buildCorbinPrompt({ date, awayTeam, homeTeam, stadium, lat, lon, player
 **Stadium:** ${stadium || 'unknown'}
 ${lat && lon ? `**Stadium coords:** ${lat}, ${lon}` : ''}
 
-**Target hitters:**
-${(players || []).map(p => `- ${p.name}${p.bats ? ` (Bats ${p.bats})` : ''}${p.lineupSpot ? `, lineup spot ${p.lineupSpot}` : ''}`).join('\n') || '(none specified — analyze the most relevant hitters from both lineups)'}
+**IMPORTANT — SCOPE:** Analyze **${dbacksTeam} hitters ONLY**. Do NOT produce probabilities for the opposing team's hitters. Also analyze both starting pitchers.
 
-**Starting pitchers:**
+**Target D-backs hitters:**
+${(players || []).map(p => `- ${p.name}${p.bats ? ` (Bats ${p.bats})` : ''}${p.lineupSpot ? `, lineup spot ${p.lineupSpot}` : ''}`).join('\n') || `(none specified — look up the ${dbacksTeam} batting lineup and analyze their starters)`}
+
+**Starting pitchers (both teams):**
 ${(pitchers || []).map(p => `- ${p.name}${p.throws ? ` (Throws ${p.throws})` : ''}${p.team ? `, ${p.team}` : ''}`).join('\n') || '(look up if needed)'}
 
 Run your full workflow. End with the CORBIN_REPORT JSON block.`;
 }
 
 function buildCarolPrompt({ date, awayTeam, homeTeam, corbinText }) {
+  const dbacksTeam = [awayTeam, homeTeam].find(t => /arizona|d-?backs/i.test(t)) || 'Arizona Diamondbacks';
   return `Corbin has finished his statistical analysis. Below is his full report. Find the highest-EV prop bets on the board.
 
 **Game:** ${awayTeam} @ ${homeTeam}
 **Date:** ${date}
 
+**IMPORTANT — SCOPE:** Only recommend bets for **${dbacksTeam} hitters** (and both starting pitchers). Do NOT include any props for players on the opposing team.
+
 ---
 ${corbinText}
 ---
 
-Use get_game_events to find the event_id for this game (date ${date}), then get_player_props for that event_id. Compare every relevant line to Corbin's probabilities, line-shop across books, and rank by EV. Output the CAROL_REPORT JSON block.`;
+Use get_game_events to find the event_id for this game (date ${date}), then get_player_props for that event_id. Compare every relevant line to Corbin's probabilities, line-shop across books, and rank by EV. Only include D-backs hitters (and pitchers) in your output. Output the CAROL_REPORT JSON block.`;
 }
 
 function extractJsonBlock(text) {
