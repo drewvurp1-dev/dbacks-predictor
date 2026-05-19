@@ -6129,3 +6129,14 @@ function _handleAgentEvent(event, data) {
       break;
   }
 }
+
+// Deep-link: if notification was tapped with ?panel=agents, open the panel automatically
+(function () {
+  const p = new URLSearchParams(location.search);
+  if (p.get('panel') === 'agents') {
+    window.addEventListener('DOMContentLoaded', () => {
+      openModal('panel-agents', 'Corbin & Carol');
+      renderAgentsPanel();
+    });
+  }
+})();
