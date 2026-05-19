@@ -201,8 +201,13 @@ function openModal(panelIds, title) {
   _clearModalSlot();
   document.getElementById('modal-player-name').textContent = title || '';
   panelIds.forEach(id => _moveToModal(id));
-  document.getElementById('modal-overlay').classList.remove('hidden');
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  // Scroll the modal back to the top so users see the panel header, not the
+  // bottom of the previous scroll position (matters most for long panels).
+  overlay.scrollTo?.(0, 0);
+  overlay.querySelector('.modal-frame')?.scrollTo?.(0, 0);
 }
 
 function closeModal() {

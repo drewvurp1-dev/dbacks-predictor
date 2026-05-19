@@ -1242,10 +1242,10 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   /* Search dropdown gets more room when keyboard is up */
   .search-results { max-height: 50vh; }
 
-  /* Modal — full-width sheet */
-  .modal-overlay { padding: 8px 4px 0; align-items: flex-end; }
+  /* Modal — full-width sheet, top-anchored so long panels open from the top */
+  .modal-overlay { padding: 8px 4px; align-items: flex-start; }
   .modal-frame {
-    border-radius: 12px 12px 0 0;
+    border-radius: 12px;
     padding: 48px 12px 20px;
     padding-bottom: max(20px, env(safe-area-inset-bottom));
     max-height: 92vh;
