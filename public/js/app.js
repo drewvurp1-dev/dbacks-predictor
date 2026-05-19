@@ -5653,7 +5653,7 @@ loadTeamMomentum(); // dashboard team standings/streak strip
 // probabilities, Carol (prop bet expert) compares to live odds and ranks
 // edges. Streamed over SSE so tool calls and text render live.
 
-const _agentsState = { running: false, corbinText: '', carolText: '', corbinReport: null, carolReport: null };
+const _agentsState = { running: false, corbinText: '', carolText: '', corbinReport: null, carolReport: null, cachedData: null };
 
 function renderAgentsPanel() {
   // Populate the context block from current setup state
@@ -5676,6 +5676,138 @@ function renderAgentsPanel() {
     ${pitcher?.name ? `<br>Opposing pitcher: <strong>${pitcher.name}</strong> (${pitcher.hand || '?'}HP)` : ''}
     ${players.length ? `<br>Hitters to analyze: ${players.map(p => p.name).join(', ')}` : ''}
   `;
+
+  _checkCachedAnalysis();
+}
+
+async function _checkCachedAnalysis() {
+  try {
+    const r = await fetch('/api/agents/cached');
+    const data = await r.json();
+    if (data.cached) _loadCachedAnalysis(data);
+  } catch (e) { /* no cache or network error — silent */ }
+}
+
+function _loadCachedAnalysis(data) {
+  _agentsState.cachedData = data;
+
+  const ts = data.createdAt
+    ? new Date(data.createdAt).toLocaleTimeString('en-US', { timeZone: 'America/Phoenix', hour: 'numeric', minute: '2-digit' })
+    : 'earlier today';
+  document.getElementById('agents-cache-info').innerHTML =
+    `Analysis from <strong>${ts} AZ</strong> · loaded from cache · hit Watch Replay to see step-by-step`;
+  document.getElementById('agents-cache-banner').classList.remove('hidden');
+  document.getElementById('agents-run-btn').textContent = '↺ Re-run (~$0.50)';
+
+  _applyInstantCache(data);
+}
+
+function _applyInstantCache(data) {
+  // Corbin
+  _setAgentState('corbin', 'done', 'done');
+  let pending = null;
+  for (const entry of (data.corbinLog || [])) {
+    if (entry.event === 'tool_use') {
+      pending = _addAgentToolCall('corbin', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && pending) {
+      const r = pending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) pending.classList.add('error'); }
+      pending = null;
+    }
+  }
+  document.getElementById('corbin-text').textContent = data.corbinText || '';
+  _agentsState.corbinText = data.corbinText || '';
+  _agentsState.corbinReport = data.corbinReport;
+  if (data.corbinReport) _renderCorbinReport(data.corbinReport);
+
+  // Carol
+  _setAgentState('carol', 'done', 'done');
+  pending = null;
+  for (const entry of (data.carolLog || [])) {
+    if (entry.event === 'tool_use') {
+      pending = _addAgentToolCall('carol', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && pending) {
+      const r = pending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) pending.classList.add('error'); }
+      pending = null;
+    }
+  }
+  document.getElementById('carol-text').textContent = data.carolText || '';
+  _agentsState.carolText = data.carolText || '';
+  _agentsState.carolReport = data.carolReport;
+  if (data.carolReport) _renderCarolReport(data.carolReport);
+}
+
+async function _replayCachedAnalysis() {
+  const data = _agentsState.cachedData;
+  if (!data) return;
+  const btn = document.getElementById('agents-replay-btn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Replaying…';
+
+  // Clear content but keep banner visible
+  ['corbin', 'carol'].forEach(a => {
+    document.getElementById(`${a}-tools`).innerHTML = '';
+    document.getElementById(`${a}-text`).textContent = '';
+    document.getElementById(`${a}-report`)?.classList.add('hidden');
+    document.getElementById(`${a}-bets`)?.classList.add('hidden');
+    _setAgentState(a, 'idle', '');
+  });
+  _agentsState.corbinText = '';
+  _agentsState.carolText = '';
+
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+
+  // ── Corbin phase ──
+  _setAgentState('corbin', 'working…', 'working');
+  document.getElementById('agents-status').textContent = 'Corbin is analyzing matchup…';
+  document.getElementById('agents-status').classList.remove('hidden');
+  let corbinPending = null;
+  for (const entry of (data.corbinLog || [])) {
+    if (entry.event === 'tool_use') {
+      await delay(180);
+      corbinPending = _addAgentToolCall('corbin', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && corbinPending) {
+      await delay(80);
+      const r = corbinPending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) corbinPending.classList.add('error'); }
+      corbinPending = null;
+    }
+  }
+  await delay(300);
+  document.getElementById('corbin-text').textContent = data.corbinText || '';
+  _agentsState.corbinText = data.corbinText || '';
+  _agentsState.corbinReport = data.corbinReport;
+  if (data.corbinReport) _renderCorbinReport(data.corbinReport);
+  _setAgentState('corbin', 'done', 'done');
+
+  // ── Carol phase ──
+  await delay(400);
+  _setAgentState('carol', 'working…', 'working');
+  document.getElementById('agents-status').textContent = 'Carol is hunting edges…';
+  let carolPending = null;
+  for (const entry of (data.carolLog || [])) {
+    if (entry.event === 'tool_use') {
+      await delay(180);
+      carolPending = _addAgentToolCall('carol', entry.data.name, entry.data.input);
+    } else if (entry.event === 'tool_result' && carolPending) {
+      await delay(80);
+      const r = carolPending.querySelector('.tool-result');
+      if (r) { r.textContent = entry.data.summary; if (entry.data.summary?.startsWith('error')) carolPending.classList.add('error'); }
+      carolPending = null;
+    }
+  }
+  await delay(300);
+  document.getElementById('carol-text').textContent = data.carolText || '';
+  _agentsState.carolText = data.carolText || '';
+  _agentsState.carolReport = data.carolReport;
+  if (data.carolReport) _renderCarolReport(data.carolReport);
+  _setAgentState('carol', 'done', 'done');
+
+  document.getElementById('agents-status').textContent = 'Replay complete.';
+  setTimeout(() => document.getElementById('agents-status')?.classList.add('hidden'), 2000);
+  btn.disabled = false;
+  btn.textContent = '▶ Watch Replay';
 }
 
 function _setAgentState(agent, label, cls) {
@@ -5726,6 +5858,7 @@ function _resetAgentUI() {
     _setAgentState(a, 'idle', '');
   });
   document.getElementById('agents-error')?.classList.add('hidden');
+  document.getElementById('agents-cache-banner')?.classList.add('hidden');
   _agentsState.corbinText = '';
   _agentsState.carolText = '';
   _agentsState.corbinReport = null;

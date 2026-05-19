@@ -31,9 +31,18 @@ function pool() {
         game_pk       TEXT PRIMARY KEY,
         corbin_report JSONB,
         carol_report  JSONB,
+        corbin_text   TEXT,
+        carol_text    TEXT,
+        corbin_log    JSONB,
+        carol_log     JSONB,
         created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
       )
     `).catch(err => console.error('[cron] agent_cache table init failed:', err.message));
+    // Migrations for existing installs that have the old 4-column table
+    for (const col of ['corbin_text TEXT', 'carol_text TEXT', 'corbin_log JSONB', 'carol_log JSONB']) {
+      _pool.query(`ALTER TABLE agent_cache ADD COLUMN IF NOT EXISTS ${col}`)
+        .catch(() => {});
+    }
   }
   return _pool;
 }
@@ -122,20 +131,25 @@ async function triggerAgentAnalysis(game) {
 
   console.log('[cron] starting agent analysis for game', gamePk);
   const { runAgentAnalysis } = require('./routes/agents');
-  const { corbinReport, carolReport } = await runAgentAnalysis({
+  const { corbinReport, carolReport, corbinText, carolText, corbinLog, carolLog } = await runAgentAnalysis({
     date, awayTeam, homeTeam, stadium,
     lat: coords.latitude, lon: coords.longitude,
     players, pitchers,
   });
 
-  _agentCacheMem.set(gamePk, { corbinReport, carolReport });
+  _agentCacheMem.set(gamePk, { corbinReport, carolReport, corbinText, carolText, corbinLog, carolLog });
   if (pool()) {
     await pool().query(`
-      INSERT INTO agent_cache (game_pk, corbin_report, carol_report)
-      VALUES ($1, $2, $3)
+      INSERT INTO agent_cache (game_pk, corbin_report, carol_report, corbin_text, carol_text, corbin_log, carol_log)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (game_pk) DO UPDATE SET
-        corbin_report = $2, carol_report = $3, created_at = now()
-    `, [gamePk, JSON.stringify(corbinReport), JSON.stringify(carolReport)]);
+        corbin_report = $2, carol_report = $3,
+        corbin_text = $4, carol_text = $5,
+        corbin_log = $6, carol_log = $7,
+        created_at = now()
+    `, [gamePk, JSON.stringify(corbinReport), JSON.stringify(carolReport),
+        corbinText || '', carolText || '',
+        JSON.stringify(corbinLog || []), JSON.stringify(carolLog || [])]);
   }
   console.log('[cron] agent analysis cached for game', gamePk);
 }
@@ -163,7 +177,7 @@ async function checkLineup() {
     const result = await sendToAll({
       title: '🐍 D-backs lineup posted',
       body: `vs ${pitcherName} (${oppAbbr}) — ${topFive}${analysisNote}`,
-      url: '/',
+      url: '/?panel=agents',
       tag: `lineup-${game.gamePk}`,
     });
     console.log(`[cron] lineup notification: sent=${result.sent} pruned=${result.removed}`);
@@ -226,7 +240,7 @@ async function checkFirstPitch() {
     const result = await sendToAll({
       title: '⚾ First pitch in 30 min',
       body: `vs ${pitcherName} (${oppAbbr}) · ${azTime} AZ${topBets}`,
-      url: '/',
+      url: '/?panel=agents',
       tag: `t30-${game.gamePk}`,
     });
     console.log(`[cron] T-30 notification: sent=${result.sent} pruned=${result.removed}`);

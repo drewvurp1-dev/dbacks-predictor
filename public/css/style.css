@@ -1342,3 +1342,36 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 
 .agent-bet-summary { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-family: 'Chakra Petch', monospace; font-size: 11px; color: #aaa; line-height: 1.6; }
 .agent-bet-summary strong { color: #5fc8e0; }
+
+/* ── Agents cache banner ─────────────────────────────────────────── */
+.agents-cache-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #0c1a14;
+  border: 1px solid #1a3a28;
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  font-family: 'Chakra Petch', monospace;
+  font-size: 11px;
+  color: #4a9;
+}
+.agents-cache-info { flex: 1; line-height: 1.4; }
+.agents-cache-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.agents-replay-btn {
+  background: none;
+  border: 1px solid #2a5a3a;
+  color: #4a9;
+  font-family: 'Chakra Petch', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.agents-replay-btn:hover { border-color: #4a9; color: #6bc; }
+.agents-replay-btn:disabled { opacity: 0.4; cursor: default; }

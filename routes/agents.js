@@ -854,6 +854,49 @@ function summarizeResult(result) {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+//  DB  —  lazy pool for reading agent_cache (written by cron)
+// ════════════════════════════════════════════════════════════════════════
+
+let _pool = null;
+function db() {
+  if (!_pool && process.env.DATABASE_URL) {
+    const { Pool } = require('pg');
+    _pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  }
+  return _pool;
+}
+
+router.get('/cached', async (req, res) => {
+  if (!db()) return res.json({ cached: false });
+  try {
+    const { rows } = await db().query(`
+      SELECT game_pk, corbin_report, carol_report, corbin_text, carol_text,
+             corbin_log, carol_log, created_at
+      FROM agent_cache
+      WHERE created_at >= now() - interval '20 hours'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    if (!rows.length) return res.json({ cached: false });
+    const row = rows[0];
+    res.json({
+      cached: true,
+      gamePk: row.game_pk,
+      createdAt: row.created_at,
+      corbinReport: row.corbin_report,
+      carolReport: row.carol_report,
+      corbinText: row.corbin_text || '',
+      carolText: row.carol_text || '',
+      corbinLog: row.corbin_log || [],
+      carolLog: row.carol_log || [],
+    });
+  } catch (e) {
+    console.error('[agents] cached lookup failed:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════
 //  PROGRAMMATIC API  —  used by the cron for background analysis
 // ════════════════════════════════════════════════════════════════════════
 
@@ -896,18 +939,19 @@ function extractJsonBlock(text) {
 async function runAgentAnalysis({ date, awayTeam, homeTeam, stadium, players, pitchers, lat, lon }) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
   const client = new Anthropic();
-  const noop = () => {};
+  const corbinLog = [];
+  const carolLog = [];
 
   const corbinText = await runAgent({
     client, name: 'corbin', systemPrompt: CORBIN_SYSTEM, tools: CORBIN_TOOLS,
     userMessage: buildCorbinPrompt({ date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers }),
-    send: noop,
+    send: (event, data) => corbinLog.push({ event, data }),
   });
 
   const carolText = await runAgent({
     client, name: 'carol', systemPrompt: CAROL_SYSTEM, tools: CAROL_TOOLS,
     userMessage: buildCarolPrompt({ date, awayTeam, homeTeam, corbinText }),
-    send: noop,
+    send: (event, data) => carolLog.push({ event, data }),
   });
 
   return {
@@ -915,6 +959,8 @@ async function runAgentAnalysis({ date, awayTeam, homeTeam, stadium, players, pi
     carolReport: extractJsonBlock(carolText),
     corbinText,
     carolText,
+    corbinLog,
+    carolLog,
   };
 }
 

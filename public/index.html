@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20">
+<link rel="stylesheet" href="/css/style.css?v=21">
 </head>
 <body>
 
@@ -295,6 +295,12 @@
     <div id="agents-context" class="agents-context"></div>
     <div id="agents-status" class="agents-status hidden"></div>
     <div id="agents-error" class="status error hidden"></div>
+    <div id="agents-cache-banner" class="agents-cache-banner hidden">
+      <span id="agents-cache-info" class="agents-cache-info"></span>
+      <div class="agents-cache-actions">
+        <button class="agents-replay-btn" id="agents-replay-btn" onclick="_replayCachedAnalysis()">▶ Watch Replay</button>
+      </div>
+    </div>
 
     <div class="card agent-card" id="corbin-card">
       <div class="card-header">
@@ -534,7 +540,7 @@
   </div>
 </div>
 
-<script src="/js/app.js?v=26"></script>
+<script src="/js/app.js?v=27"></script>
 
 </body>
 </html>
