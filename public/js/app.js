@@ -3909,6 +3909,7 @@ function _getTopBets(n=3){
   S.allPlayerBets.forEach(pg=>{
     if(pg.lowData)return;
     pg.bets.forEach(b=>{
+      if(b.propKey==='batter_home_runs')return;
       if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
         qualified.push({...b,playerName:pg.playerName});
     });
