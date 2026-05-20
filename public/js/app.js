@@ -2791,12 +2791,14 @@ function modelProbability(propKey,line,score){
     {const mu=_pitchMatchupFactor();
      if(mu)p+=Math.max(-3.5,Math.min(3.5,mu.wobaDelta*180));}
     p+=_ttopBonus();
-    // Direct contact-quality signal for TB. Hard-Hit% (no longer in calcPrediction) and
-    // Barrel% are the strongest batted-ball predictors of extra-base output, and they
-    // can diverge from season SLG when a hitter's results lag their underlying contact.
-    // League avg hhRate ~40%, barrel% ~8%. Capped ±3pp each.
-    if(S.statcast?.hhRate!=null) p+=Math.max(-3,Math.min(3,(S.statcast.hhRate-40)*0.12));
-    if(S.statcast?.brl!=null)    p+=Math.max(-3,Math.min(3,(S.statcast.brl-8)*0.35));
+    // Direct contact-quality signal for TB. Hard-Hit% and Barrel% are the strongest
+    // batted-ball predictors of extra-base output, and they can diverge from season
+    // SLG when a hitter's results lag their underlying contact. With HR props removed,
+    // TB is the only prop carrying the power read — barrels (which become doubles and
+    // homers) are weighted heavily here so good-contact hitters surface on TB.
+    // League avg hhRate ~40%, barrel% ~8%. Cap ±4pp hard-hit, ±6pp barrel.
+    if(S.statcast?.hhRate!=null) p+=Math.max(-4,Math.min(4,(S.statcast.hhRate-40)*0.16));
+    if(S.statcast?.brl!=null)    p+=Math.max(-6,Math.min(6,(S.statcast.brl-8)*0.65));
     // PA volume adjustment, capped at ±4pp.
     p+=Math.max(-4,Math.min(4,paDelta*10));
   }
@@ -3032,7 +3034,7 @@ function modelProbability(propKey,line,score){
 }
 
 const PROP_NAMES={
-  'batter_hits':'Hits','batter_total_bases':'Total Bases','batter_home_runs':'Home Runs',
+  'batter_hits':'Hits','batter_total_bases':'Total Bases',
   'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
   'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
 };
@@ -3286,7 +3288,7 @@ async function loadCorbet(){
         return;
       }
 
-      const propMarkets='batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
+      const propMarkets='batter_hits,batter_total_bases,batter_rbis,batter_walks,batter_strikeouts,batter_runs_scored,batter_hits_runs_rbis';
       // No bookmaker filter — let the API return every book that offers these
       // prop markets. The outcome-matching step downstream only keeps D-backs
       // outcomes anyway, so extra books in the response are harmless and let
@@ -4030,7 +4032,7 @@ function clearRecord(){
 // ── Manual bet entry ──────────────────────────────────────────────────────────
 
 const _MANUAL_PROP_LABELS={
-  batter_hits:'Hits',batter_total_bases:'Total Bases',batter_home_runs:'Home Runs',
+  batter_hits:'Hits',batter_total_bases:'Total Bases',
   batter_rbis:'RBI',batter_walks:'Walks',batter_strikeouts:'Strikeouts',
   batter_runs_scored:'Runs',batter_hits_runs_rbis:'H+R+RBI',
 };

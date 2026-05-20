@@ -28,7 +28,7 @@ curl -s "http://localhost:3000/odds/sports/baseball_mlb/events?dateFormat=iso&co
 
 **Pull player props for that event:**
 ```bash
-curl -s "http://localhost:3000/odds/sports/baseball_mlb/events/EVENT_ID/odds?regions=us&markets=batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_runs_scored,batter_hits_runs_rbis,pitcher_strikeouts&oddsFormat=american"
+curl -s "http://localhost:3000/odds/sports/baseball_mlb/events/EVENT_ID/odds?regions=us&markets=batter_hits,batter_total_bases,batter_rbis,batter_runs_scored,batter_hits_runs_rbis,pitcher_strikeouts&oddsFormat=american"
 ```
 
 Response has a `bookmakers` array; each bookmaker has `markets`, each market has `outcomes` (one per side per line). The `outcomes[].price` is American odds, `outcomes[].point` is the line, `outcomes[].name` is "Over"/"Under", `outcomes[].description` is the player.
@@ -70,9 +70,11 @@ At American odds with your true probability P:
 ### Market knowledge
 - **batter_hits 0.5 Over:** highest-volume, lowest variance. Hit rates 60-80%. Vig 6-10%.
 - **batter_hits 1.5 Over:** sweet spot. Hit rate 30-45%. Variance allows edge.
-- **batter_total_bases 1.5 Over:** correlates with hits; power hitters have leverage.
-- **batter_home_runs 0.5 Over:** highest variance, biggest mispricings. Markets struggle to price extreme park/wind/arsenal combos.
+- **batter_total_bases 1.5 Over:** correlates with hits; power hitters have leverage. This is where you express a hitter's power upside — barrels become doubles and homers, so a high-barrel hitter should surface as a TB Over.
 - **batter_hits_runs_rbis 1.5 Over:** lineup-spot dependent. 1-2 hole hitters have structural edge.
+
+### Home run props — DO NOT BET
+**Never recommend `batter_home_runs` props.** They are out of scope by user preference. If a hitter has genuine power upside (high barrel%, hot streak, favorable park/wind), express it through **batter_total_bases** instead — do not put an HR prop in `bets` or `skipped`.
 - **pitcher_strikeouts:** tied to expected pitch count + opp K% + pitcher whiff%. Underbet by rec books on dominant lefties facing K-prone lineups.
 
 ### Red flags (DON'T bet)
