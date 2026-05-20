@@ -5704,7 +5704,7 @@ function _loadCachedAnalysis(data) {
   document.getElementById('agents-cache-info').innerHTML =
     `Analysis from <strong>${ts} AZ</strong> · loaded from cache · hit Watch Replay to see step-by-step`;
   document.getElementById('agents-cache-banner').classList.remove('hidden');
-  document.getElementById('agents-run-btn').textContent = '↺ Re-run (~$0.50)';
+  // run button removed — analysis is CLI-only
 
   _applyInstantCache(data);
 }
@@ -6024,71 +6024,8 @@ function _buildAgentPayload() {
   return { date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers };
 }
 
-async function runAgents() {
-  if (_agentsState.running) return;
-
-  const date = document.getElementById('game-date')?.value;
-  if (!date) {
-    alert('Set a game date in Setup first.');
-    return;
-  }
-
-  _agentsState.running = true;
-  _resetAgentUI();
-  const btn = document.getElementById('agents-run-btn');
-  btn.disabled = true;
-  btn.textContent = '⟳ Running…';
-  document.getElementById('agents-status').classList.remove('hidden');
-  document.getElementById('agents-status').textContent = 'Connecting to agents…';
-  _setAgentState('corbin', 'queued', '');
-
-  const payload = _buildAgentPayload();
-
-  try {
-    const r = await fetch('/api/agents/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!r.ok) {
-      const errText = await r.text();
-      throw new Error(`HTTP ${r.status}: ${errText.slice(0, 200)}`);
-    }
-
-    const reader = r.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      const chunks = buf.split('\n\n');
-      buf = chunks.pop();
-      for (const chunk of chunks) {
-        if (!chunk.trim()) continue;
-        const lines = chunk.split('\n');
-        let event = 'message', data = '';
-        for (const line of lines) {
-          if (line.startsWith('event: ')) event = line.slice(7).trim();
-          else if (line.startsWith('data: ')) data += line.slice(6);
-        }
-        let parsed = null;
-        try { parsed = data ? JSON.parse(data) : {}; } catch (e) { continue; }
-        _handleAgentEvent(event, parsed);
-      }
-    }
-  } catch (e) {
-    document.getElementById('agents-error').textContent = `Error: ${e.message}`;
-    document.getElementById('agents-error').classList.remove('hidden');
-    _setAgentState('corbin', 'error', '');
-    _setAgentState('carol', 'error', '');
-  } finally {
-    _agentsState.running = false;
-    btn.disabled = false;
-    btn.textContent = '▶ Run Again';
-    document.getElementById('agents-status').classList.add('hidden');
-  }
+function runAgents() {
+  alert('Analysis runs via @corbin and @carol in Claude Code — free with your Claude subscription. Open a Claude Code session in the dbacks-predictor folder and ask to run Corbin and Carol.');
 }
 
 function _handleAgentEvent(event, data) {

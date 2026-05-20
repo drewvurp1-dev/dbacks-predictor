@@ -964,64 +964,12 @@ async function runAgentAnalysis({ date, awayTeam, homeTeam, stadium, players, pi
   };
 }
 
-// ════════════════════════════════════════════════════════════════════════
-//  ROUTE  —  POST /api/agents/analyze  →  SSE stream
-// ════════════════════════════════════════════════════════════════════════
+// POST /api/agents/analyze has been removed — analysis runs via Claude Code
+// subagents (@corbin / @carol) using the user's Claude subscription (no API cost).
+// Results are stored via runAgentAnalysis and read back via GET /cached below.
 
-router.post('/analyze', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
-  }
-
-  const { date, awayTeam, homeTeam, stadium, players, pitchers, lat, lon } = req.body || {};
-  if (!date || !awayTeam || !homeTeam) {
-    return res.status(400).json({ error: 'date, awayTeam, homeTeam required' });
-  }
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders?.();
-
-  const send = (event, data) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  };
-
-  const client = new Anthropic();
-
-  try {
-    // ─── Phase 1: Corbin builds the statistical model ───
-    send('phase', { phase: 'corbin_starting' });
-
-    const corbinText = await runAgent({
-      client,
-      name: 'corbin',
-      systemPrompt: CORBIN_SYSTEM,
-      tools: CORBIN_TOOLS,
-      userMessage: buildCorbinPrompt({ date, awayTeam, homeTeam, stadium, lat, lon, players, pitchers }),
-      send,
-    });
-
-    // ─── Phase 2: Carol hunts edges ───
-    send('phase', { phase: 'carol_starting' });
-
-    await runAgent({
-      client,
-      name: 'carol',
-      systemPrompt: CAROL_SYSTEM,
-      tools: CAROL_TOOLS,
-      userMessage: buildCarolPrompt({ date, awayTeam, homeTeam, corbinText }),
-      send,
-    });
-
-    send('done', { ok: true });
-  } catch (e) {
-    console.error('[agents] error:', e);
-    send('error', { message: String(e?.message || e), stack: e?.stack });
-  } finally {
-    res.end();
-  }
+router.post('/analyze', (_req, res) => {
+  res.status(410).json({ error: 'In-app analysis removed. Run @corbin and @carol via Claude Code instead (free with Claude subscription).' });
 });
 
 module.exports = router;

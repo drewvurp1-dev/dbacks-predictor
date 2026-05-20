@@ -173,17 +173,13 @@ async function checkLineup() {
       .filter(Boolean)
       .join(' · ');
 
-    const analysisNote = process.env.ANTHROPIC_API_KEY ? ' — bet analysis starting' : '';
     const result = await sendToAll({
       title: '🐍 D-backs lineup posted',
-      body: `vs ${pitcherName} (${oppAbbr}) — ${topFive}${analysisNote}`,
+      body: `vs ${pitcherName} (${oppAbbr}) — ${topFive}`,
       url: '/?panel=agents',
       tag: `lineup-${game.gamePk}`,
     });
     console.log(`[cron] lineup notification: sent=${result.sent} pruned=${result.removed}`);
-    triggerAgentAnalysis(game).catch(err =>
-      console.warn('[cron] agent analysis failed:', err.message)
-    );
   } catch (err) {
     console.error('[cron] checkLineup error:', err.message);
   }
