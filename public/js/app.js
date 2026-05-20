@@ -1899,6 +1899,32 @@ function calcPrediction(){
     if(bbP>=12)add('BB%',bbP.toFixed(1)+'%',3,'Elite walk rate');
     if(kP>=28)add('K%',kP.toFixed(1)+'%',-3,'High strikeout rate');
   }
+  // Recent form — last 5 games. Hot/cold streaks carry real but regression-prone
+  // signal beyond season stats, so the weight is moderate and the adj is capped ±6.
+  if(S.recentGameLog&&S.recentGameLog.length>=3){
+    const recent=S.recentGameLog.slice(0,5);
+    const rH=recent.reduce((s,g)=>s+(parseInt(g.stat.hits)||0),0);
+    const rAB=recent.reduce((s,g)=>s+(parseInt(g.stat.atBats)||0),0);
+    const multiHit=recent.filter(g=>(parseInt(g.stat.hits)||0)>=2).length;
+    if(rAB>=8){
+      const avg5=rH/rAB;
+      let a=0;
+      if(avg5>=0.400)a=5;
+      else if(avg5>=0.350)a=3;
+      else if(avg5<=0.100)a=-5;
+      else if(avg5<=0.150)a=-3;
+      if(multiHit>=3)a+=2;
+      a=Math.max(-6,Math.min(6,a));
+      if(a!==0){
+        const note=avg5>=0.400?`Scorching — ${avg5.toFixed(3)} with ${multiHit} multi-hit games in his last ${recent.length}`
+          :avg5>=0.350?`Hot bat — ${avg5.toFixed(3)} over his last ${recent.length} games`
+          :avg5<=0.100?`Ice cold — ${avg5.toFixed(3)} over his last ${recent.length} games`
+          :avg5<=0.150?`Slumping — ${avg5.toFixed(3)} over his last ${recent.length} games`
+          :`${multiHit} multi-hit games in his last ${recent.length}`;
+        add('Recent Form',avg5.toFixed(3)+' L5',a,note);
+      }
+    }
+  }
   // Batter Statcast factors. Barrel% lives only in per-prop adjustments (TB/HR
   // in modelProbability) — it has no causal effect on walks/Ks/runs/RBI and was
   // double-counting against TB through the score → lerp3 pipeline.
@@ -4579,6 +4605,9 @@ const DEFAULT_WEIGHTS = {
 
   // Batter plate discipline (flat)
   'BB%': 3, 'K%': -3,
+
+  // Batter recent form — last-5 hot/cold streak, raw adj capped ±6
+  'Recent Form': 5,
 
   // Batter Statcast (single label used for both directions — weight scales magnitude symmetrically)
   'Whiff%': 3, 'xwOBA': 4, 'GB%': -2, 'FB%': 2,
