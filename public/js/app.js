@@ -293,6 +293,9 @@ function openPlayerStats(playerId) {
   if (!snap) return;
   _modalSavedS = _swapToPlayer(playerId);
   renderSplitsTab(); renderStatsTab();
+  // Statcast grid isn't part of renderStatsTab — render it from the swapped-in
+  // player snapshot so it doesn't show the last Setup-panel player's numbers.
+  _renderStatcastGrid(S.statcast);
   openModal(['panel-splits', 'panel-stats'], snap.name + ' · Stats');
 }
 
@@ -5217,6 +5220,37 @@ function parseCSV(text) {
   });
 }
 
+// Renders the Statcast/Advanced grid from a raw-value statcast object (S.statcast
+// shape). Shared by loadStatcast (Setup panel) and openPlayerStats (dashboard
+// "More Stats" button) so the grid always reflects the player being viewed.
+function _renderStatcastGrid(sc){
+  const el=document.getElementById('stat-statcast');
+  if(!el)return;
+  if(!sc){el.innerHTML='';return;}
+  const fmt=(v,d,suffix='')=>v!=null?v.toFixed(d)+suffix:'—';
+  const fmtPct=(v,d=1)=>fmt(v,d,'%');
+  const c=(v,good,bad,invert=false)=>{
+    if(v==null)return '';
+    return (invert?(v<=bad?'good':v>=good?'bad':''):(v>=good?'good':v<=bad?'bad':''));
+  };
+  el.innerHTML = [
+    statBox('xwOBA',   fmt(sc.xwoba,3),  'Expected weighted OBA',        c(sc.xwoba,0.360,0.300), STAT_INFO.XWOBA),
+    statBox('xBA',     fmt(sc.xba,3),    'Expected batting average',     c(sc.xba,0.280,0.220),   STAT_INFO.XBA),
+    statBox('xSLG',    fmt(sc.xslg,3),   'Expected slugging %',          c(sc.xslg,0.480,0.360),  STAT_INFO.XSLG),
+    statBox('Barrel%', fmtPct(sc.brl),   'Barrel rate',                  c(sc.brl,10,4),          STAT_INFO.BARREL_B),
+    statBox('HH Rate', fmtPct(sc.hhRate),'Hard-hit rate (95+ mph EV)',   c(sc.hhRate,45,35),      STAT_INFO.HH_B),
+    statBox('Avg EV',  sc.avgEV!=null?sc.avgEV.toFixed(1)+' mph':'—', 'Avg exit velocity',  c(sc.avgEV,92,86), STAT_INFO.EV_B),
+    statBox('Sweet Sp%',fmtPct(sc.sweetSpot),'Sweet spot contact %',     c(sc.sweetSpot,40,28),   STAT_INFO.SWEET),
+    statBox('Whiff%',  fmtPct(sc.whiff), 'Whiff rate per swing',         c(sc.whiff,30,20,true),  STAT_INFO.WHIFF_B),
+    statBox('GB%',     fmtPct(sc.gb),    'Ground ball rate',             '',                      STAT_INFO.GB_B),
+    statBox('FB%',     fmtPct(sc.fb),    'Fly ball rate',                '',                      STAT_INFO.FB_B),
+    statBox('Bat Spd', sc.batSpeed!=null?sc.batSpeed.toFixed(1)+' mph':'—', 'Avg bat speed', c(sc.batSpeed,75,68), STAT_INFO.BATSPD),
+    statBox('Sw Len',  sc.swingLength!=null?sc.swingLength.toFixed(1)+' ft':'—', '',  '',  { title:'Swing Length (feet)', body:'Tradeoff stat — not categorically good or bad. <6.8: pure contact (Arraez). 6.8 – 7.5: balanced / league avg. 7.5 – 8.0: power-leaning. >8.0: elite power, high K (Judge).' }),
+    statBox('Sqd Up%', fmtPct(sc.squaredUp),'Squared-up per contact',    c(sc.squaredUp,22,12),   STAT_INFO.SQDUP),
+    statBox('Blast%',  fmtPct(sc.blast), 'Blast per contact',            c(sc.blast,8,3),         STAT_INFO.BLAST),
+  ].join('');
+}
+
 async function loadStatcast(playerId) {
   document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Loading Statcast data...</div>';
   try {
@@ -5280,47 +5314,6 @@ async function loadStatcast(playerId) {
     const sqdUpRaw   = batRow ? (v => v != null ? v * 100 : null)(p(batRow.squared_up_per_bat_contact)) : null;
     const blastRaw   = batRow ? (v => v != null ? v * 100 : null)(p(batRow.blast_per_bat_contact)) : null;
 
-    const fmt=(v,d,suffix='')=>v!=null?v.toFixed(d)+suffix:'—';
-    const fmtPct=(v,d=1)=>fmt(v,d,'%');
-
-    const xwoba   = fmt(xwobaRaw,3);
-    const xba     = fmt(xbaRaw,3);
-    const xslg    = fmt(xslgRaw,3);
-    const brl     = fmtPct(brlRaw);
-    const hhRate  = fmtPct(hhRaw);
-    const avgEV   = avgEVRaw!=null?avgEVRaw.toFixed(1)+' mph':'—';
-    const sweetSp = fmtPct(sweetSpRaw);
-    const whiff   = fmtPct(whiffRaw);
-    const batSpd  = batSpdRaw!=null?batSpdRaw.toFixed(1)+' mph':'—';
-    const swLen   = swLenRaw!=null?swLenRaw.toFixed(1)+' ft':'—';
-    const sqdUp   = fmtPct(sqdUpRaw);
-    const blast   = fmtPct(blastRaw);
-
-    const c=(v,good,bad,invert=false)=>{
-      if(v==null)return '';
-      return (invert?(v<=bad?'good':v>=good?'bad':''):(v>=good?'good':v<=bad?'bad':''));
-    };
-
-    const gb    = fmtPct(gbRaw);
-    const fb    = fmtPct(fbRaw);
-
-    document.getElementById('stat-statcast').innerHTML = [
-      statBox('xwOBA',   xwoba,  'Expected weighted OBA',        c(xwobaRaw,0.360,0.300), STAT_INFO.XWOBA),
-      statBox('xBA',     xba,    'Expected batting average',     c(xbaRaw,0.280,0.220),   STAT_INFO.XBA),
-      statBox('xSLG',    xslg,   'Expected slugging %',          c(xslgRaw,0.480,0.360),  STAT_INFO.XSLG),
-      statBox('Barrel%', brl,    'Barrel rate',                  c(brlRaw,10,4),          STAT_INFO.BARREL_B),
-      statBox('HH Rate', hhRate, 'Hard-hit rate (95+ mph EV)',   c(hhRaw,45,35),          STAT_INFO.HH_B),
-      statBox('Avg EV',  avgEV,  'Avg exit velocity',            c(avgEVRaw,92,86),       STAT_INFO.EV_B),
-      statBox('Sweet Sp%',sweetSp,'Sweet spot contact %',        c(sweetSpRaw,40,28),     STAT_INFO.SWEET),
-      statBox('Whiff%',  whiff,  'Whiff rate per swing',         c(whiffRaw,30,20,true),  STAT_INFO.WHIFF_B),
-      statBox('GB%',     gb,     'Ground ball rate',             '',                      STAT_INFO.GB_B),
-      statBox('FB%',     fb,     'Fly ball rate',                '',                      STAT_INFO.FB_B),
-      statBox('Bat Spd', batSpd, 'Avg bat speed',                c(batSpdRaw,75,68),      STAT_INFO.BATSPD),
-      statBox('Sw Len',  swLen,  '',  '',  { title:'Swing Length (feet)', body:'Tradeoff stat — not categorically good or bad. <6.8: pure contact (Arraez). 6.8 – 7.5: balanced / league avg. 7.5 – 8.0: power-leaning. >8.0: elite power, high K (Judge).' }),
-      statBox('Sqd Up%', sqdUp,  'Squared-up per contact',       c(sqdUpRaw,22,12),       STAT_INFO.SQDUP),
-      statBox('Blast%',  blast,  'Blast per contact',            c(blastRaw,8,3),         STAT_INFO.BLAST),
-    ].join('');
-
     S.statcast = {
       xwoba: xwobaRaw, xba: xbaRaw, xslg: xslgRaw,
       brl: brlRaw, hhRate: hhRaw, avgEV: avgEVRaw,
@@ -5328,6 +5321,7 @@ async function loadStatcast(playerId) {
       whiff: whiffRaw, batSpeed: batSpdRaw,
       swingLength: swLenRaw, squaredUp: sqdUpRaw, blast: blastRaw,
     };
+    _renderStatcastGrid(S.statcast);
 
   } catch(e) {
     document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
