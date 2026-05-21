@@ -3806,6 +3806,7 @@ function renderDashboard(){
     const analysisText=_lineupAnalysisText(snap);
     const analysisHtml=analysisText?`<div class="dpb-lineup-analysis">${analysisText}</div>`:'';
     const matchupHtml=_matchupCardHtml(snap);
+    const splitsHtml=_splitsCardHtml(snap);
     const recentHtml=_recentFormHtml(snap);
 
     const avgStr=snap.seasonStat?.avg?parseFloat(snap.seasonStat.avg).toFixed(3):'—';
@@ -3830,7 +3831,7 @@ function renderDashboard(){
           <button class="dpb-details-btn" onclick="openPlayerDetails('${pid}')">Details ›</button>
         </div>
         <div class="dpb-center">${lowDataWarning}${betsHtml}</div>
-        <div class="dpb-right">${matchupHtml}${recentHtml}</div>
+        <div class="dpb-right">${matchupHtml}${splitsHtml}${recentHtml}</div>
         ${analysisHtml}
       </div>
     </div>`;
@@ -3878,6 +3879,25 @@ function _matchupCardHtml(snap){
     <div class="dpb-mini-head">${header} · ${m.ab} AB</div>
     <div class="dpb-mini-row">${slash}</div>
     <div class="dpb-mini-row">${m.h} H · ${m.hr} HR · ${m.k} K · ${m.bb} BB</div>
+  </div>`;
+}
+
+function _splitsCardHtml(snap){
+  const hand=S.pitcher?.hand||S.pitcherThrows||'R';
+  const s=hand==='L'?snap.splits?.vl:snap.splits?.vr;
+  const label=`SPLITS VS ${hand}HP`;
+  if(!s||!s.pa){
+    return`<div class="dpb-mini-card">
+      <div class="dpb-mini-head">${label}</div>
+      <div class="dpb-mini-empty">No splits data</div>
+    </div>`;
+  }
+  const fmt=v=>(parseFloat(v)||0).toFixed(3).replace(/^0/,'');
+  const slash=`${fmt(s.avg)}/${fmt(s.obp)}/${fmt(s.slg)}`;
+  return`<div class="dpb-mini-card">
+    <div class="dpb-mini-head">${label} · ${s.pa} PA</div>
+    <div class="dpb-mini-row">${slash}</div>
+    <div class="dpb-mini-row">${s.h} H · ${s.hr} HR · ${s.k} K · ${s.bb} BB</div>
   </div>`;
 }
 
