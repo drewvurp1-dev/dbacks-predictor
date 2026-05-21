@@ -27,7 +27,6 @@
     <div id="odds-lock-badge" class="odds-lock-badge hidden" title="">Odds locked · pre-game line</div>
     <div id="api-credits" class="api-credits" title="Odds API credits remaining">— credits</div>
     <button class="header-btn" onclick="location.reload();" title="Reload latest game data">↻ REFRESH</button>
-    <button class="header-btn" onclick="openModal('panel-agents','Corbin &amp; Carol');renderAgentsPanel();">🤖 AGENTS</button>
     <button class="header-btn" onclick="openModal('panel-grade','Grade &amp; Learn');renderGradePanel();">📊 GRADE</button>
     <button class="header-btn" onclick="openModal('panel-record','Bet Record');renderRecord();">📝 RECORD</button>
   </div>
@@ -283,50 +282,6 @@
     <div id="corbet-no-props" class="corbet-empty hidden">No player props available for this game yet. Props typically appear 1-2 days before game time.</div>
   </div>
 
-  <!-- ═══════════════════ AGENTS (Corbin × Carol) ═══════════════════ -->
-  <div id="panel-agents" class="panel">
-    <div class="agents-header">
-      <div class="agents-header-left">
-        <div class="agents-title">CORBIN × CAROL</div>
-        <div class="agents-sub">Stat savant + prop bet expert · run via Claude Code</div>
-      </div>
-    </div>
-
-    <div id="agents-context" class="agents-context"></div>
-    <div id="agents-status" class="agents-status hidden"></div>
-    <div id="agents-error" class="status error hidden"></div>
-    <div id="agents-cache-banner" class="agents-cache-banner hidden">
-      <span id="agents-cache-info" class="agents-cache-info"></span>
-      <div class="agents-cache-actions">
-        <button class="agents-replay-btn" id="agents-replay-btn" onclick="_replayCachedAnalysis()">▶ Watch Replay</button>
-      </div>
-    </div>
-
-    <div class="card agent-card" id="corbin-card">
-      <div class="card-header">
-        <span><span class="agent-badge corbin">CORBIN</span> Stat Savant</span>
-        <span class="agent-state" id="corbin-state">idle</span>
-      </div>
-      <div class="card-body">
-        <div class="agent-tools" id="corbin-tools"></div>
-        <div class="agent-text" id="corbin-text"></div>
-        <div class="agent-report hidden" id="corbin-report"></div>
-      </div>
-    </div>
-
-    <div class="card agent-card" id="carol-card">
-      <div class="card-header">
-        <span><span class="agent-badge carol">CAROL</span> Prop Bet Expert</span>
-        <span class="agent-state" id="carol-state">idle</span>
-      </div>
-      <div class="card-body">
-        <div class="agent-tools" id="carol-tools"></div>
-        <div class="agent-text" id="carol-text"></div>
-        <div class="agent-bets hidden" id="carol-bets"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
@@ -540,7 +495,7 @@
   </div>
 </div>
 
-<script src="/js/app.js?v=32"></script>
+<script src="/js/app.js?v=33"></script>
 
 </body>
 </html>
