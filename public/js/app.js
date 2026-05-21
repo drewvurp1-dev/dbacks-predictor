@@ -880,15 +880,17 @@ async function loadPitcherStatcast(pitcherId){
     const CODE_TO_TYPE={FF:'4-Seam FB',SI:'Sinker',FC:'Cutter',SL:'Slider',ST:'Slider',SV:'Slider',CU:'Curveball',KC:'Curveball',CH:'Changeup',FS:'Splitter',FO:'Splitter'};
     const arsenalPit=S.pitchArsenal?.pitchers?.[pid];
     const newMix=Object.fromEntries(PITCH_TYPES.map(t=>[t,0]));
-    if(arsenalPit){
-      for(const[code,data] of Object.entries(arsenalPit.pitches)){
-        const type=CODE_TO_TYPE[code];
-        if(type)newMix[type]=Math.round((newMix[type]||0)+(data.usage||0));
-      }
-    }else if(arsenalRows.length){
+    if(arsenalRows.length){
+      // Live Savant (min=3 per pitch type) — most complete; prefer over local cache
       for(const r of arsenalRows){
         const type=CODE_TO_TYPE[r.pitch_type];
         if(type)newMix[type]=Math.round((newMix[type]||0)+parseFloat(r.pitch_usage||0));
+      }
+    }else if(arsenalPit){
+      // Fallback: local cache (min=50 per pitch type) — may miss low-volume pitches
+      for(const[code,data] of Object.entries(arsenalPit.pitches)){
+        const type=CODE_TO_TYPE[code];
+        if(type)newMix[type]=Math.round((newMix[type]||0)+(data.usage||0));
       }
     }
     if(Object.values(newMix).some(v=>v>0)){
