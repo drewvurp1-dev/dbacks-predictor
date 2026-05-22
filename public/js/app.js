@@ -312,7 +312,6 @@ const BOOK_ABBREVS={
   'DraftKings':'DK',
   'BetMGM':'MGM',
   'Caesars':'CZR',
-  'Fanatics':'FAN',
   'Hard Rock Bet':'HR',
   'Hard Rock Bet (OH)':'HR',
   'theScore Bet':'ESPN',
@@ -3366,8 +3365,8 @@ async function loadCorbet(){
           market.outcomes
             .filter(o=>{
               // Standard format: description = player name, name = "Over"/"Under"
-              // Some books (Fanatics) put the player name in `name` (e.g. "Ketel Marte - Over")
-              // with no description. Pick whichever field is not a bare direction keyword.
+              // Some books put the player name in `name` with no description.
+              // Pick whichever field is not a bare direction keyword.
               const rawDesc=(o.description||'').toLowerCase().trim();
               const rawName=(o.name||'').toLowerCase().trim();
               const d=(rawDesc&&rawDesc!=='over'&&rawDesc!=='under')?rawDesc:rawName;
@@ -3725,18 +3724,24 @@ function renderDashboard(){
   // Top 5 bets — only when props are available
   if(S.allPlayerBets&&S.allPlayerBets.length){
     const topBets=_getTopBets(5);
+    const _tbIdByName={};
+    activeRoster().forEach(p=>{_tbIdByName[p.name]=p.id;});
     document.getElementById('dash-best-bets').innerHTML=topBets.length
       ?topBets.map(b=>{
         const _tb_softBadge=(b.marketConfidence==='low'||b.marketConfidence==='medium')
           ?` <span class="dpb-soft-market" data-tip="Thinly traded / soft market — fewer books have posted this line, so the over/under prices are more asymmetric than usual. The EV estimate is less precise, but soft lines are often early-market opportunities before the price moves to consensus. Treat the exact EV% with extra skepticism.">⚠</span>`
           :'';
-        return`<div class="dash-best-bet-row">
+        const _tbBest=b.direction.toLowerCase()==='over'?b.overBest:b.underBest;
+        const _tbBookBadge=_tbBest?.book?`<span class="dpb-book">${bookAbbrev(_tbBest.book)}</span>`:'';
+        const _tbPid=_tbIdByName[b.playerName];
+        const _tbAttrs=_tbPid?` class="dash-best-bet-row dash-best-bet-row--link" onclick="openPlayerCorbet('${_tbPid}')" title="View CorBET bets for ${b.playerName}"`:' class="dash-best-bet-row"';
+        return`<div${_tbAttrs}>
         <div class="dash-best-bet-left">
           <div class="dash-best-bet-player">${b.playerName}</div>
           <div class="dash-best-bet-prop">${b.direction.toUpperCase()} ${b.line} ${b.prop}${_tb_softBadge}</div>
         </div>
         <div class="dash-best-bet-right">
-          <span class="dash-badge">${fmtOdds(b.direction.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price)}</span>
+          <span class="dash-badge">${fmtOdds(_tbBest?.price)}${_tbBookBadge}</span>
           <span class="dash-badge" title="Edge stability % — not win probability">Stab ${b.mcConfidence.toFixed(0)}%</span>
           <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
         </div>
