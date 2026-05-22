@@ -394,6 +394,17 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .bet-card.yellow { background: #1a1406; border-color: #3a2a00; }
 .bet-card.red { background: #1a0606; border-color: #3a1010; }
 .bet-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+/* CorBET bet-card stats row: centered, wraps gracefully (3-up) on phones. */
+.bet-stats-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 12px; margin: 2px 0 10px; font-family: 'Chakra Petch', monospace; font-size: 11px; }
+.bet-stat-col { flex: 0 0 auto; min-width: 90px; text-align: center; }
+.bet-stat-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; line-height: 14px; height: 14px; margin-bottom: 3px; white-space: nowrap; }
+.bet-stat-label-model { color: #aaa; font-weight: 700; text-decoration: underline; }
+.bet-stat-val { line-height: 1.2; }
+.bet-stat-book { color: #555; font-size: 9px; }
+@media (max-width: 560px) {
+  .bet-stats-row { gap: 16px 10px; }
+  .bet-stat-col { min-width: 84px; }
+}
 .bet-rating { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: 'Chakra Petch', monospace; padding: 3px 8px; border-radius: 4px; }
 .bet-rating.green { background: #0d3a0d; color: #2ecc71; }
 .bet-rating.yellow { background: #2a2000; color: #f39c12; }
