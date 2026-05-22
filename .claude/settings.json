@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(jq -r '.tool_input.file_path // empty'); if [[ \"$FILE\" == *.js ]]; then node --check \"$FILE\" 2>&1 && echo \"Syntax OK: $FILE\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
