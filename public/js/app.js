@@ -3075,6 +3075,12 @@ function americanToDecimal(price){
   return price>0?price/100+1:100/Math.abs(price)+1;
 }
 
+// Convert a model win probability (percent, 0-100) to fair American odds.
+function probToAmerican(pct){
+  const p=Math.min(99.5,Math.max(0.5,pct))/100;
+  return p>=0.5?Math.round(-p/(1-p)*100):Math.round((1-p)/p*100);
+}
+
 function generateCorbetBets(score,factors,rawMarketMap){
   const results=[];
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
@@ -3559,6 +3565,13 @@ function renderCorbetBets(){
       const _softBadge=(b.marketConfidence==='low'||b.marketConfidence==='medium')
         ?` <span class="dpb-soft-market" data-tip="Thinly traded / soft market — fewer books have posted this line, so the over/under prices are more asymmetric than usual. The EV estimate is less precise, but soft lines are often early-market opportunities before the price moves to consensus. Treat the exact EV% with extra skepticism.">⚠</span>`
         :'';
+      const _colLbl='font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;';
+      const _modelDirPct=b.direction==='Over'?b.modelProb:100-b.modelProb;
+      const _modelOdds=fmtOdds(probToAmerican(_modelDirPct));
+      const _evPct=b.ev!=null?b.ev*100:null;
+      const _evColor=_evPct!=null?(_evPct>=0?'#2ecc71':'#e74c3c'):'#ccc';
+      const _evStr=_evPct!=null?(_evPct>=0?'+':'')+_evPct.toFixed(1)+'%':'—';
+      const _evInfo=` <span class="corbet-info" data-tip="Expected Value — the model's average profit per $1 staked at the best available price, if this bet were repeated many times. A positive EV% means the price beats the model's fair odds; negative means it doesn't.">ⓘ</span>`;
       return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span>${_softBadge}</span>
@@ -3590,12 +3603,16 @@ function renderCorbetBets(){
           </div>
         </div>
         <div style="display:flex;gap:14px;margin:0 0 8px;flex-wrap:wrap;font-family:\'Chakra Petch\',monospace;font-size:11px;">
-          <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Over</div>
+          <div><div style="${_colLbl}">Best Over</div>
             <div style="color:#ccc;">${fmtOdds(b.overBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.overBest?.book||'')}</span></div></div>
-          <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best Under</div>
+          <div><div style="${_colLbl}">Best Under</div>
             <div style="color:#ccc;">${fmtOdds(b.underBest?.price)} <span style="color:#555;font-size:9px;">${bookAbbrev(b.underBest?.book||'')}</span></div></div>
-          <div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Delta</div>
+          <div><div style="${_colLbl}">Model\'s ${b.direction}</div>
+            <div style="color:#E8DFC8;font-weight:900;">${_modelOdds}</div></div>
+          <div><div style="${_colLbl}">Delta</div>
             <div style="color:${deltaColor};font-weight:700;">${deltaLabel}</div></div>
+          <div><div style="${_colLbl}">EV %${_evInfo}</div>
+            <div style="color:${_evColor};font-weight:700;">${_evStr}</div></div>
         </div>
         <div class="bet-reasoning">${b.reasoning}</div>
       </div>`;
@@ -5636,6 +5653,7 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
 
 // ── Soft-market tooltip (fixed-position, avoids stacking-context issues on mobile) ──
 (function(){
+  const TIP_SEL='.dpb-soft-market[data-tip],.corbet-info[data-tip]';
   let tip=null, activeEl=null;
   function getOrCreate(){
     if(!tip){tip=document.createElement('div');tip.id='soft-market-tip';document.body.appendChild(tip);}
@@ -5665,7 +5683,7 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
   // mouseenter then click on touch devices) doesn't immediately toggle it off.
   let hoverShown=false;
   document.addEventListener('click',function(e){
-    const badge=e.target.closest('.dpb-soft-market[data-tip]');
+    const badge=e.target.closest(TIP_SEL);
     if(badge){
       e.stopPropagation();
       if(activeEl===badge&&!hoverShown){dismiss();}
@@ -5675,14 +5693,14 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
     if(activeEl)dismiss();
   },true);
   document.addEventListener('mouseover',function(e){
-    const badge=e.target.closest('.dpb-soft-market[data-tip]');
+    const badge=e.target.closest(TIP_SEL);
     if(!badge||activeEl===badge)return;
     show(badge);
     hoverShown=true;
   });
   document.addEventListener('mouseout',function(e){
     if(!hoverShown||!activeEl)return;
-    const badge=e.target.closest('.dpb-soft-market[data-tip]');
+    const badge=e.target.closest(TIP_SEL);
     if(badge!==activeEl)return;
     // Ignore mouseout into a child element of the badge
     if(badge.contains(e.relatedTarget))return;
