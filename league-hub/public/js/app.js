@@ -153,7 +153,9 @@ async function loadTodayResults() {
   for (let i = 0; i < 5 && finals.length === 0; i++) {
     const data = await api(`/api/v1/schedule?sportId=1&date=${ymd(date)}`);
     const games = (data.dates?.[0]?.games) || [];
-    finals = games.filter((g) => g.status?.abstractGameState === 'Final');
+    // codedGameState 'F' = a true Final; excludes postponed games, which
+    // the API also reports as abstractGameState "Final" but with no score.
+    finals = games.filter((g) => g.status?.codedGameState === 'F');
     if (finals.length === 0) date.setDate(date.getDate() - 1);
   }
   $('results-date').textContent = finals.length ? shortDate(ymd(date)) : '';
@@ -169,8 +171,8 @@ async function loadTodayResults() {
     const h = g.teams.home, a = g.teams.away;
     const homeWon = h.score > a.score;
     const W = homeWon ? h : a, L = homeWon ? a : h;
-    winners.push(resultCard(W, L, true, !homeWon));   // winner home? = homeWon
-    losers.push(resultCard(L, W, false, homeWon));    // loser home? = homeWon? -> opposite
+    winners.push(resultCard(W, L, true, homeWon));    // winner is home when homeWon
+    losers.push(resultCard(L, W, false, !homeWon));   // loser is home when away won
   });
   $('winners-body').innerHTML = winners.join('');
   $('losers-body').innerHTML = losers.join('');
