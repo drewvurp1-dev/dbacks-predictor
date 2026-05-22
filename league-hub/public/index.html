@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLB League Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=1">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <div class="brand-mark">MLB</div>
+    <div class="brand-text">
+      <div class="brand-title">LEAGUE HUB</div>
+      <div class="brand-sub" id="asof">Loading…</div>
+    </div>
+  </div>
+  <button class="refresh-btn" onclick="location.reload()">&#x21bb; Refresh</button>
+</header>
+
+<main class="content">
+
+  <!-- Today's Winners / Losers -->
+  <section class="row-2">
+    <div class="panel" id="panel-winners">
+      <div class="panel-head"><h2>Today's Winners</h2><span class="panel-tag" id="results-date"></span></div>
+      <div class="panel-body" id="winners-body"><div class="loading">Loading results…</div></div>
+    </div>
+    <div class="panel" id="panel-losers">
+      <div class="panel-head"><h2>Today's Losers</h2></div>
+      <div class="panel-body" id="losers-body"><div class="loading">Loading results…</div></div>
+    </div>
+  </section>
+
+  <!-- Hot / Cold Teams -->
+  <section class="row-2">
+    <div class="panel">
+      <div class="panel-head"><h2>Hottest Teams</h2><span class="panel-tag">Last 10 games</span></div>
+      <div class="panel-body" id="hot-teams"><div class="loading">Loading teams…</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Coldest Teams</h2><span class="panel-tag">Last 10 games</span></div>
+      <div class="panel-body" id="cold-teams"><div class="loading">Loading teams…</div></div>
+    </div>
+  </section>
+
+  <!-- Hot / Cold Players -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Hot &amp; Cold Players</h2>
+      <div class="toggle" id="player-toggle">
+        <button class="toggle-btn active" data-view="hitters">Hitters</button>
+        <button class="toggle-btn" data-view="pitchers">Pitchers</button>
+      </div>
+      <span class="panel-tag">Last 14 days</span>
+    </div>
+    <div class="panel-body row-2 nogap" id="players-body">
+      <div class="subcol">
+        <h3 class="sublabel hot">Heating Up</h3>
+        <div id="hot-players"><div class="loading">Loading players…</div></div>
+      </div>
+      <div class="subcol">
+        <h3 class="sublabel cold">Ice Cold</h3>
+        <div id="cold-players"><div class="loading">Loading players…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Biggest Movers -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Biggest Movers</h2>
+      <span class="panel-tag">OPS shift vs. season average</span>
+    </div>
+    <div class="panel-body row-2 nogap">
+      <div class="subcol">
+        <h3 class="sublabel hot">Risers</h3>
+        <div id="risers"><div class="loading">Loading…</div></div>
+      </div>
+      <div class="subcol">
+        <h3 class="sublabel cold">Fallers</h3>
+        <div id="fallers"><div class="loading">Loading…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- News / Transactions -->
+  <section class="panel">
+    <div class="panel-head"><h2>Around the League</h2><span class="panel-tag">Recent transactions</span></div>
+    <div class="panel-body" id="news-body"><div class="loading">Loading news…</div></div>
+  </section>
+
+</main>
+
+<footer class="site-footer">Data: MLB StatsAPI &middot; not affiliated with MLB</footer>
+
+<!-- Deep-dive modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="/js/app.js?v=1"></script>
+</body>
+</html>

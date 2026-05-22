@@ -1,0 +1,382 @@
+:root {
+  --bg:       #0d1117;
+  --panel:    #161b22;
+  --panel-2:  #1c2230;
+  --line:     #2a3140;
+  --text:     #e6edf3;
+  --muted:    #8b97a8;
+  --accent:   #d22d49;
+  --hot:      #ff6b3d;
+  --cold:     #4aa8ff;
+  --win:      #3fb950;
+  --loss:     #d2484c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.45;
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  background: linear-gradient(180deg, #11161f, #0d1117);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  background: var(--accent);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+}
+.brand-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+.brand-sub { font-size: 12px; color: var(--muted); }
+.refresh-btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.refresh-btn:hover { border-color: var(--accent); }
+
+/* ---------- Layout ---------- */
+.content {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.row-2.nogap { gap: 0; }
+@media (max-width: 760px) {
+  .row-2 { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* ---------- Panels ---------- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.panel-head h2 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.panel-tag {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.panel-body { padding: 8px; }
+
+.subcol { padding: 10px 12px; }
+.subcol:first-child { border-right: 1px solid var(--line); }
+@media (max-width: 760px) {
+  .subcol:first-child { border-right: none; border-bottom: 1px solid var(--line); }
+}
+.sublabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.sublabel.hot  { color: var(--hot); }
+.sublabel.cold { color: var(--cold); }
+
+.loading, .empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 18px 10px;
+  text-align: center;
+}
+
+/* ---------- Toggle ---------- */
+.toggle { display: flex; gap: 4px; }
+.toggle-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ---------- Row items (teams / players) ---------- */
+.row-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.row-item:hover { background: var(--panel-2); }
+.rk {
+  width: 20px;
+  text-align: center;
+  font-family: 'Oswald', sans-serif;
+  font-size: 15px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.badge {
+  width: 46px;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 0;
+  border-radius: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.ri-main { flex: 1; min-width: 0; }
+.ri-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ri-sub { font-size: 11.5px; color: var(--muted); }
+.ri-stat {
+  font-family: 'Oswald', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ri-stat.hot  { color: var(--hot); }
+.ri-stat.cold { color: var(--cold); }
+.ri-delta {
+  font-family: 'Oswald', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: right;
+}
+.ri-delta.up   { color: var(--win); }
+.ri-delta.down { color: var(--loss); }
+
+/* ---------- Result cards ---------- */
+.result-card {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px;
+  cursor: pointer;
+}
+.result-card:hover { background: var(--panel-2); }
+.result-card.win  { border-left-color: var(--win); }
+.result-card.loss { border-left-color: var(--loss); }
+.rc-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.rc-team { font-size: 14px; font-weight: 700; flex: 1; }
+.rc-score {
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+.rc-opp { font-size: 12px; color: var(--muted); margin: 3px 0 6px 56px; }
+.rc-notes { list-style: none; margin: 0 0 0 56px; }
+.rc-notes li {
+  font-size: 12px;
+  color: var(--text);
+  padding: 2px 0 2px 14px;
+  position: relative;
+}
+.rc-notes li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ---------- News ---------- */
+.news-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.news-item:last-child { border-bottom: none; }
+.news-date {
+  font-size: 11px;
+  color: var(--muted);
+  width: 52px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.news-text { font-size: 13px; flex: 1; }
+.news-type {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+/* ---------- Modal ---------- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 50;
+  padding: 28px 16px;
+  overflow-y: auto;
+}
+.modal-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 620px;
+  position: relative;
+  padding: 22px;
+}
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 26px;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+.modal h3 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+.modal-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+@media (max-width: 520px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+.stat-box {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.stat-box .sv {
+  font-family: 'Oswald', sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+}
+.stat-box .sl {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 4px 0 8px;
+}
+table.log {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+table.log th, table.log td {
+  padding: 5px 7px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+table.log th {
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}
+table.log td:first-child, table.log th:first-child { text-align: left; }
+.tag-w { color: var(--win); font-weight: 700; }
+.tag-l { color: var(--loss); font-weight: 700; }
+
+.site-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 24px;
+}
