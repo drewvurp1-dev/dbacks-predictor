@@ -1,0 +1,14 @@
+{
+  "name": "mlb-league-hub",
+  "version": "1.0.0",
+  "description": "League-wide MLB dashboard: hot/cold teams & players, today's results, biggest movers, and transactions.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
