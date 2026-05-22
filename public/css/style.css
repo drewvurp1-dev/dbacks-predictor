@@ -501,6 +501,8 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-pitcher-btn:hover { background: #009A8B; color: #000; }
 .dash-best-bet-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #1a1730; gap: 10px; }
 .dash-best-bet-row:last-child { border-bottom: none; }
+.dash-best-bet-row--link { cursor: pointer; transition: background 0.12s; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 4px; }
+.dash-best-bet-row--link:hover { background: #14112a; }
 .dash-best-bet-left { flex: 1; }
 .dash-best-bet-player { font-size: 9px; color: #009A8B; font-family: 'Chakra Petch', monospace; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
 .dash-best-bet-prop { font-size: 13px; font-weight: 800; color: #E8DFC8; font-family: Georgia, serif; }
