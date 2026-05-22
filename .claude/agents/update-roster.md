@@ -22,21 +22,29 @@ The response has a `roster` array. Each entry has:
 - `person.fullName`
 - `position.abbreviation` — POS (e.g. CF, SS, 2B, C, LF, RF, 3B, 1B, DH)
 
-### Step 2 — Filter to hitters only
+### Step 2 — Filter to position players and rank by AB
 
-Exclude any player whose `position.abbreviation` is one of: `SP`, `RP`, `P`. Keep everyone else (position players and two-way players).
+Exclude any player whose `position.abbreviation` is one of: `SP`, `RP`, `P`.
 
-### Step 3 — Fetch batting hand for each hitter
+For each remaining position player, fetch their 2026 season hitting stats:
+```
+curl -s "http://localhost:3000/mlb/api/v1/people/PLAYER_ID/stats?stats=season&season=2026&group=hitting"
+```
+or WebFetch `https://statsapi.mlb.com/api/v1/people/PLAYER_ID/stats?stats=season&season=2026&group=hitting`
 
-For each hitter, fetch:
+Read `stats[0].splits[0].stat.atBats` (will be 0 or missing for players with no appearances yet).
+
+Sort all position players by AB descending. **Keep only the top 8.**
+
+### Step 3 — Fetch batting hand for the top 8
+
+For each of the 8 players, fetch:
 ```
 curl -s "http://localhost:3000/mlb/api/v1/people/PLAYER_ID"
 ```
 or WebFetch `https://statsapi.mlb.com/api/v1/people/PLAYER_ID`
 
 Read `people[0].batSide.code` → L, R, or S (switch hitter).
-
-Batch these with `&` in bash or run them sequentially — whichever is faster. There are usually 13–15 hitters.
 
 ### Step 4 — Update the file
 
