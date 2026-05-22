@@ -312,7 +312,6 @@ const BOOK_ABBREVS={
   'DraftKings':'DK',
   'BetMGM':'MGM',
   'Caesars':'CZR',
-  'Fanatics':'FAN',
   'Hard Rock Bet':'HR',
   'Hard Rock Bet (OH)':'HR',
   'theScore Bet':'ESPN',
@@ -3366,8 +3365,8 @@ async function loadCorbet(){
           market.outcomes
             .filter(o=>{
               // Standard format: description = player name, name = "Over"/"Under"
-              // Some books (Fanatics) put the player name in `name` (e.g. "Ketel Marte - Over")
-              // with no description. Pick whichever field is not a bare direction keyword.
+              // Some books put the player name in `name` with no description.
+              // Pick whichever field is not a bare direction keyword.
               const rawDesc=(o.description||'').toLowerCase().trim();
               const rawName=(o.name||'').toLowerCase().trim();
               const d=(rawDesc&&rawDesc!=='over'&&rawDesc!=='under')?rawDesc:rawName;
