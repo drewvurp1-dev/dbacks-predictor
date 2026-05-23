@@ -1,20 +1,27 @@
-// Charter Tracker — looks up an MLB team's chartered aircraft arrival via the
-// /flights proxy (AeroDataBox). Requires AERODATABOX_API_KEY on the server and
-// tail numbers populated in data/team_charters.json. When the result indicates
-// a late arrival into PHX, auto-suggests bumping the Travel dropdown.
+// Charter Tracker — looks up MLB charter aircraft arrivals via the /flights
+// proxy (AeroDataBox). Honors the page's Home/Away toggle:
+//   Home game  → tracks the opponent arriving at PHX
+//   Away game  → tracks the D-backs (ARI) arriving at the opponent's home airport
+// Requires AERODATABOX_API_KEY on the server and tail numbers populated in
+// data/team_charters.json. When a late landing is detected, suggests bumping
+// the Travel dropdown.
 
 (function () {
-  const TEAMS = [
-    'ARI','ATL','BAL','BOS','CHC','CWS','CIN','CLE','COL','DET',
-    'HOU','KC','LAA','LAD','MIA','MIL','MIN','NYM','NYY','ATH',
-    'PHI','PIT','SD','SF','SEA','STL','TB','TEX','TOR','WSH',
-  ];
+  // Opponent → home airport map (mirrors data/team_charters.json server-side).
+  const OPP_AIRPORTS = {
+    ATL:'ATL', BAL:'BWI', BOS:'BOS', CHC:'ORD', CWS:'MDW', CIN:'CVG',
+    CLE:'CLE', COL:'DEN', DET:'DTW', HOU:'IAH', KC:'MCI', LAA:'SNA',
+    LAD:'LAX', MIA:'MIA', MIL:'MKE', MIN:'MSP', NYM:'JFK', NYY:'EWR',
+    ATH:'SMF', PHI:'PHL', PIT:'PIT', SD:'SAN', SF:'SFO', SEA:'SEA',
+    STL:'STL', TB:'TPA', TEX:'DFW', TOR:'YYZ', WSH:'IAD',
+  };
+  const OPPONENTS = Object.keys(OPP_AIRPORTS); // 29 non-ARI teams
 
   function populateTeams() {
     const sel = document.getElementById('charter-team');
     if (!sel || sel.options.length) return;
-    sel.innerHTML = '<option value="">— select away team —</option>' +
-      TEAMS.map(t => `<option value="${t}">${t}</option>`).join('');
+    sel.innerHTML = '<option value="">— select opponent —</option>' +
+      OPPONENTS.map(t => `<option value="${t}">${t}</option>`).join('');
   }
 
   function fmtLocal(iso) {
@@ -31,13 +38,20 @@
   function suggestTravel(arrival) {
     if (!arrival || !arrival.arrUtc) return null;
     const arrivalLocal = new Date(arrival.arrUtc);
-    const hour = arrivalLocal.getHours(); // browser local; close enough for D-backs (MST)
-    // Heuristic: landed after midnight or before 5 AM local = red-eye candidate.
+    const hour = arrivalLocal.getHours();
     if (hour >= 0 && hour < 5) return 'redeye';
-    // Landed same day as game (rough: less than ~10 hours before a 7pm first pitch) = same-day.
     const sameDay = arrivalLocal.toDateString() === new Date().toDateString();
     if (sameDay && hour >= 12) return 'same';
     return null;
+  }
+
+  // Read the page-level Home/Away toggle. Falls back to "home" if S is not
+  // exposed yet on first paint.
+  function isHomeGame() {
+    if (typeof window.S === 'object' && window.S && typeof window.S.isHome === 'boolean') {
+      return window.S.isHome;
+    }
+    return document.getElementById('loc-home')?.classList.contains('active') ?? true;
   }
 
   window.checkCharter = async function () {
@@ -45,17 +59,21 @@
     const out = document.getElementById('charter-result');
     const btn = document.getElementById('charter-check-btn');
     if (!sel || !out) return;
-    const abbr = sel.value;
-    if (!abbr) { out.textContent = 'Pick a team first.'; return; }
+    const opp = sel.value;
+    if (!opp) { out.textContent = 'Pick the opponent first.'; return; }
+
+    const homeGame = isHomeGame();
+    const trackedTeam  = homeGame ? opp   : 'ARI';
+    const destAirport  = homeGame ? 'PHX' : (OPP_AIRPORTS[opp] || 'PHX');
+    const context = homeGame
+      ? `Tracking ${opp} into PHX`
+      : `Tracking ARI into ${destAirport} (${opp})`;
 
     btn.disabled = true;
-    out.textContent = 'Looking up charter…';
+    out.innerHTML = `<span style="color:#999;">${context}…</span>`;
 
-    // Default destination: PHX (assume D-backs home game). Could be wired to the
-    // current game's stadium airport later.
-    const destAirport = 'PHX';
     try {
-      const r = await fetch(`/flights/team/${encodeURIComponent(abbr)}?destAirport=${destAirport}`);
+      const r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}?destAirport=${destAirport}`);
       const d = await r.json();
 
       if (r.status === 503) {
@@ -63,17 +81,18 @@
         return;
       }
       if (d.note && (!d.tails || !d.tails.length)) {
-        out.innerHTML = `<span style="color:#c84;">No tail numbers registered for ${abbr}.</span> Add them to <code>data/team_charters.json</code> (sources: r/MLBcharterflights, JetPhotos spotter logs).`;
+        out.innerHTML = `<span style="color:#c84;">No tail numbers registered for ${trackedTeam}.</span> Add them to <code>data/team_charters.json</code> (sources: r/MLBcharterflights, JetPhotos spotter logs).`;
         return;
       }
       if (!d.arrival) {
-        out.innerHTML = `Tracked tails: <code>${(d.tails || []).join(', ')}</code><br>No recent flights found in the last 48 h.`;
+        out.innerHTML = `${context}<br>Tracked tails: <code>${(d.tails || []).join(', ')}</code><br>No recent flights found in the last 48 h.`;
         return;
       }
       const a = d.arrival;
       const intoTarget = a.to === destAirport;
       const suggestion = suggestTravel(a);
       let html = `
+        <div style="color:#999;">${context}</div>
         <div>Tail <code>${a.tail || '—'}</code> &middot; ${a.from || '???'} → <strong style="color:${intoTarget?'#5d8':'#aaa'};">${a.to || '???'}</strong></div>
         <div>Arrived ${fmtLocal(a.arrUtc)}${a.status ? ` <span style="color:#666;">(${a.status})</span>`:''}</div>
       `;
