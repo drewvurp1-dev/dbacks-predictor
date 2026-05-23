@@ -95,20 +95,27 @@
         out.innerHTML = `<span style="color:#c84;">Charter tracker not configured.</span> Set <code>AERODATABOX_API_KEY</code> in <code>.env</code> and restart the server.`;
         return;
       }
-      if (d.note && (!d.tails || !d.tails.length)) {
-        out.innerHTML = `<span style="color:#c84;">No tail numbers registered for ${trackedTeam}.</span> Add them to <code>data/team_charters.json</code> (sources: r/MLBcharterflights, JetPhotos spotter logs).`;
+      const hasIds = (d.tails && d.tails.length) || (d.callsigns && d.callsigns.length);
+      if (d.note && !hasIds) {
+        out.innerHTML = `<span style="color:#c84;">No tails or callsigns registered for ${trackedTeam}.</span> Add them to <code>data/team_charters.json</code> (sources: r/MLBcharterflights, JetPhotos, AirlineGeeks).`;
         return;
       }
       if (!d.arrival) {
-        out.innerHTML = `${context}<br>Tracked tails: <code>${(d.tails || []).join(', ')}</code><br>No recent flights found in the last 48 h.`;
+        const idParts = [];
+        if (d.tails && d.tails.length)     idParts.push('tails <code>' + d.tails.join(', ') + '</code>');
+        if (d.callsigns && d.callsigns.length) idParts.push('callsigns <code>' + d.callsigns.join(', ') + '</code>');
+        out.innerHTML = `${context}<br>Tracked ${idParts.join(', ')}<br>No recent flights found in the last 48 h.`;
         return;
       }
       const a = d.arrival;
       const intoTarget = a.to === destAirport;
       const suggestion = suggestTravel(a);
+      const idLine = a.callsign && (a.source || '').startsWith('callsign:')
+        ? `Flight <code>${a.callsign}</code>${a.tail ? ` &middot; tail <code>${a.tail}</code>` : ''}`
+        : `Tail <code>${a.tail || a.callsign || '—'}</code>`;
       let html = `
         <div style="color:#999;">${context}</div>
-        <div>Tail <code>${a.tail || '—'}</code> &middot; ${a.from || '???'} → <strong style="color:${intoTarget?'#5d8':'#aaa'};">${a.to || '???'}</strong></div>
+        <div>${idLine} &middot; ${a.from || '???'} → <strong style="color:${intoTarget?'#5d8':'#aaa'};">${a.to || '???'}</strong></div>
         <div>Arrived ${fmtLocal(a.arrUtc)}${a.status ? ` <span style="color:#666;">(${a.status})</span>`:''}</div>
       `;
       if (intoTarget && suggestion) {
