@@ -1872,15 +1872,31 @@ function calcPrediction(){
       if(gap>=0.75)add('Unlucky Pitcher',`ERA ${era.toFixed(2)} vs FIP ${adv.fip.toFixed(2)}`,-2,'ERA inflated vs FIP — pitcher likely better than results show, expect regression','pitcher');
       else if(gap<=-0.75)add('Lucky Pitcher',`ERA ${era.toFixed(2)} vs FIP ${adv.fip.toFixed(2)}`,2,'ERA suppressed vs FIP — pitcher likely worse than results show, expect regression','pitcher');
     }
-    // K-BB% — much more predictive than raw K% alone
+    // K-BB% — linear gradient around league avg ~12. Binary cliffs at 8/18
+    // dropped — a 14% K-BB% had no signal but is meaningfully above average.
+    // Slope tuned so 18% → -4 (matches old elite cap) and 8% → +2.8 (close to
+    // old +3 poor cap). Labels split by sign to preserve learned-weight buckets.
     if(adv.kbbPct!=null){
-      if(adv.kbbPct>=18)add('Elite K-BB%',adv.kbbPct.toFixed(1)+'%',-4,'Dominant strikeout-to-walk skill gap','pitcher');
-      else if(adv.kbbPct<=8)add('Poor K-BB%',adv.kbbPct.toFixed(1)+'%',3,'Weak K-BB ratio — hitters get more usable contact','pitcher');
+      const a=Math.max(-4,Math.min(3,-(adv.kbbPct-12)*0.7));
+      if(Math.abs(a)>=1){
+        const label=a<0?'Elite K-BB%':'Poor K-BB%';
+        const note=adv.kbbPct>=16?'Dominant strikeout-to-walk skill gap'
+                  :adv.kbbPct<=8 ?'Weak K-BB ratio — hitters get more usable contact'
+                  :a<0?'Above-average K-BB skill':'Below-average K-BB skill';
+        add(label,adv.kbbPct.toFixed(1)+'%',a,note,'pitcher');
+      }
     }
-    // HR/9 — power suppression metric
+    // HR/9 — linear gradient around league avg ~1.2. Slope tuned so 1.5 → +3
+    // (matches old HR-prone cap) and 0.8 → -2 (cap). Labels split by sign.
     if(adv.hr9!=null){
-      if(adv.hr9>=1.5)add('HR-prone',adv.hr9.toFixed(2)+' HR/9',3,'Allows home runs at high rate','pitcher');
-      else if(adv.hr9<=0.8)add('HR Suppressor',adv.hr9.toFixed(2)+' HR/9',-2,'Limits home runs effectively','pitcher');
+      const a=Math.max(-2,Math.min(3,(adv.hr9-1.2)*10));
+      if(Math.abs(a)>=1){
+        const label=a>0?'HR-prone':'HR Suppressor';
+        const note=adv.hr9>=1.4?'Allows home runs at high rate'
+                  :adv.hr9<=0.9?'Limits home runs effectively'
+                  :a>0?'Slightly HR-prone':'Slightly HR-suppressing';
+        add(label,adv.hr9.toFixed(2)+' HR/9',a,note,'pitcher');
+      }
     }
     if(S.pitcher.daysRest!=='—'){if(S.pitcher.daysRest<4)add('Short Rest',S.pitcher.daysRest+'d',3,'Pitcher on short rest — fatigue advantage','pitcher');else if(S.pitcher.daysRest>=6)add('Extra Rest',S.pitcher.daysRest+'d',-2,'Well-rested pitcher — sharper command','pitcher');}
     const lpc=S.pitcher.lastOuting?.numberOfPitches;
@@ -1906,8 +1922,23 @@ function calcPrediction(){
     const pa=S.seasonStat.plateAppearances||1;
     const bbP=(S.seasonStat.baseOnBalls/pa)*100;
     const kP=(S.seasonStat.strikeOuts/pa)*100;
-    if(bbP>=12)add('BB%',bbP.toFixed(1)+'%',3,'Elite walk rate');
-    if(kP>=28)add('K%',kP.toFixed(1)+'%',-3,'High strikeout rate');
+    // BB% — linear gradient around league avg ~9%. Old binary cliff at ≥12%
+    // missed gradient (10% vs 11% vs 12% all matter), and ignored low-BB hitters
+    // entirely. Slope tuned so 15% → +3 cap, 3% → -3 cap.
+    {const a=Math.max(-3,Math.min(3,(bbP-9)*0.5));
+     if(Math.abs(a)>=1){
+       const note=bbP>=12?'Elite walk rate':bbP<=6?'Poor plate discipline — rarely walks'
+                 :a>0?'Above-average walk rate':'Below-average walk rate';
+       add('BB%',bbP.toFixed(1)+'%',a,note);
+     }}
+    // K% — linear gradient around league avg ~22%. Old binary at ≥28% missed
+    // contact hitters entirely. Slope tuned so 34% → -3 cap, 10% → +3 cap.
+    {const a=Math.max(-3,Math.min(3,-(kP-22)*0.25));
+     if(Math.abs(a)>=1){
+       const note=kP>=28?'High strikeout rate':kP<=16?'Elite contact — rarely strikes out'
+                 :a<0?'Above-average strikeouts':'Above-average contact';
+       add('K%',kP.toFixed(1)+'%',a,note);
+     }}
   }
   // Recent form — last 5 games. Hot/cold streaks carry real but regression-prone
   // signal beyond season stats, so the weight is moderate and the adj is capped ±6.
@@ -1940,14 +1971,32 @@ function calcPrediction(){
   // double-counting against TB through the score → lerp3 pipeline.
   if(S.statcast){
     const {whiff,xwoba,gb,fb}=S.statcast;
+    // Whiff% (hitter) — linear gradient around league avg ~24%. Old binary
+    // cliffs at 18/30 missed gradient in between. Slope tuned to hit ±3 caps
+    // near the old binary thresholds.
     if(whiff!=null){
-      if(whiff<=18)add('Whiff%',whiff.toFixed(1)+'%',3,'Low whiff rate — difficult to strike out');
-      else if(whiff>=30)add('Whiff%',whiff.toFixed(1)+'%',-3,'High whiff rate — vulnerable to swing-and-miss stuff');
+      const a=Math.max(-3,Math.min(3,-(whiff-24)*0.4));
+      if(Math.abs(a)>=1){
+        const note=whiff<=18?'Low whiff rate — difficult to strike out'
+                  :whiff>=30?'High whiff rate — vulnerable to swing-and-miss stuff'
+                  :a>0?'Below-average whiff rate':'Above-average whiff rate';
+        add('Whiff%',whiff.toFixed(1)+'%',a,note);
+      }
     }
+    // xwOBA (hitter) — linear gradient around league avg ~0.320. Asymmetric
+    // caps (-3/+4) preserved from old binary: elite hitters are rare and more
+    // impactful than below-avg ones are negative.
     if(xwoba!=null){
-      if(xwoba>=0.380)add('xwOBA',xwoba.toFixed(3),4,'Elite expected production — hitting the ball well');
-      else if(xwoba<=0.290)add('xwOBA',xwoba.toFixed(3),-3,'Below-average expected production');
+      const a=Math.max(-3,Math.min(4,(xwoba-0.320)*70));
+      if(Math.abs(a)>=1){
+        const note=xwoba>=0.380?'Elite expected production — hitting the ball well'
+                  :xwoba<=0.290?'Below-average expected production'
+                  :a>0?'Above-average expected production':'Slightly below-average production';
+        add('xwOBA',xwoba.toFixed(3),a,note);
+      }
     }
+    // GB%/FB% kept binary — these two are correlated (low GB often = high FB),
+    // so converting both to linear would double-count the same batted-ball skew.
     if(gb!=null&&gb>=55)add('GB%',gb.toFixed(1)+'%',-2,'Heavy ground ball hitter — limits extra-base upside');
     if(fb!=null&&fb>=45)add('FB%',fb.toFixed(1)+'%',2,'High fly ball rate — elevated HR and total bases ceiling');
   }
@@ -1957,14 +2006,28 @@ function calcPrediction(){
   // signal again. Both dropped in favor of xwOBA-against + Whiff%.
   if(S.pitcherStatcast){
     const{whiff:pWhiff,gbPct,xwoba:pXwoba}=S.pitcherStatcast;
+    // Pitcher Whiff% — linear gradient around league avg ~22%. Slope tuned so
+    // 28% → -4 (matches old elite) and 16% → +3 (matches old poor).
     if(pWhiff!=null){
-      if(pWhiff>=28)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',-4,'Elite whiff rate — dominant swing-and-miss stuff','pitcher');
-      else if(pWhiff<=16)add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',3,'Low pitcher whiff rate — hitter-friendly contact','pitcher');
+      const a=Math.max(-4,Math.min(3,-(pWhiff-22)*0.7));
+      if(Math.abs(a)>=1){
+        const note=pWhiff>=28?'Elite whiff rate — dominant swing-and-miss stuff'
+                  :pWhiff<=16?'Low pitcher whiff rate — hitter-friendly contact'
+                  :a<0?'Above-average whiff rate':'Below-average whiff rate';
+        add('Pitcher Whiff%',pWhiff.toFixed(1)+'%',a,note,'pitcher');
+      }
     }
     if(gbPct!=null&&gbPct>=50)add('Pitcher GB%',gbPct.toFixed(1)+'%',-2,'Ground ball pitcher — limits extra-base power','pitcher');
+    // xwOBA vs (pitcher) — linear gradient around league avg ~0.320. Slope
+    // tuned so 0.280 → -3 (elite suppression) and 0.370 → +3 (hitter-friendly).
     if(pXwoba!=null){
-      if(pXwoba<=0.280)add('xwOBA vs',pXwoba.toFixed(3),-3,'Elite expected wOBA suppression','pitcher');
-      else if(pXwoba>=0.370)add('xwOBA vs',pXwoba.toFixed(3),3,'High xwOBA allowed — hitter-friendly profile','pitcher');
+      const a=Math.max(-3,Math.min(3,(pXwoba-0.320)*75));
+      if(Math.abs(a)>=1){
+        const note=pXwoba<=0.280?'Elite expected wOBA suppression'
+                  :pXwoba>=0.370?'High xwOBA allowed — hitter-friendly profile'
+                  :a<0?'Above-average xwOBA suppression':'Below-average xwOBA suppression';
+        add('xwOBA vs',pXwoba.toFixed(3),a,note,'pitcher');
+      }
     }
   }
   const w=S.weather;const wm=document.getElementById('weather-manual')&&!document.getElementById('weather-manual').classList.contains('hidden');
@@ -1978,8 +2041,10 @@ function calcPrediction(){
   if(!roofClosed){
     if(tempF>=90)add('Heat',tempF+'°F',4,'Hot thin air — more carry on contact','conditions');
     else if(tempF<=55)add('Cold',tempF+'°F',-4,'Dense cold air suppresses ball flight','conditions');
-    if(wd==='out'&&windMph>=8)add('Wind Out',windMph+' mph',windMph*0.35,'Blowing out — HR potential elevated','conditions');
-    else if(wd==='in'&&windMph>=8)add('Wind In',windMph+' mph',-windMph*0.28,'Blowing in — suppresses power','conditions');
+    // Wind adj capped ±8 — without the cap a 30 mph wind dwarfs every other
+    // factor (30*0.35 = +10.5, larger than Altitude's +8 max).
+    if(wd==='out'&&windMph>=8)add('Wind Out',windMph+' mph',Math.min(8,windMph*0.35),'Blowing out — HR potential elevated','conditions');
+    else if(wd==='in'&&windMph>=8)add('Wind In',windMph+' mph',Math.max(-8,-windMph*0.28),'Blowing in — suppresses power','conditions');
     else if(windMph>=15)add('Crosswind',windMph+' mph',-2,'Strong crosswind affects pitch movement','conditions');
   }
   if(humidity>70)add('High Humidity',humidity+'%',-1,'Heavy air slightly suppresses carry','conditions');
@@ -2782,11 +2847,13 @@ function modelProbability(propKey,line,score){
   let p=null;
 
   // Piecewise linear interpolation between three anchor points (score 20/50/80).
-  // Clamps to anchor values outside that range.
+  // Linearly extrapolates outside [s1, s3] using the nearest segment's slope, so
+  // MC samples at extreme scores (4-19, 81-96) still produce variable probabilities
+  // instead of all collapsing to the anchor endpoint. Final prop-specific clamps
+  // at the bottom of modelProbability keep extrapolated values in a sane range.
   function lerp3(sc,s1,p1,s2,p2,s3,p3){
-    const c=Math.max(s1,Math.min(s3,sc));
-    if(c<=s2)return p1+(p2-p1)*(c-s1)/(s2-s1);
-    return p2+(p3-p2)*(c-s2)/(s3-s2);
+    if(sc<=s2)return p1+(p2-p1)*(sc-s1)/(s2-s1);
+    return p2+(p3-p2)*(sc-s2)/(s3-s2);
   }
 
   // PA delta from league-average (4.2). Used to scale lerp3-based prop probs since
@@ -2797,10 +2864,13 @@ function modelProbability(propKey,line,score){
     if(line<=0.5) p=lerp3(score,20,42,50,62,80,78);
     else          p=lerp3(score,20,18,50,32,80,52);
     // WHIP is the most direct pitcher signal for hits-allowed. League avg ~1.30.
-    // Elite pitcher (1.10) → -3pp, poor (1.50) → +3pp. Skip on bullpen games (the
-    // listed pitcher faces only a few batters, so their WHIP isn't representative).
-    if(S.pitcher?.st?.whip&&!S.pitcher.bullpenGame){
-      const whip=parseFloat(S.pitcher.st.whip);
+    // Elite pitcher (1.10) → -3pp, poor (1.50) → +3pp. Bullpen games: hitters face
+    // the listed opener for ~2 PAs then relievers cover the rest, so blend toward
+    // league-average reliever WHIP (~1.27) at 40% listed / 60% reliever pool —
+    // mirrors the K-rate blending logic used for strikeouts.
+    if(S.pitcher?.st?.whip){
+      let whip=parseFloat(S.pitcher.st.whip);
+      if(S.pitcher.bullpenGame&&isFinite(whip))whip=whip*0.4+1.27*0.6;
       if(isFinite(whip))p+=Math.max(-4,Math.min(4,(whip-1.30)*15));
     }
     // Pitch-mix matchup — wOBA delta scaled to pp. wOBA spreads of 0.020 are
@@ -2819,8 +2889,10 @@ function modelProbability(propKey,line,score){
     else               p=lerp3(score,20, 6,50,14,80,26);
     // Same WHIP signal but smaller magnitude — TB is heavily HR-skewed and HR
     // suppression is handled by the HR park factor + xFIP/HR9 score factors.
-    if(S.pitcher?.st?.whip&&!S.pitcher.bullpenGame){
-      const whip=parseFloat(S.pitcher.st.whip);
+    // Bullpen game blend mirrors batter_hits above.
+    if(S.pitcher?.st?.whip){
+      let whip=parseFloat(S.pitcher.st.whip);
+      if(S.pitcher.bullpenGame&&isFinite(whip))whip=whip*0.4+1.27*0.6;
       if(isFinite(whip))p+=Math.max(-3,Math.min(3,(whip-1.30)*12));
     }
     // wOBA captures slug too — TB is slug-sensitive, so weight slightly higher.
@@ -3044,24 +3116,42 @@ function modelProbability(propKey,line,score){
 
   p+=Math.max(-6,Math.min(6,trendAdj));
 
-  // Line-specific hard clamps applied last
+  // Line-specific hard clamps applied last. Each tier tightens as the prop
+  // becomes harder to clear — at score=20 a hitter's true probability of ≥3 TB
+  // is ~2%, so a 20pp floor (the old uniform clamp) was structurally wrong.
   if(propKey==='batter_hits'){
-    if(line<=0.5) p=Math.max(38,Math.min(82,p));
-    else          p=Math.max(20,Math.min(65,p));
+    if(line<=0.5)      p=Math.max(38,Math.min(82,p));  // ≥1 hit
+    else if(line<=1.5) p=Math.max(20,Math.min(65,p));  // ≥2 hits
+    else               p=Math.max(8, Math.min(40,p));  // ≥3 hits (rare)
   } else if(propKey==='batter_total_bases'){
-    p=Math.max(20,Math.min(78,p));
+    if(line<=0.5)      p=Math.max(25,Math.min(80,p));  // ≥1 TB
+    else if(line<=1.5) p=Math.max(15,Math.min(70,p));  // ≥2 TB
+    else if(line<=2.5) p=Math.max(7, Math.min(55,p));  // ≥3 TB
+    else               p=Math.max(3, Math.min(35,p));  // ≥4 TB
   } else if(propKey==='batter_home_runs'){
     p=Math.max(5,Math.min(45,p));
   } else if(propKey==='batter_walks'){
-    p=Math.max(15,Math.min(65,p));
+    if(line<=0.5)      p=Math.max(15,Math.min(65,p));  // ≥1 walk
+    else if(line<=1.5) p=Math.max(6, Math.min(40,p));  // ≥2 walks
+    else               p=Math.max(2, Math.min(25,p));  // ≥3 walks
   } else if(propKey==='batter_strikeouts'){
-    p=Math.max(20,Math.min(75,p));
+    if(line<=0.5)      p=Math.max(25,Math.min(78,p));  // ≥1 K
+    else if(line<=1.5) p=Math.max(15,Math.min(65,p));  // ≥2 K
+    else if(line<=2.5) p=Math.max(8, Math.min(50,p));  // ≥3 K
+    else               p=Math.max(3, Math.min(30,p));  // ≥4 K
   } else if(propKey==='batter_rbis'){
-    p=Math.max(12,Math.min(65,p));
+    if(line<=0.5)      p=Math.max(15,Math.min(65,p));  // ≥1 RBI
+    else if(line<=1.5) p=Math.max(7, Math.min(45,p));  // ≥2 RBI
+    else               p=Math.max(3, Math.min(28,p));  // ≥3 RBI
   } else if(propKey==='batter_runs_scored'){
-    p=Math.max(15,Math.min(70,p));
+    if(line<=0.5)      p=Math.max(18,Math.min(70,p));  // ≥1 run
+    else if(line<=1.5) p=Math.max(8, Math.min(50,p));  // ≥2 runs
+    else               p=Math.max(3, Math.min(30,p));  // ≥3 runs
   } else if(propKey==='batter_hits_runs_rbis'){
-    p=Math.max(15,Math.min(75,p));
+    if(line<=1.5)      p=Math.max(20,Math.min(75,p));  // ≥2 H+R+RBI
+    else if(line<=2.5) p=Math.max(12,Math.min(60,p));  // ≥3
+    else if(line<=3.5) p=Math.max(6, Math.min(45,p));  // ≥4
+    else               p=Math.max(3, Math.min(30,p));  // ≥5
   } else{
     p=Math.max(5,Math.min(95,p));
   }
@@ -4651,7 +4741,7 @@ function renderStatsTab(){
 // Labels MUST match the strings passed to add() in calcPrediction — a typo
 // silently drops the multiplier (mult = 1.0) and the factor never learns.
 const DEFAULT_WEIGHTS = {
-  // Batter splits — adj = (ops − 0.750) × weight
+  // Batter splits — adj = (ops − 0.720) × weight (0.720 ≈ league avg OPS)
   'vs LHP': 70, 'vs RHP': 70,
   'Home':   35, 'Away':   35,
 
@@ -4682,8 +4772,9 @@ const DEFAULT_WEIGHTS = {
   // Batter Statcast (single label used for both directions — weight scales magnitude symmetrically)
   'Whiff%': 3, 'xwOBA': 4, 'GB%': -2, 'FB%': 2,
 
-  // Pitcher Statcast
-  'Pitcher Whiff%': 3, 'Pitcher GB%': -2, 'xwOBA vs': 3,
+  // Pitcher Statcast — Pitcher Whiff% weight bumped from 3 → 4 so it matches
+  // the typical |adj| magnitude (elite case fires at -4, poor case at +3).
+  'Pitcher Whiff%': 4, 'Pitcher GB%': -2, 'xwOBA vs': 3,
 
   // Weather (Heat/Cold flat; wind uses mph-scaled coefficient inside add — weight=1 keeps default)
   'Heat': 4, 'Cold': -4,
