@@ -482,6 +482,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .abf-input:focus { border-color: #009A8B; }
 .abf-input option { background: #0e0c22; }
 .abf-line { width: 72px; }
+.abf-odds { width: 72px; }
 .abf-toggle { display: flex; gap: 4px; }
 .abf-toggle-btn { background: #0e0c22; border: 1px solid #2a2550; color: #666; font-family: 'Chakra Petch', monospace; font-size: 10px; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; transition: all 0.12s; }
 .abf-toggle-btn.active { background: #1a1a40; border-color: #009A8B; color: #009A8B; }

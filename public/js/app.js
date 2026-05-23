@@ -4152,6 +4152,8 @@ function addManualBet(){
   const propKey=document.getElementById('abf-prop').value;
   const lineRaw=document.getElementById('abf-line').value;
   const lineVal=parseFloat(lineRaw);
+  const oddsRaw=document.getElementById('abf-odds').value.trim();
+  const oddsVal=oddsRaw?parseInt(oddsRaw,10)||null:null;
   const dir=document.getElementById('abf-over')?.classList.contains('active')?'Over':'Under';
   const resultBtns=['win','loss','push'].filter(r=>document.getElementById(`abf-${r}`)?.classList.contains('active'));
   const result=resultBtns[0]||null;
@@ -4159,6 +4161,7 @@ function addManualBet(){
   if(!date){alert('Please enter a date.');return;}
   if(!player){alert('Please enter a player name.');return;}
   if(isNaN(lineVal)||lineVal<=0){alert('Please enter a valid line (e.g. 1.5).');return;}
+  if(oddsVal!=null&&(Math.abs(oddsVal)<100)){alert('Odds must be ≥ +100 or ≤ -100 (e.g. -110, +150).');return;}
 
   const propLabel=_MANUAL_PROP_LABELS[propKey]||propKey;
   const prop=`${dir} ${lineVal} ${propLabel}`;
@@ -4170,7 +4173,7 @@ function addManualBet(){
   S.betLog.unshift({
     id:Date.now(),date,player,playerId:_playerIdByName(player)||null,
     opponent:'',prop,propKey,direction:dir,line:lineVal,
-    odds:null,rating:null,score:null,result,
+    odds:oddsVal,rating:null,score:null,result,
     modelProb:null,mcConfidence:null,marketOverProb:null,ev:null,
   });
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
@@ -4178,6 +4181,7 @@ function addManualBet(){
   // Reset for next entry (keep date and prop selected)
   document.getElementById('abf-player').value='';
   document.getElementById('abf-line').value='';
+  document.getElementById('abf-odds').value='';
   abfSetDir('Over');
   abfSetResult(null);
   document.getElementById('abf-player').focus();
@@ -4290,7 +4294,8 @@ function renderRecord(){
     const pk=_propKeyForBet(b);
     if(b.result==='win'){
       allW++;
-      const payout=b.odds>0?b.odds/100:100/Math.abs(b.odds);
+      const o=b.odds||(-110);
+      const payout=o>0?o/100:100/Math.abs(o);
       allProfit+=payout;
       if(propStats[pk]){propStats[pk].w++;propStats[pk].profit+=payout;}
     }else if(b.result==='loss'){
