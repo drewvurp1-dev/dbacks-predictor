@@ -69,8 +69,10 @@ function pickLatestArrival(flights, homeAirport) {
         source: f?._source,
         from:  f?.departure?.airport?.iata || f?.departure?.airport?.icao,
         to:    arrIata,
-        depUtc: f?.departure?.actualTime?.utc || f?.departure?.scheduledTime?.utc,
-        arrUtc: arrTime,
+        depUtc:   f?.departure?.actualTime?.utc   || f?.departure?.scheduledTime?.utc,
+        depLocal: f?.departure?.actualTime?.local || f?.departure?.scheduledTime?.local,
+        arrUtc:   arrTime,
+        arrLocal: f?.arrival?.actualTime?.local   || f?.arrival?.scheduledTime?.local,
         intoHome: homeAirport && arrIata === homeAirport,
         status: f?.status,
       };
