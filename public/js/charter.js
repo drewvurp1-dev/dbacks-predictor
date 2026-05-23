@@ -117,9 +117,53 @@
     sel.dispatchEvent(new Event('change'));
   };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', populateTeams);
-  } else {
+  // Auto-detect the opponent + home/away from the app's loaded game state.
+  // The main app sets S.opposingTeamAbbr and S.isHome asynchronously when the
+  // game-date schedule resolves; we poll until both appear, then pre-fill the
+  // dropdown and refresh the hint. The actual /flights call still waits on the
+  // user clicking Track so credits aren't burned on every page load.
+  let _lastAuto = { opp: null, home: null };
+  function syncFromGame() {
+    const sel = document.getElementById('charter-team');
+    const out = document.getElementById('charter-result');
+    if (!sel || !out) return;
+    const opp = window.S?.opposingTeamAbbr || null;
+    const homeGame = isHomeGame();
+    if (!opp) return;
+    if (opp === _lastAuto.opp && homeGame === _lastAuto.home) return;
+    _lastAuto = { opp, home: homeGame };
+
+    // Only auto-fill if the user hasn't manually picked something different.
+    const userPicked = sel.value && sel.value !== _lastAuto.opp && sel.dataset.userSet === '1';
+    if (!userPicked && [...sel.options].some(o => o.value === opp)) {
+      sel.value = opp;
+    }
+    const destAirport = homeGame ? 'PHX' : (OPP_AIRPORTS[opp] || '?');
+    const summary = homeGame
+      ? `Auto-detected: ${opp} → PHX`
+      : `Auto-detected: ARI → ${destAirport} (${opp})`;
+    out.innerHTML = `<span style="color:#5d8;">${summary}</span><br>Click <strong>Track</strong> to look up the charter.`;
+  }
+
+  // Mark manual selections so syncFromGame doesn't clobber them on re-render.
+  function wireManualOverride() {
+    const sel = document.getElementById('charter-team');
+    if (!sel) return;
+    sel.addEventListener('change', () => { sel.dataset.userSet = '1'; });
+  }
+
+  function init() {
     populateTeams();
+    wireManualOverride();
+    // Poll every 1.5s — game data resolves within a few seconds of page load,
+    // and S.isHome can flip if the user toggles Location manually.
+    setInterval(syncFromGame, 1500);
+    syncFromGame();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 })();
