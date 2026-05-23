@@ -372,6 +372,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .outcome-badge.poor   { background: #2a0808; color: #e74c3c; }
 .model-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-align: center; }
 .model-badge.accurate { background: #0d3a0d; color: #2ecc71; }
+.model-badge.close    { background: #2a2000; color: #f39c12; }
 .model-badge.off      { background: #2a0808; color: #e74c3c; }
 .model-badge.neutral  { background: #1a1730; color: #888; }
 
