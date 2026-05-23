@@ -24,6 +24,17 @@
       OPPONENTS.map(t => `<option value="${t}">${t}</option>`).join('');
   }
 
+  function setCharterCredits(remaining, limit) {
+    const el = document.getElementById('adsbx-credits');
+    if (!el) return;
+    if (remaining == null) { el.classList.add('hidden'); return; }
+    const n = parseInt(remaining);
+    if (Number.isNaN(n)) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.textContent = limit != null ? `${n}/${limit} charter` : `${n} charter`;
+    el.className = 'api-credits' + (n < 10 ? ' critical' : n < 50 ? ' low' : '');
+  }
+
   function fmtLocal(iso) {
     if (!iso) return '—';
     try {
@@ -75,6 +86,10 @@
     try {
       const r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}?destAirport=${destAirport}`);
       const d = await r.json();
+      const headerRem = r.headers.get('X-Aerodatabox-Remaining');
+      const headerLim = r.headers.get('X-Aerodatabox-Limit');
+      if (headerRem != null) setCharterCredits(headerRem, headerLim);
+      else if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
 
       if (r.status === 503) {
         out.innerHTML = `<span style="color:#c84;">Charter tracker not configured.</span> Set <code>AERODATABOX_API_KEY</code> in <code>.env</code> and restart the server.`;
@@ -152,6 +167,14 @@
     sel.addEventListener('change', () => { sel.dataset.userSet = '1'; });
   }
 
+  async function primeCredits() {
+    try {
+      const r = await fetch('/flights/status');
+      const d = await r.json();
+      if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
+    } catch (e) { /* status endpoint is optional cosmetic */ }
+  }
+
   function init() {
     populateTeams();
     wireManualOverride();
@@ -159,6 +182,7 @@
     // and S.isHome can flip if the user toggles Location manually.
     setInterval(syncFromGame, 1500);
     syncFromGame();
+    primeCredits();
   }
 
   if (document.readyState === 'loading') {

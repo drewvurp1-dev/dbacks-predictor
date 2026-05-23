@@ -34,10 +34,22 @@ function fetchJSON(host, urlPath, headers) {
       r.on('end', () => {
         let body;
         try { body = JSON.parse(data); } catch { body = data; }
-        resolve({ status: r.statusCode, body });
+        resolve({ status: r.statusCode, body, headers: r.headers });
       });
     }).on('error', reject);
   });
+}
+
+// Most recent RapidAPI rate-limit snapshot, kept in module scope so
+// /flights/status can surface it without making a fresh upstream call.
+let _lastQuota = { limit: null, remaining: null, ts: null };
+function captureQuota(h) {
+  if (!h) return;
+  const limit     = h['x-ratelimit-requests-limit'];
+  const remaining = h['x-ratelimit-requests-remaining'];
+  if (limit != null || remaining != null) {
+    _lastQuota = { limit, remaining, ts: Date.now() };
+  }
 }
 
 function ymd(d) { return d.toISOString().slice(0, 10); }
@@ -78,6 +90,7 @@ router.get('/status', (req, res) => {
     provider:   'AeroDataBox (RapidAPI)',
     teams:      Object.keys(charters).length,
     teamsWithTails: withTails,
+    quota:      _lastQuota,
   });
 });
 
@@ -130,6 +143,7 @@ router.get('/team/:abbr', async (req, res) => {
             'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com',
           }
         );
+        captureQuota(result.headers);
         if (result.status === 200 && Array.isArray(result.body)) {
           anySuccess = true;
           for (const f of result.body) allFlights.push({ ...f, _tail: tail });
@@ -166,8 +180,11 @@ router.get('/team/:abbr', async (req, res) => {
     arrival,
     raw_flight_count: allFlights.length,
   };
+  out.quota = _lastQuota;
   _cache[cacheKey] = { data: out, ts: now };
   res.setHeader('X-Cache', 'MISS');
+  if (_lastQuota.remaining != null) res.setHeader('X-Aerodatabox-Remaining', _lastQuota.remaining);
+  if (_lastQuota.limit != null)     res.setHeader('X-Aerodatabox-Limit', _lastQuota.limit);
   res.json(out);
 });
 
