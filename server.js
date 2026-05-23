@@ -13,6 +13,7 @@ app.use('/weather',    require('./routes/weather'));
 app.use('/savant',     require('./routes/savant'));
 app.use('/fangraphs',  require('./routes/fangraphs'));
 app.use('/pitch-arsenal', require('./routes/arsenal'));
+app.use('/flights',    require('./routes/flights'));
 app.use('/api/sync',   require('./routes/sync'));
 app.use('/api/push',   require('./routes/push'));
 
