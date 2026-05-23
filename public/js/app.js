@@ -3735,6 +3735,10 @@ async function loadDashboard(){
   // Render game banner with current context
   _renderGameBanner();
   _renderPitcherCard();
+  // Charter strip auto-fires on series-opener days only; no-op + hidden otherwise
+  if (typeof window.renderDashboardCharter === 'function') {
+    window.renderDashboardCharter();
+  }
   // Make sure pitch-arsenal data is loaded before scoring any props — the matchup
   // factor is a no-op if S.pitchArsenal hasn't resolved yet.
   await _loadPitchArsenal();
