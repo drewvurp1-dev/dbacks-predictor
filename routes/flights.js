@@ -65,6 +65,8 @@ function pickLatestArrival(flights, homeAirport) {
       if (!arrTime) return null;
       return {
         tail: f?.aircraft?.reg,
+        callsign: f?.callSign || f?.number,
+        source: f?._source,
         from:  f?.departure?.airport?.iata || f?.departure?.airport?.icao,
         to:    arrIata,
         depUtc: f?.departure?.actualTime?.utc || f?.departure?.scheduledTime?.utc,
@@ -83,13 +85,18 @@ function pickLatestArrival(flights, homeAirport) {
 // GET /flights/status — health/config check
 router.get('/status', (req, res) => {
   const charters = loadCharters();
-  const withTails = Object.values(charters).filter(t => t.tails && t.tails.length).length;
+  const withTails     = Object.values(charters).filter(t => t.tails     && t.tails.length).length;
+  const withCallsigns = Object.values(charters).filter(t => t.callsigns && t.callsigns.length).length;
+  const withAny       = Object.values(charters).filter(t =>
+    (t.tails && t.tails.length) || (t.callsigns && t.callsigns.length)).length;
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.json({
     configured: !!process.env.AERODATABOX_API_KEY,
     provider:   'AeroDataBox (RapidAPI)',
     teams:      Object.keys(charters).length,
-    teamsWithTails: withTails,
+    teamsWithTails:     withTails,
+    teamsWithCallsigns: withCallsigns,
+    teamsTrackable:     withAny,
     quota:      _lastQuota,
   });
 });
@@ -107,13 +114,17 @@ router.get('/team/:abbr', async (req, res) => {
   const charters = loadCharters();
   const team = charters[abbr];
   if (!team) return res.status(404).json({ error: `Unknown team ${abbr}` });
-  if (!team.tails || !team.tails.length) {
+
+  const tails     = Array.isArray(team.tails)     ? team.tails     : [];
+  const callsigns = Array.isArray(team.callsigns) ? team.callsigns : [];
+  if (!tails.length && !callsigns.length) {
     return res.json({
       team: abbr,
       home_airport: team.home_airport,
       tails: [],
+      callsigns: [],
       arrival: null,
-      note: `No tail numbers registered for ${abbr}. Add them to data/team_charters.json.`,
+      note: `No tail numbers or callsigns registered for ${abbr}. Add them to data/team_charters.json.`,
     });
   }
 
@@ -131,30 +142,44 @@ router.get('/team/:abbr', async (req, res) => {
   let anySuccess = false;
   let lastError = null;
 
-  // Walk known tails; for each, pull yesterday + today.
-  for (const tail of team.tails) {
-    for (const date of [yesterday, today]) {
-      try {
-        const result = await fetchJSON(
-          'aerodatabox.p.rapidapi.com',
-          `/flights/reg/${encodeURIComponent(tail)}/${date}?withAircraftImage=false&withLocation=false`,
-          {
-            'X-RapidAPI-Key':  apiKey,
-            'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com',
-          }
-        );
-        captureQuota(result.headers);
-        if (result.status === 200 && Array.isArray(result.body)) {
-          anySuccess = true;
-          for (const f of result.body) allFlights.push({ ...f, _tail: tail });
-        } else if (result.status === 204 || result.status === 404) {
-          anySuccess = true; // no flights that day is a valid answer
-        } else {
-          lastError = { status: result.status, body: result.body };
-        }
-      } catch (e) {
-        lastError = { message: e.message };
+  // Helper: run one upstream call, capture quota, accumulate flights.
+  async function runLookup(urlPath, tag) {
+    try {
+      const result = await fetchJSON('aerodatabox.p.rapidapi.com', urlPath, {
+        'X-RapidAPI-Key':  apiKey,
+        'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com',
+      });
+      captureQuota(result.headers);
+      if (result.status === 200 && Array.isArray(result.body)) {
+        anySuccess = true;
+        for (const f of result.body) allFlights.push({ ...f, _source: tag });
+      } else if (result.status === 204 || result.status === 404) {
+        anySuccess = true;
+      } else {
+        lastError = { status: result.status, body: result.body, tag };
       }
+    } catch (e) {
+      lastError = { message: e.message, tag };
+    }
+  }
+
+  // Tail-number lookups (dedicated charter aircraft like DET's N313TR).
+  for (const tail of tails) {
+    for (const date of [yesterday, today]) {
+      await runLookup(
+        `/flights/reg/${encodeURIComponent(tail)}/${date}?withAircraftImage=false&withLocation=false`,
+        `tail:${tail}`
+      );
+    }
+  }
+
+  // Callsign / flight-number lookups (pooled charters like DL8884 for STL).
+  for (const callsign of callsigns) {
+    for (const date of [yesterday, today]) {
+      await runLookup(
+        `/flights/number/${encodeURIComponent(callsign)}/${date}?withAircraftImage=false&withLocation=false`,
+        `callsign:${callsign}`
+      );
     }
   }
 
@@ -175,7 +200,8 @@ router.get('/team/:abbr', async (req, res) => {
   const out = {
     team: abbr,
     home_airport: team.home_airport,
-    tails: team.tails,
+    tails: tails,
+    callsigns: callsigns,
     dest_airport: destAirport,
     arrival,
     raw_flight_count: allFlights.length,
