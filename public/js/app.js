@@ -4906,21 +4906,43 @@ function editGradeEntry(id) {
   renderGradePanel();
 }
 
-// Grade a performance — returns outcome category
+// Grade a performance — returns outcome category + continuous calibration.
 function gradePerformance(actual, predScore) {
   // wOBA-calibrated weights. TB captures hit quality without double-counting raw hits.
   // Walk ≈ 75% of a single → 15 pts vs 20 pts (1 TB). K is unambiguously negative.
-  // Capped 0–100 so the chart Y axis works without separate normalization.
+  // Cap raised 100 → 150 so monster days (multi-HR, 4-for-4 with XBH) no longer
+  // saturate to the same value as a "great" 1-HR day. Outcome thresholds are
+  // unchanged so bucket semantics still hold; chart Y axis extended to 150.
   const raw = (actual.totalBases * 20) + (actual.walks * 15)
             + (actual.runs * 5) + (actual.rbi * 5)
             - (actual.strikeOuts * 4);
-  const perfScore = Math.max(0, Math.min(100, raw));
+  const perfScore = Math.max(0, Math.min(150, raw));
   const outcome = perfScore >= 65 ? 'great' : perfScore >= 40 ? 'good' : perfScore >= 15 ? 'avg' : 'poor';
-  // Model accuracy: did high score predict good performance?
-  const modelExpectedGood = predScore >= 60;
+
+  // Continuous model-accuracy: residual between actual perfScore and the
+  // predScore rescaled to expected-perfScore (same anchor as drawPerfChart:
+  // predScore 60 ↔ expected 40). Three buckets so the badge tells you not just
+  // whether the model was right but how far off it was. Thresholds are wider
+  // than the per-day quantization (one walk ≈ 15, one single ≈ 20+RBI/R, one
+  // XBH ≈ 40+) because game-to-game perfScore variance is structurally large.
+  //   ≤20 → "accurate" (within ~one hit's worth of expectation)
+  //   ≤40 → "close" (directionally right, off by an extra-base hit's worth)
+  //   >40 → "off"
+  const expectedPerf = Math.max(0, Math.min(150, predScore - 20));
+  const residual = perfScore - expectedPerf;
+  const absResidual = Math.abs(residual);
+  const accuracy = absResidual <= 20 ? 'accurate' : absResidual <= 40 ? 'close' : 'off';
+
+  // Retained for updateFactorPerf hit/miss attribution — unchanged semantics.
   const actuallyGood = perfScore >= 40;
-  const modelAccurate = modelExpectedGood === actuallyGood;
-  return { perfScore, outcome, modelAccurate, modelExpectedGood, actuallyGood };
+
+  return {
+    perfScore, outcome, actuallyGood,
+    expectedPerf, residual, accuracy,
+    // Legacy fields preserved for back-compat with older stored grade entries.
+    modelAccurate: accuracy === 'accurate',
+    modelExpectedGood: predScore >= 60,
+  };
 }
 
 // Update factor performance stats after grading.
@@ -5130,8 +5152,10 @@ async function renderGradePanel() {
       // Recompute on render so historical entries always reflect the current formula.
       // Stored g.grade.perfScore is frozen at grade time and may be stale after a formula tweak.
       const live = gradePerformance(g.actual, g.score);
-      const modelLabel = live.modelAccurate ? 'Accurate' : 'Off';
-      const modelClass = live.modelAccurate ? 'accurate' : 'off';
+      const modelLabels = { accurate: 'Accurate', close: 'Close', off: 'Off' };
+      const modelLabel = modelLabels[live.accuracy] || 'Off';
+      const modelClass = live.accuracy || 'off';
+      const residualText = live.residual > 0 ? `+${Math.round(live.residual)}` : `${Math.round(live.residual)}`;
       const playerLast = g.playerName ? g.playerName.split(' ').pop() : '—';
       return `<div class="grade-log-row">
         <span style="color:#888;font-family:\'Chakra Petch\',monospace;font-size:11px;">${g.date}</span>
@@ -5140,7 +5164,7 @@ async function renderGradePanel() {
         <span style="color:#ccc;font-family:\'Chakra Petch\',monospace;font-size:11px;">${g.actual.summary||`${g.actual.hits}H ${g.actual.totalBases}TB`}</span>
         <span style="color:#888;font-family:\'Chakra Petch\',monospace;font-size:11px;" title="Performance score">${live.perfScore}</span>
         <span class="outcome-badge ${live.outcome}">${outcomeLabels[live.outcome]||live.outcome}</span>
-        <span class="model-badge ${modelClass}">${modelLabel}</span>
+        <span class="model-badge ${modelClass}" title="Actual ${Math.round(live.perfScore)} vs Expected ${Math.round(live.expectedPerf)} (residual ${residualText})">${modelLabel}</span>
         <span class="grade-row-actions">
           <button class="grade-row-edit" onclick="editGradeEntry(${g.id})" title="Edit stats (MLB API correction)">✎</button>
           <button class="grade-row-del" onclick="deleteGradeEntry(${g.id})" title="Remove from log">×</button>
@@ -5227,10 +5251,14 @@ function drawPerfChart(log) {
   const chartW = W - pad.l - pad.r;
   const chartH = H - pad.t - pad.b;
 
+  // Y axis range extended 0-100 → 0-150 to accommodate the raised perfScore cap
+  // (monster days that previously saturated at 100 now reach up to 150).
+  const Y_MAX = 150;
+
   // Grid
   ctx.strokeStyle = '#1a1730'; ctx.lineWidth = 1;
-  [0, 25, 50, 75, 100].forEach(v => {
-    const y = pad.t + chartH - (v / 100) * chartH;
+  [0, 50, 100, 150].forEach(v => {
+    const y = pad.t + chartH - (v / Y_MAX) * chartH;
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
     ctx.fillStyle = '#777'; ctx.font = "9px 'Chakra Petch', monospace"; ctx.fillText(v, 4, y + 3);
   });
@@ -5241,18 +5269,18 @@ function drawPerfChart(log) {
   // (stored values may be frozen from earlier formula versions).
   const points = recent.map(g => ({ ...g, livePerf: gradePerformance(g.actual, g.score).perfScore }));
 
-  // Rescale predScore (0-100 composite) → expected perfScore (0-100 outcome).
+  // Rescale predScore (0-100 composite) → expected perfScore (0-Y_MAX outcome).
   // Without this the dashed line shared a y-axis with the green outcome line
   // but used different units — a 70 predScore visually appeared to predict a
   // ~70 perfScore, when in reality 70 maps to ~50 perfScore. Linear anchor:
   // predScore 60 (Favorable threshold) ↔ perfScore 40 (actuallyGood threshold).
-  const _predToPerf = s => Math.max(0, Math.min(100, s - 20));
+  const _predToPerf = s => Math.max(0, Math.min(Y_MAX, s - 20));
 
-  // Actual performance line — perfScore is already capped 0-100 by gradePerformance
+  // Actual performance line — perfScore is capped 0-150 by gradePerformance
   ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 2; ctx.beginPath();
   points.forEach((g, i) => {
     const x = pad.l + i * xStep;
-    const y = pad.t + chartH - (g.livePerf / 100) * chartH;
+    const y = pad.t + chartH - (g.livePerf / Y_MAX) * chartH;
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
   ctx.stroke();
@@ -5261,7 +5289,7 @@ function drawPerfChart(log) {
   ctx.strokeStyle = '#A71930'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.beginPath();
   points.forEach((g, i) => {
     const x = pad.l + i * xStep;
-    const y = pad.t + chartH - (_predToPerf(g.score) / 100) * chartH;
+    const y = pad.t + chartH - (_predToPerf(g.score) / Y_MAX) * chartH;
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
   ctx.stroke(); ctx.setLineDash([]);
@@ -5269,7 +5297,7 @@ function drawPerfChart(log) {
   // Dots + dates
   points.forEach((g, i) => {
     const x = pad.l + i * xStep;
-    const py = pad.t + chartH - (g.livePerf / 100) * chartH;
+    const py = pad.t + chartH - (g.livePerf / Y_MAX) * chartH;
     ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(x, py, 3, 0, Math.PI*2); ctx.fill();
     if (i % 3 === 0) {
       ctx.fillStyle = '#777'; ctx.font = "8px 'Chakra Petch', monospace";
