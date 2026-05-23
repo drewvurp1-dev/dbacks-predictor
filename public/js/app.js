@@ -153,8 +153,11 @@ function _computePitcherMetrics(st, statcast){
 function _mcVariance(){
   const sc=S.statcast||{};
   const ss=S.seasonStat||{};
-  const whiff=parseFloat(sc.whiff_percent);
-  let sigma=isFinite(whiff)?5+(whiff-18)*0.15:6;
+  // S.statcast stores whiff as `whiff` (already parsed). `whiff_percent` is the
+  // raw Savant CSV column name and is never present here — reading that key
+  // returned undefined for every hitter, collapsing sigma to the default.
+  const whiff=sc.whiff;
+  let sigma=(typeof whiff==='number'&&isFinite(whiff))?5+(whiff-18)*0.15:6;
   const pa=parseInt(ss.plateAppearances)||0;
   if(pa>0&&pa<50)sigma+=1.5;
   return Math.max(4.5,Math.min(10,sigma));
@@ -1853,12 +1856,15 @@ function calcPrediction(){
   if(S.pitcher?.st){
     const era=parseFloat(S.pitcher.st.era);
     const adv=S.pitcher.advanced||{};
-    // Use xFIP > FIP > ERA in order of predictive value. Display label reflects source.
+    // Use SIERA > xFIP > FIP > ERA in order of predictive value. The factor
+    // label is unified so factor-learning isn't split across four buckets that
+    // depend on which advanced metric was available; the specific metric used
+    // is surfaced in the value field instead.
     const trueERA=adv.siera??adv.xfip??adv.fip??era;
     const trueLabel=adv.siera!=null?'SIERA':adv.xfip!=null?'xFIP':adv.fip!=null?'FIP':'ERA';
     if(!isNaN(trueERA)&&trueERA!=null){
       const a=(trueERA-4.00)*4;
-      add(`Pitcher ${trueLabel}`,trueERA.toFixed(2),a,trueERA<3.25?'Elite arm':trueERA<4.00?'Above-average':trueERA<5.00?'League-average':'Hittable pitcher','pitcher');
+      add('Pitcher Quality',`${trueLabel} ${trueERA.toFixed(2)}`,a,trueERA<3.25?'Elite arm':trueERA<4.00?'Above-average':trueERA<5.00?'League-average':'Hittable pitcher','pitcher');
     }
     // ERA-FIP divergence reveals luck/regression — show only when gap is meaningful
     if(adv.fip!=null&&!isNaN(era)){
@@ -1884,7 +1890,7 @@ function calcPrediction(){
     }
   } else {
     const mEra=parseFloat(document.getElementById('m-pitcher-era')?.value);
-    if(!isNaN(mEra)){const a=(mEra-4.00)*4;add('Pitcher ERA',mEra.toFixed(2),a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher','pitcher');}
+    if(!isNaN(mEra)){const a=(mEra-4.00)*4;add('Pitcher Quality',`ERA ${mEra.toFixed(2)}`,a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher','pitcher');}
   }
   if(S.matchupStats&&S.matchupStats.ab>=5){
     const{ops,ab}=S.matchupStats;
@@ -4652,8 +4658,11 @@ const DEFAULT_WEIGHTS = {
   // Career matchup vs current pitcher — adj capped ±6
   'vs Pitcher (career)': 50,
 
-  // Opposing pitcher headline metric — adj = (era − 4.00) × weight (one fires per game)
-  'Pitcher SIERA': 4, 'Pitcher xFIP': 4, 'Pitcher FIP': 4, 'Pitcher ERA': 4,
+  // Opposing pitcher headline metric — adj = (trueERA − 4.00) × weight.
+  // Unified label so learning isn't split across SIERA/xFIP/FIP/ERA depending on
+  // which advanced metric was available for that pitcher. The specific metric
+  // used appears in the factor's `value` field instead.
+  'Pitcher Quality': 4,
 
   // Pitcher regression / quality flags (flat adj)
   'Unlucky Pitcher': -2, 'Lucky Pitcher':  2,
@@ -4695,6 +4704,16 @@ const DEFAULT_WEIGHTS = {
   'Protection': 3,
 };
 
+// Map legacy per-metric pitcher labels onto the unified 'Pitcher Quality' label
+// so learning stats accumulate in one bucket regardless of which advanced metric
+// was available at prediction time. Used by updateFactorPerf / _rebuildFactorPerf
+// so historical gradeLog entries written before the consolidation still credit
+// the right factor.
+const _LEGACY_PITCHER_QUALITY = new Set(['Pitcher SIERA','Pitcher xFIP','Pitcher FIP','Pitcher ERA']);
+function _canonicalFactorLabel(label){
+  return _LEGACY_PITCHER_QUALITY.has(label) ? 'Pitcher Quality' : label;
+}
+
 // Storage keys
 const GRADE_LOG_KEY = 'gradeLog_v1';
 const FACTOR_PERF_KEY = 'factorPerf_v1';
@@ -4702,7 +4721,25 @@ const FACTOR_WEIGHTS_KEY = 'factorWeights_v1';
 const PENDING_KEY = 'pendingPredictions_v1';
 
 function getGradeLog()     { return JSON.parse(localStorage.getItem(GRADE_LOG_KEY)||'[]'); }
-function getFactorPerf()   { return JSON.parse(localStorage.getItem(FACTOR_PERF_KEY)||'{}'); }
+function getFactorPerf()   {
+  const raw = JSON.parse(localStorage.getItem(FACTOR_PERF_KEY)||'{}');
+  // One-shot migration: collapse legacy metric-specific pitcher labels into the
+  // unified 'Pitcher Quality' bucket so the learning panel doesn't double-list
+  // them after the consolidation. The merged result is persisted so the merge
+  // only runs until the next save.
+  let dirty = false;
+  const out = {};
+  for (const [label, data] of Object.entries(raw)) {
+    const canon = _canonicalFactorLabel(label);
+    if (canon !== label) dirty = true;
+    if (!out[canon]) out[canon] = { fires: 0, hits: 0, totalPerf: 0 };
+    out[canon].fires += data.fires || 0;
+    out[canon].hits += data.hits || 0;
+    out[canon].totalPerf += data.totalPerf || 0;
+  }
+  if (dirty) localStorage.setItem(FACTOR_PERF_KEY, JSON.stringify(out));
+  return out;
+}
 function getFactorWeights(){ return JSON.parse(localStorage.getItem(FACTOR_WEIGHTS_KEY)||JSON.stringify(DEFAULT_WEIGHTS)); }
 function getPending()      { return JSON.parse(localStorage.getItem(PENDING_KEY)||'[]'); }
 
@@ -4809,9 +4846,12 @@ function _rebuildFactorPerf() {
     if (!entry.factors || !entry.grade) continue;
     const perfGood = entry.grade.actuallyGood;
     for (const f of entry.factors) {
-      if (!perf[f.label]) perf[f.label] = { fires: 0, hits: 0, totalPerf: 0 };
-      perf[f.label].fires++;
-      perf[f.label].totalPerf += (entry.grade.perfScore || 0);
+      // Canonicalize on rebuild too so historical metric-specific pitcher
+      // labels collapse into the unified bucket.
+      const label = _canonicalFactorLabel(f.label);
+      if (!perf[label]) perf[label] = { fires: 0, hits: 0, totalPerf: 0 };
+      perf[label].fires++;
+      perf[label].totalPerf += (entry.grade.perfScore || 0);
       let factorPositive;
       if (typeof f.adj === 'number') {
         if (f.adj === 0) continue;
@@ -4819,7 +4859,7 @@ function _rebuildFactorPerf() {
       } else {
         factorPositive = f.impact === 'positive';
       }
-      if ((factorPositive && perfGood) || (!factorPositive && !perfGood)) perf[f.label].hits++;
+      if ((factorPositive && perfGood) || (!factorPositive && !perfGood)) perf[label].hits++;
     }
   }
   saveFactorPerf(perf);
@@ -4904,9 +4944,12 @@ function updateFactorPerf(factors, actual, gradeResult) {
   const perf = getFactorPerf();
   const perfGood = gradeResult.actuallyGood;
   factors.forEach(f => {
-    if (!perf[f.label]) perf[f.label] = { fires: 0, hits: 0, totalPerf: 0 };
-    perf[f.label].fires++;
-    perf[f.label].totalPerf += gradeResult.perfScore;
+    // Canonicalize so historical gradeLog entries with metric-specific labels
+    // (Pitcher SIERA/xFIP/FIP/ERA) accumulate into the unified bucket.
+    const label = _canonicalFactorLabel(f.label);
+    if (!perf[label]) perf[label] = { fires: 0, hits: 0, totalPerf: 0 };
+    perf[label].fires++;
+    perf[label].totalPerf += gradeResult.perfScore;
     let factorPositive;
     if (typeof f.adj === 'number') {
       if (f.adj === 0) return; // factor fired but didn't move the score — no hit either way
@@ -4915,7 +4958,7 @@ function updateFactorPerf(factors, actual, gradeResult) {
       // Legacy entry without persisted adj — fall back to impact label
       factorPositive = f.impact === 'positive';
     }
-    if ((factorPositive && perfGood) || (!factorPositive && !perfGood)) perf[f.label].hits++;
+    if ((factorPositive && perfGood) || (!factorPositive && !perfGood)) perf[label].hits++;
   });
   saveFactorPerf(perf);
   // Auto-adjust weights after 15+ graded games
@@ -4972,7 +5015,12 @@ async function confirmGrade(pendingId, actualStats) {
     actual: actualStats,
     grade: gradeResult,
   });
-  saveGradeLog(log.slice(0, 100));
+  // Cap at 500 entries (was 100). updateFactorPerf accumulates fires across all
+  // graded games, but _rebuildFactorPerf only walks gradeLog — so any cap below
+  // the all-time graded count silently drops historical fires whenever a user
+  // edits or deletes an entry. 500 matches the pending cap and gives 5× more
+  // headroom before that drift can start.
+  saveGradeLog(log.slice(0, 500));
 
   // Remove from pending
   savePending(pending.filter(p => p.id !== pendingId));
@@ -5193,6 +5241,13 @@ function drawPerfChart(log) {
   // (stored values may be frozen from earlier formula versions).
   const points = recent.map(g => ({ ...g, livePerf: gradePerformance(g.actual, g.score).perfScore }));
 
+  // Rescale predScore (0-100 composite) → expected perfScore (0-100 outcome).
+  // Without this the dashed line shared a y-axis with the green outcome line
+  // but used different units — a 70 predScore visually appeared to predict a
+  // ~70 perfScore, when in reality 70 maps to ~50 perfScore. Linear anchor:
+  // predScore 60 (Favorable threshold) ↔ perfScore 40 (actuallyGood threshold).
+  const _predToPerf = s => Math.max(0, Math.min(100, s - 20));
+
   // Actual performance line — perfScore is already capped 0-100 by gradePerformance
   ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 2; ctx.beginPath();
   points.forEach((g, i) => {
@@ -5202,11 +5257,11 @@ function drawPerfChart(log) {
   });
   ctx.stroke();
 
-  // Prediction score line
+  // Prediction score line (rescaled to expected perfScore so both lines share units)
   ctx.strokeStyle = '#A71930'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.beginPath();
   points.forEach((g, i) => {
     const x = pad.l + i * xStep;
-    const y = pad.t + chartH - (g.score / 100) * chartH;
+    const y = pad.t + chartH - (_predToPerf(g.score) / 100) * chartH;
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
   ctx.stroke(); ctx.setLineDash([]);
@@ -5226,7 +5281,7 @@ function drawPerfChart(log) {
   ctx.fillStyle = '#2ecc71'; ctx.fillRect(pad.l, 8, 12, 3);
   ctx.fillStyle = '#888'; ctx.font = "10px 'Chakra Petch', monospace"; ctx.fillText('Actual', pad.l + 16, 12);
   ctx.fillStyle = '#A71930'; ctx.fillRect(pad.l + 70, 8, 12, 3);
-  ctx.fillStyle = '#888'; ctx.fillText('Predicted', pad.l + 86, 12);
+  ctx.fillStyle = '#888'; ctx.fillText('Expected', pad.l + 86, 12);
 }
 
 // ═══════════ STATCAST ════════════════════════════════════════════════════════
