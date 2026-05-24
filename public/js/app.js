@@ -2586,6 +2586,38 @@ function _binomGE(n, p, k) {
   return Math.max(0, Math.min(1, 1 - cdf));
 }
 
+// P(sum TB >= k) where each AB independently produces TB ∈ {0,1,2,3,4} with
+// probabilities `perAB`. Convolves the 5-point distribution `n` times. Handles
+// fractional `n` by linearly interpolating between floor(n) and ceil(n).
+function _convolveTBge(perAB, n, k){
+  if(n<=0) return k<=0 ? 1 : 0;
+  const floor=Math.floor(n), frac=n-floor;
+  function convN(steps){
+    let dist=[1];
+    for(let i=0;i<steps;i++){
+      const next=new Array(dist.length+4).fill(0);
+      for(let j=0;j<dist.length;j++) for(let m=0;m<5;m++) next[j+m]+=dist[j]*perAB[m];
+      dist=next;
+    }
+    return dist;
+  }
+  const pGE=dist=>{let s=0;for(let i=k;i<dist.length;i++)s+=dist[i];return Math.max(0,Math.min(1,s));};
+  const lo=pGE(convN(floor));
+  if(frac===0) return lo;
+  return (1-frac)*lo + frac*pGE(convN(floor+1));
+}
+
+// log-5 combine of two rates against a league baseline. All inputs clamped to
+// (0, 0.5) to keep the formula numerically stable on small/large rates (HR/AB
+// for elite power can flirt with 0.08, which the clamp still admits).
+function _log5(b, p, lg){
+  const c=v=>Math.max(0.001,Math.min(0.5,v));
+  const bc=c(b), pc=c(p), lc=c(lg);
+  const num=bc*pc/lc;
+  const den=num+(1-bc)*(1-pc)/(1-lc);
+  return den>0 ? num/den : bc;
+}
+
 // Extract the full stat payload from a MLB Stats API statSplits row. Includes
 // counting stats (K, BB, PA, AB, H, TB, HR) so handedness-specific rates can be
 // computed for the K/BB/Hits projections — not just OPS for the score.
@@ -2917,32 +2949,81 @@ function modelProbability(propKey,line,score){
     // gamePAs and pitcher BAA — no separate paDelta or WHIP adjustment.
   }
   else if(propKey==='batter_total_bases'){
-    if(line<=0.5)      p=lerp3(score,20,38,50,58,80,74);
-    else if(line<=1.5) p=lerp3(score,20,22,50,40,80,62);
-    else if(line<=2.5) p=lerp3(score,20,12,50,24,80,42);
-    else               p=lerp3(score,20, 6,50,14,80,26);
-    // Same WHIP signal but smaller magnitude — TB is heavily HR-skewed and HR
-    // suppression is handled by the HR park factor + xFIP/HR9 score factors.
-    // Bullpen game blend mirrors batter_hits above.
-    if(S.pitcher?.st?.whip){
-      let whip=parseFloat(S.pitcher.st.whip);
-      if(S.pitcher.bullpenGame&&isFinite(whip))whip=whip*0.4+1.27*0.6;
-      if(isFinite(whip))p+=Math.max(-3,Math.min(3,(whip-1.30)*12));
+    // Distribution-based: per-AB TB outcome ∈ {0,1,2,3,4} with probabilities
+    // from log-5(batter rate, pitcher rate, league rate) for each event class
+    // (1B / 2B / 3B / HR). Convolve over expected AB and read off P(TB >= k).
+    // Replaces the lerp3-only path which had the same no-ceiling problem as
+    // hits — outputs could extrapolate to 70%+ on TB 1.5 lines where the
+    // multinomial cap is ~55% even for a true .500-SLG hitter.
+    const LG_1B=0.150, LG_2B=0.045, LG_3B=0.005, LG_HR=0.030;
+
+    const bAB=parseInt(ss?.atBats)||0;
+    const bH=parseInt(ss?.hits)||0;
+    const bHR=parseInt(ss?.homeRuns)||0;
+    const b2B=parseInt(ss?.doubles)||0;
+    const b3B=parseInt(ss?.triples)||0;
+    const b1B=Math.max(0,bH-bHR-b2B-b3B);
+    const r_b1B=_shrunkRate(b1B,bAB||1,LG_1B,150);
+    const r_b2B=_shrunkRate(b2B,bAB||1,LG_2B,150);
+    const r_b3B=_shrunkRate(b3B,bAB||1,LG_3B,200);
+    const r_bHR=_shrunkRate(bHR,bAB||1,LG_HR,150);
+
+    const pAB=parseInt(S.pitcher?.st?.atBats)||0;
+    const pH=parseInt(S.pitcher?.st?.hits)||0;
+    const pHR_=parseInt(S.pitcher?.st?.homeRuns)||0;
+    const p2B_=parseInt(S.pitcher?.st?.doubles)||0;
+    const p3B_=parseInt(S.pitcher?.st?.triples)||0;
+    const p1B_=Math.max(0,pH-pHR_-p2B_-p3B_);
+    let r_p1B=pAB>0?_shrunkRate(p1B_,pAB,LG_1B,200):LG_1B;
+    let r_p2B=pAB>0?_shrunkRate(p2B_,pAB,LG_2B,250):LG_2B;
+    let r_p3B=pAB>0?_shrunkRate(p3B_,pAB,LG_3B,300):LG_3B;
+    let r_pHR=pAB>0?_shrunkRate(pHR_,pAB,LG_HR,200):LG_HR;
+    if(S.pitcher?.bullpenGame){
+      r_p1B=r_p1B*0.4+LG_1B*0.6;
+      r_p2B=r_p2B*0.4+LG_2B*0.6;
+      r_p3B=r_p3B*0.4+LG_3B*0.6;
+      r_pHR=r_pHR*0.4+LG_HR*0.6;
     }
-    // wOBA captures slug too — TB is slug-sensitive, so weight slightly higher.
+
+    let q1B=_log5(r_b1B,r_p1B,LG_1B);
+    let q2B=_log5(r_b2B,r_p2B,LG_2B);
+    let q3B=_log5(r_b3B,r_p3B,LG_3B);
+    let qHR=_log5(r_bHR,r_pHR,LG_HR);
+    // Sanity cap: total hit prob shouldn't exceed plausible AVG ceiling.
+    const totalHit=q1B+q2B+q3B+qHR;
+    if(totalHit>0.55){const s=0.55/totalHit;q1B*=s;q2B*=s;q3B*=s;qHR*=s;}
+    const perAB=[Math.max(0,1-q1B-q2B-q3B-qHR),q1B,q2B,q3B,qHR];
+
+    // Expected AB from gamePAs (already factors in WHIP & park run-env).
+    const overallBBF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,60):0.09;
+    const abPerPA=Math.max(0.78,Math.min(0.94,1-overallBBF-0.01));
+    const expectedAB=gamePAs*abPerPA;
+
+    const k=Math.ceil(line+1e-9);
+    const rateBase=_convolveTBge(perAB,expectedAB,k)*100;
+
+    // Score-based component (25%) — captures contact-quality and OPS-vs-hand
+    // signals beyond what season counting stats see. Anchors recalibrated for
+    // realistic ceilings (top of the 80-score band ≈ what a true .470-SLG bat
+    // produces under typical AB volume).
+    let scoreBase;
+    if(line<=0.5)      scoreBase=lerp3(score,20,38,50,55,80,68);
+    else if(line<=1.5) scoreBase=lerp3(score,20,18,50,32,80,50);
+    else if(line<=2.5) scoreBase=lerp3(score,20, 8,50,16,80,30);
+    else               scoreBase=lerp3(score,20, 3,50, 7,80,16);
+    p=scoreBase*0.25+rateBase*0.75;
+
+    // Pitch-mix wOBA delta — small additive bonus.
     {const mu=_pitchMatchupFactor();
-     if(mu)p+=Math.max(-3.5,Math.min(3.5,mu.wobaDelta*180));}
+     if(mu)p+=Math.max(-3,Math.min(3,mu.wobaDelta*180));}
     p+=_ttopBonus();
-    // Direct contact-quality signal for TB. Hard-Hit% and Barrel% are the strongest
-    // batted-ball predictors of extra-base output, and they can diverge from season
-    // SLG when a hitter's results lag their underlying contact. With HR props removed,
-    // TB is the only prop carrying the power read — barrels (which become doubles and
-    // homers) are weighted heavily here so good-contact hitters surface on TB.
-    // League avg hhRate ~40%, barrel% ~8%. Cap ±4pp hard-hit, ±6pp barrel.
-    if(S.statcast?.hhRate!=null) p+=Math.max(-4,Math.min(4,(S.statcast.hhRate-40)*0.16));
-    if(S.statcast?.brl!=null)    p+=Math.max(-6,Math.min(6,(S.statcast.brl-8)*0.65));
-    // PA volume adjustment, capped at ±4pp.
-    p+=Math.max(-4,Math.min(4,paDelta*10));
+    // Statcast contact-quality bumps at half their previous magnitude — the
+    // multinomial already captures season HR/2B rates, so these only correct
+    // for hitters whose batted-ball quality leads their results (small-sample
+    // rookies, hot/cold contact streaks). League avg hhRate ~40%, barrel% ~8%.
+    if(S.statcast?.hhRate!=null) p+=Math.max(-2,Math.min(2,(S.statcast.hhRate-40)*0.08));
+    if(S.statcast?.brl!=null)    p+=Math.max(-3,Math.min(3,(S.statcast.brl-8)*0.32));
+    // NOTE: PA volume and WHIP signal already captured via expectedAB.
   }
   else if(propKey==='batter_home_runs'){
     p=lerp3(score,20,8,50,14,80,28);
