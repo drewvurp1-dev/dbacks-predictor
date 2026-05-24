@@ -3030,14 +3030,36 @@ function modelProbability(propKey,line,score){
     // NOTE: PA volume and WHIP signal already captured via expectedAB.
   }
   else if(propKey==='batter_home_runs'){
-    p=lerp3(score,20,8,50,14,80,28);
+    // Distribution-based: P(HR >= k) ~ Binomial(gamePAs, p_HR) where p_HR is
+    // log-5(batter HR/PA, pitcher HR/PA, league HR/PA). Replaces the lerp3-only
+    // path with the same no-ceiling problem as Hits/TB had: elite sluggers
+    // were outputting 30%+ on HR 0.5 even though the binomial ceiling at a
+    // true 5% HR/PA over 4.4 PA is ~20%.
+    const LG_HR_PA=0.030;
+    const bPA=parseInt(ss?.plateAppearances)||0;
+    const bHR=parseInt(ss?.homeRuns)||0;
+    const bHR_PA=_shrunkRate(bHR,bPA||1,LG_HR_PA,150);
+    const pPA=parseInt(S.pitcher?.st?.battersFaced)||0;
+    const pHRCount=parseInt(S.pitcher?.st?.homeRuns)||0;
+    let pHR_PA=pPA>0?_shrunkRate(pHRCount,pPA,LG_HR_PA,200):LG_HR_PA;
+    if(S.pitcher?.bullpenGame) pHR_PA=pHR_PA*0.4+LG_HR_PA*0.6;
+    const pHRrate=_log5(bHR_PA,pHR_PA,LG_HR_PA);
+    const k=Math.ceil(line+1e-9);
+    const rateBase=_binomGE(gamePAs,pHRrate,k)*100;
+    // Score-based component (25%) — captures barrel%, OPS-vs-hand, and other
+    // contact-quality signals the season HR rate misses (esp. for small-sample
+    // rookies where xHR/PA leads HR/PA). Line-specific anchors keep blends
+    // realistic at HR 1.5+ where the prop is genuinely rare.
+    let scoreBase;
+    if(line<=0.5)      scoreBase=lerp3(score,20, 4,50, 9,80,18);
+    else if(line<=1.5) scoreBase=lerp3(score,20,0.2,50,0.5,80,1.8);
+    else               scoreBase=lerp3(score,20,0.05,50,0.1,80,0.4);
+    p=scoreBase*0.25+rateBase*0.75;
     p+=_ttopBonus();
-    // Barrel% is the single strongest predictor of HR rate — drives HR/PA. Moved
-    // out of calcPrediction so it only affects power-relevant props. Cap ±4pp.
-    if(S.statcast?.brl!=null) p+=Math.max(-2,Math.min(2,(S.statcast.brl-8)*0.25));
-    // HR rate is per-PA, so extra PAs lift HR probability proportionally — but the
-    // base prob is small (~14%), so the absolute pp swing is modest. Cap ±2pp.
-    p+=Math.max(-2,Math.min(2,paDelta*5));
+    // Barrel% retained at the same magnitude — it's the single best predictor
+    // of HR rate and can lead season HR/PA for hot-contact hitters. Cap ±2pp.
+    if(S.statcast?.brl!=null) p+=Math.max(-2,Math.min(2,(S.statcast.brl-8)*0.20));
+    // NOTE: PA volume already in the binomial via gamePAs — no separate paDelta.
   }
   else if(propKey==='batter_walks'){
     // League avg BB rate ~9%. Stabilization point ~120 PA → priorN=60 (light shrinkage for vets).
@@ -3087,8 +3109,17 @@ function modelProbability(propKey,line,score){
     const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj+matchupK);
     // P(strikeouts ≥ k) over gamePAs Bernoulli trials. Generalized for any line.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    const scoreBase=lerp3(score,20,28,50,48,80,68);
-    p=scoreBase*0.6+rateBase*0.4;
+    // scoreBase weight dropped 60% → 25% with line-specific anchors that
+    // mirror the binomial's natural distribution across the population at
+    // each line. Old single-anchor (28/48/68) was line-agnostic, which
+    // overshot K 1.5+ for high-K matchups (model 54% vs binomial truth ~34%)
+    // while merely tracking the binomial on K 0.5.
+    let scoreBase;
+    if(line<=0.5)      scoreBase=lerp3(score,20,35,50,50,80,65);
+    else if(line<=1.5) scoreBase=lerp3(score,20,10,50,20,80,38);
+    else if(line<=2.5) scoreBase=lerp3(score,20, 3,50, 8,80,22);
+    else               scoreBase=lerp3(score,20, 1,50, 3,80,10);
+    p=scoreBase*0.25+rateBase*0.75;
   }
   else if(propKey==='batter_rbis'){
     // Poisson on shrunken RBI/G is the principled signal. Scale the per-game
