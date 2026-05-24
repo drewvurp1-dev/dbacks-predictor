@@ -2263,7 +2263,11 @@ function scoreIndividualProp(propKey){
   }
   else if(propKey==='batter_walks'){
     if(bbPct!=null)      score+=(bbPct-9)*3;
-    if(obp!=null)        score+=(obp-0.318)*70;
+    // OBP factor removed: high OBP correlates with walks but also with BABIP-
+    // driven hits, which double-counted with bbPct above. Hot rookies on a
+    // batting-average heater (Waldschmidt .404 OBP from .500 BABIP) were
+    // inflating the walks score by ~6 pts, pushing P(BB>=1) projections from
+    // a binomial-grounded ~32% to ~48%.
     if(pBBPct!=null)     score+=(pBBPct-7)*2.5;
     if(umpAdj>0)         score+=umpAdj*2.5;
     else if(umpAdj<0)    score+=umpAdj*2;
@@ -3051,8 +3055,13 @@ function modelProbability(propKey,line,score){
     // P(walks ≥ k) over gamePAs Bernoulli trials. k = smallest integer > line,
     // so line=0.5→k=1, line=1.5→k=2, line=2.5→k=3, etc.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    const scoreBase=lerp3(score,20,18,50,30,80,48);
-    p=scoreBase*0.6+rateBase*0.4;
+    // scoreBase weight dropped 60% → 25% and anchor at 80 trimmed from 48 to
+    // 42. The binomial on shrunken BB rate is the principled signal here;
+    // score retains weight for ump/recent-form/days-rest factors the binomial
+    // doesn't see. Old weighting could push elite-OBP rookies to 48% on Walks
+    // 0.5 even when the matchup binomial sat at ~32%.
+    const scoreBase=lerp3(score,20,15,50,28,80,42);
+    p=scoreBase*0.25+rateBase*0.75;
   }
   else if(propKey==='batter_strikeouts'){
     // League avg K rate ~22% batter / ~22% pitcher. K rate stabilizes ~60 PA → priorN=40.
