@@ -5179,19 +5179,28 @@ function gradePerformance(actual, predScore) {
   const perfScore = Math.max(0, Math.min(150, raw));
   const outcome = perfScore >= 65 ? 'great' : perfScore >= 40 ? 'good' : perfScore >= 15 ? 'avg' : 'poor';
 
-  // Continuous model-accuracy: residual between actual perfScore and the
-  // predScore rescaled to expected-perfScore (same anchor as drawPerfChart:
-  // predScore 60 ↔ expected 40). Three buckets so the badge tells you not just
-  // whether the model was right but how far off it was. Thresholds are wider
-  // than the per-day quantization (one walk ≈ 15, one single ≈ 20+RBI/R, one
-  // XBH ≈ 40+) because game-to-game perfScore variance is structurally large.
-  //   ≤20 → "accurate" (within ~one hit's worth of expectation)
-  //   ≤40 → "close" (directionally right, off by an extra-base hit's worth)
-  //   >40 → "off"
+  // Model-accuracy: bucket match between predicted and actual outcome is the
+  // primary signal. Residual is a tiebreaker for mismatched buckets only.
+  //
+  // The pure-residual version (kept around as a tooltip detail) wrongly fires
+  // "off" when a player overperforms past the model's structural ceiling —
+  // predScore caps at 100, so expectedPerf caps at 80, but perfScore can reach
+  // 150. A correctly-predicted Great (score 80, perfScore 126) would otherwise
+  // grade as off purely because of the gap between bounded prediction and
+  // unbounded outcome.
+  //
+  // Predicted outcome thresholds mirror the score-driven verdict copy:
+  //   ≥75 great · ≥60 good · ≥40 avg · else poor.
   const expectedPerf = Math.max(0, Math.min(150, predScore - 20));
   const residual = perfScore - expectedPerf;
   const absResidual = Math.abs(residual);
-  const accuracy = absResidual <= 20 ? 'accurate' : absResidual <= 40 ? 'close' : 'off';
+  const predOutcome = predScore >= 75 ? 'great' : predScore >= 60 ? 'good' : predScore >= 40 ? 'avg' : 'poor';
+  const outcomeRank = { poor: 0, avg: 1, good: 2, great: 3 };
+  const bucketDistance = Math.abs(outcomeRank[outcome] - outcomeRank[predOutcome]);
+  const accuracy =
+    bucketDistance === 0 || absResidual <= 20 ? 'accurate' :
+    bucketDistance === 1 || absResidual <= 40 ? 'close' :
+    'off';
 
   // Retained for updateFactorPerf hit/miss attribution — unchanged semantics.
   const actuallyGood = perfScore >= 40;
