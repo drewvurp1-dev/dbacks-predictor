@@ -144,12 +144,46 @@ function _computePitcherMetrics(st, statcast){
   return{fip,xfip,siera,kbbPct,hr9};
 }
 
+// Slump dampener: widens MC sigma when recent results diverge from the model's
+// positive prediction, so cold-streak bets fail the MC confidence threshold
+// instead of being recommended at face value. Returns 0–5 sigma points based on
+// active hitless streak + L10 batting average. Does NOT change the point
+// prediction — only the uncertainty band around it.
+function _slumpPenalty(){
+  const log=S.recentGameLog;
+  if(!log||log.length<3)return 0;
+  let droughtGames=0;
+  for(const g of log){
+    const ab=parseInt(g.stat?.atBats)||0;
+    const h=parseInt(g.stat?.hits)||0;
+    if(ab===0)continue; // skip DNP/pinch appearances
+    if(h===0)droughtGames++;
+    else break;
+  }
+  let p=0;
+  if(droughtGames>=5)p+=4;
+  else if(droughtGames===4)p+=2.5;
+  else if(droughtGames===3)p+=1.5;
+  else if(droughtGames===2)p+=0.5;
+  const recent=log.slice(0,10);
+  const rH=recent.reduce((s,g)=>s+(parseInt(g.stat?.hits)||0),0);
+  const rAB=recent.reduce((s,g)=>s+(parseInt(g.stat?.atBats)||0),0);
+  if(rAB>=15){
+    const avg=rH/rAB;
+    if(avg<0.150)p+=3;
+    else if(avg<0.200)p+=1.5;
+    else if(avg<0.250)p+=0.5;
+  }
+  return Math.min(5,p);
+}
+
 // Score-variance estimate for Monte Carlo, derived from the hitter's profile.
 // High-whiff hitters have wider outcome distributions (more boom/bust), so the
 // model score is a less reliable point estimate — σ scales up. Small samples
-// (<50 PA) also widen σ since the season-rate inputs are noisy.
+// (<50 PA) also widen σ since the season-rate inputs are noisy. A slump
+// dampener widens σ further when recent form contradicts the season profile.
 // Maps: whiff 18% → σ≈5.0 (contact hitter), 28% → σ≈6.5 (league avg),
-//       38% → σ≈8.0 (three-true-outcomes). Clamped to [4.5, 10].
+//       38% → σ≈8.0 (three-true-outcomes). Clamped to [4.5, 15].
 function _mcVariance(){
   const sc=S.statcast||{};
   const ss=S.seasonStat||{};
@@ -160,7 +194,8 @@ function _mcVariance(){
   let sigma=(typeof whiff==='number'&&isFinite(whiff))?5+(whiff-18)*0.15:6;
   const pa=parseInt(ss.plateAppearances)||0;
   if(pa>0&&pa<50)sigma+=1.5;
-  return Math.max(4.5,Math.min(10,sigma));
+  sigma+=_slumpPenalty();
+  return Math.max(4.5,Math.min(15,sigma));
 }
 
 // Monte Carlo confidence: % of noisy-score simulations where the edge holds
