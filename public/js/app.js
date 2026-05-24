@@ -3082,26 +3082,36 @@ function modelProbability(propKey,line,score){
     p=scoreBase*0.6+rateBase*0.4;
   }
   else if(propKey==='batter_rbis'){
-    // League avg RBI/G ~0.43. priorN=60 games (stabilization point for per-game rates).
-    // Scale the per-game rate by today's expected PAs vs league average — high-PA
-    // games produce proportionally more RBI opportunities.
+    // Poisson on shrunken RBI/G is the principled signal. Scale the per-game
+    // rate by today's expected PAs vs league average — high-PA games produce
+    // proportionally more RBI opportunities. League avg RBI/G ~0.43.
     const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2);
     const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
-    const scoreBase=lerp3(score,20,15,50,28,80,45);
-    p=scoreBase*0.6+rateBase*0.4;
-    if(S.lineupProtection?.tier==='strong')p+=5;
-    else if(S.lineupProtection?.tier==='weak')p-=5;
+    // Score-based component dropped from 60% → 25% weight. Anchors recalibrated
+    // so league-avg score (50) produces league-avg P(≥1 RBI) of ~33% rather
+    // than the old 28% which biased toward Under across the board.
+    const scoreBase=lerp3(score,20,15,50,30,80,42);
+    p=scoreBase*0.25+rateBase*0.75;
+    // Protection cut from ±5pp to ±3pp — strong protection behind you keeps
+    // pitchers from intentionally walking you, but the effect is smaller than
+    // the previous magnitude implied.
+    if(S.lineupProtection?.tier==='strong')p+=3;
+    else if(S.lineupProtection?.tier==='weak')p-=3;
   }
   else if(propKey==='batter_runs_scored'){
-    // League avg runs/G ~0.55. priorN=60 games. PA-scaled like RBI.
+    // Poisson on shrunken Runs/G. League avg ~0.55. PA-scaled like RBI.
     const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2);
     const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
-    const scoreBase=lerp3(score,20,18,50,32,80,50);
-    p=scoreBase*0.5+rateBase*0.5;
-    // Runs depend on hitters behind you driving you in — strong protection helps,
-    // weak protection hurts. Same magnitude as RBI.
-    if(S.lineupProtection?.tier==='strong')p+=5;
-    else if(S.lineupProtection?.tier==='weak')p-=5;
+    // scoreBase weight dropped 50% → 25%. Anchors recalibrated so a true elite
+    // leadoff bat (score=80, runs/G ~0.85) blends to ~57%, matching observed
+    // market consensus on leadoff Runs Over 0.5 props. Old anchor of 50@80
+    // combined with 50/50 blend let the prop extrapolate to 60%+ on hot bats
+    // batting low in the order — exactly the Waldschmidt failure mode.
+    const scoreBase=lerp3(score,20,15,50,35,80,50);
+    p=scoreBase*0.25+rateBase*0.75;
+    // Protection cut from ±5 → ±3 — captured partly by OBP-loaded score.
+    if(S.lineupProtection?.tier==='strong')p+=3;
+    else if(S.lineupProtection?.tier==='weak')p-=3;
   }
   else if(propKey==='batter_hits_runs_rbis'){
     const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs);
