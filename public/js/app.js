@@ -2212,7 +2212,9 @@ function scoreIndividualProp(propKey){
     if(babip!=null)      score+=(babip-0.291)*80;
     if(kPct!=null)       score-=(kPct-22)*0.5;
     if(handOps)          score+=(handOps-0.720)*35;
-    if(pWhip!=null)      score-=(pWhip-1.25)*20;
+    // Higher pitcher WHIP = more baserunners = more hits against. Was previously
+    // `score-=`, which incorrectly penalized batters facing hittable pitchers.
+    if(pWhip!=null)      score+=(pWhip-1.25)*20;
     if(pKPct!=null)      score-=(pKPct-22)*0.4;
     if(whiff!=null)      score-=(whiff-22)*0.35;
     if(hhRate!=null)     score+=(hhRate-40)*0.15;
@@ -2292,7 +2294,8 @@ function scoreIndividualProp(propKey){
   }
   else if(propKey==='batter_runs_scored'){
     if(obp!=null)        score+=(obp-0.318)*80;
-    if(pWhip!=null)      score-=(pWhip-1.25)*15;
+    // High pitcher WHIP = more baserunners = more runs scored. Was previously inverted.
+    if(pWhip!=null)      score+=(pWhip-1.25)*15;
     if(pBBPct!=null)     score+=(pBBPct-7)*1.5;
     if(handOps)          score+=(handOps-0.720)*25;
     if(mu&&muW>0)        score+=(parseFloat(mu.obp||0)-0.318)*40*muW;
@@ -2861,26 +2864,57 @@ function modelProbability(propKey,line,score){
   const paDelta=gamePAs-4.2;
 
   if(propKey==='batter_hits'){
-    if(line<=0.5) p=lerp3(score,20,42,50,62,80,78);
-    else          p=lerp3(score,20,18,50,32,80,52);
-    // WHIP is the most direct pitcher signal for hits-allowed. League avg ~1.30.
-    // Elite pitcher (1.10) → -3pp, poor (1.50) → +3pp. Bullpen games: hitters face
-    // the listed opener for ~2 PAs then relievers cover the rest, so blend toward
-    // league-average reliever WHIP (~1.27) at 40% listed / 60% reliever pool —
-    // mirrors the K-rate blending logic used for strikeouts.
-    if(S.pitcher?.st?.whip){
-      let whip=parseFloat(S.pitcher.st.whip);
-      if(S.pitcher.bullpenGame&&isFinite(whip))whip=whip*0.4+1.27*0.6;
-      if(isFinite(whip))p+=Math.max(-4,Math.min(4,(whip-1.30)*15));
-    }
-    // Pitch-mix matchup — wOBA delta scaled to pp. wOBA spreads of 0.020 are
-    // common at extremes; 150× gives ±3pp at that magnitude. Cap ±3pp.
+    // Distribution-based: P(H >= k) ~ Binomial(expectedAB, p_hit). Replaces the
+    // previous lerp3-only path which had no ceiling — a 4-AB game caps Hits 1.5
+    // around 45% even for an elite hitter, but the old lerp could extrapolate
+    // well above that and produce 60-70%+ outputs.
+    const LG_AVG=0.245;
+    // Batter hit rate per AB. Prefer L/R-split when stabilized (>=100 PA),
+    // shrunk toward the batter's overall rate. Falls back to league.
+    const overallH=parseInt(ss?.hits)||0;
+    const overallAB=parseInt(ss?.atBats)||0;
+    const overallRate=overallAB?overallH/overallAB:LG_AVG;
+    const hs=_handSplit();
+    const bRate=(hs?.pa>=100&&hs?.ab>0)
+      ?_shrunkRate(parseInt(hs.h)||0,hs.ab,overallRate,80)
+      :_shrunkRate(overallH,overallAB||1,LG_AVG,80);
+    // Pitcher hits-allowed rate (BAA). Shrunk to league with priorN=200
+    // since BAA stabilizes slowly. Bullpen games: blend listed pitcher 40% /
+    // league-average reliever BAA (~.235) 60% — mirrors the K/BB logic.
+    const pAvgRaw=parseFloat(S.pitcher?.st?.avg);
+    const pAB=parseInt(S.pitcher?.st?.atBats)||0;
+    const pH=parseInt(S.pitcher?.st?.hits)||0;
+    let pRate=(pAB>0)
+      ?_shrunkRate(pH,pAB,LG_AVG,200)
+      :(isFinite(pAvgRaw)?pAvgRaw:LG_AVG);
+    if(S.pitcher?.bullpenGame)pRate=pRate*0.4+0.235*0.6;
+    // Log-5 combine batter × pitcher × league.
+    const b=Math.max(0.05,Math.min(0.55,bRate));
+    const pp=Math.max(0.05,Math.min(0.55,pRate));
+    const num=b*pp/LG_AVG;
+    const den=num+(1-b)*(1-pp)/(1-LG_AVG);
+    const pHit=den>0?num/den:b;
+    // Expected AB = PA * (1 - BB - HBP). HBP ~1% of PA league-wide.
+    const overallBBF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,60):0.09;
+    const abPerPA=Math.max(0.78,Math.min(0.94,1-overallBBF-0.01));
+    const expectedAB=gamePAs*abPerPA;
+    const k=Math.ceil(line+1e-9);
+    const rateBase=_binomGE(expectedAB,pHit,k)*100;
+    // Keep a small score-based component (25%) so contact-quality signals the
+    // rate model doesn't see (whiff, HH%, handOps) still influence the final
+    // probability. Anchors recalibrated for realistic ceilings.
+    let scoreBase;
+    if(line<=0.5)      scoreBase=lerp3(score,20,45,50,60,80,72);
+    else if(line<=1.5) scoreBase=lerp3(score,20,15,50,28,80,42);
+    else if(line<=2.5) scoreBase=lerp3(score,20, 3,50, 8,80,18);
+    else               scoreBase=lerp3(score,20, 1,50, 3,80, 7);
+    p=scoreBase*0.25+rateBase*0.75;
+    // Pitch-mix wOBA delta — captures matchup signal beyond season-wide AVG/BAA.
     {const mu=_pitchMatchupFactor();
      if(mu)p+=Math.max(-3,Math.min(3,mu.wobaDelta*150));}
     p+=_ttopBonus();
-    // PA volume — extra PAs mean extra at-bats, which compound a hit chance.
-    // ±5pp at the cap (~±0.4 PA from average).
-    p+=Math.max(-5,Math.min(5,paDelta*12));
+    // NOTE: PA volume and WHIP signal are already inside the binomial via
+    // gamePAs and pitcher BAA — no separate paDelta or WHIP adjustment.
   }
   else if(propKey==='batter_total_bases'){
     if(line<=0.5)      p=lerp3(score,20,38,50,58,80,74);
