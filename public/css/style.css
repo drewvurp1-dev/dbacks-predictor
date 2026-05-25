@@ -510,7 +510,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-game-weather { font-size: 10px; color: #009A8B; font-family: 'Chakra Petch', monospace; margin-top: 3px; }
 .dash-ump { font-size: 10px; color: #888; font-family: 'Chakra Petch', monospace; margin-top: 2px; }
 .dash-pitcher-card { background: #0c0a1e; border: 1px solid #009A8B; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
-.dash-charter { background: #0c0a1e; border-left: 3px solid #009A8B; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-family: 'Chakra Petch', monospace; font-size: 11px; color: #aaa; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dash-charter { background: #0c0a1e; border-left: 3px solid #009A8B; border-radius: 6px; padding: 8px 12px; margin-top: 14px; margin-bottom: 14px; font-family: 'Chakra Petch', monospace; font-size: 11px; color: #aaa; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .dash-charter .dch-plane { font-size: 14px; color: #009A8B; }
 .dash-charter .dch-route { color: #E8DFC8; }
 .dash-charter .dch-time { color: #aaa; }
