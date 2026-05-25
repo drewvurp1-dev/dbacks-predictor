@@ -221,14 +221,26 @@
     const el = document.getElementById('dash-charter-strip');
     if (!el) return;
 
+    // Always show the strip on the dashboard so the user can see the feature
+    // is wired up. We render a "waiting" state if game data hasn't resolved.
+    el.classList.remove('hidden');
+
     const opp = window.S?.opposingTeamAbbr || null;
     const gameDate = document.getElementById('game-date')?.value || '';
-    if (!opp || !gameDate) { el.classList.add('hidden'); return; }
+    if (!opp || !gameDate) {
+      el.className = 'dash-charter';
+      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">waiting for game data…</span>`;
+      return;
+    }
 
     const homeGame = isHomeGame();
     const trackedTeam = homeGame ? opp   : 'ARI';
     const destAirport = homeGame ? 'PHX' : (OPP_AIRPORTS[opp] || null);
-    if (!destAirport) { el.classList.add('hidden'); return; }
+    if (!destAirport) {
+      el.className = 'dash-charter';
+      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">unknown destination for ${opp}</span>`;
+      return;
+    }
 
     const cacheKey = `${gameDate}|${trackedTeam}|${destAirport}`;
     if (_dashCache.key === cacheKey && Date.now() - _dashCache.ts < DASH_TTL) {
@@ -238,10 +250,8 @@
     }
 
     const seriesOpener = await isSeriesOpener(gameDate, opp);
-    el.classList.remove('hidden');
 
-    // Mid-series days: show a passive line, don't burn AeroDataBox credits
-    // since the team flew in days ago and there's no fresh signal to surface.
+    // Mid-series days: passive line, no AeroDataBox call.
     if (!seriesOpener) {
       const passiveHtml = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">mid-series · no new travel today</span>`;
       el.className = 'dash-charter';
