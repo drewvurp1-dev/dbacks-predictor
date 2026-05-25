@@ -238,10 +238,19 @@
     }
 
     const seriesOpener = await isSeriesOpener(gameDate, opp);
-    if (!seriesOpener) { el.classList.add('hidden'); return; }
-
-    // Show a "loading" state while we hit AeroDataBox.
     el.classList.remove('hidden');
+
+    // Mid-series days: show a passive line, don't burn AeroDataBox credits
+    // since the team flew in days ago and there's no fresh signal to surface.
+    if (!seriesOpener) {
+      const passiveHtml = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">mid-series · no new travel today</span>`;
+      el.className = 'dash-charter';
+      el.innerHTML = passiveHtml;
+      _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = passiveHtml; _dashCache.cls = '';
+      return;
+    }
+
+    // Series-opener: hit the proxy.
     el.className = 'dash-charter';
     el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-spinner">Looking up ${trackedTeam} charter into ${destAirport}…</span>`;
 
