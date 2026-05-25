@@ -28,10 +28,18 @@
   function setCharterCredits(remaining, limit) {
     const el = document.getElementById('adsbx-credits');
     if (!el) return;
-    if (remaining == null) { el.classList.add('hidden'); return; }
-    const n = parseInt(remaining);
-    if (Number.isNaN(n)) { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
+    if (remaining == null) {
+      el.textContent = '— charter';
+      el.className = 'api-credits';
+      return;
+    }
+    const n = parseInt(remaining);
+    if (Number.isNaN(n)) {
+      el.textContent = '— charter';
+      el.className = 'api-credits';
+      return;
+    }
     el.textContent = limit != null ? `${n}/${limit} charter` : `${n} charter`;
     el.className = 'api-credits' + (n < 10 ? ' critical' : n < 50 ? ' low' : '');
   }
@@ -290,11 +298,15 @@
         return;
       }
       if (!d.arrival) {
-        const cls = '';
-        const html = `<span class="dch-plane">✈</span><span>${trackedTeam} → ${destAirport}</span><span class="dch-spinner">no charter movement found yet</span>`;
-        el.className = `dash-charter ${cls}`.trim();
+        const ids = [...(d.tails || []), ...(d.callsigns || [])].join(', ') || '—';
+        const flightCount = d.raw_flight_count || 0;
+        const detail = flightCount > 0
+          ? `${flightCount} flights found, none into ${destAirport}`
+          : `no ${ids} flights in last 48h`;
+        const html = `<span class="dch-plane">✈</span><span class="dch-route">${trackedTeam} → ${destAirport}</span><span class="dch-spinner">${detail}</span><span style="color:#444;font-size:9px;">${ids}</span>`;
+        el.className = 'dash-charter';
         el.innerHTML = html;
-        _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = cls;
+        _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = '';
         return;
       }
       const a = d.arrival;
@@ -403,7 +415,11 @@
     try {
       const r = await fetch('/flights/status');
       const d = await r.json();
-      if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
+      // Always show the chip if the API is configured, even before any actual
+      // lookup has fired (so the user can confirm the integration is alive).
+      if (d?.configured) {
+        setCharterCredits(d?.quota?.remaining ?? null, d?.quota?.limit ?? null);
+      }
     } catch (e) { /* status endpoint is optional cosmetic */ }
   }
 
