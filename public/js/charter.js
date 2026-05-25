@@ -18,6 +18,17 @@
   };
   const OPPONENTS = Object.keys(OPP_AIRPORTS);
 
+  // MLB team ID -> our internal abbreviation. The /mlb/* schedule endpoint
+  // doesn't include team.abbreviation in its default response (just id + name),
+  // and special hydration is unreliable — so we lookup by stable team ID.
+  const TEAM_ID_TO_ABBR = {
+    108:'LAA', 109:'ARI', 110:'BAL', 111:'BOS', 112:'CHC', 113:'CIN',
+    114:'CLE', 115:'COL', 116:'DET', 117:'HOU', 118:'KC',  119:'LAD',
+    120:'WSH', 121:'NYM', 133:'ATH', 134:'PIT', 135:'SD',  136:'SEA',
+    137:'SF',  138:'STL', 139:'TB',  140:'TEX', 141:'TOR', 142:'MIN',
+    143:'PHI', 144:'ATL', 145:'CWS', 146:'MIA', 147:'NYY', 158:'MIL',
+  };
+
   function populateTeams() {
     const sel = document.getElementById('charter-team');
     if (!sel || sel.options.length) return;
@@ -261,15 +272,20 @@
     }
     const isHome = today.teams?.home?.team?.id === 109;
     const oppSide = isHome ? today.teams?.away : today.teams?.home;
-    const opp = oppSide?.team?.abbreviation || oppSide?.team?.teamCode?.toUpperCase() || null;
+    const oppId = oppSide?.team?.id;
+    const opp = TEAM_ID_TO_ABBR[oppId]
+             || oppSide?.team?.abbreviation
+             || oppSide?.team?.teamCode?.toUpperCase()
+             || null;
     if (!opp) {
-      _scheduleCache = { ts: Date.now(), data: null, err: `no opp abbr in ${today.officialDate}` };
+      _scheduleCache = { ts: Date.now(), data: null, err: `unknown opp team id ${oppId} on ${today.officialDate}` };
       return null;
     }
     const finals = games.filter(g => g.status?.abstractGameState === 'Final');
     const prev = finals[finals.length - 1] || null;
     const prevHome = prev?.teams?.home?.team?.id === 109;
-    const prevOpp  = prev ? (prevHome ? prev.teams?.away?.team?.abbreviation : prev.teams?.home?.team?.abbreviation) : null;
+    const prevOppId = prev ? (prevHome ? prev.teams?.away?.team?.id : prev.teams?.home?.team?.id) : null;
+    const prevOpp = prevOppId ? (TEAM_ID_TO_ABBR[prevOppId] || null) : null;
     const result = { opp, homeGame: isHome, gameDate: today.officialDate, prevOpp };
     _scheduleCache = { ts: Date.now(), data: result, err: null };
     return result;
