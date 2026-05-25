@@ -98,10 +98,20 @@
     return { tier: 'normal', label: '' };
   }
 
+  // Resolve the app's state object from either window.S (if app.js exposed it
+  // explicitly) or the bare `S` global from app.js's classic-script scope.
+  // Top-level `const` in classic scripts is accessible from other classic
+  // scripts as a bare identifier but is NOT attached to window — hence the
+  // dual-path lookup.
+  function getAppState() {
+    if (typeof window.S === 'object' && window.S) return window.S;
+    try { if (typeof S !== 'undefined' && S) return S; } catch (e) {}
+    return null;
+  }
+
   function isHomeGame() {
-    if (typeof window.S === 'object' && window.S && typeof window.S.isHome === 'boolean') {
-      return window.S.isHome;
-    }
+    const s = getAppState();
+    if (s && typeof s.isHome === 'boolean') return s.isHome;
     return document.getElementById('loc-home')?.classList.contains('active') ?? true;
   }
 
@@ -225,7 +235,7 @@
     // is wired up. We render a "waiting" state if game data hasn't resolved.
     el.classList.remove('hidden');
 
-    const opp = window.S?.opposingTeamAbbr || null;
+    const opp = getAppState()?.opposingTeamAbbr || null;
     const gameDate = document.getElementById('game-date')?.value || '';
     if (!opp || !gameDate) {
       el.className = 'dash-charter';
@@ -360,7 +370,7 @@
     const sel = document.getElementById('charter-team');
     const out = document.getElementById('charter-result');
     if (!sel || !out) return;
-    const opp = window.S?.opposingTeamAbbr || null;
+    const opp = getAppState()?.opposingTeamAbbr || null;
     const homeGame = isHomeGame();
     if (!opp) return;
     if (opp === _lastAuto.opp && homeGame === _lastAuto.home) return;
@@ -375,6 +385,12 @@
       ? `Auto-detected: ${opp} → PHX`
       : `Auto-detected: ARI → ${destAirport} (${opp})`;
     out.innerHTML = `<span style="color:#5d8;">${summary}</span><br>Click <strong>Track</strong> to look up the charter.`;
+    // Game state just became available — re-render the dashboard strip so it
+    // can't get stuck in the "waiting for game data…" fallback if loadDashboard
+    // happened to run before autoLoadNextGame finished.
+    if (typeof window.renderDashboardCharter === 'function') {
+      window.renderDashboardCharter();
+    }
   }
 
   function wireManualOverride() {
