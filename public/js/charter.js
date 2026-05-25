@@ -244,8 +244,20 @@
     el.classList.remove('hidden');
 
     const opp = getAppState()?.opposingTeamAbbr || null;
-    const gameDate = document.getElementById('game-date')?.value || '';
-    if (!opp || !gameDate) {
+    // Date resolution: prefer the explicit game-date input (set by auto-load),
+    // fall back to S.gameDate (UTC ISO from MLB schedule), then to today's
+    // Arizona-local date so the strip can render even if the Setup panel's
+    // input hasn't been populated yet.
+    let gameDate = document.getElementById('game-date')?.value || '';
+    if (!gameDate) {
+      const sg = getAppState()?.gameDate;
+      if (sg) gameDate = new Date(sg).toISOString().slice(0, 10);
+    }
+    if (!gameDate) {
+      // Arizona is UTC-7 year-round (no DST).
+      gameDate = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    }
+    if (!opp) {
       el.className = 'dash-charter';
       el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">waiting for game data…</span>`;
       return;
@@ -391,6 +403,12 @@
     if (!sel || !out) return;
     const opp = getAppState()?.opposingTeamAbbr || null;
     const homeGame = isHomeGame();
+    // Always nudge the dashboard renderer — its internal cache prevents
+    // re-firing API calls within the 15-min TTL, and this lets it recover
+    // from any earlier "waiting for game data…" stub render.
+    if (typeof window.renderDashboardCharter === 'function') {
+      window.renderDashboardCharter();
+    }
     if (!opp) return;
     if (opp === _lastAuto.opp && homeGame === _lastAuto.home) return;
     _lastAuto = { opp, home: homeGame };
@@ -404,12 +422,6 @@
       ? `Auto-detected: ${opp} → PHX`
       : `Auto-detected: ARI → ${destAirport} (${opp})`;
     out.innerHTML = `<span style="color:#5d8;">${summary}</span><br>Click <strong>Track</strong> to look up the charter.`;
-    // Game state just became available — re-render the dashboard strip so it
-    // can't get stuck in the "waiting for game data…" fallback if loadDashboard
-    // happened to run before autoLoadNextGame finished.
-    if (typeof window.renderDashboardCharter === 'function') {
-      window.renderDashboardCharter();
-    }
   }
 
   function wireManualOverride() {
