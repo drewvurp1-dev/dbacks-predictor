@@ -217,53 +217,62 @@
 
   // Check if today's game is a series opener by comparing today's opponent to
   // the opponent of the most recent prior D-backs game (within last 3 days).
-  async function isSeriesOpener(todayYmd, todayOpp) {
-    if (!todayYmd || !todayOpp) return false;
+  // Self-sufficient schedule fetch — gets today's game + previous game in one
+  // call so we don't depend on app.js state. Cached per dashboard render cycle.
+  let _scheduleCache = { ts: 0, data: null };
+  const SCHEDULE_TTL = 5 * 60 * 1000;
+  async function loadGameContext() {
+    if (_scheduleCache.data && Date.now() - _scheduleCache.ts < SCHEDULE_TTL) {
+      return _scheduleCache.data;
+    }
     try {
-      const start = new Date(new Date(todayYmd).getTime() - 3 * 86400000).toISOString().slice(0, 10);
-      const end   = new Date(new Date(todayYmd).getTime() - 1 * 86400000).toISOString().slice(0, 10);
+      const start = new Date(Date.now() - 4 * 86400000).toISOString().slice(0, 10);
+      const end   = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
       const r = await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&startDate=${start}&endDate=${end}`);
       const d = await r.json();
-      const games = (d?.dates || []).flatMap(dt => dt.games || []).filter(g => g.status?.abstractGameState === 'Final');
-      const prev = games[games.length - 1];
-      if (!prev) return true; // no game in last 3 days = traveled here from home stand or off
-      const prevHome = prev.teams?.home?.team?.id === 109;
-      const prevOpp = prevHome ? prev.teams?.away?.team?.abbreviation : prev.teams?.home?.team?.abbreviation;
-      return prevOpp !== todayOpp;
+      const games = (d?.dates || []).flatMap(dt => dt.games || []);
+      const today = games.find(g => g.status?.abstractGameState === 'Live')
+                 || games.find(g => g.status?.abstractGameState === 'Preview')
+                 || games[games.length - 1];
+      if (!today) return null;
+      const isHome = today.teams?.home?.team?.id === 109;
+      const oppSide = isHome ? today.teams?.away : today.teams?.home;
+      const opp = oppSide?.team?.abbreviation || null;
+      const finals = games.filter(g => g.status?.abstractGameState === 'Final');
+      const prev = finals[finals.length - 1] || null;
+      const prevHome = prev?.teams?.home?.team?.id === 109;
+      const prevOpp  = prev ? (prevHome ? prev.teams?.away?.team?.abbreviation : prev.teams?.home?.team?.abbreviation) : null;
+      const result = {
+        opp,
+        homeGame: isHome,
+        gameDate: today.officialDate,
+        prevOpp,
+      };
+      _scheduleCache = { ts: Date.now(), data: result };
+      return result;
     } catch (e) {
-      return false; // if we can't tell, don't auto-fire
+      return null;
     }
   }
 
   window.renderDashboardCharter = async function () {
     const el = document.getElementById('dash-charter-strip');
     if (!el) return;
-
-    // Always show the strip on the dashboard so the user can see the feature
-    // is wired up. We render a "waiting" state if game data hasn't resolved.
     el.classList.remove('hidden');
 
-    const opp = getAppState()?.opposingTeamAbbr || null;
-    // Date resolution: prefer the explicit game-date input (set by auto-load),
-    // fall back to S.gameDate (UTC ISO from MLB schedule), then to today's
-    // Arizona-local date so the strip can render even if the Setup panel's
-    // input hasn't been populated yet.
-    let gameDate = document.getElementById('game-date')?.value || '';
-    if (!gameDate) {
-      const sg = getAppState()?.gameDate;
-      if (sg) gameDate = new Date(sg).toISOString().slice(0, 10);
-    }
-    if (!gameDate) {
-      // Arizona is UTC-7 year-round (no DST).
-      gameDate = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    }
-    if (!opp) {
+    // Fetch game context directly from MLB schedule — self-sufficient,
+    // doesn't depend on app.js state being populated correctly. The
+    // /mlb/* proxy is free, no AeroDataBox credits burned here.
+    const ctx = await loadGameContext();
+    if (!ctx || !ctx.opp) {
       el.className = 'dash-charter';
-      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">waiting for game data…</span>`;
+      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">no upcoming game found</span>`;
       return;
     }
 
-    const homeGame = isHomeGame();
+    const opp = ctx.opp;
+    const homeGame = ctx.homeGame;
+    const gameDate = ctx.gameDate;
     const trackedTeam = homeGame ? opp   : 'ARI';
     const destAirport = homeGame ? 'PHX' : (OPP_AIRPORTS[opp] || null);
     if (!destAirport) {
@@ -279,7 +288,8 @@
       return;
     }
 
-    const seriesOpener = await isSeriesOpener(gameDate, opp);
+    // Series-opener detection uses the prevOpp we already pulled, no extra call.
+    const seriesOpener = !ctx.prevOpp || ctx.prevOpp !== opp;
 
     // Mid-series days: passive line, no AeroDataBox call.
     if (!seriesOpener) {
