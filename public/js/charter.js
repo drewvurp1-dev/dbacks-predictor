@@ -219,40 +219,60 @@
   // the opponent of the most recent prior D-backs game (within last 3 days).
   // Self-sufficient schedule fetch — gets today's game + previous game in one
   // call so we don't depend on app.js state. Cached per dashboard render cycle.
-  let _scheduleCache = { ts: 0, data: null };
+  let _scheduleCache = { ts: 0, data: null, err: null };
   const SCHEDULE_TTL = 5 * 60 * 1000;
+
+  async function fetchSchedule(start, end, includeSeason) {
+    const seasonParam = includeSeason ? '&season=2026' : '';
+    const url = `/mlb/api/v1/schedule?sportId=1&teamId=109&gameType=R${seasonParam}&startDate=${start}&endDate=${end}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`MLB ${r.status}`);
+    const d = await r.json();
+    return (d?.dates || []).flatMap(dt => dt.games || []);
+  }
+
   async function loadGameContext() {
     if (_scheduleCache.data && Date.now() - _scheduleCache.ts < SCHEDULE_TTL) {
       return _scheduleCache.data;
     }
+    const start = new Date(Date.now() - 4 * 86400000).toISOString().slice(0, 10);
+    const end   = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
+    let games = [];
+    let err = null;
+    // Try with season=2026 first (matches the rest of the app). If that returns
+    // an empty list, retry without season so we don't break across year boundaries.
     try {
-      const start = new Date(Date.now() - 4 * 86400000).toISOString().slice(0, 10);
-      const end   = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
-      const r = await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&startDate=${start}&endDate=${end}`);
-      const d = await r.json();
-      const games = (d?.dates || []).flatMap(dt => dt.games || []);
-      const today = games.find(g => g.status?.abstractGameState === 'Live')
-                 || games.find(g => g.status?.abstractGameState === 'Preview')
-                 || games[games.length - 1];
-      if (!today) return null;
-      const isHome = today.teams?.home?.team?.id === 109;
-      const oppSide = isHome ? today.teams?.away : today.teams?.home;
-      const opp = oppSide?.team?.abbreviation || null;
-      const finals = games.filter(g => g.status?.abstractGameState === 'Final');
-      const prev = finals[finals.length - 1] || null;
-      const prevHome = prev?.teams?.home?.team?.id === 109;
-      const prevOpp  = prev ? (prevHome ? prev.teams?.away?.team?.abbreviation : prev.teams?.home?.team?.abbreviation) : null;
-      const result = {
-        opp,
-        homeGame: isHome,
-        gameDate: today.officialDate,
-        prevOpp,
-      };
-      _scheduleCache = { ts: Date.now(), data: result };
-      return result;
-    } catch (e) {
+      games = await fetchSchedule(start, end, true);
+    } catch (e) { err = e.message; }
+    if (!games.length) {
+      try { games = await fetchSchedule(start, end, false); }
+      catch (e) { err = err || e.message; }
+    }
+    if (!games.length) {
+      _scheduleCache = { ts: Date.now(), data: null, err: err || `no games ${start}..${end}` };
       return null;
     }
+    const today = games.find(g => g.status?.abstractGameState === 'Live')
+               || games.find(g => g.status?.abstractGameState === 'Preview')
+               || games[games.length - 1];
+    if (!today) {
+      _scheduleCache = { ts: Date.now(), data: null, err: 'no usable game' };
+      return null;
+    }
+    const isHome = today.teams?.home?.team?.id === 109;
+    const oppSide = isHome ? today.teams?.away : today.teams?.home;
+    const opp = oppSide?.team?.abbreviation || oppSide?.team?.teamCode?.toUpperCase() || null;
+    if (!opp) {
+      _scheduleCache = { ts: Date.now(), data: null, err: `no opp abbr in ${today.officialDate}` };
+      return null;
+    }
+    const finals = games.filter(g => g.status?.abstractGameState === 'Final');
+    const prev = finals[finals.length - 1] || null;
+    const prevHome = prev?.teams?.home?.team?.id === 109;
+    const prevOpp  = prev ? (prevHome ? prev.teams?.away?.team?.abbreviation : prev.teams?.home?.team?.abbreviation) : null;
+    const result = { opp, homeGame: isHome, gameDate: today.officialDate, prevOpp };
+    _scheduleCache = { ts: Date.now(), data: result, err: null };
+    return result;
   }
 
   window.renderDashboardCharter = async function () {
@@ -265,8 +285,9 @@
     // /mlb/* proxy is free, no AeroDataBox credits burned here.
     const ctx = await loadGameContext();
     if (!ctx || !ctx.opp) {
+      const detail = _scheduleCache.err || 'no upcoming game found';
       el.className = 'dash-charter';
-      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">no upcoming game found</span>`;
+      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">${detail}</span>`;
       return;
     }
 
