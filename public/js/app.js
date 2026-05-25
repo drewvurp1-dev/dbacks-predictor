@@ -34,6 +34,10 @@ const S = {
     return log;
   })(),
 };
+// Expose S on window so other classic scripts (e.g. charter.js) can read app
+// state. Top-level `const` declarations don't auto-attach to window in classic
+// scripts; without this, `window.S` is undefined from outside this file.
+window.S = S;
 
 const CORBET_ROSTER = [
   { name: 'Corbin Carroll',   id: '682998' },
