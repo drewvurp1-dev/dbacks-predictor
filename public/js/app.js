@@ -2557,21 +2557,29 @@ function _ttopBonus(){
 // alone, which is exactly the failure mode we hit on Del Castillo 2026-05-25.
 function _hrrOverPct(line, ss, recentLog, gamePAs){
   const k=Math.floor(line);
-  if(recentLog?.length){
-    const playedGames=recentLog.filter(g=>(parseInt(g.stat?.plateAppearances)||parseInt(g.stat?.atBats)||0)>0);
-    if(playedGames.length>=10){
-      const counts=playedGames.map(g=>(parseInt(g.stat?.hits)||0)+(parseInt(g.stat?.runs)||0)+(parseInt(g.stat?.rbi)||0));
-      const cnt=counts.filter(c=>c>k).length;
-      return (cnt/counts.length)*100;
-    }
-  }
-  // No recent-game log — fall back to season rate with Bayesian shrinkage.
-  // League avg H+R+RBI per game ~1.55-1.7 depending on year; use 1.6 as prior.
-  // Scale the per-game rate by today's expected PAs vs the league-average ~4.2.
+  // Always compute the Poisson estimate — it's both the no-data fallback AND
+  // the Bayesian prior we shrink the empirical CDF toward. The summed-rate
+  // Poisson is biased high (events are correlated within a game), but it's a
+  // reasonable mean-of-population prior at the rate level we care about.
   const paMult=gamePAs?gamePAs/4.2:1.0;
   const totalHRR=(parseInt(ss?.hits)||0)+(parseInt(ss?.runs)||0)+(parseInt(ss?.rbi)||0);
   const hrrPG=_shrunkRate(totalHRR,parseInt(ss?.gamesPlayed)||0,1.6,60)*paMult;
-  return (1-_poissonCDF(hrrPG,k))*100;
+  const poissonOver=(1-_poissonCDF(hrrPG,k))*100;
+  if(recentLog?.length){
+    const playedGames=recentLog.filter(g=>(parseInt(g.stat?.plateAppearances)||parseInt(g.stat?.atBats)||0)>0);
+    if(playedGames.length>=5){
+      const counts=playedGames.map(g=>(parseInt(g.stat?.hits)||0)+(parseInt(g.stat?.runs)||0)+(parseInt(g.stat?.rbi)||0));
+      const cnt=counts.filter(c=>c>k).length;
+      const empOver=(cnt/playedGames.length)*100;
+      // Bayesian-shrink the empirical CDF toward the Poisson prior with a 15-game
+      // pseudo-prior weight. Keeps a 10-game cold streak from dominating the
+      // projection — a sporadic catcher with empirical 40% but per-PA bottom-up
+      // 60% shrinks to ~55% instead of trusting the noisy 40% directly. Threshold
+      // lowered from 10 → 5 games since the shrinkage now provides regularization.
+      return (playedGames.length*empOver + 15*poissonOver) / (playedGames.length + 15);
+    }
+  }
+  return poissonOver;
 }
 
 // Median of implied probabilities (not median of American odds — odds are non-linear,
@@ -3206,8 +3214,13 @@ function modelProbability(propKey,line,score){
   }
   else if(propKey==='batter_hits_runs_rbis'){
     const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs);
+    // scoreBase weight dropped 50% → 25%, matching the pattern applied to
+    // every other rate-based prop. The Bayesian-shrunk empirical CDF (or
+    // Poisson fallback) is the principled signal here; the heavy 50% score
+    // weight was pulling low-stat-line starters' projections down by ~25pp
+    // even when their per-PA bottom-up math said they were a coin flip.
     const scoreBase=lerp3(score,20,20,50,38,80,60);
-    p=scoreBase*0.5+rateBase*0.5;
+    p=scoreBase*0.25+rateBase*0.75;
     // Composite of hits (no protection effect) + runs + RBI (both protection-sensitive).
     // Roughly 2/3 the magnitude of RBI/Runs since hits are unaffected.
     if(S.lineupProtection?.tier==='strong')p+=3;
