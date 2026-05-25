@@ -54,33 +54,49 @@ function captureQuota(h) {
 
 function ymd(d) { return d.toISOString().slice(0, 10); }
 
-// Pick the flight whose arrival looks most relevant for "did they get in last night?":
-// prefer most recent arrival into the team's home airport in the lookback window.
+// Pick the flight whose arrival looks most relevant for "the team is on the
+// way to / has arrived at the host city": filter to flights with any kind of
+// arrival timestamp (actual, estimated, or scheduled), prefer arrivals INTO
+// the destination airport, then sort by arrival time desc.
 function pickLatestArrival(flights, homeAirport) {
   if (!Array.isArray(flights)) return null;
   const scored = flights
     .map(f => {
       const arrIata = f?.arrival?.airport?.iata || f?.arrival?.airport?.icao;
-      const arrTime = f?.arrival?.actualTime?.utc || f?.arrival?.scheduledTime?.utc;
-      if (!arrTime) return null;
+      const arrScheduledUtc = f?.arrival?.scheduledTime?.utc   || null;
+      const arrEstimatedUtc = f?.arrival?.predictedTime?.utc   || null;
+      const arrActualUtc    = f?.arrival?.actualTime?.utc      || null;
+      // Sort key: prefer actual > predicted > scheduled.
+      const arrUtc = arrActualUtc || arrEstimatedUtc || arrScheduledUtc;
+      if (!arrUtc) return null;
       return {
         tail: f?.aircraft?.reg,
         callsign: f?.callSign || f?.number,
         source: f?._source,
         from:  f?.departure?.airport?.iata || f?.departure?.airport?.icao,
         to:    arrIata,
+        // Convenience fields (best-available, what the existing UI uses):
         depUtc:   f?.departure?.actualTime?.utc   || f?.departure?.scheduledTime?.utc,
         depLocal: f?.departure?.actualTime?.local || f?.departure?.scheduledTime?.local,
-        arrUtc:   arrTime,
-        arrLocal: f?.arrival?.actualTime?.local   || f?.arrival?.scheduledTime?.local,
+        arrUtc,
+        arrLocal: f?.arrival?.actualTime?.local || f?.arrival?.predictedTime?.local || f?.arrival?.scheduledTime?.local,
+        // Discrete fields so the client can tell "departed yet?" / "landed yet?":
+        depScheduledUtc:   f?.departure?.scheduledTime?.utc   || null,
+        depScheduledLocal: f?.departure?.scheduledTime?.local || null,
+        depActualUtc:      f?.departure?.actualTime?.utc      || null,
+        depActualLocal:    f?.departure?.actualTime?.local    || null,
+        arrScheduledUtc,
+        arrScheduledLocal: f?.arrival?.scheduledTime?.local   || null,
+        arrEstimatedUtc,
+        arrEstimatedLocal: f?.arrival?.predictedTime?.local   || null,
+        arrActualUtc,
+        arrActualLocal:    f?.arrival?.actualTime?.local      || null,
         intoHome: homeAirport && arrIata === homeAirport,
         status: f?.status,
       };
     })
     .filter(Boolean)
     .sort((a, b) => new Date(b.arrUtc) - new Date(a.arrUtc));
-  // Prefer arrivals into the away team's destination over arrivals back into home,
-  // but fall back to most recent of either.
   return scored[0] || null;
 }
 
