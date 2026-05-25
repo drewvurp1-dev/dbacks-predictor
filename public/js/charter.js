@@ -269,31 +269,68 @@
         return;
       }
       const a = d.arrival;
-      const body = bodyClockArrival(a.arrUtc, a.depLocal);
-      const cls_  = classifyArrival(body, gameDate);
-      const tierClass = cls_.tier === 'yellow'   ? 'dch-yellow'
-                      : cls_.tier === 'red'      ? 'dch-red'
-                      : cls_.tier === 'critical' ? 'dch-critical'
-                      : '';
-      const flagBadge = cls_.label
-        ? `<span class="dch-flag">⚑ ${cls_.label.toUpperCase()}</span>`
-        : `<span class="dch-flag" style="color:#2ecc71;">✓ on time</span>`;
       const idTxt = a.callsign && (a.source || '').startsWith('callsign:')
         ? a.callsign
         : (a.tail || a.callsign || '—');
-      const html = `
-        <span class="dch-plane">✈</span>
-        <span class="dch-route">${trackedTeam} ${a.from || '???'} → <strong>${a.to || '???'}</strong></span>
-        <span class="dch-time">${fmtLocal(a.arrUtc)}</span>
-        <span class="dch-body">(body ${fmtBodyHM(body)})</span>
-        ${flagBadge}
-        <span style="color:#444;font-size:9px;">${idTxt}</span>
-      `;
+      const route = `${trackedTeam} ${a.from || '???'} → <strong>${a.to || '???'}</strong>`;
+
+      // Phase detection — actual arrival wins over actual departure wins over scheduled.
+      const landed   = !!a.arrActualUtc;
+      const departed = !landed && !!a.depActualUtc;
+      const scheduled = !landed && !departed;
+
+      let html, tierClass = '';
+
+      if (landed) {
+        const body = bodyClockArrival(a.arrActualUtc, a.depLocal);
+        const cls_ = classifyArrival(body, gameDate);
+        tierClass = cls_.tier === 'yellow'   ? 'dch-yellow'
+                  : cls_.tier === 'red'      ? 'dch-red'
+                  : cls_.tier === 'critical' ? 'dch-critical'
+                  : '';
+        const flagBadge = cls_.label
+          ? `<span class="dch-flag">⚑ ${cls_.label.toUpperCase()}</span>`
+          : `<span class="dch-flag" style="color:#2ecc71;">✓ on time</span>`;
+        html = `
+          <span class="dch-plane">✈</span>
+          <span class="dch-route">${route}</span>
+          <span class="dch-time">landed ${fmtLocal(a.arrActualUtc)}</span>
+          <span class="dch-body">(body ${fmtBodyHM(body)})</span>
+          ${flagBadge}
+          <span style="color:#444;font-size:9px;">${idTxt}</span>
+        `;
+      } else if (departed) {
+        // In the air — show departure delta vs scheduled, plus best-guess arrival.
+        const etaUtc = a.arrEstimatedUtc || a.arrScheduledUtc;
+        const depDelayMin = (a.depScheduledUtc && a.depActualUtc)
+          ? Math.round((new Date(a.depActualUtc) - new Date(a.depScheduledUtc)) / 60000)
+          : null;
+        const delayTxt = depDelayMin == null ? ''
+          : depDelayMin > 0 ? ` <span style="color:#f1c40f;">(${depDelayMin} min late)</span>`
+          : depDelayMin < 0 ? ` <span style="color:#2ecc71;">(${-depDelayMin} min early)</span>`
+          : '';
+        html = `
+          <span class="dch-plane">✈</span>
+          <span class="dch-route">${route}</span>
+          <span class="dch-time">departed ${fmtLocal(a.depActualUtc)}${delayTxt}</span>
+          ${etaUtc ? `<span class="dch-body">ETA ${fmtLocal(etaUtc)}</span>` : ''}
+          <span class="dch-flag" style="color:#5dade2;">⏳ EN ROUTE</span>
+          <span style="color:#444;font-size:9px;">${idTxt}</span>
+        `;
+      } else {
+        // Scheduled — show planned departure and arrival.
+        html = `
+          <span class="dch-plane">✈</span>
+          <span class="dch-route">${route}</span>
+          <span class="dch-time">scheduled ${fmtLocal(a.depScheduledUtc)}${a.arrScheduledUtc ? ' → ' + fmtLocal(a.arrScheduledUtc) : ''}</span>
+          <span class="dch-flag" style="color:#888;">◷ SCHEDULED</span>
+          <span style="color:#444;font-size:9px;">${idTxt}</span>
+        `;
+      }
       el.className = `dash-charter ${tierClass}`.trim();
       el.innerHTML = html;
       _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = tierClass;
     } catch (e) {
-      // Silent failure on dashboard — don't spam the user with API errors.
       el.classList.add('hidden');
     }
   };
