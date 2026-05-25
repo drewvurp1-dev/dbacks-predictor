@@ -315,15 +315,22 @@
         : (a.tail || a.callsign || '—');
       const route = `${trackedTeam} ${a.from || '???'} → <strong>${a.to || '???'}</strong>`;
 
-      // Phase detection — actual arrival wins over actual departure wins over scheduled.
-      const landed   = !!a.arrActualUtc;
-      const departed = !landed && !!a.depActualUtc;
-      const scheduled = !landed && !departed;
+      // Phase detection — trust actualTime fields when present, fall back to
+      // AeroDataBox's status field since that's the authoritative phase marker
+      // and actualTime is often null even on flights AeroDataBox knows landed.
+      const statusLc = (a.status || '').toLowerCase();
+      const arrivedByStatus  = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
+      const enRouteByStatus  = /(en[-\s]?route|departed|airborne|approaching)/.test(statusLc);
+      const landed   = !!a.arrActualUtc || arrivedByStatus;
+      const departed = !landed && (!!a.depActualUtc || enRouteByStatus);
+      // Best-available timestamps for the display layer (actual > scheduled).
+      const displayArrUtc = a.arrActualUtc || a.arrScheduledUtc;
+      const displayDepUtc = a.depActualUtc || a.depScheduledUtc;
 
       let html, tierClass = '';
 
       if (landed) {
-        const body = bodyClockArrival(a.arrActualUtc, a.depLocal);
+        const body = bodyClockArrival(displayArrUtc, a.depLocal);
         const cls_ = classifyArrival(body, gameDate);
         tierClass = cls_.tier === 'yellow'   ? 'dch-yellow'
                   : cls_.tier === 'red'      ? 'dch-red'
@@ -335,7 +342,7 @@
         html = `
           <span class="dch-plane">✈</span>
           <span class="dch-route">${route}</span>
-          <span class="dch-time">landed ${fmtLocal(a.arrActualUtc)}</span>
+          <span class="dch-time">landed ${fmtLocal(displayArrUtc)}</span>
           <span class="dch-body">(body ${fmtBodyHM(body)})</span>
           ${flagBadge}
           <span style="color:#444;font-size:9px;">${idTxt}</span>
@@ -353,7 +360,7 @@
         html = `
           <span class="dch-plane">✈</span>
           <span class="dch-route">${route}</span>
-          <span class="dch-time">departed ${fmtLocal(a.depActualUtc)}${delayTxt}</span>
+          <span class="dch-time">departed ${fmtLocal(displayDepUtc)}${delayTxt}</span>
           ${etaUtc ? `<span class="dch-body">ETA ${fmtLocal(etaUtc)}</span>` : ''}
           <span class="dch-flag" style="color:#5dade2;">⏳ EN ROUTE</span>
           <span style="color:#444;font-size:9px;">${idTxt}</span>
