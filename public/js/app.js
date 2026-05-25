@@ -2543,15 +2543,27 @@ function _ttopBonus(){
 
 // H+R+RBI estimate. These three events are positively correlated (a hit often produces
 // a run or RBI; HRs produce all three), so summing rates and feeding to a single Poisson
-// understates variance and biases OVER probability high. When we have ≥10 recent games,
-// use the empirical CDF directly — it captures the real joint distribution. Otherwise
-// fall back to the summed-rate Poisson with the caveat that it's biased.
+// understates variance and biases OVER probability high. When we have ≥10 recent games
+// WITH ACTUAL PLATE APPEARANCES, use the empirical CDF directly — it captures the real
+// joint distribution. Otherwise fall back to the summed-rate Poisson with the caveat
+// that it's biased.
+//
+// The plate-appearance filter is critical for sporadic players (backup catchers,
+// utility bats, defensive subs). Without it, zero-PA appearances in the recent log
+// — late-inning defensive replacements, pinch-running cameos, days where the player
+// pinch-hit and walked but otherwise sat — encode as "0 H+R+RBI" outcomes and crush
+// the Over probability. A starting backup catcher with a 30% recent appearance rate
+// at full PA can have his Over 0.5 probability deflated from ~60% to ~20% by this
+// alone, which is exactly the failure mode we hit on Del Castillo 2026-05-25.
 function _hrrOverPct(line, ss, recentLog, gamePAs){
   const k=Math.floor(line);
-  if(recentLog?.length>=10){
-    const counts=recentLog.map(g=>(parseInt(g.stat?.hits)||0)+(parseInt(g.stat?.runs)||0)+(parseInt(g.stat?.rbi)||0));
-    const cnt=counts.filter(c=>c>k).length;
-    return (cnt/counts.length)*100;
+  if(recentLog?.length){
+    const playedGames=recentLog.filter(g=>(parseInt(g.stat?.plateAppearances)||parseInt(g.stat?.atBats)||0)>0);
+    if(playedGames.length>=10){
+      const counts=playedGames.map(g=>(parseInt(g.stat?.hits)||0)+(parseInt(g.stat?.runs)||0)+(parseInt(g.stat?.rbi)||0));
+      const cnt=counts.filter(c=>c>k).length;
+      return (cnt/counts.length)*100;
+    }
   }
   // No recent-game log — fall back to season rate with Bayesian shrinkage.
   // League avg H+R+RBI per game ~1.55-1.7 depending on year; use 1.6 as prior.
