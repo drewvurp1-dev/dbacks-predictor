@@ -227,7 +227,50 @@ function monteCarloConfidence(propKey, line, score, marketOverProb, direction = 
 
 // ═══════════ MODAL SYSTEM ════════════════════════════════════════════════════
 let _modalPanels = [];
-let _modalSavedS = null;
+
+// Player-context transaction. Modal openers swap a subset of S into the
+// selected player's snapshot so render code can read S.* uniformly, then
+// closeModal() restores the outer state. The helpers below make that
+// atomic, idempotent, and safe across re-entry.
+const PLAYER_CONTEXT_KEYS = [
+  'playerName', 'playerId', 'splits', 'seasonStat', 'rispStat',
+  'statcast', 'recentGameLog', 'matchupStats', 'lastScore', 'currentOrder',
+];
+let _activeContext = null;
+
+function enterPlayerContext(playerId) {
+  const p = S.players?.[playerId];
+  if (!p) return null;
+  // Re-entry: restore outer first so its state isn't permanently lost.
+  if (_activeContext) _activeContext.restore();
+  const saved = {};
+  for (const k of PLAYER_CONTEXT_KEYS) saved[k] = S[k];
+  S.playerName    = p.name;
+  S.playerId      = playerId;
+  S.splits        = p.splits;
+  S.seasonStat    = p.seasonStat;
+  S.rispStat      = p.rispStat;
+  S.statcast      = p.statcast;
+  S.recentGameLog = p.recentGameLog;
+  S.matchupStats  = p.matchupStats;
+  S.lastScore     = p.score;
+  S.currentOrder  = p.order;
+  let restored = false;
+  _activeContext = {
+    snap: p,
+    restore() {
+      if (restored) return;
+      restored = true;
+      Object.assign(S, saved);
+      if (_activeContext && _activeContext.restore === this.restore) _activeContext = null;
+    },
+  };
+  return _activeContext;
+}
+
+function exitPlayerContext() {
+  _activeContext?.restore();
+}
 
 function _clearModalSlot() {
   const content = document.querySelector('.content');
@@ -264,32 +307,14 @@ function closeModal() {
   _clearModalSlot();
   document.getElementById('modal-overlay').classList.add('hidden');
   document.body.style.overflow = '';
-  if (_modalSavedS) { Object.assign(S, _modalSavedS); _modalSavedS = null; }
+  exitPlayerContext();
   _renderPitcherCard(); // re-assert card after DOM-move operations
 }
 
-function _swapToPlayer(playerId) {
-  const p = S.players?.[playerId];
-  if (!p) return null;
-  // If a modal is already open with a stale save slot, restore its outer state
-  // before swapping again so the original outer state isn't permanently lost.
-  if (_modalSavedS) { Object.assign(S, _modalSavedS); _modalSavedS = null; }
-  const saved = {
-    playerName: S.playerName, playerId: S.playerId, splits: S.splits, seasonStat: S.seasonStat,
-    rispStat: S.rispStat, statcast: S.statcast, recentGameLog: S.recentGameLog,
-    matchupStats: S.matchupStats, lastScore: S.lastScore, currentOrder: S.currentOrder
-  };
-  S.playerName = p.name; S.playerId = playerId; S.splits = p.splits; S.seasonStat = p.seasonStat;
-  S.rispStat = p.rispStat; S.statcast = p.statcast;
-  S.recentGameLog = p.recentGameLog; S.matchupStats = p.matchupStats;
-  S.lastScore = p.score; S.currentOrder = p.order;
-  return saved;
-}
-
 function openPlayerDetails(playerId) {
-  const snap = S.players?.[playerId];
-  if (!snap) return;
-  _modalSavedS = _swapToPlayer(playerId);
+  const ctx = enterPlayerContext(playerId);
+  if (!ctx) return;
+  const snap = ctx.snap;
   const C = 2 * Math.PI * 52;
   document.getElementById('gauge-circle').style.strokeDashoffset = C - (snap.score / 100) * C;
   document.getElementById('gauge-circle').style.stroke = snap.tier.color;
@@ -304,8 +329,8 @@ function openPlayerDetails(playerId) {
   renderFactorCards(snap.factors, snap.catTotals);
   buildPredictionSummary(snap.factors);
   // Auto-populate the Pitch Mix matchup grid so users see batter vs pitcher arsenal
-  // without having to click Run Prediction. _swapToPlayer already set S.playerId so
-  // _renderPitchMatchup keys into the right batter row in S.pitchArsenal.
+  // without having to click Run Prediction. enterPlayerContext already set
+  // S.playerId so _renderPitchMatchup keys into the right batter row in S.pitchArsenal.
   document.getElementById('pitch-display').innerHTML = _renderPitchMatchup();
   document.getElementById('result-nav-btns').style.display = 'none';
   hide('no-prediction'); show('prediction-output');
@@ -313,9 +338,9 @@ function openPlayerDetails(playerId) {
 }
 
 function openPlayerCorbet(playerId) {
-  const snap = S.players?.[playerId];
-  if (!snap) return;
-  _modalSavedS = _swapToPlayer(playerId);
+  const ctx = enterPlayerContext(playerId);
+  if (!ctx) return;
+  const snap = ctx.snap;
   const playerBets = S.allPlayerBets?.filter(pg => pg.playerName === snap.name) || [];
   if (!playerBets.length) {
     document.getElementById('corbet-no-prediction').textContent = 'No bets available for this player.';
@@ -339,9 +364,9 @@ function openPlayerCorbet(playerId) {
 }
 
 function openPlayerStats(playerId) {
-  const snap = S.players?.[playerId];
-  if (!snap) return;
-  _modalSavedS = _swapToPlayer(playerId);
+  const ctx = enterPlayerContext(playerId);
+  if (!ctx) return;
+  const snap = ctx.snap;
   renderSplitsTab(); renderStatsTab();
   // Statcast grid isn't part of renderStatsTab — render it from the swapped-in
   // player snapshot so it doesn't show the last Setup-panel player's numbers.
