@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "lint": "eslint .",
-    "test": "npm run lint",
+    "test": "node --test public/js/*.test.js",
+    "test:all": "npm run lint && npm test",
     "refresh-arsenal": "python3 scripts/refresh_pitch_arsenal.py"
   },
   "keywords": [],
