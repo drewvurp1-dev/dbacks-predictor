@@ -6,55 +6,10 @@ import {
   SYNC_KEY_STORAGE, SYNC_LAST_TS_KEY,
 } from './constants.js';
 import { show, hide, setText, _parkFactors, parseCSV } from './utils.js';
-
-// ═══════════ STATE ════════════════════════════════════════════════════════════
-const S = {
-  splits:null, seasonStat:null, rispStat:null,
-  playerName:'Corbin Carroll', playerId:'682998',
-  pitcher:null, pitcherThrows:'R',
-  pitcherPitches:{'4-Seam FB':40,'Slider':25,'Changeup':20,'Curveball':15,'Sinker':0,'Cutter':0,'Splitter':0},
-  isHome:true, dayGame:false, roofClosed:true,
-  weather:null, umpire:null, weatherManual:false, pitcherManual:false,
-  matchupStats:null,
-  lineupProtection:{tier:'average',avgOps:null,spots:[],manual:true},
-  lineupRoster:null,
-  recentGameLog:null,
-  lastScore:null, lastPrediction:null,
-  recordSort: (()=>{
-    try{const s=JSON.parse(localStorage.getItem('corbetRecordSort'));if(s&&s.key&&s.dir)return s;}catch(e){}
-    return{key:'date',dir:'desc'};
-  })(),
-  betLog: (()=>{
-    const log=JSON.parse(localStorage.getItem('corbetRecord')||'[]');
-    // Repair any duplicate IDs from a prior bug where autoSaveTopBets used the same Date.now() timestamp
-    const seen=new Set();
-    let repaired=false;
-    log.forEach((b,i)=>{
-      if(seen.has(b.id)){b.id=Date.now()+i;repaired=true;}
-      seen.add(b.id);
-      // Repair legacy entries from saveBet bug that stored rating as undefined.
-      // Derive from EV when possible; default to 'yellow' otherwise.
-      if(!['green','yellow','red'].includes(b.rating)){
-        b.rating=b.ev>=0.12?'green':b.ev>=0.06?'yellow':b.ev>=0.02?'red':'yellow';
-        repaired=true;
-      }
-    });
-    if(repaired)localStorage.setItem('corbetRecord',JSON.stringify(log));
-    return log;
-  })(),
-};
-// Expose S on window so other classic scripts (e.g. charter.js) can read app
-// state. Top-level `const` declarations don't auto-attach to window in classic
-// scripts; without this, `window.S` is undefined from outside this file.
-window.S = S;
-
-// Gated debug logger — opt in via `?debug=1` or `localStorage.debug = '1'`.
-// Keeps trace output available without spamming the console in production.
-const DEBUG = (() => {
-  try { return new URLSearchParams(location.search).has('debug') || localStorage.getItem('debug') === '1'; }
-  catch (e) { return false; }
-})();
-const log = (...args) => { if (DEBUG) console.log(...args); }; // eslint-disable-line no-console
+import {
+  S, DEBUG, log,
+  enterPlayerContext, exitPlayerContext,
+} from './state.js';
 
 // Returns the live lineup roster when available, otherwise the hardcoded fallback
 function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
@@ -226,49 +181,7 @@ function monteCarloConfidence(propKey, line, score, marketOverProb, direction = 
 // ═══════════ MODAL SYSTEM ════════════════════════════════════════════════════
 let _modalPanels = [];
 
-// Player-context transaction. Modal openers swap a subset of S into the
-// selected player's snapshot so render code can read S.* uniformly, then
-// closeModal() restores the outer state. The helpers below make that
-// atomic, idempotent, and safe across re-entry.
-const PLAYER_CONTEXT_KEYS = [
-  'playerName', 'playerId', 'splits', 'seasonStat', 'rispStat',
-  'statcast', 'recentGameLog', 'matchupStats', 'lastScore', 'currentOrder',
-];
-let _activeContext = null;
-
-function enterPlayerContext(playerId) {
-  const p = S.players?.[playerId];
-  if (!p) return null;
-  // Re-entry: restore outer first so its state isn't permanently lost.
-  if (_activeContext) _activeContext.restore();
-  const saved = {};
-  for (const k of PLAYER_CONTEXT_KEYS) saved[k] = S[k];
-  S.playerName    = p.name;
-  S.playerId      = playerId;
-  S.splits        = p.splits;
-  S.seasonStat    = p.seasonStat;
-  S.rispStat      = p.rispStat;
-  S.statcast      = p.statcast;
-  S.recentGameLog = p.recentGameLog;
-  S.matchupStats  = p.matchupStats;
-  S.lastScore     = p.score;
-  S.currentOrder  = p.order;
-  let restored = false;
-  _activeContext = {
-    snap: p,
-    restore() {
-      if (restored) return;
-      restored = true;
-      Object.assign(S, saved);
-      if (_activeContext && _activeContext.restore === this.restore) _activeContext = null;
-    },
-  };
-  return _activeContext;
-}
-
-function exitPlayerContext() {
-  _activeContext?.restore();
-}
+// (PLAYER_CONTEXT_KEYS + enterPlayerContext + exitPlayerContext moved to state.js)
 
 function _clearModalSlot() {
   const content = document.querySelector('.content');
