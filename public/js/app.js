@@ -22,6 +22,7 @@ import {
   _shrunkRate, _binomGE, _convolveTBge, _log5,
   _extractSplitStat, _handSplit,
 } from './player.js';
+import { openModal, closeModal } from './ui/modal.js';
 
 // Returns the live lineup roster when available, otherwise the hardcoded fallback
 function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
@@ -80,48 +81,10 @@ function monteCarloConfidence(propKey, line, score, marketOverProb, direction = 
 }
 
 // ═══════════ MODAL SYSTEM ════════════════════════════════════════════════════
-let _modalPanels = [];
-
-// (PLAYER_CONTEXT_KEYS + enterPlayerContext + exitPlayerContext moved to state.js)
-
-function _clearModalSlot() {
-  const content = document.querySelector('.content');
-  _modalPanels.forEach(id => {
-    const p = document.getElementById(id);
-    if (p) content.appendChild(p);
-  });
-  _modalPanels = [];
-  document.getElementById('modal-slot').innerHTML = '';
-}
-
-function _moveToModal(panelId) {
-  const p = document.getElementById(panelId);
-  if (!p) return;
-  document.getElementById('modal-slot').appendChild(p);
-  _modalPanels.push(panelId);
-}
-
-function openModal(panelIds, title) {
-  if (typeof panelIds === 'string') panelIds = [panelIds];
-  _clearModalSlot();
-  document.getElementById('modal-player-name').textContent = title || '';
-  panelIds.forEach(id => _moveToModal(id));
-  const overlay = document.getElementById('modal-overlay');
-  overlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-  // Scroll the modal back to the top so users see the panel header, not the
-  // bottom of the previous scroll position (matters most for long panels).
-  overlay.scrollTo?.(0, 0);
-  overlay.querySelector('.modal-frame')?.scrollTo?.(0, 0);
-}
-
-function closeModal() {
-  _clearModalSlot();
-  document.getElementById('modal-overlay').classList.add('hidden');
-  document.body.style.overflow = '';
-  exitPlayerContext();
-  _renderPitcherCard(); // re-assert card after DOM-move operations
-}
+// (openModal / closeModal / _clearModalSlot / _moveToModal moved to ui/modal.js)
+// Re-assert the pitcher card after the modal's DOM-move operations finish —
+// _renderPitcherCard lives in app.js until ui/render.js extracts it in PR4h.
+document.addEventListener('modal:closed', () => _renderPitcherCard());
 
 function openPlayerDetails(playerId) {
   const ctx = enterPlayerContext(playerId);
