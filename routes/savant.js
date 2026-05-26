@@ -1,4 +1,5 @@
 const express = require('express');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 const router  = express.Router();
 
 // In-memory cache — Savant CSVs update at most once per day
@@ -22,14 +23,14 @@ async function savantFetch(url, res) {
     const r = await fetch(url, { headers: SAVANT_HEADERS });
     const data = await r.text();
     if (data.trim().startsWith('<!DOCTYPE') || data.trim().startsWith('<html')) {
-      return res.status(502).json({ error: 'Savant returned HTML — endpoint may be blocked' });
+      return errorResponse(res, 502, 'Savant returned HTML — endpoint may be blocked', { code: ErrorCodes.UPSTREAM_HTML });
     }
     _cache[url] = { data, ts: now };
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(data);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    errorResponse(res, 502, e.message, { code: ErrorCodes.UPSTREAM_FAILED });
   }
 }
 

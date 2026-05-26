@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 
 const router = express.Router();
 const DATA_PATH = path.join(__dirname, '..', 'data', 'pitch_arsenal.json');
@@ -23,9 +24,9 @@ function load() {
 router.get('/', (req, res) => {
   const data = load();
   if (!data) {
-    return res.status(503).json({
-      error: 'pitch arsenal data unavailable',
-      hint: 'run `npm run refresh-arsenal` to generate data/pitch_arsenal.json',
+    return errorResponse(res, 503, 'pitch arsenal data unavailable', {
+      code: ErrorCodes.NOT_CONFIGURED,
+      detail: { hint: 'run `npm run refresh-arsenal` to generate data/pitch_arsenal.json' },
     });
   }
   // Pinned to mtime — daily refresh means we want the latest, not a browser cache.

@@ -1,5 +1,6 @@
 const express = require('express');
 const https   = require('https');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 const router  = express.Router();
 
 router.use('/', (req, res) => {
@@ -8,7 +9,7 @@ router.use('/', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     mlbRes.pipe(res);
-  }).on('error', (e) => res.status(500).json({ error: e.message }));
+  }).on('error', (e) => errorResponse(res, 502, e.message, { code: ErrorCodes.UPSTREAM_FAILED }));
 });
 
 module.exports = router;

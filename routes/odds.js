@@ -1,5 +1,6 @@
 const express = require('express');
 const https   = require('https');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 const router  = express.Router();
 
 // Cache odds responses to avoid burning API quota on every page load.
@@ -15,7 +16,7 @@ function cacheTTL(url) {
 
 router.use('/', (req, res) => {
   const apiKey = process.env.ODDS_API_KEY;
-  if (!apiKey) { res.status(500).json({ error: 'ODDS_API_KEY not configured' }); return; }
+  if (!apiKey) { errorResponse(res, 503, 'ODDS_API_KEY not configured', { code: ErrorCodes.NOT_CONFIGURED }); return; }
 
   const sep = req.url.includes('?') ? '&' : '?';
   const url = 'https://api.the-odds-api.com' + req.url + sep + 'apiKey=' + apiKey;
@@ -54,8 +55,8 @@ router.use('/', (req, res) => {
       }
       res.status(oddsRes.statusCode).send(data);
     });
-    oddsRes.on('error', e => res.status(500).json({ error: e.message }));
-  }).on('error', (e) => res.status(500).json({ error: e.message }));
+    oddsRes.on('error', e => errorResponse(res, 502, e.message, { code: ErrorCodes.UPSTREAM_FAILED }));
+  }).on('error', (e) => errorResponse(res, 502, e.message, { code: ErrorCodes.UPSTREAM_FAILED }));
 });
 
 module.exports = router;
