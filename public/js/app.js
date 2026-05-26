@@ -470,7 +470,7 @@ async function onPitcherSearch(val){
       const d=await r.json();
       const pitchers=(d.people||[]).filter(p=>p.primaryPosition?.type==='Pitcher').slice(0,8);
       if(!pitchers.length){hide('pitcher-search-results');return;}
-      document.getElementById('pitcher-search-results').innerHTML=pitchers.map(p=>`<div class="search-result-item" onclick="selectPitcher(${p.id},'${p.fullName.replace(/'/g,"\\'")}')"><span>${p.fullName}</span><span class="sr-pos">${p.pitchHand?.code||'?'}HP</span></div>`).join('');
+      document.getElementById('pitcher-search-results').innerHTML=pitchers.map(p=>`<div class="search-result-item" data-action="select-pitcher" data-pitcher-id="${p.id}" data-pitcher-name="${p.fullName.replace(/"/g,'&quot;')}"><span>${p.fullName}</span><span class="sr-pos">${p.pitchHand?.code||'?'}HP</span></div>`).join('');
       show('pitcher-search-results');
     }catch(e){console.warn('Pitcher search failed:',e.message);hide('pitcher-search-results');}
   },300);
@@ -2661,7 +2661,7 @@ async function loadCorbet(){
     S.allPlayerBets=allPlayerBets.filter(pg=>pg.bets.length>0);
     const filterEl=document.getElementById('corbet-player-filter');
     filterEl.innerHTML='<div class="cpf-label">Show players</div>'+
-      S.allPlayerBets.map(pg=>`<label data-name="${pg.playerName}"><input type="checkbox" checked onchange="renderCorbetBets()"> ${pg.playerName}</label>`).join('');
+      S.allPlayerBets.map(pg=>`<label data-name="${pg.playerName}"><input type="checkbox" checked data-action="render-corbet-bets"> ${pg.playerName}</label>`).join('');
     show('corbet-player-filter');
     renderCorbetBets();
     show('corbet-bets');
@@ -2725,7 +2725,7 @@ function renderCorbetBets(){
       return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span>${_softBadge}</span>
-          ${showSave?`<button data-bk="${betKey.replace(/"/g,'&quot;')}" onclick="saveBet(this.dataset.bk,this)" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
+          ${showSave?`<button data-action="save-bet" data-bk="${betKey.replace(/"/g,'&quot;')}" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
         </div>
         ${b.conflict?`<div style="background:#1a0808;border:1px solid #4a1010;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;">⚠ CONFLICT — Direction contradicts Total Bases recommendation. No edge shown.</div>`:''}
         ${b.edgeStrength!=='none'
@@ -2852,7 +2852,7 @@ function _renderPitcherCard(){
   if(!S.pitcher){
     el.innerHTML=`<div class="dash-pitcher-card" style="justify-content:space-between;">
       <div class="dash-pitcher-meta" style="color:#f39c12;">⚠ Probable pitcher not yet announced — scores exclude pitcher factors.</div>
-      <button class="dash-pitcher-btn" onclick="openModal('panel-setup','Setup &amp; Overrides')" style="white-space:nowrap;">Set Pitcher</button>
+      <button class="dash-pitcher-btn" data-action="open-setup" style="white-space:nowrap;">Set Pitcher</button>
     </div>`;
     return;
   }
@@ -2869,7 +2869,7 @@ function _renderPitcherCard(){
       <div id="dash-pitcher-splits-slot"></div>
     </div>
     <div id="dash-best-matchup-slot" class="pitcher-matchup"></div>
-    <button class="dash-pitcher-btn" onclick="openModal('panel-pitcher','Pitcher Analysis')">View Stats</button>
+    <button class="dash-pitcher-btn" data-action="open-pitcher">View Stats</button>
   </div>`;
   // Async-fetch last 3 starts + season splits and slot them in
   if(S.pitcher.id&&!S.pitcher.bullpenGame){
@@ -2915,7 +2915,7 @@ function renderDashboard(){
         const _tbBest=b.direction.toLowerCase()==='over'?b.overBest:b.underBest;
         const _tbBookBadge=_tbBest?.book?`<span class="dpb-book">${bookAbbrev(_tbBest.book)}</span>`:'';
         const _tbPid=_tbIdByName[b.playerName];
-        const _tbAttrs=_tbPid?` class="dash-best-bet-row dash-best-bet-row--link" onclick="openPlayerCorbet('${_tbPid}')" title="View CorBET bets for ${b.playerName}"`:' class="dash-best-bet-row"';
+        const _tbAttrs=_tbPid?` class="dash-best-bet-row dash-best-bet-row--link" data-action="open-player-corbet" data-player-id="${_tbPid}" title="View CorBET bets for ${b.playerName}"`:' class="dash-best-bet-row"';
         return`<div${_tbAttrs}>
         <div class="dash-best-bet-left">
           <div class="dash-best-bet-player">${b.playerName}</div>
@@ -2987,7 +2987,7 @@ function renderDashboard(){
         </tr>`;
       }).join('');
       betsHtml=`<table class="dpb-bets-table">${rows}</table>
-        ${pg?`<button class="dpb-more-bets" onclick="openPlayerCorbet('${pid}')">View More Bets for ${player.name} ›</button>`:''}`;
+        ${pg?`<button class="dpb-more-bets" data-action="open-player-corbet" data-player-id="${pid}">View More Bets for ${player.name} ›</button>`:''}`;
     }else if(pg){
       betsHtml='<div class="dpb-no-edge">No strong edges today</div>';
     }else{
@@ -3006,7 +3006,7 @@ function renderDashboard(){
     const lowDataBadge=snap.lowData?`<span class="low-data-badge" title="Fewer than 50 PA this season — small sample">⚠ Low PA</span>`:'';
     const lowDataWarning=snap.lowData?`<div class="low-data-warning">⚠ Fewer than 50 PA this season — rate stats (BB%, K%, AVG) may not be reliable with a small sample</div>`:'';
     return`<div class="dash-prow" id="dpr-${pid}">
-      <div class="dash-prow-header" onclick="togglePlayerCard('${pid}')">
+      <div class="dash-prow-header" data-action="toggle-player-card" data-player-id="${pid}">
         <span class="dash-prow-order">${orderLabel}</span>
         <span class="dash-prow-name">${player.name}</span>${lowDataBadge}
         <span class="dash-prow-statline">AVG ${avgStr} &nbsp; OPS ${opsStr}</span>
@@ -3019,7 +3019,7 @@ function renderDashboard(){
             <div class="dpb-gauge-score" style="color:${scoreColor}">${snap.score}</div>
           </div>
           <div class="dpb-tier" style="color:${scoreColor}">${snap.tier?.label||''}</div>
-          <button class="dpb-details-btn" onclick="openPlayerDetails('${pid}')">Details ›</button>
+          <button class="dpb-details-btn" data-action="open-player-details" data-player-id="${pid}">Details ›</button>
         </div>
         <div class="dpb-center">${lowDataWarning}${betsHtml}</div>
         <div class="dpb-right">${matchupHtml}${splitsHtml}${recentHtml}</div>
@@ -3515,11 +3515,11 @@ function renderRecord(){
       <span class="bli-odds">${b.odds>0?'+':''}${b.odds??'—'}</span>
       <span class="bli-rating" style="background:${ratingBg[b.rating]||'#1a1730'};color:${ratingColors[b.rating]||'#777'}">${b.rating||'—'}</span>
       <span class="bli-result">
-        <button class="result-btn win ${b.result==='win'?'active':''}" onclick="setResult(${b.id},'win')">W</button>
-        <button class="result-btn loss ${b.result==='loss'?'active':''}" onclick="setResult(${b.id},'loss')">L</button>
-        <button class="result-btn push ${b.result==='push'?'active':''}" onclick="setResult(${b.id},'push')">P</button>
+        <button class="result-btn win ${b.result==='win'?'active':''}" data-action="set-result" data-bet-id="${b.id}" data-value="win">W</button>
+        <button class="result-btn loss ${b.result==='loss'?'active':''}" data-action="set-result" data-bet-id="${b.id}" data-value="loss">L</button>
+        <button class="result-btn push ${b.result==='push'?'active':''}" data-action="set-result" data-bet-id="${b.id}" data-value="push">P</button>
       </span>
-      <button class="del-btn" onclick="deleteBet(${b.id})" title="Remove">×</button>
+      <button class="del-btn" data-action="delete-bet" data-bet-id="${b.id}" title="Remove">×</button>
     </div>`).join('');
 }
 
@@ -4125,7 +4125,7 @@ async function renderGradePanel() {
           ${['H','TB','HR','BB','K','RBI'].map(s => `<div class="grade-stat"><div class="gs-label">${s}</div><div class="gs-val loading" id="stat-${pred.id}-${s}">...</div></div>`).join('')}
         </div>
         <div style="display:flex;gap:8px;align-items:center;" id="grade-actions-${pred.id}">
-          <button class="grade-btn confirm" onclick="autoGrade(${pred.id}, '${pred.playerId}', '${pred.date}')">⟳ Fetch & Grade</button>
+          <button class="grade-btn confirm" data-action="auto-grade" data-pred-id="${pred.id}" data-player-id="${pred.playerId}" data-date="${pred.date}">⟳ Fetch & Grade</button>
           <span style="font-size:10px;color:#777;font-family:\'Chakra Petch\',monospace;">Fetches actual stats from MLB API</span>
         </div>`;
       pendingEl.appendChild(div);
@@ -4188,8 +4188,8 @@ async function renderGradePanel() {
         <span class="outcome-badge ${live.outcome}">${outcomeLabels[live.outcome]||live.outcome}</span>
         <span class="model-badge ${modelClass}" title="Actual ${Math.round(live.perfScore)} vs Expected ${Math.round(live.expectedPerf)} (residual ${residualText})">${modelLabel}</span>
         <span class="grade-row-actions">
-          <button class="grade-row-edit" onclick="editGradeEntry(${g.id})" title="Edit stats (MLB API correction)">✎</button>
-          <button class="grade-row-del" onclick="deleteGradeEntry(${g.id})" title="Remove from log">×</button>
+          <button class="grade-row-edit" data-action="edit-grade" data-grade-id="${g.id}" title="Edit stats (MLB API correction)">✎</button>
+          <button class="grade-row-del" data-action="delete-grade" data-grade-id="${g.id}" title="Remove from log">×</button>
         </span>
       </div>`;
     }).join('');
@@ -4226,7 +4226,7 @@ async function autoGrade(predId, playerId, date) {
       const actionsEl = document.getElementById(`grade-actions-${predId}`);
       if (actionsEl) {
         actionsEl.innerHTML = `
-          <button class="grade-btn remove-btn" style="background:#2a1a1a;color:#e74c3c;border:1px solid #e74c3c;" onclick="removePending(${predId})">✕ Remove (didn't play)</button>
+          <button class="grade-btn remove-btn" style="background:#2a1a1a;color:#e74c3c;border:1px solid #e74c3c;" data-action="remove-pending" data-pred-id="${predId}">✕ Remove (didn't play)</button>
           <span style="font-size:10px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;">Player had 0 PA — no at-bats recorded</span>`;
       }
       return;
@@ -4792,23 +4792,80 @@ document.getElementById('game-date').value=new Date().toISOString().split('T')[0
 // and continue to rely on the window-exposure block below; those migrate in a
 // follow-up.
 const ACTIONS = {
-  // Header buttons
-  'open-grade':        () => { openModal('panel-grade',       'Grade & Learn');      renderGradePanel(); },
-  'open-record':       () => { openModal('panel-record',      'Bet Record');         renderRecord(); },
+  // ── Page actions (no args) ────────────────────────────────────────────────
+  'load-player':           () => loadPlayer(),
+  'run-prediction':        () => runPrediction(),
+  'fetch-weather':         () => fetchWeather(),
+  'toggle-manual':         () => toggleManual(),
+  'toggle-weather-manual': () => toggleWeatherManual(),
+  'toggle-add-bet':        () => toggleAddBetForm(),
+  'check-charter':         () => window.checkCharter(), // defined in charter.js (classic script)
+  'load-umpire-weather':   () => loadUmpireAndWeather(),
+  'update-weather-time':   () => updateWeatherForTime(),
+  'stadium-change':        () => onStadiumChange(),
+  'reload':                () => location.reload(),
 
-  // Result panel buttons
+  // ── Sync + push ──────────────────────────────────────────────────────────
+  'push-record':    () => pushRecord(),
+  'pull-record':    () => pullRecord(),
+  'push-subscribe': () => _pushSubscribe(),
+  'push-test':      () => _pushTest(),
+
+  // ── Bet log ──────────────────────────────────────────────────────────────
+  'clear-record':   () => clearRecord(),
+  'clear-grades':   () => clearGrades(),
+  'add-manual-bet': () => addManualBet(),
+  'autograde':      () => autoGradeBetLog(),
+
+  // ── Setup toggles (value in data-value) ──────────────────────────────────
+  'set-throws':         (el) => setThrows(el.dataset.value),
+  'set-day':            (el) => setDay(el.dataset.value === 'true'),
+  'set-home':           (el) => setHome(el.dataset.value === 'true'),
+  'set-roof':           (el) => setRoof(el.dataset.value === 'true'),
+  'toggle-factor-card': (el) => toggleFactorCard(el.dataset.value),
+  'set-record-sort':    (el) => setRecordSort(el.dataset.value),
+
+  // ── Bet finder (Add bet form) ────────────────────────────────────────────
+  'abf-set-dir':    (el) => abfSetDir(el.dataset.value),
+  'abf-set-result': (el) => abfSetResult(el.dataset.value === 'null' ? null : el.dataset.value),
+
+  // ── Modal lifecycle ──────────────────────────────────────────────────────
+  'open-setup':     () => openModal('panel-setup',   'Setup & Overrides'),
+  'open-pitcher':   () => openModal('panel-pitcher', 'Pitcher Analysis'),
+  'close-modal':    () => closeModal(),
+  // Close only when clicking the backdrop itself, not modal content.
+  'close-modal-backdrop': (el, e) => { if (e.target === el) closeModal(); },
+
+  // ── Chained / composite handlers (bug-prone class — see audit #9) ────────
+  'open-grade':        () => { openModal('panel-grade',       'Grade & Learn');     renderGradePanel(); },
+  'open-record':       () => { openModal('panel-record',      'Bet Record');        renderRecord(); },
   'view-corbet':       () => { closeModal(); openModal('panel-corbet', 'CorBET Carroll'); loadCorbet(); },
-  'adjust-conditions': () => { closeModal(); openModal('panel-setup',  'Setup & Overrides'); },
-
-  // CorBET Record card
-  'open-calibration':  () => { openModal('panel-calibration', 'Model Calibration');  renderCalibration(); },
-
-  // Dashboard player rows — stops propagation so the row's outer click handler
+  'adjust-conditions': () => { closeModal(); openModal('panel-setup', 'Setup & Overrides'); },
+  'open-calibration':  () => { openModal('panel-calibration', 'Model Calibration'); renderCalibration(); },
+  // open-player-stats stops propagation so the row's outer click handler
   // (which opens the Details modal) doesn't also fire.
-  'open-player-stats': (el, e) => { e.stopPropagation(); openPlayerStats(el.dataset.playerId); },
+  'open-player-stats':   (el, e) => { e.stopPropagation(); openPlayerStats(el.dataset.playerId); },
 
-  // Pitch-mix slider — mutates S.pitcherPitches and updates the trailing %.
-  'pitch-mix-slider':  (el) => {
+  // ── Dynamic actions (inside app.js innerHTML strings) ────────────────────
+  'select-pitcher':      (el) => selectPitcher(el.dataset.pitcherId, el.dataset.pitcherName),
+  'render-corbet-bets':  () => renderCorbetBets(),
+  'save-bet':            (el) => saveBet(el.dataset.bk, el),
+  'open-player-corbet':  (el) => openPlayerCorbet(el.dataset.playerId),
+  'open-player-details': (el) => openPlayerDetails(el.dataset.playerId),
+  'toggle-player-card':  (el) => togglePlayerCard(el.dataset.playerId),
+  'set-result':          (el) => setResult(parseInt(el.dataset.betId), el.dataset.value),
+  'delete-bet':          (el) => deleteBet(parseInt(el.dataset.betId)),
+  'auto-grade':          (el) => autoGrade(parseInt(el.dataset.predId), el.dataset.playerId, el.dataset.date),
+  'edit-grade':          (el) => editGradeEntry(parseInt(el.dataset.gradeId)),
+  'delete-grade':        (el) => deleteGradeEntry(parseInt(el.dataset.gradeId)),
+  'remove-pending':      (el) => removePending(parseInt(el.dataset.predId)),
+
+  // ── Inputs (data-action + delegation on 'input' event) ───────────────────
+  'pitcher-search':   (el) => onPitcherSearch(el.value),
+  'temp-slider':      (el) => { document.getElementById('temp-label').textContent  = 'Temp: '     + el.value + '°F'; },
+  'wind-slider':      (el) => { document.getElementById('wind-label').textContent  = 'Wind: '     + el.value + ' mph'; },
+  'humid-slider':     (el) => { document.getElementById('humid-label').textContent = 'Humidity: ' + el.value + '%'; },
+  'pitch-mix-slider': (el) => {
     S.pitcherPitches[el.dataset.pitch] = parseInt(el.value);
     el.nextElementSibling.textContent = el.value + '%';
   },
@@ -4820,39 +4877,13 @@ function _dispatchAction(e) {
   const handler = ACTIONS[el.dataset.action];
   if (handler) handler(el, e);
 }
-document.addEventListener('click', _dispatchAction);
-document.addEventListener('input', _dispatchAction);
+document.addEventListener('click',  _dispatchAction);
+document.addEventListener('input',  _dispatchAction);
+document.addEventListener('change', _dispatchAction);
 
-// ═══════════ INLINE-HANDLER EXPORTS ═════════════════════════════════════════
-// Inline `onclick="..."` / `oninput="..."` strings in innerHTML evaluate
-// against `window`, not the module scope. ES modules don't auto-attach
-// top-level declarations to window, so these need explicit exposure.
-// Remove this block once audit finding #9 is done and inline handlers have
-// migrated to addEventListener. charter.js (classic script) also reads
-// window.S from here.
-Object.assign(window, {
-  // State + debug (also consumed by charter.js)
-  S, log, DEBUG,
-  // Modal lifecycle
-  openModal, closeModal, openPlayerDetails, openPlayerCorbet, openPlayerStats,
-  // Page actions
-  loadPlayer, loadCorbet, loadUmpireAndWeather, runPrediction, selectPitcher,
-  onPitcherSearch, onStadiumChange, fetchWeather, updateWeatherForTime,
-  // Toggles + setters
-  setDay, setHome, setRoof, setThrows, setResult, setRecordSort,
-  toggleAddBetForm, toggleFactorCard, toggleManual, togglePlayerCard,
-  toggleWeatherManual,
-  // Bet log + grading + rendering (all five reached via chained inline handlers
-  // like `onclick="openModal(...);renderXyz()"` — must be on window)
-  saveBet, addManualBet, deleteBet, clearRecord, removePending,
-  deleteGradeEntry, editGradeEntry, clearGrades,
-  autoGrade, autoGradeBetLog,
-  renderCorbetBets, renderRecord, renderGradePanel, renderCalibration,
-  // Bet finder
-  abfSetDir, abfSetResult,
-  // Push + sync
-  _pushSubscribe, _pushTest, pushRecord, pullRecord,
-});
+// Audit #9 done: inline handlers are gone; everything routes through the
+// data-action delegation above. window.S is still set in state.js for
+// charter.js (classic script) which reads it directly.
 
 onStadiumChange();
 loadPlayer();
