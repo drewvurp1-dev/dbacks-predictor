@@ -29,6 +29,10 @@ export const ALLOWED_BOOKS = new Set(Object.keys(BOOK_ABBREVS));
 // ── Pitch types ─────────────────────────────────────────────────────────────
 export const PITCH_TYPES = ['4-Seam FB','Sinker','Cutter','Slider','Curveball','Changeup','Splitter'];
 
+// Statcast pitch-code → display name. Used by pitch-matchup rendering and the
+// pitch-matchup factor (predict.js) when surfacing the most-impactful pitch.
+export const PITCH_NAMES = { FF:'4-seam', SI:'sinker', FC:'cutter', SL:'slider', ST:'sweeper', CU:'curve', CH:'change', FS:'splitter', SV:'slurve', KC:'knuckle-curve' };
+
 // ── Props ───────────────────────────────────────────────────────────────────
 export const PROP_NAMES = {
   'batter_hits':'Hits','batter_total_bases':'Total Bases',
