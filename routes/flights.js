@@ -120,39 +120,31 @@ router.get('/status', (req, res) => {
   });
 });
 
-// GET /flights/team/:abbr  — most recent charter movement for the team.
-// Optional ?destAirport=PHX to flag arrival into a specific city.
-router.get('/team/:abbr', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+async function lookupTeam(abbr, destAirport) {
   const apiKey = process.env.AERODATABOX_API_KEY;
   if (!apiKey) {
-    return errorResponse(res, 503, 'AERODATABOX_API_KEY not configured', { code: ErrorCodes.NOT_CONFIGURED });
+    return { status: 503, data: { error: 'AERODATABOX_API_KEY not configured', code: ErrorCodes.NOT_CONFIGURED } };
   }
 
-  const abbr = req.params.abbr.toUpperCase();
+  abbr = abbr.toUpperCase();
+  destAirport = (destAirport || '').toUpperCase() || null;
   const charters = loadCharters();
   const team = charters[abbr];
-  if (!team) return errorResponse(res, 404, `Unknown team ${abbr}`, { code: ErrorCodes.NOT_FOUND });
+  if (!team) return { status: 404, data: { error: `Unknown team ${abbr}`, code: ErrorCodes.NOT_FOUND } };
 
   const tails     = Array.isArray(team.tails)     ? team.tails     : [];
   const callsigns = Array.isArray(team.callsigns) ? team.callsigns : [];
   if (!tails.length && !callsigns.length) {
-    return res.json({
-      team: abbr,
-      home_airport: team.home_airport,
-      tails: [],
-      callsigns: [],
-      arrival: null,
+    return { status: 200, cache: 'SKIP', data: {
+      team: abbr, home_airport: team.home_airport, tails: [], callsigns: [], arrival: null,
       note: `No tail numbers or callsigns registered for ${abbr}. Add them to data/team_charters.json.`,
-    });
+    }};
   }
 
-  const destAirport = (req.query.destAirport || '').toUpperCase() || null;
   const cacheKey = `${abbr}|${destAirport || ''}`;
   const now = Date.now();
   if (_cache[cacheKey] && now - _cache[cacheKey].ts < TTL_TODAY) {
-    res.setHeader('X-Cache', 'HIT');
-    return res.json(_cache[cacheKey].data);
+    return { status: 200, cache: 'HIT', data: _cache[cacheKey].data };
   }
 
   const today     = ymd(new Date());
@@ -161,7 +153,6 @@ router.get('/team/:abbr', async (req, res) => {
   let anySuccess = false;
   let lastError = null;
 
-  // Helper: run one upstream call, capture quota, accumulate flights.
   async function runLookup(urlPath, tag) {
     try {
       const result = await fetchJSON('aerodatabox.p.rapidapi.com', urlPath, {
@@ -182,7 +173,6 @@ router.get('/team/:abbr', async (req, res) => {
     }
   }
 
-  // Tail-number lookups (dedicated charter aircraft like DET's N313TR).
   for (const tail of tails) {
     for (const date of [yesterday, today]) {
       await runLookup(
@@ -191,8 +181,6 @@ router.get('/team/:abbr', async (req, res) => {
       );
     }
   }
-
-  // Callsign / flight-number lookups (pooled charters like DL8884 for STL).
   for (const callsign of callsigns) {
     for (const date of [yesterday, today]) {
       await runLookup(
@@ -203,15 +191,13 @@ router.get('/team/:abbr', async (req, res) => {
   }
 
   if (!anySuccess && lastError) {
-    return errorResponse(res, 502, 'Upstream lookup failed', { code: ErrorCodes.UPSTREAM_FAILED, detail: lastError });
+    return { status: 502, data: { error: 'Upstream lookup failed', code: ErrorCodes.UPSTREAM_FAILED, detail: lastError } };
   }
 
-  // If destAirport is given, prefer arrivals INTO that airport.
-  const filterTarget = destAirport || null;
-  const targeted = filterTarget
+  const targeted = destAirport
     ? allFlights.filter(f => {
         const arr = f?.arrival?.airport?.iata || f?.arrival?.airport?.icao;
-        return arr === filterTarget;
+        return arr === destAirport;
       })
     : allFlights;
 
@@ -219,18 +205,48 @@ router.get('/team/:abbr', async (req, res) => {
   const out = {
     team: abbr,
     home_airport: team.home_airport,
-    tails: tails,
-    callsigns: callsigns,
+    tails, callsigns,
     dest_airport: destAirport,
     arrival,
     raw_flight_count: allFlights.length,
+    quota: _lastQuota,
   };
-  out.quota = _lastQuota;
   _cache[cacheKey] = { data: out, ts: now };
-  res.setHeader('X-Cache', 'MISS');
+  return { status: 200, cache: 'MISS', data: out };
+}
+
+function readCached(abbr, destAirport) {
+  abbr = abbr.toUpperCase();
+  destAirport = (destAirport || '').toUpperCase() || null;
+  const cacheKey = `${abbr}|${destAirport || ''}`;
+  const entry = _cache[cacheKey];
+  if (!entry) return null;
+  return { data: entry.data, ageMs: Date.now() - entry.ts };
+}
+
+// GET /flights/team/:abbr  — most recent charter movement for the team.
+// Optional ?destAirport=PHX to flag arrival into a specific city.
+router.get('/team/:abbr', async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const result = await lookupTeam(req.params.abbr, req.query.destAirport);
+  if (result.cache) res.setHeader('X-Cache', result.cache);
   if (_lastQuota.remaining != null) res.setHeader('X-Aerodatabox-Remaining', _lastQuota.remaining);
   if (_lastQuota.limit != null)     res.setHeader('X-Aerodatabox-Limit', _lastQuota.limit);
-  res.json(out);
+  res.status(result.status).json(result.data);
+});
+
+// GET /flights/team/:abbr/cached — returns whatever the scheduled poller has
+// last cached for this team, without making any upstream call. Lets the
+// dashboard render without burning quota; returns 204 if nothing cached yet.
+router.get('/team/:abbr/cached', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const entry = readCached(req.params.abbr, req.query.destAirport);
+  if (!entry) return res.status(204).end();
+  res.setHeader('X-Cache', 'HIT');
+  res.setHeader('X-Cache-Age-Ms', String(entry.ageMs));
+  res.json(entry.data);
 });
 
 module.exports = router;
+module.exports.lookupTeam = lookupTeam;
+module.exports.readCached = readCached;

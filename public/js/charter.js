@@ -337,20 +337,23 @@
       return;
     }
 
-    // Series-opener: hit the proxy.
+    // Series-opener: read from the poller's cache. The hourly cron warms it
+    // during the T+3h to T+8h window after the getaway-game first pitch.
     el.className = 'dash-charter';
-    el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-spinner">Looking up ${trackedTeam} charter into ${destAirport}…</span>`;
+    el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-spinner">${trackedTeam} → ${destAirport}: waiting for poller…</span>`;
 
     try {
-      const r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}?destAirport=${destAirport}`);
+      const r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}/cached?destAirport=${destAirport}`);
+      if (r.status === 204) {
+        const html = `<span class="dch-plane">✈</span><span>${trackedTeam} → ${destAirport}</span><span class="dch-spinner">poller hasn't fetched yet (fires hourly from T+3h)</span>`;
+        el.className = 'dash-charter';
+        el.innerHTML = html;
+        _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = '';
+        return;
+      }
       const d = await r.json();
-      const headerRem = r.headers.get('X-Aerodatabox-Remaining');
-      const headerLim = r.headers.get('X-Aerodatabox-Limit');
-      if (headerRem != null) setCharterCredits(headerRem, headerLim);
-      else if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
+      if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
 
-      // Render an informative one-line strip even on null arrivals — useful
-      // signal that "we tried, nothing landed yet".
       const hasIds = (d.tails && d.tails.length) || (d.callsigns && d.callsigns.length);
       if (r.status === 503 || (d.note && !hasIds)) {
         el.classList.add('hidden');
