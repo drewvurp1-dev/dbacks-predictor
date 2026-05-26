@@ -61,6 +61,34 @@ export function _computePitcherMetrics(st, statcast) {
   return { fip, xfip, siera, kbbPct, hr9 };
 }
 
+// ── Pitch mix normalization ─────────────────────────────────────────────────
+// Savant arsenal data has two sources of rounding loss: (1) each pitch_usage
+// is already truncated to 1 decimal upstream, (2) Savant's min=3 filter drops
+// pitch types with <3 thrown all year. Naively rounding each value to an
+// integer also compounds when multiple codes fold into one bucket (e.g.
+// SL+ST → Slider). Result: a mix like Mahle's renders as 98% instead of 100%.
+//
+// This helper accumulates raw fractional usages, scales to sum-to-100, then
+// uses Hamilton's largest-remainder method so the integer percentages sum
+// to exactly 100. Returns an all-zero map if every input is zero.
+export function normalizePitchMix(rawMix) {
+  const entries = Object.entries(rawMix);
+  const total = entries.reduce((s, [, v]) => s + (v || 0), 0);
+  if (total <= 0) return Object.fromEntries(entries.map(([k]) => [k, 0]));
+  const scaled = entries.map(([k, v]) => {
+    const exact = (v || 0) * (100 / total);
+    const floor = Math.floor(exact);
+    return { k, floor, remainder: exact - floor };
+  });
+  let leftover = 100 - scaled.reduce((s, x) => s + x.floor, 0);
+  scaled.sort((a, b) => b.remainder - a.remainder);
+  for (let i = 0; i < scaled.length && leftover > 0; i++) {
+    scaled[i].floor += 1;
+    leftover -= 1;
+  }
+  return Object.fromEntries(scaled.map(x => [x.k, x.floor]));
+}
+
 // ── Pitch arsenal cache ─────────────────────────────────────────────────────
 // One-shot fetch of /pitch-arsenal; result cached on S.pitchArsenal.
 // Returns the arsenal object, or null if unavailable.

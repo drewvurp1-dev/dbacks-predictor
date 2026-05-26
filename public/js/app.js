@@ -19,7 +19,7 @@ import {
   impliedProb, americanToDecimal, kellyFraction,
   _medianImpliedProb, devig, bookAbbrev,
 } from './betting.js';
-import { _computePitcherMetrics, _loadPitchArsenal } from './pitcher.js';
+import { _computePitcherMetrics, _loadPitchArsenal, normalizePitchMix } from './pitcher.js';
 import {
   _factorial, _poissonCDF,
   _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
@@ -713,20 +713,23 @@ async function loadPitcherStatcast(pitcherId){
     // Sweeper/slurve fold into Slider/Splitter since PITCH_TYPES doesn't split them.
     const CODE_TO_TYPE={FF:'4-Seam FB',SI:'Sinker',FC:'Cutter',SL:'Slider',ST:'Slider',SV:'Slider',CU:'Curveball',KC:'Curveball',CH:'Changeup',FS:'Splitter',FO:'Splitter'};
     const arsenalPit=S.pitchArsenal?.pitchers?.[pid];
-    const newMix=Object.fromEntries(PITCH_TYPES.map(t=>[t,0]));
+    // Accumulate raw fractional usages first; normalize+round once at the end so
+    // the integer percentages sum to exactly 100 (largest-remainder method).
+    const rawMix=Object.fromEntries(PITCH_TYPES.map(t=>[t,0]));
     if(arsenalRows.length){
       // Live Savant (min=3 per pitch type) — most complete; prefer over local cache
       for(const r of arsenalRows){
         const type=CODE_TO_TYPE[r.pitch_type];
-        if(type)newMix[type]=Math.round((newMix[type]||0)+parseFloat(r.pitch_usage||0));
+        if(type)rawMix[type]+=parseFloat(r.pitch_usage||0);
       }
     }else if(arsenalPit){
       // Fallback: local cache (min=50 per pitch type) — may miss low-volume pitches
       for(const[code,data] of Object.entries(arsenalPit.pitches)){
         const type=CODE_TO_TYPE[code];
-        if(type)newMix[type]=Math.round((newMix[type]||0)+(data.usage||0));
+        if(type)rawMix[type]+=(data.usage||0);
       }
     }
+    const newMix=normalizePitchMix(rawMix);
     if(Object.values(newMix).some(v=>v>0)){
       Object.assign(S.pitcherPitches,newMix);
       buildPitchMixGrid('pitch-mix-grid',S.pitcherPitches);
@@ -2924,7 +2927,8 @@ function renderDashboard(){
         <div class="dash-best-bet-right">
           <span class="dash-badge">${fmtOdds(_tbBest?.price)}${_tbBookBadge}</span>
           <span class="dash-badge" title="Edge stability % — not win probability">Stab ${b.mcConfidence.toFixed(0)}%</span>
-          <span class="dash-badge">${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
+          ${b.ev!=null?`<span class="dash-badge" title="Expected value — average return per $1 wagered at the best posted price">EV ${b.ev>=0?'+':''}${(b.ev*100).toFixed(1)}%</span>`:''}
+          <span class="dash-badge" title="Model probability minus market-implied probability (percentage points)">Δ ${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
         </div>
       </div>`;}).join('')
       :'<div class="dash-empty">No bets meet the 85% MC threshold today.</div>';
