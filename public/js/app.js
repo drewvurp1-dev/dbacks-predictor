@@ -39,6 +39,14 @@ const S = {
 // scripts; without this, `window.S` is undefined from outside this file.
 window.S = S;
 
+// Gated debug logger — opt in via `?debug=1` or `localStorage.debug = '1'`.
+// Keeps trace output available without spamming the console in production.
+const DEBUG = (() => {
+  try { return new URLSearchParams(location.search).has('debug') || localStorage.getItem('debug') === '1'; }
+  catch (e) { return false; }
+})();
+const log = (...args) => { if (DEBUG) console.log(...args); }; // eslint-disable-line no-console
+
 const CORBET_ROSTER = [
   { name: 'Corbin Carroll',   id: '682998' },
   { name: 'Ketel Marte',      id: '606466' },
@@ -796,12 +804,12 @@ async function loadPitcherStatcast(pitcherId){
   const safeRows=(text,label)=>{
     if(!text||text.trim().startsWith('<')){console.warn(`[PitcherStatcast] ${label} returned HTML or empty`);return[];}
     const rows=parseCSV(text);
-    console.log(`[PitcherStatcast] ${label}: ${rows.length} rows, cols:`,rows[0]?Object.keys(rows[0]).join(', '):'none');
+    log(`[PitcherStatcast] ${label}: ${rows.length} rows, cols:`,rows[0]?Object.keys(rows[0]).join(', '):'none');
     return rows;
   };
   const findRow=(rows,label)=>{
     const row=rows.find(r=>String(r.player_id||'').trim()===pid);
-    console.log(`[PitcherStatcast] ${label} match for pid ${pid}:`,row?'found':'not found');
+    log(`[PitcherStatcast] ${label} match for pid ${pid}:`,row?'found':'not found');
     return row||null;
   };
   const col=(row,...keys)=>{if(!row)return null;for(const k of keys){const v=row[k];if(v!=null&&v!=='')return v;}return null;};
@@ -829,7 +837,7 @@ async function loadPitcherStatcast(pitcherId){
 
     // Pitch-arsenal: one row per pitch type — weighted average across all pitches
     const arsenalRows=cswRows.filter(r=>String(r.player_id||'').trim()===pid);
-    console.log('[PitcherStatcast] arsenal rows for pid:',arsenalRows.length);
+    log('[PitcherStatcast] arsenal rows for pid:',arsenalRows.length);
     const weightedAvg=(field)=>{
       if(!arsenalRows.length)return null;
       let total=0,weighted=0;
@@ -1718,7 +1726,7 @@ async function autoLoadNextGame(){
       if(pp?.id&&pp?.fullName&&!S.pitcher){
         await selectPitcher(pp.id,pp.fullName);
       }
-    }catch(e){console.log('Auto-pitcher failed:',e.message);}
+    }catch(e){console.warn('Auto-pitcher failed:',e.message);}
 
     // Travel fatigue detection — compare to last completed game
     try{
@@ -1741,11 +1749,11 @@ async function autoLoadNextGame(){
           document.getElementById('travel-select').value='none';
         }
       }
-    }catch(e){console.log('Travel detection failed:',e.message);}
+    }catch(e){console.warn('Travel detection failed:',e.message);}
     // Load umpire, weather, lineup
     await loadUmpireAndWeather();
     loadDashboard();
-  }catch(e){console.log('Auto game load failed:',e.message);}
+  }catch(e){console.warn('Auto game load failed:',e.message);}
 }
 
 // ═══════════ LINEUP ═══════════════════════════════════════════════════════════
@@ -1754,13 +1762,13 @@ async function loadLineupContext(dv){
   try{
     const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=2026&gameType=R&hydrate=lineups&date=${dv}`);
     const d=await r.json();
-    console.log('[Lineup] raw API response:', d);
+    log('[Lineup] raw API response:', d);
     const game=d?.dates?.[0]?.games?.[0];
     if(!game){setText('lineup-empty','No D-backs game on this date.');hide('lineup-spinner');show('lineup-empty');return;}
-    console.log('[Lineup] game found:', game.gamePk, '| lineups:', game.lineups);
+    log('[Lineup] game found:', game.gamePk, '| lineups:', game.lineups);
     const isHome=game.teams?.home?.team?.id===109;
     const players=(isHome?game.lineups?.homePlayers:game.lineups?.awayPlayers)||[];
-    console.log('[Lineup] players array length:', players.length, '| isHome:', isHome);
+    log('[Lineup] players array length:', players.length, '| isHome:', isHome);
     if(!players.length){
       setText('lineup-empty','Lineup not yet posted — check back closer to first pitch.');
       hide('lineup-spinner');show('lineup-empty');return;
@@ -3428,7 +3436,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
       // as ladders for HRR/HR markets, and devig produces phantom 95% edges.
       const sideShare=rO/(rO+rU);
       if(sideShare>0.85||sideShare<0.15){
-        console.log('[props]',propKey,'line',l,'rejected: sideShare='+sideShare.toFixed(2),'over='+rO.toFixed(1)+'% under='+rU.toFixed(1)+'%');
+        log('[props]',propKey,'line',l,'rejected: sideShare='+sideShare.toFixed(2),'over='+rO.toFixed(1)+'% under='+rU.toFixed(1)+'%');
         continue;
       }
       const imbalance=Math.abs(sideShare-0.5);
@@ -3440,7 +3448,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
     const overBest=mkt.overBestByLine[line]||null;
     const underBest=mkt.underBestByLine[line]||null;
     if(!calcOver?.length||!calcUnder?.length){
-      console.log('[props]',propKey,'line',line,'insufficient: over='+calcOver.length+' under='+calcUnder.length,'effectiveLine='+effectiveLine,'allLines=',[...allLines].join(','));
+      log('[props]',propKey,'line',line,'insufficient: over='+calcOver.length+' under='+calcUnder.length,'effectiveLine='+effectiveLine,'allLines=',[...allLines].join(','));
       results.push({prop:PROP_NAMES[propKey],propKey,line,insufficient:true,
         overBest,underBest,edgeStrength:'none',absDelta:0});
       return;
@@ -3448,7 +3456,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
     const dv=devig(calcOver,calcUnder);
     if(!dv)return;
     const modelProb=modelProbability(propKey,line,score);
-    if(modelProb===null){console.log('[props]',propKey,'line',line,'modelProb null');return;}
+    if(modelProb===null){log('[props]',propKey,'line',line,'modelProb null');return;}
 
     const delta=modelProb-dv.overProb;
     const absDelta=Math.abs(delta);
@@ -3669,7 +3677,7 @@ async function loadCorbet(){
     const _allowedBookmakers=(propData.bookmakers||[]).filter(b=>ALLOWED_BOOKS.has(b.title));
     _allowedBookmakers.forEach(book=>{
       const mkts=(book.markets||[]).map(m=>m.key+'('+m.outcomes.length+')');
-      console.log('[props]',book.title,'markets:',mkts.join(', ')||'none');
+      log('[props]',book.title,'markets:',mkts.join(', ')||'none');
     });
     const playerMaps={};
     activeRoster().forEach(p=>{playerMaps[p.id]={};});
@@ -3767,6 +3775,7 @@ async function loadCorbet(){
     // Call debugProps() in the console to see per-player market summaries.
     window._debugPlayerMaps=playerMaps;
     window._debugPropData=propData;
+    /* eslint-disable no-console -- intentional devtools entry: invoked manually from console */
     window.debugProps=function(){
       const PROP_KEYS=['batter_hits','batter_total_bases','batter_home_runs','batter_rbis',
         'batter_walks','batter_strikeouts','batter_runs_scored','batter_hits_runs_rbis'];
@@ -3787,7 +3796,8 @@ async function loadCorbet(){
         console.groupEnd();
       });
     };
-    console.log('[props] Market map built — call debugProps() in console to inspect per-player lines');
+    /* eslint-enable no-console */
+    log('[props] Market map built — call debugProps() in console to inspect per-player lines');
 
     // Generate bets for each roster player — game context (pitcher, weather, etc.) stays in S
     const allPlayerBets=[];
@@ -5119,7 +5129,7 @@ function dedupePending() {
     cleaned.push(entry);
   }
   if (cleaned.length !== pending.length) {
-    console.log(`[pending] removed ${pending.length - cleaned.length} duplicate(s)`);
+    log(`[pending] removed ${pending.length - cleaned.length} duplicate(s)`);
     savePending(cleaned);
   }
 }

@@ -2,10 +2,11 @@
   "name": "dbacks-predictor",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
+    "lint": "eslint .",
+    "test": "npm run lint",
     "refresh-arsenal": "python3 scripts/refresh_pitch_arsenal.py"
   },
   "keywords": [],
@@ -19,5 +20,9 @@
     "node-cron": "^4.2.1",
     "pg": "^8.20.0",
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0"
   }
 }
