@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
 const webpush = require('web-push');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 
 // VAPID keys are loaded from env so they're stable across restarts.
 // Generate once with: node -e "console.log(require('web-push').generateVAPIDKeys())"
@@ -42,20 +43,20 @@ function hashKey(k) {
 function requireKey(req, res, next) {
   const key = req.headers['x-sync-key'];
   if (!key || key !== process.env.SYNC_KEY) {
-    return res.status(401).json({ error: 'Invalid sync key' });
+    return errorResponse(res, 401, 'Invalid sync key', { code: ErrorCodes.AUTH_FAILED });
   }
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
-    return res.status(503).json({ error: 'VAPID keys not configured on server' });
+    return errorResponse(res, 503, 'VAPID keys not configured on server', { code: ErrorCodes.NOT_CONFIGURED });
   }
   if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ error: 'DATABASE_URL not configured on server' });
+    return errorResponse(res, 503, 'DATABASE_URL not configured on server', { code: ErrorCodes.NOT_CONFIGURED });
   }
   next();
 }
 
 // Public — frontend needs this before it can subscribe.
 router.get('/public-key', (req, res) => {
-  if (!VAPID_PUBLIC) return res.status(503).json({ error: 'VAPID keys not configured' });
+  if (!VAPID_PUBLIC) return errorResponse(res, 503, 'VAPID keys not configured', { code: ErrorCodes.NOT_CONFIGURED });
   res.json({ publicKey: VAPID_PUBLIC });
 });
 
@@ -64,7 +65,7 @@ router.post('/subscribe', express.json({ limit: '50kb' }), requireKey, async (re
   try {
     const { endpoint, keys } = req.body || {};
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
-      return res.status(400).json({ error: 'Bad subscription payload' });
+      return errorResponse(res, 400, 'Bad subscription payload', { code: ErrorCodes.BAD_INPUT });
     }
     const hash = hashKey(req.headers['x-sync-key']);
     await pool().query(`
@@ -76,7 +77,7 @@ router.post('/subscribe', express.json({ limit: '50kb' }), requireKey, async (re
     res.json({ ok: true });
   } catch (err) {
     console.error('[push] subscribe error:', err.message);
-    res.status(500).json({ error: 'Server error' });
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
   }
 });
 
@@ -84,12 +85,12 @@ router.post('/subscribe', express.json({ limit: '50kb' }), requireKey, async (re
 router.post('/unsubscribe', express.json({ limit: '50kb' }), requireKey, async (req, res) => {
   try {
     const { endpoint } = req.body || {};
-    if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
+    if (!endpoint) return errorResponse(res, 400, 'Missing endpoint', { code: ErrorCodes.BAD_INPUT });
     await pool().query('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
     res.json({ ok: true });
   } catch (err) {
     console.error('[push] unsubscribe error:', err.message);
-    res.status(500).json({ error: 'Server error' });
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
   }
 });
 
@@ -127,7 +128,7 @@ router.post('/test', requireKey, async (req, res) => {
     res.json({ ok: true, sent, removed });
   } catch (err) {
     console.error('[push] test error:', err.message);
-    res.status(500).json({ error: 'Server error' });
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
   }
 });
 
@@ -143,7 +144,7 @@ router.post('/run-cron', requireKey, async (req, res) => {
     res.json({ ok: true, ran: job || 'both' });
   } catch (err) {
     console.error('[push] run-cron error:', err.message);
-    res.status(500).json({ error: err.message });
+    errorResponse(res, 500, err.message, { code: ErrorCodes.INTERNAL });
   }
 });
 

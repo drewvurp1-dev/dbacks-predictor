@@ -1,5 +1,6 @@
 const express = require('express');
 const https   = require('https');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 const router  = express.Router();
 
 function fgFetch(url, res) {
@@ -20,13 +21,13 @@ function fgFetch(url, res) {
     sRes.on('data', chunk => { data += chunk; });
     sRes.on('end', () => {
       if (data.trim().startsWith('<!DOCTYPE') || data.trim().startsWith('<html')) {
-        res.status(502).json({ error: 'FanGraphs returned HTML — endpoint may be blocked' });
+        errorResponse(res, 502, 'FanGraphs returned HTML — endpoint may be blocked', { code: ErrorCodes.UPSTREAM_HTML });
       } else {
         res.send(data);
       }
     });
-    sRes.on('error', e => res.status(500).json({ error: e.message }));
-  }).on('error', e => res.status(500).json({ error: e.message }));
+    sRes.on('error', e => errorResponse(res, 502, e.message, { code: ErrorCodes.UPSTREAM_FAILED }));
+  }).on('error', e => errorResponse(res, 502, e.message, { code: ErrorCodes.UPSTREAM_FAILED }));
 }
 
 // Pitcher leaderboard — xFIP and advanced stats

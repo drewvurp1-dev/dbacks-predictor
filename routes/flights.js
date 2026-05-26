@@ -2,6 +2,7 @@ const express = require('express');
 const https   = require('https');
 const fs      = require('fs');
 const path    = require('path');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 const router  = express.Router();
 
 // Caches flight-history lookups so we don't burn AeroDataBox quota on every
@@ -125,13 +126,13 @@ router.get('/team/:abbr', async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const apiKey = process.env.AERODATABOX_API_KEY;
   if (!apiKey) {
-    return res.status(503).json({ error: 'AERODATABOX_API_KEY not configured', configured: false });
+    return errorResponse(res, 503, 'AERODATABOX_API_KEY not configured', { code: ErrorCodes.NOT_CONFIGURED });
   }
 
   const abbr = req.params.abbr.toUpperCase();
   const charters = loadCharters();
   const team = charters[abbr];
-  if (!team) return res.status(404).json({ error: `Unknown team ${abbr}` });
+  if (!team) return errorResponse(res, 404, `Unknown team ${abbr}`, { code: ErrorCodes.NOT_FOUND });
 
   const tails     = Array.isArray(team.tails)     ? team.tails     : [];
   const callsigns = Array.isArray(team.callsigns) ? team.callsigns : [];
@@ -202,7 +203,7 @@ router.get('/team/:abbr', async (req, res) => {
   }
 
   if (!anySuccess && lastError) {
-    return res.status(502).json({ error: 'Upstream lookup failed', detail: lastError });
+    return errorResponse(res, 502, 'Upstream lookup failed', { code: ErrorCodes.UPSTREAM_FAILED, detail: lastError });
   }
 
   // If destAirport is given, prefer arrivals INTO that airport.

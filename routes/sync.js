@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
+const { errorResponse, ErrorCodes } = require('../lib/errors');
 
 // Pool is created lazily so the server starts even without DATABASE_URL.
 let _pool = null;
@@ -26,10 +27,10 @@ function hashKey(k) {
 function requireKey(req, res, next) {
   const key = req.headers['x-sync-key'];
   if (!key || key !== process.env.SYNC_KEY) {
-    return res.status(401).json({ error: 'Invalid sync key' });
+    return errorResponse(res, 401, 'Invalid sync key', { code: ErrorCodes.AUTH_FAILED });
   }
   if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ error: 'DATABASE_URL not configured on server' });
+    return errorResponse(res, 503, 'DATABASE_URL not configured on server', { code: ErrorCodes.NOT_CONFIGURED });
   }
   next();
 }
@@ -47,7 +48,7 @@ router.get('/', requireKey, async (req, res) => {
     res.json({ ...rows[0].payload, updatedAt: rows[0].updated_at });
   } catch (err) {
     console.error('[sync] GET error:', err.message);
-    res.status(500).json({ error: 'Server error' });
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
   }
 });
 
@@ -65,7 +66,7 @@ router.post('/', requireKey, express.json({ limit: '2mb' }), async (req, res) =>
     res.json({ ok: true, updatedAt: new Date().toISOString() });
   } catch (err) {
     console.error('[sync] POST error:', err.message);
-    res.status(500).json({ error: 'Server error' });
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
   }
 });
 
