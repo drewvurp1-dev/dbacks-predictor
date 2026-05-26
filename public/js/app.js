@@ -28,6 +28,7 @@ import {
   _extractSplitStat, _handSplit,
 } from './player.js';
 import { openModal, closeModal } from './ui/modal.js';
+import * as api from './api.js';
 import {
   _renderStatTip, statBox,
   _renderStatcastGrid, _renderPitchMatchup,
@@ -227,12 +228,11 @@ async function loadPlayer(){
   document.getElementById('stats-card-header').textContent=`📊 ${S.playerName} · Advanced Stats ${SEASON}`;
   showSplitsLoading();showStatsLoading();
   try {
-    const [a,b,c]=await Promise.all([
-      fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=statSplits&group=hitting&season=${SEASON}&gameType=R&sitCodes=h,a,vl,vr,d,n`),
-      fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=season&group=hitting&season=${SEASON}&gameType=R`),
-      fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=statSplits&group=hitting&season=${SEASON}&gameType=R&sitCodes=risp`),
+    const [sd,ss,rd]=await Promise.all([
+      api.mlbBatterSplits(S.playerId),
+      api.mlbBatterSeason(S.playerId),
+      api.mlbBatterSplits(S.playerId, 'risp'),
     ]);
-    const sd=await a.json(),ss=await b.json(),rd=await c.json();
     const byCode={};
     (sd?.stats?.[0]?.splits??[]).forEach(s=>{if(s.split?.code)byCode[s.split.code]=_extractSplitStat(s.stat);});
     S.splits=byCode;
@@ -249,8 +249,7 @@ async function loadPlayer(){
 // ═══════════ GAME LOG ══════════════════════════════════════════════════════════
 async function loadGameLog(){
   try{
-    const r=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=gameLog&group=hitting&season=${SEASON}&gameType=R`);
-    const d=await r.json();
+    const d=await api.mlbBatterGameLog(S.playerId);
     const games=d?.stats?.[0]?.splits||[];
     S.recentGameLog=games.slice(-10).reverse(); // most recent first
   }catch(e){ S.recentGameLog=null; }
@@ -467,8 +466,7 @@ async function onPitcherSearch(val){
   if(val.length<2){hide('pitcher-search-results');return;}
   pitcherTimer=setTimeout(async()=>{
     try{
-      const r=await fetch(`/mlb/api/v1/people/search?names=${encodeURIComponent(val)}&sportId=1&active=true`);
-      const d=await r.json();
+      const d=await api.mlbPersonSearch(val);
       const pitchers=(d.people||[]).filter(p=>p.primaryPosition?.type==='Pitcher').slice(0,8);
       if(!pitchers.length){hide('pitcher-search-results');return;}
       document.getElementById('pitcher-search-results').innerHTML=pitchers.map(p=>`<div class="search-result-item" data-action="select-pitcher" data-pitcher-id="${p.id}" data-pitcher-name="${p.fullName.replace(/"/g,'&quot;')}"><span>${p.fullName}</span><span class="sr-pos">${p.pitchHand?.code||'?'}HP</span></div>`).join('');
@@ -483,12 +481,11 @@ async function selectPitcher(id,name){
   hide('pitcher-loaded');hide('pitcher-pitch-mix');
   show('pitcher-spinner');hide('pitcher-error');
   try{
-    const [sr,gr,pr]=await Promise.all([
-      fetch(`/mlb/api/v1/people/${id}/stats?stats=season&group=pitching&season=${SEASON}&gameType=R`),
-      fetch(`/mlb/api/v1/people/${id}/stats?stats=gameLog&group=pitching&season=${SEASON}&gameType=R`),
-      fetch(`/mlb/api/v1/people/${id}`),
+    const [sd,gd,pd]=await Promise.all([
+      api.mlbPitcherSeason(id),
+      api.mlbPitcherGameLog(id),
+      api.mlbPerson(id),
     ]);
-    const sd=await sr.json(),gd=await gr.json(),pd=await pr.json();
     const st=sd?.stats?.[0]?.splits?.[0]?.stat??{};
     const gameLogs=gd?.stats?.[0]?.splits??[];
     const last3=gameLogs.slice(-3).reverse();
@@ -601,10 +598,10 @@ async function loadPitcherStatcast(pitcherId){
 
   try{
     const [scRes,expRes,cswRes,bbRes]=await Promise.allSettled([
-      fetch(`/savant/statcast?type=pitcher&year=${SEASON}`).then(r=>r.text()),
-      fetch(`/savant/expected?type=pitcher&year=${SEASON}`).then(r=>r.text()),
-      fetch(`/savant/csw?year=${SEASON}`).then(r=>r.text()),
-      fetch(`/savant/batted-ball?type=pitcher&year=${SEASON}`).then(r=>r.text()),
+      api.savantStatcast('pitcher'),
+      api.savantExpected('pitcher'),
+      api.savantCsw(),
+      api.savantBattedBall('pitcher'),
     ]);
 
     const scRows  = safeRows(scRes.status==='fulfilled'?scRes.value:'',  'statcast');
@@ -753,8 +750,7 @@ async function loadUmpireAndWeather(){
 async function loadUmpire(dv){
   show('ump-spinner');hide('ump-content');setText('ump-empty','');
   try{
-    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=${SEASON}&gameType=R&hydrate=officials&date=${dv}`);
-    const d=await r.json();
+    const d=await api.mlbScheduleDate(dv, 'officials');
     const game=d?.dates?.[0]?.games?.[0];
     if(!game){setText('ump-empty','No D-backs game found on that date.');hide('ump-spinner');show('ump-empty');return;}
     const hp=(game.officials||[]).find(o=>o.officialType==='Home Plate');
@@ -773,15 +769,13 @@ async function loadMatchupStats(){
   show('matchup-section');show('matchup-spinner');hide('matchup-content');
   S.matchupStats=null;
   try{
-    // Include season=${SEASON} so new pitchers with no prior history still resolve correctly
-    const r=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${S.pitcher.id}&gameType=R&season=${SEASON}`);
-    const d=await r.json();
+    // Include season-scoped first so new pitchers with no prior history still resolve correctly
+    const d=await api.mlbVsPitcher(S.playerId, S.pitcher.id, true);
     let st=d?.stats?.[0]?.splits?.[0]?.stat;
 
-    // If 2026-scoped query returns nothing, fall back to all-time total
+    // If season-scoped query returns nothing, fall back to all-time total
     if(!st||parseInt(st?.atBats)===0){
-      const r2=await fetch(`/mlb/api/v1/people/${S.playerId}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${S.pitcher.id}&gameType=R`);
-      const d2=await r2.json();
+      const d2=await api.mlbVsPitcher(S.playerId, S.pitcher.id, false);
       st=d2?.stats?.[0]?.splits?.[0]?.stat;
     }
 
@@ -823,8 +817,7 @@ async function loadTeamMomentum(){
   const el=document.getElementById('dash-momentum-bar');
   if(!el)return;
   try{
-    const r=await fetch(`/mlb/api/v1/standings?leagueId=104&season=${SEASON}&standingsTypes=regularSeason&hydrate=team`);
-    const d=await r.json();
+    const d=await api.mlbStandings(104);
     let team=null;
     (d?.records||[]).forEach(div=>{
       (div.teamRecords||[]).forEach(tr=>{
@@ -883,8 +876,7 @@ async function loadTeamMomentum(){
 async function loadPitcherForm(pitcherId){
   if(!pitcherId)return null;
   try{
-    const r=await fetch(`/mlb/api/v1/people/${pitcherId}/stats?stats=gameLog&season=${SEASON}&group=pitching&hydrate=team`);
-    const d=await r.json();
+    const d=await api.mlbPitcherGameLogHydrated(pitcherId);
     const splits=d?.stats?.[0]?.splits||[];
     // Most recent 3, reverse-chronological
     const last3=splits.slice(-3).reverse();
@@ -913,8 +905,7 @@ async function loadPitcherForm(pitcherId){
 async function loadPitcherSplits(pitcherId){
   if(!pitcherId)return null;
   try{
-    const r=await fetch(`/mlb/api/v1/people/${pitcherId}/stats?stats=statSplits&group=pitching&season=${SEASON}&gameType=R&sitCodes=h,a,vl,vr`);
-    const d=await r.json();
+    const d=await api.mlbPitcherSplits(pitcherId);
     const splits=d?.stats?.[0]?.splits||[];
     const out={};
     splits.forEach(s=>{
@@ -1289,8 +1280,7 @@ async function loadTwoWeekSchedule(){
     const start=startD.toISOString().split('T')[0];
     const end=endD.toISOString().split('T')[0];
     const todayKey=todayD.toISOString().split('T')[0];
-    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=${SEASON}&gameType=R&hydrate=probablePitcher,team&startDate=${start}&endDate=${end}`);
-    const d=await r.json();
+    const d=await api.mlbScheduleRange(start, end, 'probablePitcher,team');
 
     // Index games by their officialDate so we can fall through to OFF DAY for missing days
     const byDate={};
@@ -1416,8 +1406,7 @@ async function autoLoadNextGame(){
     // Fetch from yesterday to give Live games a safety margin if game runs past midnight Arizona
     const start=new Date(azNow.getTime()-24*60*60*1000).toISOString().split('T')[0];
     const end=new Date(azNow.getTime()+7*24*60*60*1000).toISOString().split('T')[0];
-    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=${SEASON}&gameType=R&hydrate=probablePitcher&startDate=${start}&endDate=${end}`);
-    const d=await r.json();
+    const d=await api.mlbScheduleRange(start, end, 'probablePitcher');
     const allGames=(d?.dates||[]).flatMap(dt=>dt.games||[]);
     // Prefer in-progress (Live) game — keep today's lineup/pitcher/bets locked until today's game is over.
     // Only fall through to the next Preview once today's game goes Final.
@@ -1460,8 +1449,7 @@ async function autoLoadNextGame(){
     try{
       const weekAgo=new Date(Date.now()-8*24*60*60*1000).toISOString().split('T')[0];
       const yesterday=new Date(Date.now()-1*24*60*60*1000).toISOString().split('T')[0];
-      const prevR=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=${SEASON}&gameType=R&startDate=${weekAgo}&endDate=${yesterday}`);
-      const prevD=await prevR.json();
+      const prevD=await api.mlbScheduleRange(weekAgo, yesterday);
       const prevGames=(prevD?.dates||[]).flatMap(d=>d.games||[]).filter(g=>g.status?.abstractGameState==='Final');
       const prevGame=prevGames[prevGames.length-1];
       if(prevGame){
@@ -1488,8 +1476,7 @@ async function autoLoadNextGame(){
 async function loadLineupContext(dv){
   show('lineup-spinner');hide('lineup-content');setText('lineup-empty','');
   try{
-    const r=await fetch(`/mlb/api/v1/schedule?sportId=1&teamId=109&season=${SEASON}&gameType=R&hydrate=lineups&date=${dv}`);
-    const d=await r.json();
+    const d=await api.mlbScheduleDate(dv, 'lineups');
     log('[Lineup] raw API response:', d);
     const game=d?.dates?.[0]?.games?.[0];
     if(!game){setText('lineup-empty','No D-backs game on this date.');hide('lineup-spinner');show('lineup-empty');return;}
@@ -1506,8 +1493,7 @@ async function loadLineupContext(dv){
     if(!ordered.length){setText('lineup-empty','Lineup order not yet available.');hide('lineup-spinner');show('lineup-empty');return;}
 
     const stats=await Promise.all(ordered.map((p,idx)=>
-      fetch(`/mlb/api/v1/people/${p.id}/stats?stats=season&group=hitting&season=${SEASON}&gameType=R`)
-        .then(r=>r.json())
+      api.mlbBatterSeason(p.id)
         .then(d=>{
           const st=d?.stats?.[0]?.splits?.[0]?.stat;
           return{
@@ -1577,8 +1563,7 @@ async function fetchWeather(){
   const lat=opt.dataset.lat,lon=opt.dataset.lon;
   show('weather-spinner');hide('weather-content');
   try{
-    const r=await fetch(`/weather/${lat},${lon}?format=j1`);
-    const d=await r.json();
+    const d=await api.weatherAt(lat, lon);
     const cur=d.current_condition?.[0];
     if(!cur)throw new Error('No data');
     const tempF=parseInt(cur.temp_F);
@@ -2332,14 +2317,13 @@ function generateCorbetBets(score,factors,rawMarketMap){
 }
 
 async function _corbetFetchStatcastCSVs(){
-  const [r1,r2,r3,r4,r5]=await Promise.all([
-    fetch(`/savant/statcast?type=batter&year=${SEASON}`),
-    fetch(`/savant/expected?type=batter&year=${SEASON}`),
-    fetch(`/savant/battracking?year=${SEASON}`),
-    fetch(`/savant/batter-arsenal?year=${SEASON}`),
-    fetch(`/savant/batted-ball?year=${SEASON}`),
+  const [t1,t2,t3,t4,t5]=await Promise.all([
+    api.savantStatcast('batter'),
+    api.savantExpected('batter'),
+    api.savantBattracking(),
+    api.savantBatterArsenal(),
+    api.savantBattedBall('batter'),
   ]);
-  const [t1,t2,t3,t4,t5]=await Promise.all([r1.text(),r2.text(),r3.text(),r4.text(),r5.text()]);
   return{statRows:parseCSV(t1),expRows:parseCSV(t2),batRows:parseCSV(t3),arsenalRows:parseCSV(t4),battedRows:parseCSV(t5)};
 }
 
@@ -2460,7 +2444,7 @@ async function loadCorbet(){
       setOddsLockBadge(cached.savedAt);
     }else{
       setOddsLockBadge(null);
-      const r=await fetch('/odds/v4/sports/baseball_mlb/events?regions=us&oddsFormat=american');
+      const r=await api.oddsEvents();
       {const rem=r.headers.get('X-Requests-Remaining');if(rem!=null)setApiCredits(rem);}
       const eventsText=await r.text();
       let events;
@@ -2482,7 +2466,7 @@ async function loadCorbet(){
       // prop markets. The outcome-matching step downstream only keeps D-backs
       // outcomes anyway, so extra books in the response are harmless and let
       // us see exactly which books the Odds API actually feeds props from.
-      const pr=await fetch(`/odds/v4/sports/baseball_mlb/events/${dbacksGame.id}/odds?markets=${propMarkets}&oddsFormat=american&regions=us,us2`);
+      const pr=await api.oddsProps(dbacksGame.id, propMarkets);
       const propsText=await pr.text();
       try{propData=JSON.parse(propsText);}catch(e){throw new Error('Props endpoint returned invalid response.');}
       if(propData.message||propData.error_code){throw new Error('Odds API: '+(propData.message||propData.error_code));}
@@ -3824,8 +3808,7 @@ async function fetchActualStats(playerId, date) {
   const [y, m, d] = date.split('-');
   const mlbDate = `${m}/${d}/${y}`;
   const season = y || String(SEASON);
-  const res = await fetch(`/mlb/api/v1/people/${playerId}/stats?stats=gameLog&group=hitting&season=${season}&gameType=R&startDate=${mlbDate}&endDate=${mlbDate}`);
-  const data = await res.json();
+  const data = await api.mlbBatterGameLogRange(playerId, mlbDate, season);
   const splits = data?.stats?.[0]?.splits ?? [];
   if (!splits.length) return null;
   // Use first split (covers doubleheader game 1; acceptable for grading).
@@ -4350,15 +4333,12 @@ function drawPerfChart(log) {
 async function loadStatcast(playerId) {
   document.getElementById('stat-statcast').innerHTML = '<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Loading Statcast data...</div>';
   try {
-    const [statRes, expRes, batRes, arsenalRes, battedRes] = await Promise.all([
-      fetch(`/savant/statcast?type=batter&year=${SEASON}`),
-      fetch(`/savant/expected?type=batter&year=${SEASON}`),
-      fetch(`/savant/battracking?year=${SEASON}`),
-      fetch(`/savant/batter-arsenal?year=${SEASON}`),
-      fetch(`/savant/batted-ball?year=${SEASON}`),
-    ]);
     const [statText, expText, batText, arsenalText, battedText] = await Promise.all([
-      statRes.text(), expRes.text(), batRes.text(), arsenalRes.text(), battedRes.text()
+      api.savantStatcast('batter'),
+      api.savantExpected('batter'),
+      api.savantBattracking(),
+      api.savantBatterArsenal(),
+      api.savantBattedBall('batter'),
     ]);
 
     const statRows    = parseCSV(statText);
@@ -4559,7 +4539,7 @@ async function pushRecord(){
   _setSyncBtnState('sync-btn-push','⟳ Pushing…',true);
   try{
     const payload={betLog:S.betLog,gradeLog:getGradeLog(),factorPerf:getFactorPerf(),factorWeights:getFactorWeights(),pending:getPending()};
-    const res=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Key':key},body:JSON.stringify(payload)});
+    const res=await api.syncPost(key, payload);
     if(!res.ok){
       if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-push','↑ Push',false);alert('Wrong passphrase — cleared.');return;}
       throw new Error(`Server ${res.status}`);
@@ -4580,7 +4560,7 @@ async function pullRecord(){
   if(!key)return;
   _setSyncBtnState('sync-btn-pull','⟳ Pulling…',true);
   try{
-    const res=await fetch('/api/sync',{headers:{'X-Sync-Key':key}});
+    const res=await api.syncGet(key);
     if(!res.ok){
       if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-pull','↓ Pull',false);alert('Wrong passphrase — cleared.');return;}
       const body=await res.json().catch(()=>({}));
@@ -4664,7 +4644,7 @@ async function _pushSubscribe(){
     }
 
     // 2. Pull VAPID public key from server
-    const pkRes=await fetch('/api/push/public-key');
+    const pkRes=await api.pushPublicKey();
     if(!pkRes.ok)throw new Error('VAPID key fetch failed');
     const {publicKey}=await pkRes.json();
 
@@ -4681,11 +4661,7 @@ async function _pushSubscribe(){
     }
 
     // 4. Send subscription to server
-    const postRes=await fetch('/api/push/subscribe',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Sync-Key':key},
-      body:JSON.stringify(sub.toJSON()),
-    });
+    const postRes=await api.pushSubscribe(key, sub.toJSON());
     if(!postRes.ok){
       if(postRes.status===401){alert('Wrong sync passphrase.');_setSyncKey('');setBtn('🔔 Enable notifications');return;}
       throw new Error(`Server ${postRes.status}`);
@@ -4703,7 +4679,7 @@ async function _pushTest(){
   const key=_getSyncKey();
   if(!key){alert('Set sync passphrase first via the Sync button.');return;}
   try{
-    const res=await fetch('/api/push/test',{method:'POST',headers:{'X-Sync-Key':key}});
+    const res=await api.pushTest(key);
     if(!res.ok)throw new Error(`Server ${res.status}`);
     const j=await res.json();
     alert(j.sent>0?`Sent ${j.sent} test notification${j.sent>1?'s':''}.`:'No subscriptions yet — tap Enable first.');
