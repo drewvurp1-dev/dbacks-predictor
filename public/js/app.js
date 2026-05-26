@@ -15,6 +15,7 @@ import {
   impliedProb, americanToDecimal, kellyFraction,
   _medianImpliedProb, devig, bookAbbrev,
 } from './betting.js';
+import { _computePitcherMetrics, _loadPitchArsenal } from './pitcher.js';
 
 // Returns the live lineup roster when available, otherwise the hardcoded fallback
 function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
@@ -53,54 +54,7 @@ function _windDir(){
 
 // (gaussianRandom moved to predict.js; kellyFraction moved to betting.js)
 
-// Advanced pitcher metrics (FIP, xFIP, SIERA, K-BB%, HR/9) derived from MLB Stats API
-// + Baseball Savant Statcast. Returns nulls when data is insufficient.
-const _FIP_CONSTANT = 3.10; // Approximates league-avg (ERA - raw FIP) — stable around 3.0-3.2
-const _LG_HRFB = 0.105;     // League-average HR per fly ball, used for xFIP normalization
-function _computePitcherMetrics(st, statcast){
-  const ip=parseFloat(st?.inningsPitched)||0;
-  const hr=parseInt(st?.homeRuns)||0;
-  const bb=parseInt(st?.baseOnBalls)||0;
-  const hbp=parseInt(st?.hitByPitch)||0;
-  const k=parseInt(st?.strikeOuts)||0;
-  const tbf=parseInt(st?.battersFaced)||0;
-  if(ip<1||tbf<1)return{fip:null,xfip:null,siera:null,kbbPct:null,hr9:null};
-  const fip=(13*hr+3*(bb+hbp)-2*k)/ip+_FIP_CONSTANT;
-  const hr9=(hr/ip)*9;
-  const kbbPct=((k-bb)/tbf)*100;
-  let xfip=null;
-  const fbPct=statcast?.fbPct;
-  const gbPct=statcast?.gbPct;
-  if(fbPct!=null&&fbPct>0){
-    const bip=Math.max(0,tbf-k-bb-hbp);
-    const fbCount=bip*(fbPct/100);
-    const expHR=fbCount*_LG_HRFB;
-    xfip=(13*expHR+3*(bb+hbp)-2*k)/ip+_FIP_CONSTANT;
-  }
-  // SIERA — FanGraphs formula. Captures K/BB plus batted-ball mix (GB - FB - PU).
-  // Pop-ups aren't in our Statcast cut, so we approximate (GB - FB - PU)/PA with
-  // (GB - FB)/PA, knowing this slightly understates the GB-pitcher advantage.
-  // Returns null when batted-ball mix isn't loaded.
-  let siera=null;
-  if(fbPct!=null&&gbPct!=null&&ip>=10){
-    const bip=Math.max(0,tbf-k-bb-hbp);
-    const gbCount=bip*(gbPct/100);
-    const fbCount=bip*(fbPct/100);
-    const kPA=k/tbf;
-    const bbPA=(bb+hbp)/tbf;
-    const battedDiff=(gbCount-fbCount)/tbf;
-    const ind = battedDiff>=0 ? 1 : -1;
-    siera = 6.145
-          - 16.986 * kPA
-          + 11.434 * bbPA
-          - 1.858 * battedDiff
-          + 7.653 * kPA * kPA
-          + ind * 6.664 * battedDiff * battedDiff
-          + 10.130 * kPA * battedDiff
-          - 5.195 * bbPA * battedDiff;
-  }
-  return{fip,xfip,siera,kbbPct,hr9};
-}
+// (_computePitcherMetrics + _FIP_CONSTANT + _LG_HRFB moved to pitcher.js)
 
 // (_slumpPenalty + _mcVariance moved to predict.js)
 
@@ -2490,15 +2444,7 @@ function _handSplit(){
 // daily by scripts/refresh_pitch_arsenal.py). Compares the batter's per-pitch-type
 // rates (whiff/K/wOBA) weighted by the pitcher's actual usage% vs the batter's
 // overall baseline. Captures matchup signal the season-wide K%/wOBA stats can't.
-async function _loadPitchArsenal(){
-  if(S.pitchArsenal!==undefined)return S.pitchArsenal; // null or object — cached
-  try{
-    const r=await fetch('/pitch-arsenal');
-    if(!r.ok){S.pitchArsenal=null;return null;}
-    S.pitchArsenal=await r.json();
-    return S.pitchArsenal;
-  }catch(e){S.pitchArsenal=null;return null;}
-}
+// (_loadPitchArsenal moved to pitcher.js)
 
 const _PITCH_NAMES={FF:'4-seam',SI:'sinker',FC:'cutter',SL:'slider',ST:'sweeper',CU:'curve',CH:'change',FS:'splitter',SV:'slurve',KC:'knuckle-curve'};
 
