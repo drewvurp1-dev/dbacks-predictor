@@ -1,6 +1,6 @@
 // ═══════════ IMPORTS ═════════════════════════════════════════════════════════
 import {
-  CORBET_ROSTER, BOOK_ABBREVS, ALLOWED_BOOKS, PITCH_TYPES, PROP_NAMES,
+  CORBET_ROSTER, ALLOWED_BOOKS, PITCH_TYPES, PROP_NAMES,
   UMP_DB, VENUE_MAP, STAT_INFO, DEFAULT_WEIGHTS,
   ODDS_CACHE_KEY, GRADE_LOG_KEY, FACTOR_PERF_KEY, FACTOR_WEIGHTS_KEY, PENDING_KEY,
   SYNC_KEY_STORAGE, SYNC_LAST_TS_KEY,
@@ -10,6 +10,11 @@ import {
   S, DEBUG, log,
   enterPlayerContext, exitPlayerContext,
 } from './state.js';
+import { gaussianRandom, _slumpPenalty, _mcVariance } from './predict.js';
+import {
+  impliedProb, americanToDecimal, kellyFraction,
+  _medianImpliedProb, devig, bookAbbrev,
+} from './betting.js';
 
 // Returns the live lineup roster when available, otherwise the hardcoded fallback
 function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
@@ -46,19 +51,7 @@ function _windDir(){
   return comp>0.35?'out':comp<-0.35?'in':'cross';
 }
 
-function gaussianRandom(mean, std) {
-  const u1 = Math.random() || 1e-10, u2 = Math.random();
-  return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
-// Eighth-Kelly fraction (0–1 range; 0 means no bet). Conservative sizing to
-// dampen variance from model error — full Kelly assumes perfect win-prob estimates.
-function kellyFraction(modelProb, odds) {
-  if (!odds) return 0;
-  const b = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
-  const p = modelProb / 100, q = 1 - p;
-  return Math.max(0, (b * p - q) / b) * 0.125;
-}
+// (gaussianRandom moved to predict.js; kellyFraction moved to betting.js)
 
 // Advanced pitcher metrics (FIP, xFIP, SIERA, K-BB%, HR/9) derived from MLB Stats API
 // + Baseball Savant Statcast. Returns nulls when data is insufficient.
@@ -109,59 +102,7 @@ function _computePitcherMetrics(st, statcast){
   return{fip,xfip,siera,kbbPct,hr9};
 }
 
-// Slump dampener: widens MC sigma when recent results diverge from the model's
-// positive prediction, so cold-streak bets fail the MC confidence threshold
-// instead of being recommended at face value. Returns 0–5 sigma points based on
-// active hitless streak + L10 batting average. Does NOT change the point
-// prediction — only the uncertainty band around it.
-function _slumpPenalty(){
-  const log=S.recentGameLog;
-  if(!log||log.length<3)return 0;
-  let droughtGames=0;
-  for(const g of log){
-    const ab=parseInt(g.stat?.atBats)||0;
-    const h=parseInt(g.stat?.hits)||0;
-    if(ab===0)continue; // skip DNP/pinch appearances
-    if(h===0)droughtGames++;
-    else break;
-  }
-  let p=0;
-  if(droughtGames>=5)p+=4;
-  else if(droughtGames===4)p+=2.5;
-  else if(droughtGames===3)p+=1.5;
-  else if(droughtGames===2)p+=0.5;
-  const recent=log.slice(0,10);
-  const rH=recent.reduce((s,g)=>s+(parseInt(g.stat?.hits)||0),0);
-  const rAB=recent.reduce((s,g)=>s+(parseInt(g.stat?.atBats)||0),0);
-  if(rAB>=15){
-    const avg=rH/rAB;
-    if(avg<0.150)p+=3;
-    else if(avg<0.200)p+=1.5;
-    else if(avg<0.250)p+=0.5;
-  }
-  return Math.min(5,p);
-}
-
-// Score-variance estimate for Monte Carlo, derived from the hitter's profile.
-// High-whiff hitters have wider outcome distributions (more boom/bust), so the
-// model score is a less reliable point estimate — σ scales up. Small samples
-// (<50 PA) also widen σ since the season-rate inputs are noisy. A slump
-// dampener widens σ further when recent form contradicts the season profile.
-// Maps: whiff 18% → σ≈5.0 (contact hitter), 28% → σ≈6.5 (league avg),
-//       38% → σ≈8.0 (three-true-outcomes). Clamped to [4.5, 15].
-function _mcVariance(){
-  const sc=S.statcast||{};
-  const ss=S.seasonStat||{};
-  // S.statcast stores whiff as `whiff` (already parsed). `whiff_percent` is the
-  // raw Savant CSV column name and is never present here — reading that key
-  // returned undefined for every hitter, collapsing sigma to the default.
-  const whiff=sc.whiff;
-  let sigma=(typeof whiff==='number'&&isFinite(whiff))?5+(whiff-18)*0.15:6;
-  const pa=parseInt(ss.plateAppearances)||0;
-  if(pa>0&&pa<50)sigma+=1.5;
-  sigma+=_slumpPenalty();
-  return Math.max(4.5,Math.min(15,sigma));
-}
+// (_slumpPenalty + _mcVariance moved to predict.js)
 
 // Monte Carlo confidence: % of noisy-score simulations where the edge holds
 // Requires S player fields to be swapped in before calling (same window as generateCorbetBets)
@@ -294,7 +235,7 @@ function setApiCredits(remaining) {
 }
 
 // ═══════════ SPORTSBOOK ABBREVIATIONS ════════════════════════════════════════
-function bookAbbrev(name){return BOOK_ABBREVS[name]||name;}
+// (bookAbbrev moved to betting.js)
 
 // ═══════════ ODDS LOCK ════════════════════════════════════════════════════════
 // Don't refetch odds once the game has started — live in-game lines move wildly
@@ -2334,10 +2275,7 @@ function corbetReasoning(propKey,direction,propScore){
   return`${prefix}: ${drivers.slice(0,4).join(' · ')||'general conditions'}`;
 }
 
-function impliedProb(odds){
-  if(!odds)return null;
-  return odds<0?(-odds)/(-odds+100)*100:100/(odds+100)*100;
-}
+// (impliedProb moved to betting.js)
 
 function _factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
 function _poissonCDF(lambda,k){let p=0;for(let i=0;i<=k;i++)p+=Math.pow(lambda,i)*Math.exp(-lambda)/_factorial(i);return p;}
@@ -2457,42 +2395,7 @@ function _hrrOverPct(line, ss, recentLog, gamePAs){
 
 // Median of implied probabilities (not median of American odds — odds are non-linear,
 // so a numeric median of -200 / +200 / -110 doesn't represent the median fair price).
-function _medianImpliedProb(prices){
-  const ps=prices.map(impliedProb).filter(x=>x!=null);
-  if(!ps.length)return null;
-  const s=[...ps].sort((a,b)=>a-b),m=Math.floor(s.length/2);
-  return s.length%2?s[m]:(s[m-1]+s[m])/2;
-}
-
-// Multiplicative (power) devig. Given raw implied probs o and u that sum to >1 due
-// to vig, find exponent k such that o^k + u^k = 1. Preserves the *ratio of fair odds*
-// rather than the ratio of probabilities, which is the more theoretically sound
-// transformation since books typically apply vig multiplicatively to fair odds.
-// Better than additive normalization for asymmetric overround (one side shaded).
-function devig(overPrices,underPrices){
-  if(!overPrices?.length||!underPrices?.length)return null;
-  const rawO=_medianImpliedProb(overPrices);
-  const rawU=_medianImpliedProb(underPrices);
-  if(rawO==null||rawU==null)return null;
-  const o=rawO/100, u=rawU/100;
-  // No vig (or fair/inverted line): fall back to simple normalization to avoid
-  // numerical issues with power method on near-fair markets.
-  if(o+u<=1.0001){
-    const tot=o+u;
-    return{overProb:(o/tot)*100,underProb:(u/tot)*100};
-  }
-  // Binary search for k. f(k)=o^k+u^k is monotonically decreasing for 0<o,u<1,
-  // so we can bracket the root. f(1)>1 by assumption; f(3) is always <1 for valid
-  // probs in this range (the alt-ladder gate at sideShare>0.85 caps inputs).
-  let lo=1.0, hi=3.0;
-  for(let i=0;i<60;i++){
-    const mid=(lo+hi)/2;
-    const sum=Math.pow(o,mid)+Math.pow(u,mid);
-    if(sum>1)lo=mid; else hi=mid;
-  }
-  const k=(lo+hi)/2;
-  return{overProb:Math.pow(o,k)*100,underProb:Math.pow(u,k)*100};
-}
+// (_medianImpliedProb + devig moved to betting.js)
 
 // Shrink a player rate toward league average using Bayesian-style mixing.
 // `numerator` and `denominator` are the player's totals (e.g., walks / PA).
@@ -3261,11 +3164,7 @@ function modelProbability(propKey,line,score){
   return p;
 }
 
-function americanToDecimal(price){
-  price=Number(price);
-  if(!price)return null;
-  return price>0?price/100+1:100/Math.abs(price)+1;
-}
+// (americanToDecimal moved to betting.js)
 
 // Convert a model win probability (percent, 0-100) to fair American odds.
 function probToAmerican(pct){
