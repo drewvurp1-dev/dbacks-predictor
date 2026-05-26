@@ -2,6 +2,18 @@
 // from anywhere. Add new shared constants here rather than re-declaring them
 // in feature modules.
 
+// ── Season ──────────────────────────────────────────────────────────────────
+// All MLB Stats API + Baseball Savant queries pin the season explicitly so
+// stat splits don't bleed across years mid-fetch. Bump once at year roll-over
+// and every fetch URL across app.js + pitcher.js follows.
+export const SEASON = 2026;
+
+// ── Kelly sizing ────────────────────────────────────────────────────────────
+// Fraction of full Kelly stake to apply. 0.125 = eighth-Kelly — conservative
+// sizing that dampens variance from model error (full Kelly assumes perfect
+// win-prob estimates, which our model doesn't).
+export const KELLY_FRACTION = 0.125;
+
 // ── Roster ───────────────────────────────────────────────────────────────────
 export const CORBET_ROSTER = [
   { name: 'Corbin Carroll',   id: '682998' },

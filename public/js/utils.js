@@ -10,18 +10,29 @@ export function setText(id, t) { const el = document.getElementById(id); if (el)
 // Reads HR factor, hit factor, elevation, and roof flag straight off the
 // selected <option>'s data-* attributes. In Node (no DOM) returns league-neutral
 // defaults so prediction-math tests can run without jsdom.
+//
+// Result is memoized keyed on the selected option's value. Audit finding #10:
+// the prediction loop (monteCarloConfidence → modelProbability → _parkFactors)
+// would otherwise re-walk the DOM 2000+ times per Run Prediction. Cache
+// invalidates automatically when the dropdown changes since the key changes.
+let _parkCache = null;
+let _parkCacheKey = null;
 export function _parkFactors() {
   if (typeof document === 'undefined') {
     return { hrF: 1.0, hitF: 1.0, elev: 0, hasRoof: false };
   }
   const sel = document.getElementById('stadium-select');
+  const key = sel?.value ?? '';
+  if (key === _parkCacheKey && _parkCache) return _parkCache;
   const opt = sel?.options[sel?.selectedIndex];
-  return {
+  _parkCache = {
     hrF:    parseFloat(opt?.dataset.hr)  || 1.0,
     hitF:   parseFloat(opt?.dataset.hit) || 1.0,
     elev:   parseInt(opt?.dataset.elev)  || 0,
     hasRoof: opt?.dataset.roof === '1',
   };
+  _parkCacheKey = key;
+  return _parkCache;
 }
 
 // ── CSV parser (handles quoted fields with embedded commas) ─────────────────
