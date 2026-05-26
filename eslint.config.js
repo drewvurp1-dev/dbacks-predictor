@@ -1,7 +1,8 @@
 const globals = require('globals');
 
 // Project conventions (kept loose intentionally):
-// - Frontend in public/js/ runs as classic scripts that share globals on window.
+// - Frontend modules in public/js/ (except charter.js) are ES modules with explicit imports.
+// - charter.js is still a classic script that shares globals via window.
 // - Server code uses CommonJS in Node.
 // - Goal: catch real bugs (typos, ===, unused) without forcing a stylistic rewrite.
 
@@ -32,19 +33,32 @@ module.exports = [
     ],
   },
 
-  // Frontend (browser, classic scripts that share globals via window)
+  // Frontend ES modules (everything in public/js/ except charter.js)
   {
     files: ['public/js/**/*.js'],
+    ignores: ['public/js/charter.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: { ...globals.browser },
+    },
+    rules: {
+      ...sharedRules,
+      'no-console': ['warn', { allow: ['warn', 'error', 'group', 'groupEnd'] }],
+    },
+  },
+
+  // charter.js stays a classic script; reads S / log / DEBUG via window
+  {
+    files: ['public/js/charter.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',
       globals: {
         ...globals.browser,
-        // Cross-file globals attached to window in this project
-        S: 'writable',
+        S: 'readonly',
         log: 'readonly',
         DEBUG: 'readonly',
-        debugProps: 'writable',
       },
     },
     rules: {

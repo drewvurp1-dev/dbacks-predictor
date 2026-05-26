@@ -1,3 +1,12 @@
+// ═══════════ IMPORTS ═════════════════════════════════════════════════════════
+import {
+  CORBET_ROSTER, BOOK_ABBREVS, ALLOWED_BOOKS, PITCH_TYPES, PROP_NAMES,
+  UMP_DB, VENUE_MAP, STAT_INFO, DEFAULT_WEIGHTS,
+  ODDS_CACHE_KEY, GRADE_LOG_KEY, FACTOR_PERF_KEY, FACTOR_WEIGHTS_KEY, PENDING_KEY,
+  SYNC_KEY_STORAGE, SYNC_LAST_TS_KEY,
+} from './constants.js';
+import { show, hide, setText, _parkFactors, parseCSV } from './utils.js';
+
 // ═══════════ STATE ════════════════════════════════════════════════════════════
 const S = {
   splits:null, seasonStat:null, rispStat:null,
@@ -47,15 +56,6 @@ const DEBUG = (() => {
 })();
 const log = (...args) => { if (DEBUG) console.log(...args); }; // eslint-disable-line no-console
 
-const CORBET_ROSTER = [
-  { name: 'Corbin Carroll',   id: '682998' },
-  { name: 'Ketel Marte',      id: '606466' },
-  { name: 'Gabriel Moreno',   id: '672515' },
-  { name: 'Geraldo Perdomo',  id: '672695' },
-  { name: 'Ildemaro Vargas',  id: '545121' },
-  { name: 'Lourdes Gurriel',  id: '666971' },
-  { name: 'Nolan Arenado',    id: '571448' },
-];
 // Returns the live lineup roster when available, otherwise the hardcoded fallback
 function activeRoster(){ return S.lineupRoster||CORBET_ROSTER; }
 
@@ -75,8 +75,6 @@ const _COMPASS_DEGS={N:0,NNE:22.5,NE:45,ENE:67.5,E:90,ESE:112.5,SE:135,SSE:157.5
 function _compassDeg(pt){return _COMPASS_DEGS[pt]??null;}
 
 // Reads park HR and hit factors from the active stadium dropdown option.
-function _parkFactors(){const sel=document.getElementById('stadium-select');const opt=sel?.options[sel?.selectedIndex];return{hrF:parseFloat(opt?.dataset.hr)||1.0,hitF:parseFloat(opt?.dataset.hit)||1.0,elev:parseInt(opt?.dataset.elev)||0,hasRoof:opt?.dataset.roof==='1'};}
-
 // Returns 'out'/'in'/'cross'/'calm' relative to this park's center field orientation.
 // Accounts for live vs manual weather mode.
 function _windDir(){
@@ -383,17 +381,6 @@ function setApiCredits(remaining) {
 }
 
 // ═══════════ SPORTSBOOK ABBREVIATIONS ════════════════════════════════════════
-const BOOK_ABBREVS={
-  'DraftKings':'DK',
-  'BetMGM':'MGM',
-  'Caesars':'CZR',
-  'Hard Rock Bet':'HR',
-  'Hard Rock Bet (OH)':'HR',
-  'theScore Bet':'ESPN',
-};
-// Only these books contribute to devig calc, best-price tracking, and the
-// status banner. Books outside the set are filtered out before processing.
-const ALLOWED_BOOKS=new Set(Object.keys(BOOK_ABBREVS));
 function bookAbbrev(name){return BOOK_ABBREVS[name]||name;}
 
 // ═══════════ ODDS LOCK ════════════════════════════════════════════════════════
@@ -415,7 +402,6 @@ function isOddsLocked(gameDateISO){
   return now>=start.getTime()&&now<unlockUTC;
 }
 
-const ODDS_CACHE_KEY='corbetOddsCache';
 function readOddsCache(gameId){
   if(!gameId)return null;
   try{
@@ -456,7 +442,6 @@ function toggleManual(){S.pitcherManual=!S.pitcherManual;document.getElementById
 function toggleWeatherManual(){S.weatherManual=!S.weatherManual;document.getElementById('weather-manual').classList.toggle('hidden',!S.weatherManual);}
 
 // ═══════════ PITCH MIX ════════════════════════════════════════════════════════
-const PITCH_TYPES=['4-Seam FB','Sinker','Cutter','Slider','Curveball','Changeup','Splitter'];
 function buildPitchMixGrid(cid,pitches){document.getElementById(cid).innerHTML=PITCH_TYPES.map(pt=>`<div class="pitch-mix-item"><span class="pitch-mix-label">${pt}</span><input type="range" min="0" max="60" value="${pitches[pt]||0}" oninput="S.pitcherPitches['${pt}']=parseInt(this.value);this.nextElementSibling.textContent=this.value+'%'" style="flex:1;accent-color:#A71930"><span style="font-size:11px;color:#ccc;font-family:\'Chakra Petch\',monospace;min-width:28px;text-align:right">${pitches[pt]||0}%</span></div>`).join('');}
 function buildPitchMixManual(){buildPitchMixGrid('pitch-mix-grid-manual',S.pitcherPitches);}
 
@@ -982,39 +967,6 @@ async function loadPitcherStatcast(pitcherId){
 }
 
 // ═══════════ UMPIRE ════════════════════════════════════════════════════════════
-const UMP_DB={
-  'Doug Eddings':    {tendency:'pitcher',adj:-2,note:'Pitcher-friendly zone — calls extra strikes'},
-  'CB Bucknor':      {tendency:'hitter', adj: 3,note:'Tight zone — more walks, hitter-friendly'},
-  'Laz Diaz':        {tendency:'hitter', adj: 2,note:'Below-average called strike rate'},
-  'Bill Miller':     {tendency:'pitcher',adj:-2,note:'Expanded zone — pitcher advantage'},
-  'Angel Hernandez': {tendency:'neutral',adj: 0,note:'Inconsistent zone, high variance'},
-  'Jeff Nelson':     {tendency:'pitcher',adj:-3,note:'Consistently expanded zone, pitcher-friendly CSW'},
-  'Joe West':        {tendency:'pitcher',adj:-2,note:'Large strike zone, extra called strikes'},
-  'Mark Wegner':     {tendency:'pitcher',adj:-1,note:'Slight pitcher lean, below-average walk rate'},
-  'Alan Porter':     {tendency:'hitter', adj: 2,note:'Tight zone — above-average walk environment'},
-  'Gabe Morales':    {tendency:'neutral',adj:-1,note:'Slightly expanded zone on the corners'},
-  'Brian Gorman':    {tendency:'neutral',adj: 0,note:'Neutral, consistent zone'},
-  'Jerry Meals':     {tendency:'hitter', adj: 2,note:'Tight zone, above-average walk totals'},
-  'Alfonso Marquez': {tendency:'neutral',adj: 0,note:'Average zone consistency'},
-  'Mike Winters':    {tendency:'pitcher',adj:-2,note:'Expanded zone, extra called strikes'},
-  'Todd Tichenor':   {tendency:'neutral',adj: 0,note:'League-average called strike rate'},
-  'Chris Guccione':  {tendency:'hitter', adj: 1,note:'Slightly tight zone, mild hitter lean'},
-  'Dan Iassogna':    {tendency:'neutral',adj: 0,note:'Consistent, neutral zone'},
-  'Larry Vanover':   {tendency:'hitter', adj: 2,note:'Tight strike zone — more ball calls'},
-  'Sam Holbrook':    {tendency:'pitcher',adj:-1,note:'Slightly expanded zone'},
-  'Adrian Johnson':  {tendency:'neutral',adj: 0,note:'Average zone, high strike call rate'},
-  'Rob Drake':       {tendency:'pitcher',adj:-2,note:'Below-average walk rate — wide zone'},
-  'Quinn Wolcott':   {tendency:'neutral',adj: 0,note:'No significant zone bias on record'},
-  'Chad Fairchild':  {tendency:'hitter', adj: 2,note:'Below-average called strike rate, high walk environment'},
-  'Marvin Hudson':   {tendency:'pitcher',adj:-1,note:'Slight zone expansion, pitcher lean'},
-  'Ted Barrett':     {tendency:'neutral',adj: 0,note:'Neutral zone, league-average consistency'},
-  'Stu Scheurwater': {tendency:'hitter', adj: 1,note:'Slightly tight zone on the edges'},
-  'Jim Reynolds':    {tendency:'neutral',adj: 0,note:'Neutral zone, no significant lean'},
-  'Lance Barrett':   {tendency:'neutral',adj: 0,note:'Average zone, consistent calls'},
-  'Jansen Visconti': {tendency:'neutral',adj: 0,note:'No significant zone bias on record'},
-  'Roberto Ortiz':   {tendency:'neutral',adj: 0,note:'Average zone, no meaningful tendency'},
-  'Ryan Additon':    {tendency:'pitcher',adj:-1,note:'Slight zone expansion, below-average walk rate'},
-};
 
 async function loadUmpireAndWeather(){
   const dv=document.getElementById('game-date').value;
@@ -1088,31 +1040,6 @@ async function loadMatchupStats(){
 }
 
 // ═══════════ AUTO GAME LOADER ══════════════════════════════════════════════════
-const VENUE_MAP={
-  'Chase Field':'Chase Field (PHX)','Dodger Stadium':'Dodger Stadium (LAD)',
-  'Coors Field':'Coors Field (COL)','Oracle Park':'Oracle Park (SF)',
-  'Petco Park':'Petco Park (SD)','Wrigley Field':'Wrigley Field (CHC)',
-  'Oriole Park at Camden Yards':'Camden Yards (BAL)','Busch Stadium':'Busch Stadium (STL)',
-  'T-Mobile Park':'T-Mobile Park (SEA)','Fenway Park':'Fenway Park (BOS)',
-  'Yankee Stadium':'Yankee Stadium (NYY)','Citi Field':'Citi Field (NYM)',
-  'Great American Ball Park':'Great American (CIN)','PNC Park':'PNC Park (PIT)',
-  'Globe Life Field':'Globe Life Field (TEX)',
-  'Minute Maid Park':'Minute Maid Park (HOU)',
-  'loanDepot park':'loanDepot Park (MIA)','loanDepot Park':'loanDepot Park (MIA)',
-  'American Family Field':'American Family Field (MIL)',
-  'Rogers Centre':'Rogers Centre (TOR)',
-  'Tropicana Field':'Tropicana Field (TB)',
-  'Truist Park':'Truist Park (ATL)',
-  'Nationals Park':'Nationals Park (WSH)',
-  'Citizens Bank Park':'Citizens Bank Park (PHI)',
-  'Kauffman Stadium':'Kauffman Stadium (KC)',
-  'Target Field':'Target Field (MIN)',
-  'Angel Stadium':'Angel Stadium (LAA)',
-  'Progressive Field':'Progressive Field (CLE)',
-  'Comerica Park':'Comerica Park (DET)',
-  'Guaranteed Rate Field':'Guaranteed Rate Field (CWS)',
-  'Sutter Health Park':'Sutter Health Park (OAK)',
-};
 
 // ── Team momentum bar (dashboard top strip) ─────────────────────────────────
 // Pulls D-backs standings: streak, last 10, run differential, NL West rank.
@@ -3421,12 +3348,6 @@ function modelProbability(propKey,line,score){
   return p;
 }
 
-const PROP_NAMES={
-  'batter_hits':'Hits','batter_total_bases':'Total Bases',
-  'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
-  'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
-};
-
 function americanToDecimal(price){
   price=Number(price);
   if(!price)return null;
@@ -4906,66 +4827,6 @@ function statBox(l,v,ctx,c,info){
 // League-context tooltips for stat ⓘ icons.
 // Object shape: { title, good, avg, bad, note?, body? } — body is for stats
 // that don't have clean good/bad thresholds (counting stats, tradeoffs).
-const STAT_INFO = {
-  // ── Batter slash ──
-  BA:    { title:'Batting Avg (H ÷ AB)',           good:'≥ .290',   avg:'~ .245',  bad:'≤ .220' },
-  OBP:   { title:'On-Base % (H+BB+HBP ÷ PA)',      good:'≥ .360',   avg:'~ .315',  bad:'≤ .290' },
-  SLG:   { title:'Slugging % (TB ÷ AB)',           good:'≥ .470',   avg:'~ .400',  bad:'≤ .350' },
-  OPS:   { title:'On-base + Slugging',             good:'≥ .830',   avg:'~ .715',  bad:'≤ .640', note:'Elite ≥ .900' },
-  BABIP: { title:'BA on Balls in Play',            good:'≥ .340',   avg:'~ .295',  bad:'≤ .270', note:'Above .340 may signal luck; below .270, bad luck' },
-  ABHR:  { title:'At-bats per HR (lower = power)', good:'≤ 18',     avg:'30 – 40', bad:'50+',    note:'Elite power: ≤ 15' },
-  // ── Batter discipline ──
-  BBPCT: { title:'Walk Rate (BB ÷ PA)',            good:'≥ 10%',    avg:'~ 8.5%',  bad:'≤ 6%',   note:'Elite eye: 12%+' },
-  KPCT_B:{ title:'Strikeout Rate (K ÷ PA)',        good:'≤ 16%',    avg:'~ 22%',   bad:'≥ 25%',  note:'Lower is better' },
-  BBK:   { title:'BB/K Ratio — plate discipline',  good:'≥ 0.50',   avg:'~ 0.40',  bad:'≤ 0.25', note:'Elite: ≥ 0.80' },
-  IBB:   { title:'Intentional Walks',              body:'Context stat — common for sluggers with weak protection behind them.' },
-  HBP:   { title:'Hit By Pitch',                   body:'Context stat — league leaders typically reach 15–25/yr.' },
-  SAC:   { title:'Sacrifice Bunts + Flies',        body:'Context stat — lineup-role driven.' },
-  // ── Batter power ──
-  HR:    { title:'Home Runs',                      good:'35+ (slugger)', avg:'15 – 25', bad:'< 10',  note:'Elite: 45+ per season' },
-  D2B:   { title:'Doubles',                        good:'≥ 35',     avg:'20 – 30', bad:'< 15' },
-  D3B:   { title:'Triples (rare)',                 body:'Most players: 1–3/yr. 5+ indicates speed/gap power.' },
-  XBH:   { title:'Extra-Base Hits (HR+2B+3B)',     good:'≥ 75',     avg:'45 – 55', bad:'< 30',  note:'Elite: 75+' },
-  RBI:   { title:'Runs Batted In',                 good:'≥ 90',     avg:'60 – 80', bad:'< 40',  note:'Lineup-spot dependent · Elite: 100+' },
-  SB:    { title:'Stolen Bases',                   good:'≥ 20',     avg:'5 – 10',  bad:'< 3',   note:'Elite: 30+' },
-  // ── Batter Statcast ──
-  XWOBA: { title:'xwOBA — quality-of-contact offense', good:'≥ .360', avg:'~ .320', bad:'≤ .300' },
-  XBA:   { title:'xBA — expected BA from EV + LA',     good:'≥ .280', avg:'~ .245', bad:'≤ .220' },
-  XSLG:  { title:'xSLG — expected SLG from EV + LA',   good:'≥ .480', avg:'~ .405', bad:'≤ .360' },
-  BARREL_B:{ title:'Barrel Rate (optimal EV + LA)',    good:'≥ 10%',  avg:'~ 7%',   bad:'≤ 4%' },
-  HH_B:  { title:'Hard-Hit Rate (95+ mph EV)',         good:'≥ 45%',  avg:'~ 38%',  bad:'≤ 35%' },
-  EV_B:  { title:'Average Exit Velocity',              good:'≥ 92 mph', avg:'~ 88.5 mph', bad:'≤ 86 mph' },
-  SWEET: { title:'Sweet-Spot % (8–32° launch angle)',  good:'≥ 40%',  avg:'~ 33%',  bad:'≤ 28%' },
-  WHIFF_B:{ title:'Whiff Rate (whiffs ÷ swings)',      good:'≤ 20%',  avg:'~ 25%',  bad:'≥ 30%', note:'Lower is better' },
-  GB_B:  { title:'Ground-Ball Rate',                   body:'League avg: ~43%. Higher GB = more singles, fewer XBH.' },
-  FB_B:  { title:'Fly-Ball Rate',                      body:'League avg: ~36%. Higher FB = more HR potential but more outs.' },
-  BATSPD:{ title:'Bat Speed (Statcast 2024+)',         good:'≥ 75 mph', avg:'~ 71 mph', bad:'≤ 68 mph' },
-  SQDUP: { title:'Squared-Up % per Contact',           good:'≥ 22%',  avg:'~ 17%',  bad:'≤ 12%' },
-  BLAST: { title:'Blast % — squared-up + fast swing',  good:'≥ 8%',   avg:'~ 5%',   bad:'≤ 3%' },
-  // ── Pitcher Statcast (vs hitters) ──
-  WHIFF_P:{ title:'Whiff Rate per Pitch',          good:'≥ 30%',     avg:'~ 25%',     bad:'≤ 20%',     note:'Higher is better for pitcher' },
-  KPCT_P:{ title:'Strikeout Rate (K ÷ BF)',        good:'≥ 25%',     avg:'~ 22%',     bad:'≤ 18%',     note:'Elite: ≥ 30%' },
-  PUTAWAY:{ title:'Put-Away % (K per 2-strike pitch)', good:'≥ 22%', avg:'~ 18%',     bad:'≤ 15%' },
-  GB_P:  { title:'Ground-Ball Rate Induced',       good:'≥ 50%',     avg:'~ 43%',     bad:'≤ 38%',     note:'Higher = fewer XBH' },
-  FB_P:  { title:'Fly-Ball Rate Induced',          body:'League avg: ~36%. Lower is better for pitcher.' },
-  BARREL_VS:{ title:'Barrels Allowed',             good:'≤ 4%',      avg:'~ 7%',      bad:'≥ 10%',     note:'Lower is better' },
-  HH_VS: { title:'Hard Contact Allowed (95+ mph)', good:'≤ 35%',     avg:'~ 38%',     bad:'≥ 45%' },
-  EV_VS: { title:'Avg Exit Velo Allowed',          good:'≤ 86 mph',  avg:'~ 88.5 mph', bad:'≥ 92 mph' },
-  XWOBA_VS:{ title:'xwOBA Against',                good:'≤ .300',    avg:'~ .320',    bad:'≥ .360' },
-  XERA:  { title:'xERA — Expected ERA from EV/LA', good:'≤ 3.50',    avg:'~ 4.20',    bad:'≥ 5.00' },
-  // ── Pitcher season ──
-  ERA:   { title:'Earned Run Average (ER × 9 ÷ IP)', good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 5.00', note:'Ace: ≤ 3.00' },
-  FIP:   { title:'FIP — Fielding-Independent Pitching', good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 4.50', note:'Strips defense/luck — better than ERA' },
-  XFIP:  { title:'xFIP — FIP w/ league HR/FB rate',  good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 4.50', note:'Strips out HR luck' },
-  SIERA: { title:'SIERA — Skill-Interactive ERA',    good:'≤ 3.50', avg:'~ 4.20', bad:'≥ 4.50', note:'Most predictive ERA estimator' },
-  WHIP:  { title:'Walks + Hits per IP',              good:'≤ 1.10', avg:'~ 1.30', bad:'≥ 1.40', note:'Elite: ≤ 1.00' },
-  KBBPCT:{ title:'K-BB % — strikeout minus walk rate', good:'≥ 15%', avg:'~ 13%', bad:'≤ 8%',  note:'Strongest single-stat K predictor · Elite: ≥ 20%' },
-  HR9:   { title:'Home Runs Allowed per 9 IP',       good:'≤ 0.90', avg:'~ 1.20', bad:'≥ 1.50' },
-  BBPCT_P:{ title:'Walk Rate (BB ÷ BF)',             good:'≤ 6%',   avg:'~ 8.5%', bad:'≥ 10%' },
-  IP:    { title:'Innings Pitched',                  body:'Counting stat — role-dependent (starter vs reliever).' },
-  K9:    { title:'Strikeouts per 9 IP',              good:'≥ 9.0',  avg:'~ 8.5',  bad:'≤ 6.5', note:'Elite: ≥ 11.0' },
-  GS:    { title:'Games Started',                    body:'Counting stat.' },
-};
 function pct(n,d){if(!n||!d||d===0)return'—';return((n/d)*100).toFixed(1)+'%';}
 function renderStatsTab(){
   hide('stats-spinner');hide('stats-empty');
@@ -5008,60 +4869,6 @@ function renderStatsTab(){
 //
 // Labels MUST match the strings passed to add() in calcPrediction — a typo
 // silently drops the multiplier (mult = 1.0) and the factor never learns.
-const DEFAULT_WEIGHTS = {
-  // Batter splits — adj = (ops − 0.720) × weight (0.720 ≈ league avg OPS)
-  'vs LHP': 70, 'vs RHP': 70,
-  'Home':   35, 'Away':   35,
-
-  // Career matchup vs current pitcher — adj capped ±6
-  'vs Pitcher (career)': 50,
-
-  // Opposing pitcher headline metric — adj = (trueERA − 4.00) × weight.
-  // Unified label so learning isn't split across SIERA/xFIP/FIP/ERA depending on
-  // which advanced metric was available for that pitcher. The specific metric
-  // used appears in the factor's `value` field instead.
-  'Pitcher Quality': 4,
-
-  // Pitcher regression / quality flags (flat adj)
-  'Unlucky Pitcher': -2, 'Lucky Pitcher':  2,
-  'Elite K-BB%':     -4, 'Poor K-BB%':     3,
-  'HR-prone':         3, 'HR Suppressor': -2,
-
-  // Pitcher rest / workload (flat)
-  'Short Rest': 3, 'Extra Rest': -2,
-  'High Prev PC': 2, 'Bullpen Game': 7,
-
-  // Batter plate discipline (flat)
-  'BB%': 3, 'K%': -3,
-
-  // Batter recent form — last-5 hot/cold streak, raw adj capped ±6
-  'Recent Form': 5,
-
-  // Batter Statcast (single label used for both directions — weight scales magnitude symmetrically)
-  'Whiff%': 3, 'xwOBA': 4, 'GB%': -2, 'FB%': 2,
-
-  // Pitcher Statcast — Pitcher Whiff% weight bumped from 3 → 4 so it matches
-  // the typical |adj| magnitude (elite case fires at -4, poor case at +3).
-  'Pitcher Whiff%': 4, 'Pitcher GB%': -2, 'xwOBA vs': 3,
-
-  // Weather (Heat/Cold flat; wind uses mph-scaled coefficient inside add — weight=1 keeps default)
-  'Heat': 4, 'Cold': -4,
-  'Wind Out': 1, 'Wind In': -1,
-  'Crosswind': -2, 'High Humidity': -1, 'Roof Closed': -2,
-
-  // Park
-  'Altitude': 8, 'Elevation': 3,
-  'Hitter Park': 1, 'Pitcher Park': 1,
-
-  // Travel
-  'Red-Eye': -6, 'Same-Day Travel': -3,
-
-  // Umpire (weight=1 means apply UMP_DB adj as-is)
-  'Umpire': 1,
-
-  // Lineup protection
-  'Protection': 3,
-};
 
 // Map legacy per-metric pitcher labels onto the unified 'Pitcher Quality' label
 // so learning stats accumulate in one bucket regardless of which advanced metric
@@ -5074,10 +4881,6 @@ function _canonicalFactorLabel(label){
 }
 
 // Storage keys
-const GRADE_LOG_KEY = 'gradeLog_v1';
-const FACTOR_PERF_KEY = 'factorPerf_v1';
-const FACTOR_WEIGHTS_KEY = 'factorWeights_v1';
-const PENDING_KEY = 'pendingPredictions_v1';
 
 function getGradeLog()     { return JSON.parse(localStorage.getItem(GRADE_LOG_KEY)||'[]'); }
 function getFactorPerf()   {
@@ -5681,31 +5484,7 @@ function drawPerfChart(log) {
 }
 
 // ═══════════ STATCAST ════════════════════════════════════════════════════════
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
-
-  function splitCSVLine(line) {
-    const result = [];
-    let cur = '', inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { inQuote = !inQuote; }
-      else if (ch === ',' && !inQuote) { result.push(cur.trim()); cur = ''; }
-      else { cur += ch; }
-    }
-    result.push(cur.trim());
-    return result;
-  }
-
-  const headers = splitCSVLine(lines[0]);
-  return lines.slice(1).map(line => {
-    const vals = splitCSVLine(line);
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = (vals[i] || '').replace(/"/g, '').trim(); });
-    return obj;
-  });
-}
+// (parseCSV moved to utils.js)
 
 // Renders the Statcast/Advanced grid from a raw-value statcast object (S.statcast
 // shape). Shared by loadStatcast (Setup panel) and openPlayerStats (dashboard
@@ -5920,8 +5699,6 @@ async function autoGradeBetLog(){
 
 // ═══════════ CROSS-DEVICE SYNC ════════════════════════════════════════════════
 
-const SYNC_KEY_STORAGE = 'corbetSyncKey';
-const SYNC_LAST_TS_KEY = 'corbetLastSync';
 
 function _getSyncKey(){ return localStorage.getItem(SYNC_KEY_STORAGE)||''; }
 function _setSyncKey(k){ localStorage.setItem(SYNC_KEY_STORAGE,k); }
@@ -6112,9 +5889,7 @@ function _initPushBtn(){
 }
 
 // ═══════════ UTILS ════════════════════════════════════════════════════════════
-function show(id){document.getElementById(id)?.classList.remove('hidden');}
-function hide(id){document.getElementById(id)?.classList.add('hidden');}
-function setText(id,t){const el=document.getElementById(id);if(el)el.textContent=t;}
+// show / hide / setText moved to utils.js
 
 // ── Soft-market tooltip (fixed-position, avoids stacking-context issues on mobile) ──
 (function(){
@@ -6177,6 +5952,35 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
 
 // ═══════════ INIT ══════════════════════════════════════════════════════════════
 document.getElementById('game-date').value=new Date().toISOString().split('T')[0]; // fallback until API responds
+// ═══════════ INLINE-HANDLER EXPORTS ═════════════════════════════════════════
+// Inline `onclick="..."` / `oninput="..."` strings in innerHTML evaluate
+// against `window`, not the module scope. ES modules don't auto-attach
+// top-level declarations to window, so these need explicit exposure.
+// Remove this block once audit finding #9 is done and inline handlers have
+// migrated to addEventListener. charter.js (classic script) also reads
+// window.S from here.
+Object.assign(window, {
+  // State + debug (also consumed by charter.js)
+  S, log, DEBUG,
+  // Modal lifecycle
+  openModal, closeModal, openPlayerDetails, openPlayerCorbet,
+  // Page actions
+  loadPlayer, loadUmpireAndWeather, runPrediction, selectPitcher,
+  onPitcherSearch, onStadiumChange, fetchWeather, updateWeatherForTime,
+  // Toggles + setters
+  setDay, setHome, setRoof, setThrows, setResult, setRecordSort,
+  toggleAddBetForm, toggleFactorCard, toggleManual, togglePlayerCard,
+  toggleWeatherManual,
+  // Bet log + grading
+  saveBet, addManualBet, deleteBet, clearRecord, removePending,
+  deleteGradeEntry, editGradeEntry, clearGrades,
+  autoGrade, autoGradeBetLog, renderCorbetBets,
+  // Bet finder
+  abfSetDir, abfSetResult,
+  // Push + sync
+  _pushSubscribe, _pushTest, pushRecord, pullRecord,
+});
+
 onStadiumChange();
 loadPlayer();
 dedupePending(); // remove legacy duplicate Pending Grade cards
