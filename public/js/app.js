@@ -5523,18 +5523,20 @@ Object.assign(window, {
   // State + debug (also consumed by charter.js)
   S, log, DEBUG,
   // Modal lifecycle
-  openModal, closeModal, openPlayerDetails, openPlayerCorbet,
+  openModal, closeModal, openPlayerDetails, openPlayerCorbet, openPlayerStats,
   // Page actions
-  loadPlayer, loadUmpireAndWeather, runPrediction, selectPitcher,
+  loadPlayer, loadCorbet, loadUmpireAndWeather, runPrediction, selectPitcher,
   onPitcherSearch, onStadiumChange, fetchWeather, updateWeatherForTime,
   // Toggles + setters
   setDay, setHome, setRoof, setThrows, setResult, setRecordSort,
   toggleAddBetForm, toggleFactorCard, toggleManual, togglePlayerCard,
   toggleWeatherManual,
-  // Bet log + grading
+  // Bet log + grading + rendering (all five reached via chained inline handlers
+  // like `onclick="openModal(...);renderXyz()"` — must be on window)
   saveBet, addManualBet, deleteBet, clearRecord, removePending,
   deleteGradeEntry, editGradeEntry, clearGrades,
-  autoGrade, autoGradeBetLog, renderCorbetBets,
+  autoGrade, autoGradeBetLog,
+  renderCorbetBets, renderRecord, renderGradePanel, renderCalibration,
   // Bet finder
   abfSetDir, abfSetResult,
   // Push + sync
