@@ -1,0 +1,4 @@
+{
+  "//": "Tells Node to treat .js files in this directory as ES modules so `node --test` can import them. The browser doesn't care — it uses the script tag's type attribute. The root package.json stays type=commonjs so server.js / routes / cron.js keep working as CJS.",
+  "type": "module"
+}

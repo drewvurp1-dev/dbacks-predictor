@@ -13,6 +13,7 @@
 // same Date.now() timestamp; also derive `rating` for legacy entries that
 // stored it as undefined.
 function _loadBetLog() {
+  if (typeof localStorage === 'undefined') return [];
   const list = JSON.parse(localStorage.getItem('corbetRecord') || '[]');
   const seen = new Set();
   let repaired = false;
@@ -29,6 +30,7 @@ function _loadBetLog() {
 }
 
 function _loadRecordSort() {
+  if (typeof localStorage === 'undefined') return { key: 'date', dir: 'desc' };
   try {
     const s = JSON.parse(localStorage.getItem('corbetRecordSort'));
     if (s && s.key && s.dir) return s;
@@ -57,12 +59,14 @@ export const S = {
 // declarations don't auto-attach to window, so we expose it explicitly here.
 // The inline-handler exports block in app.js also re-exposes S; this assignment
 // just ensures charter.js sees S even if it loads before app.js's export block.
-window.S = S;
+// Guarded for Node test runs where `window` doesn't exist.
+if (typeof window !== 'undefined') window.S = S;
 
 // ── Gated debug logger ──────────────────────────────────────────────────────
 // Opt in via `?debug=1` query param or `localStorage.debug = '1'`.
 // Keeps trace output available without spamming the console in production.
 export const DEBUG = (() => {
+  if (typeof location === 'undefined' || typeof localStorage === 'undefined') return false;
   try {
     return new URLSearchParams(location.search).has('debug')
         || localStorage.getItem('debug') === '1';

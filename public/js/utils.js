@@ -8,8 +8,12 @@ export function setText(id, t) { const el = document.getElementById(id); if (el)
 
 // ── Park factor lookup from the stadium-select dropdown ─────────────────────
 // Reads HR factor, hit factor, elevation, and roof flag straight off the
-// selected <option>'s data-* attributes.
+// selected <option>'s data-* attributes. In Node (no DOM) returns league-neutral
+// defaults so prediction-math tests can run without jsdom.
 export function _parkFactors() {
+  if (typeof document === 'undefined') {
+    return { hrF: 1.0, hitF: 1.0, elev: 0, hasRoof: false };
+  }
   const sel = document.getElementById('stadium-select');
   const opt = sel?.options[sel?.selectedIndex];
   return {
