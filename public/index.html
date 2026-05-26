@@ -28,8 +28,8 @@
     <div id="api-credits" class="api-credits" title="Odds API credits remaining">— credits</div>
     <div id="adsbx-credits" class="api-credits hidden" title="AeroDataBox (charter tracker) credits remaining">— charter</div>
     <button class="header-btn" onclick="location.reload();" title="Reload latest game data">↻ REFRESH</button>
-    <button class="header-btn" onclick="openModal('panel-grade','Grade &amp; Learn');renderGradePanel();">📊 GRADE</button>
-    <button class="header-btn" onclick="openModal('panel-record','Bet Record');renderRecord();">📝 RECORD</button>
+    <button class="header-btn" data-action="open-grade">📊 GRADE</button>
+    <button class="header-btn" data-action="open-record">📝 RECORD</button>
   </div>
 </div>
 
@@ -270,8 +270,8 @@
       <div class="card"><div class="card-header">📝 Scouting Report</div><div class="card-body" id="prediction-summary" style="padding:14px 16px;"><div style="color:#777;font-family:'Chakra Petch',monospace;font-size:11px;">Run a prediction to generate the scouting report.</div></div></div>
       <div class="card"><div class="card-header">⚾ Pitch Mix</div><div class="card-body" id="pitch-display"></div></div>
       <div style="margin-top:12px;" id="result-nav-btns">
-        <button class="btn-primary" onclick="closeModal();openModal('panel-corbet','CorBET Carroll');loadCorbet();" style="background:linear-gradient(135deg,#009A8B,#007a70);">View CorBET →</button>
-        <button class="btn-secondary" onclick="closeModal();openModal('panel-setup','Setup &amp; Overrides')">← Adjust Conditions</button>
+        <button class="btn-primary" data-action="view-corbet" style="background:linear-gradient(135deg,#009A8B,#007a70);">View CorBET →</button>
+        <button class="btn-secondary" data-action="adjust-conditions">← Adjust Conditions</button>
       </div>
     </div>
   </div>
@@ -297,7 +297,7 @@
   <!-- ═══════════════════ RECORD ═══════════════════ -->
   <div id="panel-record" class="panel">
     <div class="card">
-      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:'Chakra Petch',monospace;"></span><button onclick="openModal('panel-calibration','Model Calibration');renderCalibration();" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button class="autograde-btn" onclick="autoGradeBetLog()" style="background:none;border:1px solid #2d2616;color:#d4a017;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">⟳ Grade</button><button onclick="toggleAddBetForm()" id="add-bet-toggle" style="background:none;border:1px solid #1e2d3a;color:#5bc0de;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">+ Add</button><button class="sync-btn-push" onclick="pushRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:4px;">↑ Push</button><button class="sync-btn-pull" onclick="pullRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">↓ Pull</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
+      <div class="card-header"><span>📈 CorBET Record</span><span id="rec-pending" style="font-size:10px;color:#f39c12;font-weight:400;font-family:'Chakra Petch',monospace;"></span><button data-action="open-calibration" style="background:none;border:1px solid #1e1b3a;color:#888;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:auto;margin-right:8px;">📊 Calibration</button><button class="autograde-btn" onclick="autoGradeBetLog()" style="background:none;border:1px solid #2d2616;color:#d4a017;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">⟳ Grade</button><button onclick="toggleAddBetForm()" id="add-bet-toggle" style="background:none;border:1px solid #1e2d3a;color:#5bc0de;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">+ Add</button><button class="sync-btn-push" onclick="pushRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:4px;">↑ Push</button><button class="sync-btn-pull" onclick="pullRecord()" style="background:none;border:1px solid #1e2d1e;color:#4a9;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-right:8px;">↓ Pull</button><button onclick="clearRecord()" style="background:none;border:none;color:#777;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">Clear All</button></div>
       <div class="card-body">
         <div id="add-bet-form" class="add-bet-form hidden">
           <div class="abf-row">
@@ -511,7 +511,7 @@
   </div>
 </div>
 
-<script type="module" src="/js/app.js?v=44"></script>
+<script type="module" src="/js/app.js?v=45"></script>
 <script src="/js/charter.js?v=16"></script>
 
 </body>

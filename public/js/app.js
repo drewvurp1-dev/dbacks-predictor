@@ -214,7 +214,7 @@ function toggleManual(){S.pitcherManual=!S.pitcherManual;document.getElementById
 function toggleWeatherManual(){S.weatherManual=!S.weatherManual;document.getElementById('weather-manual').classList.toggle('hidden',!S.weatherManual);}
 
 // ═══════════ PITCH MIX ════════════════════════════════════════════════════════
-function buildPitchMixGrid(cid,pitches){document.getElementById(cid).innerHTML=PITCH_TYPES.map(pt=>`<div class="pitch-mix-item"><span class="pitch-mix-label">${pt}</span><input type="range" min="0" max="60" value="${pitches[pt]||0}" oninput="S.pitcherPitches['${pt}']=parseInt(this.value);this.nextElementSibling.textContent=this.value+'%'" style="flex:1;accent-color:#A71930"><span style="font-size:11px;color:#ccc;font-family:\'Chakra Petch\',monospace;min-width:28px;text-align:right">${pitches[pt]||0}%</span></div>`).join('');}
+function buildPitchMixGrid(cid,pitches){document.getElementById(cid).innerHTML=PITCH_TYPES.map(pt=>`<div class="pitch-mix-item"><span class="pitch-mix-label">${pt}</span><input type="range" min="0" max="60" value="${pitches[pt]||0}" data-action="pitch-mix-slider" data-pitch="${pt}" style="flex:1;accent-color:#A71930"><span style="font-size:11px;color:#ccc;font-family:\'Chakra Petch\',monospace;min-width:28px;text-align:right">${pitches[pt]||0}%</span></div>`).join('');}
 function buildPitchMixManual(){buildPitchMixGrid('pitch-mix-grid-manual',S.pitcherPitches);}
 
 // ═══════════ PLAYER LOADING ═══════════════════════════════════════════════════
@@ -3010,7 +3010,7 @@ function renderDashboard(){
         <span class="dash-prow-order">${orderLabel}</span>
         <span class="dash-prow-name">${player.name}</span>${lowDataBadge}
         <span class="dash-prow-statline">AVG ${avgStr} &nbsp; OPS ${opsStr}</span>
-        <button class="dash-prow-more" onclick="event.stopPropagation();openPlayerStats('${pid}')">More Stats ›</button>
+        <button class="dash-prow-more" data-action="open-player-stats" data-player-id="${pid}">More Stats ›</button>
         <span class="dash-prow-arrow" id="dpa-${pid}">▼</span>
       </div>
       <div class="dash-prow-body hidden" id="dpb-${pid}">
@@ -4777,6 +4777,52 @@ function _initPushBtn(){
 
 // ═══════════ INIT ══════════════════════════════════════════════════════════════
 document.getElementById('game-date').value=new Date().toISOString().split('T')[0]; // fallback until API responds
+
+// ═══════════ EVENT DELEGATION ════════════════════════════════════════════════
+// Replaces inline `onclick="..."` handlers (audit finding #9). Each interactive
+// element carries `data-action="..."` and optional `data-*` payloads; a single
+// dispatcher routes events to the named handler in ACTIONS. This pattern
+// eliminates the "chained inline handler" bug class (e.g. PR4a missed
+// `openPlayerStats` because it appeared *after* `event.stopPropagation();` in
+// the onclick string) — every action is a real function reference now, not a
+// substring inside an HTML attribute.
+//
+// Migration is phased. Phase 1 (this PR) covers all chained handlers + the
+// `oninput` on the pitch-mix slider. Single-call inline handlers still exist
+// and continue to rely on the window-exposure block below; those migrate in a
+// follow-up.
+const ACTIONS = {
+  // Header buttons
+  'open-grade':        () => { openModal('panel-grade',       'Grade & Learn');      renderGradePanel(); },
+  'open-record':       () => { openModal('panel-record',      'Bet Record');         renderRecord(); },
+
+  // Result panel buttons
+  'view-corbet':       () => { closeModal(); openModal('panel-corbet', 'CorBET Carroll'); loadCorbet(); },
+  'adjust-conditions': () => { closeModal(); openModal('panel-setup',  'Setup & Overrides'); },
+
+  // CorBET Record card
+  'open-calibration':  () => { openModal('panel-calibration', 'Model Calibration');  renderCalibration(); },
+
+  // Dashboard player rows — stops propagation so the row's outer click handler
+  // (which opens the Details modal) doesn't also fire.
+  'open-player-stats': (el, e) => { e.stopPropagation(); openPlayerStats(el.dataset.playerId); },
+
+  // Pitch-mix slider — mutates S.pitcherPitches and updates the trailing %.
+  'pitch-mix-slider':  (el) => {
+    S.pitcherPitches[el.dataset.pitch] = parseInt(el.value);
+    el.nextElementSibling.textContent = el.value + '%';
+  },
+};
+
+function _dispatchAction(e) {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const handler = ACTIONS[el.dataset.action];
+  if (handler) handler(el, e);
+}
+document.addEventListener('click', _dispatchAction);
+document.addEventListener('input', _dispatchAction);
+
 // ═══════════ INLINE-HANDLER EXPORTS ═════════════════════════════════════════
 // Inline `onclick="..."` / `oninput="..."` strings in innerHTML evaluate
 // against `window`, not the module scope. ES modules don't auto-attach
