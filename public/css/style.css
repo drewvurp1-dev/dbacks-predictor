@@ -358,7 +358,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .grade-btn { padding: 8px 16px; border-radius: 6px; border: none; font-family: 'Chakra Petch', monospace; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: opacity 0.15s; }
 .grade-btn.confirm { background: linear-gradient(135deg, #1a5a10, #0d3a08); color: #2ecc71; }
 .grade-btn.confirm:hover { opacity: 0.82; }
-.grade-log-row { display: grid; grid-template-columns: 80px 40px 90px 1fr 50px 80px 55px auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
+.grade-log-row { display: grid; grid-template-columns: 80px 40px 90px 1fr 50px 80px 55px 56px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
 .grade-row-actions { display: flex; gap: 2px; align-items: center; }
 .grade-row-edit, .grade-row-del { background: none; border: none; font-family: 'Chakra Petch', monospace; cursor: pointer; padding: 2px 6px; line-height: 1; transition: color 0.12s; }
 .grade-row-edit { color: #2a2540; font-size: 13px; }
