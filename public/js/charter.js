@@ -345,7 +345,7 @@
     try {
       const r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}/cached?destAirport=${destAirport}`);
       if (r.status === 204) {
-        const html = `<span class="dch-plane">✈</span><span>${trackedTeam} → ${destAirport}</span><span class="dch-spinner">poller hasn't fetched yet (fires hourly from T+3h)</span>`;
+        const html = `<span class="dch-plane">✈</span><span>${trackedTeam} → ${destAirport}</span><span class="dch-spinner">checking for scheduled departure…</span>`;
         el.className = 'dash-charter';
         el.innerHTML = html;
         _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = '';
