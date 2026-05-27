@@ -120,7 +120,7 @@ Status codes: 400 BAD_INPUT, 401 AUTH_FAILED, 404 NOT_FOUND, 502 UPSTREAM_FAILED
 ### Module dependency graph
 
 ```
-app.js (orchestrator, ~3,730 lines)
+app.js (orchestrator, ~3,043 lines)
   ├── constants.js    (pure data)
   ├── utils.js        (pure DOM/math)
   ├── state.js        (S global, player-context)
@@ -131,7 +131,8 @@ app.js (orchestrator, ~3,730 lines)
   ├── betting.js      (odds math)
   ├── bets.js         (bet log + grading subsystem)
   ├── ui/modal.js     (modal lifecycle)
-  └── ui/render.js    (statBox, Statcast grid, pitch matchup)
+  ├── ui/render.js    (statBox, Statcast grid, pitch matchup)
+  └── ui/record.js    (bet record + grade panel + calibration + CorBET bets)
 
 charter.js (classic script, no imports — reads window.S)
 ```
@@ -185,7 +186,7 @@ Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. Th
 
 ## app.js Consolidation — Remaining Work
 
-Current state: ~3,730 lines (down from 6,156 original, −39.4%). Math, state, constants, betting, pitcher metrics, player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards, and the bet-log + grading subsystem have all been extracted. What remains is UI orchestration + data-loader functions.
+Current state: ~3,043 lines (down from 6,156 original, −50.6%). Math, state, constants, betting, pitcher metrics, player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards, the bet-log + grading subsystem, and the bet-record / grade-panel / calibration / CorBET-bets renderers have all been extracted. What remains is UI orchestration + data-loader functions.
 
 ### Planned extractions (ordered by value/risk)
 
@@ -200,9 +201,9 @@ Current state: ~3,730 lines (down from 6,156 original, −39.4%). Math, state, c
    - Storage helpers: `getGradeLog/getFactorPerf/getFactorWeights/getPending` + matching savers
    - Communication: bets.js dispatches `bets:changed` (S.betLog mutated) and `grades:changed` (gradeLog/pending/perf/weights mutated). app.js subscribes during bootstrap. No upward imports.
 
-3. **`ui/record.js` — bet record + grade panel render** (~300 lines)
-   - `renderRecord`, `renderGradePanel`, `renderCalibration`, `renderCorbetBets`, `drawPerfChart`
-   - Depends on `bets.js`. Best done now that #2 is in.
+3. ~~**`ui/record.js` — bet record + grade panel render**~~ ✅ Done (~720 lines)
+   - Moved: `renderRecord` (+ `_propKeyForBet`, `_renderPLSparkline`, `setRecordSort`, `_sortBetLog`, `_RECORD_PROP_ORDER/_SHORT` helpers), `renderGradePanel`, `renderCalibration` (+ `_calBetWinProb`, `_calBucketize`, `_calProfit` helpers), `renderCorbetBets` (+ `togglePhantom` + `probToAmerican` helper), `drawPerfChart`
+   - Imports `getPending/getGradeLog/getFactorPerf/getFactorWeights` + `gradePerformance` from bets.js; `modelProbability` from predict.js; `devig`/`bookAbbrev` from betting.js. The 'bets:changed'/'grades:changed' listeners in app.js now call into ui/record.js.
 
 4. **`push.js` + `sync.js` (frontend modules)** (~250 lines combined)
    - `_pushSubscribe`, `_pushTest`, `registerSW`, `_urlBase64ToUint8Array`, `_initPushBtn`, `pushRecord`, `pullRecord`, sync-key helpers
@@ -225,7 +226,7 @@ Current state: ~3,730 lines (down from 6,156 original, −39.4%). Math, state, c
 
 ### Target
 
-After extractions #1–#4: ~3,000 lines — orchestration + bootstrap only.
+After extraction #4: ~2,800 lines — orchestration + bootstrap only.
 
 ### Risk-mitigation rules
 
