@@ -137,11 +137,21 @@ async function checkFirstPitch() {
 }
 
 // ── Charter tracker poller ─────────────────────────────────────────────────
-// Fires once an hour during a narrow window after the *getaway game's*
-// first pitch — the game the tracked team is flying out of. Window opens
-// at first-pitch + 3h, closes at first-pitch + 8h, and stops early once
-// the arrival lands. Goal: ~3–5 upstream calls per series opener instead
-// of one per page load.
+// Runs every 30 minutes. For series-opener travel days the poller works in
+// two phases:
+//
+//   1. SCOUT (T+1h → ETD): once per 2-hour retry interval, calls lookupTeam
+//      to get the charter's scheduled departure time (ETD) from AeroDataBox.
+//      AeroDataBox includes pre-departure scheduled flights, so the first
+//      scout call typically finds ETD on the first try and populates the
+//      /cached endpoint so the dashboard shows "scheduled 5:00 PM" well
+//      before wheels-up.
+//
+//   2. ACTIVE POLL (ETD → ETD+6h): once ETD is known (or falls back to
+//      T+3h if AeroDataBox has no schedule yet), polls every 30 min until
+//      the charter lands or the window closes.
+//
+// ~3–5 upstream calls total per series opener (1–2 scouts + active polls).
 
 let _charters = null;
 function loadCharters() {
@@ -171,6 +181,13 @@ async function fetchRecentGameForTeam(teamId, beforeYmd) {
 // Falls back to an in-memory Set when DATABASE_URL isn't configured, so the
 // poller still self-limits in dev / when push is disabled.
 const _landedMemory = new Set();
+
+// Per-trip ETD (scheduled departure) cache so we don't re-scout on every
+// tick once we've found the flight schedule. Keyed by "gameDate|trackedTeam".
+const _etdCache   = {};  // { key: etdMs }
+const _etdScoutTs = {};  // { key: lastAttemptMs }
+const SCOUT_RETRY_MS = 2 * 3600 * 1000; // retry scout at most once per 2h
+
 async function isLanded(gamePk) {
   if (pool()) {
     try {
@@ -231,8 +248,9 @@ async function checkCharterPoll() {
     if (!getawayGame?.gameDate) return;
 
     const firstPitch = new Date(getawayGame.gameDate).getTime();
-    const hoursSince = (Date.now() - firstPitch) / 3600000;
-    if (hoursSince < 3 || hoursSince > 8) return;
+    const hoursSinceFirstPitch = (Date.now() - firstPitch) / 3600000;
+    // Hard outer bounds: don't run before T+1h or after T+12h from first pitch.
+    if (hoursSinceFirstPitch < 1 || hoursSinceFirstPitch > 12) return;
 
     const charters = loadCharters();
     const destAirport = isHome
@@ -240,17 +258,64 @@ async function checkCharterPoll() {
       : (charters[todayOpp]?.home_airport || null);
     if (!destAirport) return;
 
+    const etdKey = `${todayYmd}|${trackedTeamAbbr}`;
+
+    // ── Phase 1: ETD scout ─────────────────────────────────────────────────
+    // Call lookupTeam (with its own 15-min cache) to fetch the scheduled
+    // departure time before the flight actually departs. AeroDataBox returns
+    // pre-departure flights with departure.scheduledTime.utc populated, so
+    // this populates the /cached endpoint with "SCHEDULED" state for the
+    // dashboard and lets us open the poll window right at departure time
+    // rather than at a fixed T+3h offset.
+    if (!_etdCache[etdKey]) {
+      const lastScout = _etdScoutTs[etdKey] || 0;
+      if (Date.now() - lastScout >= SCOUT_RETRY_MS) {
+        _etdScoutTs[etdKey] = Date.now();
+        const scout = await flightsRouter.lookupTeam(trackedTeamAbbr, destAirport);
+        if (scout.status === 200) {
+          const arr = scout.data?.arrival;
+          // Only trust ETD when the flight is confirmed into the right airport.
+          if (arr && arr.to === destAirport && arr.depScheduledUtc) {
+            const etdMs = new Date(arr.depScheduledUtc).getTime();
+            if (!isNaN(etdMs)) {
+              _etdCache[etdKey] = etdMs;
+              console.log(`[cron] charter ${trackedTeamAbbr} ETD scouted: ${arr.depScheduledUtc}`);
+            }
+          }
+        }
+      }
+    }
+
+    // ── Phase 2: polling window ────────────────────────────────────────────
+    const etdMs = _etdCache[etdKey];
+    // Open window at ETD (or fall back to T+3h if AeroDataBox had no schedule).
+    const windowStart = etdMs ?? (firstPitch + 3 * 3600000);
+    const windowEnd   = etdMs ? etdMs + 6 * 3600000 : firstPitch + 8 * 3600000;
+
+    if (Date.now() < windowStart) {
+      if (etdMs) {
+        const minUntil = Math.round((windowStart - Date.now()) / 60000);
+        console.log(`[cron] charter ${trackedTeamAbbr} ETD in ${minUntil} min — poll window not open yet`);
+      }
+      return;
+    }
+    if (Date.now() > windowEnd) return;
+
+    // ── Active poll ────────────────────────────────────────────────────────
     const result = await flightsRouter.lookupTeam(trackedTeamAbbr, destAirport);
     if (!result || result.status !== 200) {
       console.log(`[cron] charter poll: lookup status=${result?.status}`);
       return;
     }
     const arrival = result.data?.arrival;
-    if (arrival?.arrUtc && new Date(arrival.arrUtc).getTime() <= Date.now()) {
+    if (arrival?.arrActualUtc && new Date(arrival.arrActualUtc).getTime() <= Date.now()) {
       await markLanded(game.gamePk);
       console.log(`[cron] charter ${trackedTeamAbbr} landed at ${arrival.to} — polling stopped (gamePk=${game.gamePk})`);
     } else {
-      console.log(`[cron] charter ${trackedTeamAbbr}→${destAirport}: T+${hoursSince.toFixed(1)}h, not landed yet`);
+      const refMs  = etdMs ?? (firstPitch + 3 * 3600000);
+      const minSince = Math.round((Date.now() - refMs) / 60000);
+      const tag = etdMs ? 'ETD' : 'T+3h';
+      console.log(`[cron] charter ${trackedTeamAbbr}→${destAirport}: +${minSince}min from ${tag}, not landed`);
     }
   } catch (err) {
     console.error('[cron] checkCharterPoll error:', err.message);
@@ -273,8 +338,8 @@ function start() {
   }
 
   if (process.env.AERODATABOX_API_KEY) {
-    cron.schedule('0 * * * *', checkCharterPoll);
-    console.log('[cron] scheduled hourly charter poller (T+3h to T+8h after getaway first pitch)');
+    cron.schedule('*/30 * * * *', checkCharterPoll);
+    console.log('[cron] scheduled charter poller every 30min (ETD-triggered after getaway game)');
   } else {
     console.log('[cron] charter poller disabled (AERODATABOX_API_KEY not set)');
   }

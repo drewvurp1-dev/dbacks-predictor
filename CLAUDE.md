@@ -163,7 +163,7 @@ Runs on startup via `require('./cron').start()`. No-ops if the required env vars
 |---|---|---|
 | `checkLineup` | Every 5 min | D-backs lineup posted for today's game |
 | `checkFirstPitch` | Every 5 min | First pitch is 25–35 min away |
-| `checkCharterPoll` | Every hour | T+3h to T+8h after getaway game first pitch |
+| `checkCharterPoll` | Every 30 min | Scouts for charter ETD from T+1h; active polls from scheduled departure (ETD) to ETD+6h |
 
 Notification dedup uses `notification_log (game_pk, type)` PRIMARY KEY — INSERT … ON CONFLICT DO NOTHING. Falls back to in-memory Set when `DATABASE_URL` isn't configured.
 
@@ -181,7 +181,7 @@ Frontend loads it once via `/pitch-arsenal` and caches on `S.pitchArsenal` (`pit
 
 `data/team_charters.json` — registry of MLB charter aircraft by team (tail numbers + flight callsigns). Sources: airliners.net, FlyerTalk, spotter sightings. **Verify callsigns each season** — Delta's DL88xx block and United's UA37xx block shift annually.
 
-Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. The cron poller (`checkCharterPoll`) pre-warms the in-memory cache during the T+3h–T+8h window after a getaway game's first pitch, so page loads don't burn quota.
+Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. The cron poller (`checkCharterPoll`) pre-warms the in-memory cache in two phases: (1) a scout phase from T+1h after the getaway game's first pitch, which fetches the scheduled departure time (ETD) from AeroDataBox and populates the dashboard with "SCHEDULED" state before wheels-up; (2) an active polling phase every 30 min starting at the ETD (falls back to T+3h if AeroDataBox has no schedule yet), running until the charter lands or ETD+6h.
 
 ## app.js Consolidation — Remaining Work
 
