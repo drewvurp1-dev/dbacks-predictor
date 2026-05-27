@@ -184,13 +184,14 @@ Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. Th
 
 ## app.js Consolidation — Remaining Work
 
-Current state: ~4,880 lines (down from 6,156 original, −20.7%). Math, state, constants, betting, pitcher metrics, player stats, modal lifecycle, and stat-grid rendering have all been extracted. What remains is UI orchestration + data-loader functions.
+Current state: ~4,460 lines (down from 6,156 original, −27.5%). Math, state, constants, betting, pitcher metrics, player stats, modal lifecycle, stat-grid rendering, and the dashboard pitcher card / prediction-summary / factor cards have all been extracted. What remains is UI orchestration + data-loader functions.
 
 ### Planned extractions (ordered by value/risk)
 
-1. **`ui/render.js` — expand with remaining pitcher render code** (~400 lines)
-   - `_renderPitcherCard`, `_renderPitcherForm`, `_renderPitcherSplits`, `_renderBestMatchup`, `renderFactorCards`, `buildPredictionSummary`
-   - Data loaders (`loadPitcherForm`/`loadPitcherSplits`) either move to `api.js` or stay in app.js with CustomEvent callback pattern (like `modal:closed`)
+1. ~~**`ui/render.js` — expand with remaining pitcher render code**~~ ✅ Done
+   - Moved: `_renderPitcherCard`, `_renderPitcherForm`, `_renderPitcherSplits`, `_renderBestMatchup` (+ `_buildMatchupSummary` helper), `renderFactorCards`, `buildPredictionSummary`
+   - `loadPitcherForm` / `loadPitcherSplits` data loaders moved to `pitcher.js` (alongside `_loadPitchArsenal`)
+   - `activeRoster()` accessor moved to `state.js` (used in render + many app.js call sites)
 
 2. **`bets.js` — bet-log + grading subsystem** (~500 lines)
    - `saveBet`, `addManualBet`, `deleteBet`, `clearRecord`, `setResult`, `autoGrade`, `autoGradeBetLog`, `editGradeEntry`, `deleteGradeEntry`, `clearGrades`, `removePending`, `fetchActualStats`, `_hashBet`, localStorage helpers
