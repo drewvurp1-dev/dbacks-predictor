@@ -63,6 +63,22 @@ async function fetchTodayGame() {
   return d?.dates?.[0]?.games?.[0] || null;
 }
 
+// Looks forward up to 2 days for the next Live or Preview D-backs game.
+// Used by checkCharterPoll so it can start scouting on the getaway-game day
+// or an off day, before the series opener has gone Live.
+async function fetchNextSeriesGame() {
+  const start = azDate();
+  const end   = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${DBACKS_TEAM_ID}&startDate=${start}&endDate=${end}&gameType=R`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`MLB API ${r.status}`);
+  const d = await r.json();
+  const games = (d?.dates || []).flatMap(dt => dt.games || []);
+  return games.find(g => g.status?.abstractGameState === 'Live')
+      || games.find(g => g.status?.abstractGameState === 'Preview')
+      || null;
+}
+
 function isPlayableGame(game) {
   const state = game?.status?.abstractGameState;        // Preview / Live / Final
   const detail = game?.status?.detailedState || '';     // Postponed / Cancelled / etc.
@@ -219,8 +235,13 @@ async function checkCharterPoll() {
     if (!process.env.AERODATABOX_API_KEY) return;
     if (!flightsRouter.lookupTeam) return;
 
-    const game = await fetchTodayGame();
-    if (!game || !isPlayableGame(game) || !game.gamePk) return;
+    // Look ahead up to 2 days for the next series opener — covers off days
+    // and the case where today's game is Final but the charter for the next
+    // series is about to depart or just landed.
+    const game = await fetchNextSeriesGame();
+    if (!game || !game.gamePk || !game.gameDate) return;
+    const detail = game?.status?.detailedState || '';
+    if (/Postponed|Cancelled|Suspended/i.test(detail)) return;
     if (await isLanded(game.gamePk)) return;
 
     const isHome = game.teams?.home?.team?.id === DBACKS_TEAM_ID;
@@ -240,23 +261,18 @@ async function checkCharterPoll() {
     }
 
     const trackedTeamAbbr = isHome ? todayOpp : 'ARI';
-    const trackedTeamId = isHome
-      ? (game.teams.away?.team?.id)
-      : DBACKS_TEAM_ID;
-
-    const getawayGame = await fetchRecentGameForTeam(trackedTeamId, todayYmd);
-    if (!getawayGame?.gameDate) return;
-
-    const firstPitch = new Date(getawayGame.gameDate).getTime();
-    const hoursSinceFirstPitch = (Date.now() - firstPitch) / 3600000;
-    // Hard outer bounds: don't run before T+1h or after T+12h from first pitch.
-    if (hoursSinceFirstPitch < 1 || hoursSinceFirstPitch > 12) return;
-
     const charters = loadCharters();
     const destAirport = isHome
       ? 'PHX'
       : (charters[todayOpp]?.home_airport || null);
     if (!destAirport) return;
+
+    // Timing bounds: scout/poll from 48h before the series opener's first pitch
+    // through 12h after. This covers same-day charters, off-day travel, and
+    // getaway-game-night departures regardless of how long ago the getaway game was.
+    const openerFirstPitch = new Date(game.gameDate).getTime();
+    if (Date.now() < openerFirstPitch - 48 * 3600000) return;
+    if (Date.now() > openerFirstPitch + 12 * 3600000) return;
 
     const etdKey = `${todayYmd}|${trackedTeamAbbr}`;
 
@@ -288,9 +304,9 @@ async function checkCharterPoll() {
 
     // ── Phase 2: polling window ────────────────────────────────────────────
     const etdMs = _etdCache[etdKey];
-    // Open window at ETD (or fall back to T+3h if AeroDataBox had no schedule).
-    const windowStart = etdMs ?? (firstPitch + 3 * 3600000);
-    const windowEnd   = etdMs ? etdMs + 6 * 3600000 : firstPitch + 8 * 3600000;
+    // Open at ETD; fall back to 6h before opener first pitch if no schedule found.
+    const windowStart = etdMs ?? (openerFirstPitch - 6 * 3600000);
+    const windowEnd   = etdMs ? etdMs + 6 * 3600000 : openerFirstPitch + 2 * 3600000;
 
     if (Date.now() < windowStart) {
       if (etdMs) {
@@ -312,9 +328,9 @@ async function checkCharterPoll() {
       await markLanded(game.gamePk);
       console.log(`[cron] charter ${trackedTeamAbbr} landed at ${arrival.to} — polling stopped (gamePk=${game.gamePk})`);
     } else {
-      const refMs  = etdMs ?? (firstPitch + 3 * 3600000);
+      const refMs = etdMs ?? (openerFirstPitch - 6 * 3600000);
       const minSince = Math.round((Date.now() - refMs) / 60000);
-      const tag = etdMs ? 'ETD' : 'T+3h';
+      const tag = etdMs ? 'ETD' : 'T-6h';
       console.log(`[cron] charter ${trackedTeamAbbr}→${destAirport}: +${minSince}min from ${tag}, not landed`);
     }
   } catch (err) {

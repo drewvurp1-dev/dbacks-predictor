@@ -182,7 +182,7 @@ Frontend loads it once via `/pitch-arsenal` and caches on `S.pitchArsenal` (`pit
 
 `data/team_charters.json` — registry of MLB charter aircraft by team (tail numbers + flight callsigns). Sources: airliners.net, FlyerTalk, spotter sightings. **Verify callsigns each season** — Delta's DL88xx block and United's UA37xx block shift annually.
 
-Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. The cron poller (`checkCharterPoll`) pre-warms the in-memory cache in two phases: (1) a scout phase from T+1h after the getaway game's first pitch, which fetches the scheduled departure time (ETD) from AeroDataBox and populates the dashboard with "SCHEDULED" state before wheels-up; (2) an active polling phase every 30 min starting at the ETD (falls back to T+3h if AeroDataBox has no schedule yet), running until the charter lands or ETD+6h.
+Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. The cron poller (`checkCharterPoll`) pre-warms the in-memory cache in two phases: (1) a scout phase from T-48h before the series opener's first pitch, which fetches the scheduled departure time (ETD) from AeroDataBox and populates the dashboard with "SCHEDULED" state before wheels-up; (2) an active polling phase every 30 min starting at the ETD (falls back to T-6h from opener first pitch if AeroDataBox has no schedule yet), running until the charter lands or ETD+6h. Uses `fetchNextSeriesGame` (2-day lookahead) instead of `fetchTodayGame` so it works on off days and when today's game is already Final.
 
 ## app.js Consolidation — Remaining Work
 
