@@ -2806,11 +2806,12 @@ function togglePhantom(betKey,line,on){
   if(!b)return;
   const host=document.querySelector(`[data-phantom-host="${CSS.escape(betKey)}"]`);
   if(!host)return;
-  if(!on){
-    const existing=host.querySelector(`[data-phantom-line="${line}"]`);
-    if(existing)existing.remove();
-    return;
-  }
+  // The global dispatcher listens on click+input+change, so a single checkbox
+  // interaction fires this 3x. Remove any prior row for this line first so the
+  // handler is idempotent regardless of how many events route through.
+  const prior=host.querySelector(`[data-phantom-line="${line}"]`);
+  if(prior)prior.remove();
+  if(!on)return;
   const al=(b.altLines||[]).find(x=>x.line===line);
   if(!al)return;
 
