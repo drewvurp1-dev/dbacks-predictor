@@ -7,6 +7,7 @@
 // extraction in PR4f.
 
 import { S } from './state.js';
+import * as api from './api.js';
 
 // ── Pitcher rate-stat constants ─────────────────────────────────────────────
 const _FIP_CONSTANT = 3.10; // Approximates league-avg (ERA - raw FIP) — stable around 3.0–3.2
@@ -87,6 +88,66 @@ export function normalizePitchMix(rawMix) {
     leftover -= 1;
   }
   return Object.fromEntries(scaled.map(x => [x.k, x.floor]));
+}
+
+// ── Pitcher form (last 3 starts) ────────────────────────────────────────────
+// Fetches the pitcher's recent game log, keeps the 3 most recent, and shapes
+// each into a render-ready row with a quality class:
+//   pf-good  — ER ≤ 2 AND IP ≥ 5
+//   pf-bad   — ER ≥ 5 OR IP < 3
+//   pf-mixed — anything else
+// Returns null on fetch failure / null pitcherId.
+export async function loadPitcherForm(pitcherId) {
+  if (!pitcherId) return null;
+  try {
+    const d = await api.mlbPitcherGameLogHydrated(pitcherId);
+    const splits = d?.stats?.[0]?.splits || [];
+    const last3 = splits.slice(-3).reverse();
+    return last3.map(s => {
+      const stat = s.stat || {};
+      const ip = parseFloat(stat.inningsPitched || 0);
+      const er = parseInt(stat.earnedRuns || 0, 10);
+      const k  = parseInt(stat.strikeOuts || 0, 10);
+      const bb = parseInt(stat.baseOnBalls || 0, 10);
+      let cls = 'pf-mixed';
+      if (er <= 2 && ip >= 5) cls = 'pf-good';
+      else if (er >= 5 || ip < 3) cls = 'pf-bad';
+      const date = s.date ? new Date(s.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : '';
+      const oppAbbr = s.opponent?.abbreviation || s.opponent?.teamCode?.toUpperCase() || '';
+      const isHome = s.isHome === true || s.isHome === 'true';
+      const oppLabel = oppAbbr ? (isHome ? 'vs ' + oppAbbr : '@ ' + oppAbbr) : '';
+      return { date, ip, er, k, bb, cls, opp: oppLabel };
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+// ── Pitcher splits (Home/Away + vs L/R) ─────────────────────────────────────
+// Fetches the season splits and reshapes them into a keyed map:
+//   { h: {era,avg,obp,slg,ops}, a: {...}, vl: {...}, vr: {...} }
+// Returns null on fetch failure / null pitcherId.
+export async function loadPitcherSplits(pitcherId) {
+  if (!pitcherId) return null;
+  try {
+    const d = await api.mlbPitcherSplits(pitcherId);
+    const splits = d?.stats?.[0]?.splits || [];
+    const out = {};
+    splits.forEach(s => {
+      const code = s.split?.code;
+      if (!code) return;
+      out[code] = {
+        era: s.stat?.era ? parseFloat(s.stat.era) : null,
+        avg: s.stat?.avg || null,
+        obp: s.stat?.obp || null,
+        slg: s.stat?.slg || null,
+        ops: s.stat?.ops ? parseFloat(s.stat.ops) : null,
+      };
+    });
+    return out;
+  } catch (e) {
+    return null;
+  }
 }
 
 // ── Pitch arsenal cache ─────────────────────────────────────────────────────

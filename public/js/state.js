@@ -8,6 +8,8 @@
 // charter.js (still a classic script) reads `window.S`, so we re-attach S to
 // window at module load. DEBUG / log are exported too.
 
+import { CORBET_ROSTER } from './constants.js';
+
 // ── Persisted reads (run at module load) ────────────────────────────────────
 // Repair any duplicate IDs from a prior bug where autoSaveTopBets used the
 // same Date.now() timestamp; also derive `rating` for legacy entries that
@@ -74,6 +76,11 @@ export const DEBUG = (() => {
 })();
 
 export const log = (...args) => { if (DEBUG) console.log(...args); }; // eslint-disable-line no-console
+
+// ── Active roster ───────────────────────────────────────────────────────────
+// Live lineup roster when MLB API has posted it, else the hardcoded fallback.
+// Used by dashboard renderers, prediction loops, and best-matchup picker.
+export function activeRoster() { return S.lineupRoster || CORBET_ROSTER; }
 
 // ── Player-context transaction (used by modal openers) ──────────────────────
 // Modal openers swap a subset of S into the selected player's snapshot so
