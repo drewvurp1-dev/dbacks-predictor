@@ -385,6 +385,21 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .edge-badge.moderate { background: #2a2000; color: #f39c12; border: 1px solid #3a2a00; }
 .edge-badge.small { background: #1a1730; color: #888; border: 1px solid #2a2550; }
 
+/* ── Phantom (teaser) lines ── */
+.phantom-lines-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0 6px; border-top: 1px dashed #1a1730; margin: 4px 0 4px; }
+.phantom-lines-label { font: 9px 'Chakra Petch', monospace; letter-spacing: 1.5px; color: #666; text-transform: uppercase; margin-right: 4px; cursor: help; }
+.phantom-chk { display: inline-flex; align-items: center; gap: 4px; font: 11px 'Chakra Petch', monospace; color: #aaa; cursor: pointer; padding: 2px 6px; background: #0e0c22; border: 1px solid #1e1b3a; border-radius: 4px; }
+.phantom-chk:hover { color: #ccc; border-color: #2a2550; }
+.phantom-chk input { margin: 0; cursor: pointer; }
+.phantom-results { margin-bottom: 8px; }
+.phantom-row { margin: 6px 0; padding: 6px 8px; background: #08081a; border: 1px solid #15152a; border-radius: 6px; }
+.phantom-row-head { display: flex; justify-content: space-between; font: 10px 'Chakra Petch', monospace; color: #bbb; margin-bottom: 4px; }
+.phantom-row-line { color: #ccc; font-weight: 700; letter-spacing: 0.5px; }
+.phantom-row-odds em { color: #555; font-style: normal; font-size: 9px; }
+.phantom-bar { height: 14px; line-height: 14px; padding: 0 6px; border-radius: 3px; font: 9px 'Chakra Petch', monospace; color: #fff; margin: 2px 0; white-space: nowrap; overflow: hidden; transition: width 0.4s; min-width: 56px; }
+.phantom-bar-model  { background: #1a3a8a; }
+.phantom-bar-market { background: #5a9ed9; color: #04162a; }
+
 /* ── CorBET ── */
 .corbet-header { background: linear-gradient(135deg, #001a18, #002822); border: 1px solid #009A8B; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
 .corbet-logo { font-size: 22px; }

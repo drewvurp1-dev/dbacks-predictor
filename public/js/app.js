@@ -2252,10 +2252,27 @@ function generateCorbetBets(score,factors,rawMarketMap){
     const calcUnder=mkt.underByLine[line]||[];
     const overBest=mkt.overBestByLine[line]||null;
     const underBest=mkt.underBestByLine[line]||null;
+    // Phantom/teaser lines: every other book-posted line for this prop with
+    // both sides quoted. Probabilities are NOT pre-computed — togglePhantom()
+    // computes them lazily on user interaction.
+    const altLines=[];
+    for(const l of [...allLines]){
+      if(l===line)continue;
+      const oArr=mkt.overByLine[l]||[];
+      const uArr=mkt.underByLine[l]||[];
+      if(!oArr.length||!uArr.length)continue;
+      altLines.push({
+        line:l,
+        overPrices:oArr,underPrices:uArr,
+        overBest:mkt.overBestByLine[l]||null,
+        underBest:mkt.underBestByLine[l]||null,
+      });
+    }
+    altLines.sort((a,b)=>a.line-b.line);
     if(!calcOver?.length||!calcUnder?.length){
       log('[props]',propKey,'line',line,'insufficient: over='+calcOver.length+' under='+calcUnder.length,'effectiveLine='+effectiveLine,'allLines=',[...allLines].join(','));
       results.push({prop:PROP_NAMES[propKey],propKey,line,insufficient:true,
-        overBest,underBest,edgeStrength:'none',absDelta:0});
+        overBest,underBest,edgeStrength:'none',absDelta:0,altLines:[]});
       return;
     }
     const dv=devig(calcOver,calcUnder);
@@ -2300,6 +2317,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
       books:mkt.books||[],
       odds:bestOdds?.price||0,
       reasoning:corbetReasoning(propKey,direction.toLowerCase(),modelProb>=50?modelProb:100-modelProb),
+      altLines,
     });
   });
 
@@ -2625,7 +2643,7 @@ async function loadCorbet(){
           }
         });
         bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
-        bets.forEach(b=>{b._playerName=player.name;b._playerScore=snap.score;});
+        bets.forEach(b=>{b._playerName=player.name;b._playerScore=snap.score;b._playerId=player.id;});
         allPlayerBets.push({playerName:player.name,bets,lowData:(S.players[player.id]?.lowData||false)});
       }catch(e){
         console.warn(`Bet generation failed for ${player.name} (${player.id}):`,e.message);
@@ -2762,6 +2780,12 @@ function renderCorbetBets(){
             <div class="bet-stat-val" style="color:${_evColor};font-weight:700;">${_evStr}</div>
           </div>
         </div>
+        ${(b.altLines&&b.altLines.length)?`
+        <div class="phantom-lines-strip">
+          <div class="phantom-lines-label" data-tip="Alternate lines posted by the books for this prop. Check one to see how the model and the market price the teased threshold.">PHANTOM LINES</div>
+          ${b.altLines.map(al=>`<label class="phantom-chk"><input type="checkbox" data-action="toggle-phantom" data-bk="${betKey.replace(/"/g,'&quot;')}" data-line="${al.line}"> <span>${al.line}</span></label>`).join('')}
+        </div>
+        <div class="phantom-results" data-phantom-host="${betKey.replace(/"/g,'&quot;')}"></div>`:''}
         <div class="bet-reasoning">${b.reasoning}</div>
       </div>`;
     }).join('');
@@ -2772,6 +2796,73 @@ function renderCorbetBets(){
   }).join('');
   S.corbetBets=flatBets;
   S.corbetBetsMap=corbetBetsMap;
+}
+
+// Render a single phantom-line comparison row inside the card's host div.
+// Dark-blue bar = model probability for the alt line. Light-blue bar = market
+// (vig-stripped) probability for the same line. Best price across books.
+function togglePhantom(betKey,line,on){
+  const b=S.corbetBetsMap?.[betKey];
+  if(!b)return;
+  const host=document.querySelector(`[data-phantom-host="${CSS.escape(betKey)}"]`);
+  if(!host)return;
+  if(!on){
+    const existing=host.querySelector(`[data-phantom-line="${line}"]`);
+    if(existing)existing.remove();
+    return;
+  }
+  const al=(b.altLines||[]).find(x=>x.line===line);
+  if(!al)return;
+
+  b._phantomCache=b._phantomCache||{};
+  let cached=b._phantomCache[line];
+  if(!cached){
+    // modelProbability reads S.seasonStat / S.splits / S.statcast / S.recentGameLog /
+    // S.currentOrder — these were swapped per-player during bet generation but have
+    // since been restored. Swap in this player's snapshot for the call, then restore.
+    const snap=S.players?.[b._playerId];
+    let modelProb=null;
+    if(snap){
+      const savedCtx={seasonStat:S.seasonStat,splits:S.splits,matchupStats:S.matchupStats,statcast:S.statcast,recentGameLog:S.recentGameLog,currentOrder:S.currentOrder};
+      try{
+        S.seasonStat=snap.seasonStat;S.splits=snap.splits;S.matchupStats=snap.matchupStats;S.statcast=snap.statcast;S.recentGameLog=snap.recentGameLog;S.currentOrder=snap.order;
+        modelProb=modelProbability(b.propKey,line,b._playerScore);
+      }finally{
+        Object.assign(S,savedCtx);
+      }
+    }
+    if(modelProb==null)return;
+    const dv=devig(al.overPrices,al.underPrices);
+    if(!dv)return;
+    cached=b._phantomCache[line]={modelProb,marketOverProb:dv.overProb,marketUnderProb:dv.underProb,overBest:al.overBest,underBest:al.underBest};
+  }
+
+  const direction=cached.modelProb>=50?'Over':'Under';
+  const modelPct=direction==='Over'?cached.modelProb:100-cached.modelProb;
+  const marketPct=direction==='Over'?cached.marketOverProb:cached.marketUnderProb;
+  const best=direction==='Over'?cached.overBest:cached.underBest;
+  const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
+  const modelW=Math.max(1,Math.min(100,modelPct)).toFixed(1);
+  const marketW=Math.max(1,Math.min(100,marketPct)).toFixed(1);
+  const edge=modelPct-marketPct;
+  const edgeStr=(edge>=0?'+':'')+edge.toFixed(1)+'%';
+  const edgeColor=edge>=0?'#2ecc71':'#e74c3c';
+
+  const row=document.createElement('div');
+  row.className='phantom-row';
+  row.dataset.phantomLine=String(line);
+  row.innerHTML=`
+    <div class="phantom-row-head">
+      <span class="phantom-row-line">Line ${line} · ${direction}</span>
+      <span class="phantom-row-odds">${fmtOdds(best?.price)} <em>${bookAbbrev(best?.book||'')}</em> · <span style="color:${edgeColor};">${edgeStr}</span></span>
+    </div>
+    <div class="phantom-bar phantom-bar-model" style="width:${modelW}%">Model ${modelPct.toFixed(0)}%</div>
+    <div class="phantom-bar phantom-bar-market" style="width:${marketW}%">Market ${marketPct.toFixed(0)}%</div>`;
+
+  // Insert in ascending line order for stability.
+  const existing=Array.from(host.querySelectorAll('.phantom-row'));
+  const next=existing.find(el=>parseFloat(el.dataset.phantomLine)>line);
+  if(next)host.insertBefore(row,next);else host.appendChild(row);
 }
 
 async function loadDashboard(){
@@ -4830,6 +4921,7 @@ const ACTIONS = {
   // ── Dynamic actions (inside app.js innerHTML strings) ────────────────────
   'select-pitcher':      (el) => selectPitcher(el.dataset.pitcherId, el.dataset.pitcherName),
   'render-corbet-bets':  () => renderCorbetBets(),
+  'toggle-phantom':      (el) => togglePhantom(el.dataset.bk, parseFloat(el.dataset.line), el.checked),
   'save-bet':            (el) => saveBet(el.dataset.bk, el),
   'open-player-corbet':  (el) => openPlayerCorbet(el.dataset.playerId),
   'open-player-details': (el) => openPlayerDetails(el.dataset.playerId),
