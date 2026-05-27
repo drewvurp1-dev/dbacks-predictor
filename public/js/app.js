@@ -2747,15 +2747,17 @@ function renderCorbetBets(){
           <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
             <span>Over ${overW}%</span><span>Under ${underW}%</span>
           </div>
-          <div style="position:relative;">
+          <div style="position:relative;" data-phantom-bar-host="${betKey.replace(/"/g,'&quot;')}">
             <div class="prob-bar-wrap">
               <div class="prob-bar-over" style="width:${overW}%">${overW}%</div>
               <div class="prob-bar-under" style="width:${underW}%">${underW}%</div>
             </div>
-            <div style="position:absolute;top:0;left:${markerLeft}%;width:2px;height:22px;background:rgba(255,255,255,0.9);transform:translateX(-50%);pointer-events:none;border-radius:1px;box-shadow:0 0 4px rgba(255,255,255,0.5);"></div>
+            <div class="prob-bar-model-marker" style="position:absolute;top:0;left:${markerLeft}%;width:2px;height:22px;background:rgba(255,255,255,0.9);transform:translateX(-50%);pointer-events:none;border-radius:1px;box-shadow:0 0 4px rgba(255,255,255,0.5);z-index:2;"></div>
           </div>
-          <div style="position:relative;height:18px;margin-top:3px;">
-            <div style="position:absolute;left:${markerLeft}%;transform:translateX(-50%);font-size:8px;color:#ccc;font-family:\'Chakra Petch\',monospace;white-space:nowrap;text-align:center;">▲ Model ${b.modelProb.toFixed(0)}%</div>
+          <div data-phantom-marker-host="${betKey.replace(/"/g,'&quot;')}">
+            <div style="position:relative;height:18px;margin-top:3px;">
+              <div style="position:absolute;left:${markerLeft}%;transform:translateX(-50%);font-size:8px;color:#ccc;font-family:\'Chakra Petch\',monospace;white-space:nowrap;text-align:center;">▲ Model ${b.modelProb.toFixed(0)}%</div>
+            </div>
           </div>
         </div>
         <div class="bet-stats-row">
@@ -2782,10 +2784,9 @@ function renderCorbetBets(){
         </div>
         ${(b.altLines&&b.altLines.length)?`
         <div class="phantom-lines-strip">
-          <div class="phantom-lines-label" data-tip="Alternate lines posted by the books for this prop. Check one to see how the model and the market price the teased threshold.">PHANTOM LINES</div>
+          <div class="phantom-lines-label" data-tip="Alternate lines posted by the books for this prop. Check one to overlay the model & market for that teased threshold onto the bar above.">PHANTOM LINES</div>
           ${b.altLines.map(al=>`<label class="phantom-chk"><input type="checkbox" data-action="toggle-phantom" data-bk="${betKey.replace(/"/g,'&quot;')}" data-line="${al.line}"> <span>${al.line}</span></label>`).join('')}
-        </div>
-        <div class="phantom-results" data-phantom-host="${betKey.replace(/"/g,'&quot;')}"></div>`:''}
+        </div>`:''}
         <div class="bet-reasoning">${b.reasoning}</div>
       </div>`;
     }).join('');
@@ -2798,19 +2799,21 @@ function renderCorbetBets(){
   S.corbetBetsMap=corbetBetsMap;
 }
 
-// Render a single phantom-line comparison row inside the card's host div.
-// Dark-blue bar = model probability for the alt line. Light-blue bar = market
-// (vig-stripped) probability for the same line. Best price across books.
+// Render a phantom-line overlay on top of the main probability bar.
+// Dark-blue translucent overlay = model Over% for the alt line. Light-blue
+// label below = market Over% position for the alt line (mirroring the
+// existing white "▲ Model X%" marker convention for the main line).
 function togglePhantom(betKey,line,on){
   const b=S.corbetBetsMap?.[betKey];
   if(!b)return;
-  const host=document.querySelector(`[data-phantom-host="${CSS.escape(betKey)}"]`);
-  if(!host)return;
+  const barHost=document.querySelector(`[data-phantom-bar-host="${CSS.escape(betKey)}"]`);
+  const markerHost=document.querySelector(`[data-phantom-marker-host="${CSS.escape(betKey)}"]`);
+  if(!barHost||!markerHost)return;
   // The global dispatcher listens on click+input+change, so a single checkbox
-  // interaction fires this 3x. Remove any prior row for this line first so the
-  // handler is idempotent regardless of how many events route through.
-  const prior=host.querySelector(`[data-phantom-line="${line}"]`);
-  if(prior)prior.remove();
+  // interaction fires this 3x. Remove any prior overlay+marker for this line
+  // first so the handler is idempotent regardless of how many events route through.
+  barHost.querySelectorAll(`.phantom-overlay[data-phantom-line="${line}"]`).forEach(el=>el.remove());
+  markerHost.querySelectorAll(`.phantom-marker-slot[data-phantom-line="${line}"]`).forEach(el=>el.remove());
   if(!on)return;
   const al=(b.altLines||[]).find(x=>x.line===line);
   if(!al)return;
@@ -2838,32 +2841,42 @@ function togglePhantom(betKey,line,on){
     cached=b._phantomCache[line]={modelProb,marketOverProb:dv.overProb,marketUnderProb:dv.underProb,overBest:al.overBest,underBest:al.underBest};
   }
 
-  const direction=cached.modelProb>=50?'Over':'Under';
-  const modelPct=direction==='Over'?cached.modelProb:100-cached.modelProb;
-  const marketPct=direction==='Over'?cached.marketOverProb:cached.marketUnderProb;
-  const best=direction==='Over'?cached.overBest:cached.underBest;
+  // Both overlay (model) and marker (market) are always referenced to the
+  // Over side, matching the main bar's convention (Over% on the left, white
+  // model triangle = main line's Over% position).
+  const modelOverW=Math.max(0,Math.min(100,cached.modelProb)).toFixed(1);
+  const marketLeft=Math.max(1,Math.min(99,cached.marketOverProb)).toFixed(1);
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
-  const modelW=Math.max(1,Math.min(100,modelPct)).toFixed(1);
-  const marketW=Math.max(1,Math.min(100,marketPct)).toFixed(1);
-  const edge=modelPct-marketPct;
-  const edgeStr=(edge>=0?'+':'')+edge.toFixed(1)+'%';
-  const edgeColor=edge>=0?'#2ecc71':'#e74c3c';
+  const overBest=cached.overBest;
+  const underBest=cached.underBest;
+  const tipParts=[
+    `Line ${line}`,
+    `Model ${cached.modelProb.toFixed(0)}% Over`,
+    `Market ${cached.marketOverProb.toFixed(0)}% Over`,
+  ];
+  if(overBest?.price!=null)tipParts.push(`Best Over: ${fmtOdds(overBest.price)} ${bookAbbrev(overBest.book||'')}`);
+  if(underBest?.price!=null)tipParts.push(`Best Under: ${fmtOdds(underBest.price)} ${bookAbbrev(underBest.book||'')}`);
+  const tip=tipParts.join(' · ');
 
-  const row=document.createElement('div');
-  row.className='phantom-row';
-  row.dataset.phantomLine=String(line);
-  row.innerHTML=`
-    <div class="phantom-row-head">
-      <span class="phantom-row-line">Line ${line} · ${direction}</span>
-      <span class="phantom-row-odds">${fmtOdds(best?.price)} <em>${bookAbbrev(best?.book||'')}</em> · <span style="color:${edgeColor};">${edgeStr}</span></span>
-    </div>
-    <div class="phantom-bar phantom-bar-model" style="width:${modelW}%">Model ${modelPct.toFixed(0)}%</div>
-    <div class="phantom-bar phantom-bar-market" style="width:${marketW}%">Market ${marketPct.toFixed(0)}%</div>`;
+  // Dark-blue translucent overlay on the bar at model Over% width.
+  const overlay=document.createElement('div');
+  overlay.className='phantom-overlay';
+  overlay.dataset.phantomLine=String(line);
+  overlay.style.width=modelOverW+'%';
+  overlay.title=tip;
+  overlay.textContent=`Model ${cached.modelProb.toFixed(0)}% (${line})`;
+  barHost.appendChild(overlay);
 
-  // Insert in ascending line order for stability.
-  const existing=Array.from(host.querySelectorAll('.phantom-row'));
+  // Light-blue marker label below the bar at market Over% position.
+  const slot=document.createElement('div');
+  slot.className='phantom-marker-slot';
+  slot.dataset.phantomLine=String(line);
+  slot.innerHTML=`<div class="phantom-marker-label" style="left:${marketLeft}%;" title="${tip.replace(/"/g,'&quot;')}">▲ Market ${cached.marketOverProb.toFixed(0)}% (${line})</div>`;
+
+  // Insert in ascending line order so the stacked marker rows stay sorted.
+  const existing=Array.from(markerHost.querySelectorAll('.phantom-marker-slot'));
   const next=existing.find(el=>parseFloat(el.dataset.phantomLine)>line);
-  if(next)host.insertBefore(row,next);else host.appendChild(row);
+  if(next)markerHost.insertBefore(slot,next);else markerHost.appendChild(slot);
 }
 
 async function loadDashboard(){
