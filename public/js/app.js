@@ -4,7 +4,6 @@ import {
   ALLOWED_BOOKS, PITCH_TYPES, PITCH_NAMES, PROP_NAMES,
   UMP_DB, VENUE_MAP, STAT_INFO, DEFAULT_WEIGHTS,
   ODDS_CACHE_KEY,
-  SYNC_KEY_STORAGE, SYNC_LAST_TS_KEY,
 } from './constants.js';
 import { show, hide, setText, _parkFactors, parseCSV } from './utils.js';
 import {
@@ -53,6 +52,15 @@ import {
   renderCalibration,
   renderGradePanel,
 } from './ui/record.js';
+import {
+  pushRecord, pullRecord, _initSyncBtnLabel,
+} from './sync.js';
+import {
+  _pushSubscribe, _pushTest, _initPushBtn, registerSW,
+} from './push.js';
+import {
+  _COMPASS_DEGS, _windDir, fetchWeather,
+} from './weather.js';
 
 function rebuildPlayerSelect(roster){
   const sel=document.getElementById('player-select');
@@ -65,26 +73,7 @@ function rebuildPlayerSelect(roster){
 
 // ═══════════ MATH / BETTING UTILS ════════════════════════════════════════════
 
-// Park orientation helpers
-const _COMPASS_DEGS={N:0,NNE:22.5,NE:45,ENE:67.5,E:90,ESE:112.5,SE:135,SSE:157.5,S:180,SSW:202.5,SW:225,WSW:247.5,W:270,WNW:292.5,NW:315,NNW:337.5};
-function _compassDeg(pt){return _COMPASS_DEGS[pt]??null;}
-
-// Reads park HR and hit factors from the active stadium dropdown option.
-// Returns 'out'/'in'/'cross'/'calm' relative to this park's center field orientation.
-// Accounts for live vs manual weather mode.
-function _windDir(){
-  const sel=document.getElementById('stadium-select');const opt=sel?.options[sel?.selectedIndex];
-  const cfBearing=parseInt(opt?.dataset.cf)||45;
-  const wm=document.getElementById('weather-manual')&&!document.getElementById('weather-manual').classList.contains('hidden');
-  const rawDir=(!wm&&S.weather?.windDir)||document.getElementById('wind-dir')?.value||'calm';
-  const windMph=(!wm&&S.weather?.windMph)||parseInt(document.getElementById('wind-slider')?.value)||5;
-  if(['out','in','cross'].includes(rawDir))return rawDir;
-  if(!rawDir||rawDir==='calm'||windMph<3)return 'calm';
-  const fromDeg=_compassDeg(rawDir);if(fromDeg===null)return 'cross';
-  const toDeg=(fromDeg+180)%360;
-  const comp=Math.cos((cfBearing-toDeg)*Math.PI/180);
-  return comp>0.35?'out':comp<-0.35?'in':'cross';
-}
+// (_COMPASS_DEGS, _compassDeg, _windDir moved to weather.js)
 
 // (gaussianRandom moved to predict.js; kellyFraction moved to betting.js)
 
@@ -1138,36 +1127,9 @@ async function loadLineupContext(dv){
 
 
 // ═══════════ WEATHER ════════════════════════════════════════════════════════════
-async function fetchWeather(){
-  const sel=document.getElementById('stadium-select');
-  const opt=sel.options[sel.selectedIndex];
-  const lat=opt.dataset.lat,lon=opt.dataset.lon;
-  show('weather-spinner');hide('weather-content');
-  try{
-    const d=await api.weatherAt(lat, lon);
-    const cur=d.current_condition?.[0];
-    if(!cur)throw new Error('No data');
-    const tempF=parseInt(cur.temp_F);
-    const windMph=parseInt(cur.windspeedMiles);
-    const windDir=cur.winddir16Point;
-    const humidity=parseInt(cur.humidity);
-    const desc=cur.weatherDesc?.[0]?.value||'';
-    const hour=parseInt((document.getElementById('game-time').value||'19:10').split(':')[0]);
-    const today=d.weather?.[0];
-    let fh=null;
-    if(today?.hourly)fh=today.hourly.reduce((p,c)=>Math.abs(parseInt(c.time)/100-hour)<Math.abs(parseInt(p.time)/100-hour)?c:p);
-    const u=fh||cur;
-    const uT=parseInt(u.tempF||u.temp_F||tempF),uW=parseInt(u.windspeedMiles||windMph),uH=parseInt(u.humidity||humidity),uD=u.winddir16Point||windDir;
-    S.weather={tempF:uT,windMph:uW,windDir:uD,humidity:uH,desc};
-    document.getElementById('weather-grid').innerHTML=`<div class="weather-cell"><div class="wc-label">Temp</div><div class="wc-val" style="color:${uT>=90?'#e74c3c':uT<=55?'#3498db':'#fff'}">${uT}°F</div><div class="wc-sub">${desc}</div></div><div class="weather-cell"><div class="wc-label">Wind</div><div class="wc-val">${uW} mph</div><div class="wc-sub">${uD}</div></div><div class="weather-cell"><div class="wc-label">Humidity</div><div class="wc-val">${uH}%</div><div class="wc-sub">relative</div></div><div class="weather-cell"><div class="wc-label">Sky</div><div class="wc-val" style="font-size:18px;">${desc.includes('Rain')?'🌧':desc.includes('Cloud')||desc.includes('Overcast')?'☁️':'☀️'}</div></div>`;
-    const hasRoof=opt.dataset.roof==='1';
-    const roofRec=document.getElementById('roof-rec');
-    if(hasRoof){if(uT>=90){roofRec.className='roof-recommendation likely-closed';roofRec.textContent=`⚠ ${uT}°F — Roof likely closed.`;roofRec.classList.remove('hidden');}else if(uT<80){roofRec.className='roof-recommendation likely-open';roofRec.textContent=`✓ ${uT}°F — Roof likely open.`;roofRec.classList.remove('hidden');}else roofRec.classList.add('hidden');}else roofRec.classList.add('hidden');
-    show('weather-content');
-  }catch(e){console.warn('Weather load failed:',e.message);hide('weather-spinner');}
-  finally{hide('weather-spinner');}
-}
-
+// fetchWeather, _windDir, _COMPASS_DEGS moved to weather.js. updateWeatherForTime
+// stays here because it coordinates fetchWeather with setDay (a DOM-toggle helper
+// adjacent to the other game-time toggles).
 function updateWeatherForTime(){if(S.weather)fetchWeather();const h=parseInt((document.getElementById('game-time').value||'19:10').split(':')[0]);setDay(h<17);}
 
 // ═══════════ PREDICTION ENGINE ════════════════════════════════════════════════
@@ -2666,193 +2628,6 @@ async function loadStatcast(playerId) {
 
   } catch(e) {
     document.getElementById('stat-statcast').innerHTML = `<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Statcast data unavailable: ${e.message}</div>`;
-  }
-}
-
-// ═══════════ CROSS-DEVICE SYNC ════════════════════════════════════════════════
-
-
-function _getSyncKey(){ return localStorage.getItem(SYNC_KEY_STORAGE)||''; }
-function _setSyncKey(k){ localStorage.setItem(SYNC_KEY_STORAGE,k); }
-
-// Touch-primary input on a narrow viewport → treat as the phone in the user's
-// hand. Desktop pushes (authoritative); mobile pulls (overwritten by server).
-function _isMobileDevice(){
-  return window.matchMedia('(pointer: coarse) and (max-width: 768px)').matches;
-}
-function _setSyncBtnState(cls,text,disabled){
-  document.querySelectorAll('.'+cls).forEach(btn=>{btn.textContent=text;btn.disabled=disabled;});
-}
-function _initSyncBtnLabel(){}
-
-async function _getSyncKeyPrompted(){
-  let key=_getSyncKey();
-  if(!key){
-    key=(prompt('Enter your sync passphrase (must match SYNC_KEY on Railway):')||'').trim();
-    if(!key)return null;
-    _setSyncKey(key);
-  }
-  return key;
-}
-
-async function pushRecord(){
-  const key=await _getSyncKeyPrompted();
-  if(!key)return;
-  _setSyncBtnState('sync-btn-push','⟳ Pushing…',true);
-  try{
-    const payload={betLog:S.betLog,gradeLog:getGradeLog(),factorPerf:getFactorPerf(),factorWeights:getFactorWeights(),pending:getPending()};
-    const res=await api.syncPost(key, payload);
-    if(!res.ok){
-      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-push','↑ Push',false);alert('Wrong passphrase — cleared.');return;}
-      throw new Error(`Server ${res.status}`);
-    }
-    localStorage.setItem(SYNC_LAST_TS_KEY,new Date().toISOString());
-    const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    _setSyncBtnState('sync-btn-push',`✓ ${t}`,false);
-    setTimeout(()=>_setSyncBtnState('sync-btn-push','↑ Push',false),3000);
-  }catch(err){
-    console.error('[sync push]',err);
-    _setSyncBtnState('sync-btn-push','↑ Push',false);
-    alert('Push failed: '+err.message);
-  }
-}
-
-async function pullRecord(){
-  const key=await _getSyncKeyPrompted();
-  if(!key)return;
-  _setSyncBtnState('sync-btn-pull','⟳ Pulling…',true);
-  try{
-    const res=await api.syncGet(key);
-    if(!res.ok){
-      if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-pull','↓ Pull',false);alert('Wrong passphrase — cleared.');return;}
-      const body=await res.json().catch(()=>({}));
-      throw new Error(body.error||`Server ${res.status}`);
-    }
-    const remote=await res.json();
-    S.betLog=remote.betLog||[];
-    localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
-    saveGradeLog(remote.gradeLog||[]);
-    saveFactorPerf(remote.factorPerf||{});
-    saveFactorWeights(remote.factorWeights||{});
-    savePending(remote.pending||[]);
-    localStorage.setItem(SYNC_LAST_TS_KEY,new Date().toISOString());
-    renderRecord();
-    renderGradePanel();
-    const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    _setSyncBtnState('sync-btn-pull',`✓ ${t}`,false);
-    setTimeout(()=>_setSyncBtnState('sync-btn-pull','↓ Pull',false),3000);
-  }catch(err){
-    console.error('[sync pull]',err);
-    _setSyncBtnState('sync-btn-pull','↓ Pull',false);
-    alert('Pull failed: '+err.message);
-  }
-}
-
-// ═══════════ WEB PUSH NOTIFICATIONS ═══════════════════════════════════════════
-// iOS requires the app to be installed to the home screen first (PWA). On the
-// home-screen instance, the user can grant notification permission and we
-// register a push subscription with the server.
-
-function _isStandalonePWA(){
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-}
-
-function _urlBase64ToUint8Array(base64String){
-  const padding='='.repeat((4-base64String.length%4)%4);
-  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
-  const raw=atob(base64);
-  const out=new Uint8Array(raw.length);
-  for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);
-  return out;
-}
-
-async function registerSW(){
-  if(!('serviceWorker'in navigator))return null;
-  try{
-    const reg=await navigator.serviceWorker.register('/sw.js');
-    return reg;
-  }catch(e){console.warn('[push] SW register failed:',e);return null;}
-}
-
-async function _pushSubscribe(){
-  const btn=document.getElementById('push-btn');
-  const setBtn=(t)=>{if(btn)btn.textContent=t;};
-
-  if(!('serviceWorker'in navigator)||!('PushManager'in window)){
-    alert('This browser doesn’t support web push. On iPhone, open in Safari, tap Share → Add to Home Screen, then open the app from the home screen.');
-    return;
-  }
-  // iOS Safari requires the app to be running as an installed PWA before push works
-  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!_isStandalonePWA()){
-    alert('To enable notifications on iPhone:\n1. Tap the Share icon\n2. Tap "Add to Home Screen"\n3. Open Snake Savant from your home screen\n4. Tap this button again');
-    return;
-  }
-
-  let key=_getSyncKey();
-  if(!key){
-    key=(prompt('Enter your sync passphrase (must match SYNC_KEY on Railway):')||'').trim();
-    if(!key)return;
-    _setSyncKey(key);
-  }
-
-  setBtn('⟳ Subscribing…');
-  try{
-    // 1. Permission
-    const perm=await Notification.requestPermission();
-    if(perm!=='granted'){
-      setBtn('🔔 Enable notifications');
-      alert('Notification permission denied. Enable in Settings → Safari → Notifications.');
-      return;
-    }
-
-    // 2. Pull VAPID public key from server
-    const pkRes=await api.pushPublicKey();
-    if(!pkRes.ok)throw new Error('VAPID key fetch failed');
-    const {publicKey}=await pkRes.json();
-
-    // 3. Register service worker, subscribe
-    const reg=await registerSW();
-    if(!reg)throw new Error('Service worker registration failed');
-    await navigator.serviceWorker.ready;
-    let sub=await reg.pushManager.getSubscription();
-    if(!sub){
-      sub=await reg.pushManager.subscribe({
-        userVisibleOnly:true,
-        applicationServerKey:_urlBase64ToUint8Array(publicKey),
-      });
-    }
-
-    // 4. Send subscription to server
-    const postRes=await api.pushSubscribe(key, sub.toJSON());
-    if(!postRes.ok){
-      if(postRes.status===401){alert('Wrong sync passphrase.');_setSyncKey('');setBtn('🔔 Enable notifications');return;}
-      throw new Error(`Server ${postRes.status}`);
-    }
-    localStorage.setItem('pushSubscribed','1');
-    setBtn('✓ Notifications on');
-  }catch(err){
-    console.error('[push]',err);
-    setBtn('🔔 Enable notifications');
-    alert('Subscribe failed: '+err.message);
-  }
-}
-
-async function _pushTest(){
-  const key=_getSyncKey();
-  if(!key){alert('Set sync passphrase first via the Sync button.');return;}
-  try{
-    const res=await api.pushTest(key);
-    if(!res.ok)throw new Error(`Server ${res.status}`);
-    const j=await res.json();
-    alert(j.sent>0?`Sent ${j.sent} test notification${j.sent>1?'s':''}.`:'No subscriptions yet — tap Enable first.');
-  }catch(err){alert('Test failed: '+err.message);}
-}
-
-function _initPushBtn(){
-  const btn=document.getElementById('push-btn');
-  if(!btn)return;
-  if(localStorage.getItem('pushSubscribed')==='1'&&Notification.permission==='granted'){
-    btn.textContent='✓ Notifications on';
   }
 }
 

@@ -42,6 +42,9 @@ public/
     predict.js         Gaussian sampler, slump dampener, modelProbability, monteCarloConfidence
     pitcher.js         FIP/xFIP/SIERA/K-BB%, pitch-mix normalization, arsenal cache loader
     betting.js         impliedProb, americanToDecimal, kellyFraction, devig
+    sync.js            Cross-device sync (pushRecord/pullRecord) + sync-key helpers
+    push.js            Web push notification subscription + service worker registration
+    weather.js         Live weather fetch + park-relative wind direction (_windDir, _COMPASS_DEGS)
     app.js             Main orchestrator: data loaders, UI, event delegation, bootstrap
     charter.js         Charter flight tracker UI (classic script, not ES module)
     ui/
@@ -120,7 +123,7 @@ Status codes: 400 BAD_INPUT, 401 AUTH_FAILED, 404 NOT_FOUND, 502 UPSTREAM_FAILED
 ### Module dependency graph
 
 ```
-app.js (orchestrator, ~3,043 lines)
+app.js (orchestrator, ~2,861 lines)
   ├── constants.js    (pure data)
   ├── utils.js        (pure DOM/math)
   ├── state.js        (S global, player-context)
@@ -130,6 +133,9 @@ app.js (orchestrator, ~3,043 lines)
   ├── pitcher.js      (pitcher metrics + arsenal)
   ├── betting.js      (odds math)
   ├── bets.js         (bet log + grading subsystem)
+  ├── sync.js         (cross-device sync: pushRecord/pullRecord)
+  ├── push.js         (web push subscription — imports _getSyncKey from sync.js)
+  ├── weather.js      (fetchWeather + _windDir + _COMPASS_DEGS)
   ├── ui/modal.js     (modal lifecycle)
   ├── ui/render.js    (statBox, Statcast grid, pitch matchup)
   └── ui/record.js    (bet record + grade panel + calibration + CorBET bets)
@@ -186,7 +192,7 @@ Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. Th
 
 ## app.js Consolidation — Remaining Work
 
-Current state: ~3,043 lines (down from 6,156 original, −50.6%). Math, state, constants, betting, pitcher metrics, player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards, the bet-log + grading subsystem, and the bet-record / grade-panel / calibration / CorBET-bets renderers have all been extracted. What remains is UI orchestration + data-loader functions.
+Current state: ~2,818 lines (down from 6,156 original, −54.2%). Math, state, constants, betting, pitcher metrics, player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards, the bet-log + grading subsystem, the bet-record / grade-panel / calibration / CorBET-bets renderers, and the live weather fetch + park-relative wind helpers have all been extracted. What remains is UI orchestration + data-loader functions.
 
 ### Planned extractions (ordered by value/risk)
 
@@ -205,11 +211,15 @@ Current state: ~3,043 lines (down from 6,156 original, −50.6%). Math, state, c
    - Moved: `renderRecord` (+ `_propKeyForBet`, `_renderPLSparkline`, `setRecordSort`, `_sortBetLog`, `_RECORD_PROP_ORDER/_SHORT` helpers), `renderGradePanel`, `renderCalibration` (+ `_calBetWinProb`, `_calBucketize`, `_calProfit` helpers), `renderCorbetBets` (+ `togglePhantom` + `probToAmerican` helper), `drawPerfChart`
    - Imports `getPending/getGradeLog/getFactorPerf/getFactorWeights` + `gradePerformance` from bets.js; `modelProbability` from predict.js; `devig`/`bookAbbrev` from betting.js. The 'bets:changed'/'grades:changed' listeners in app.js now call into ui/record.js.
 
-4. **`push.js` + `sync.js` (frontend modules)** (~250 lines combined)
-   - `_pushSubscribe`, `_pushTest`, `registerSW`, `_urlBase64ToUint8Array`, `_initPushBtn`, `pushRecord`, `pullRecord`, sync-key helpers
-   - Already use `api.js` for fetches. Low risk.
+4. ~~**`push.js` + `sync.js` (frontend modules)**~~ ✅ Done (sync.js ~90 lines, push.js ~110 lines)
+   - `sync.js`: `pushRecord`, `pullRecord`, `_getSyncKey/_setSyncKey`, `_getSyncKeyPrompted`, `_isMobileDevice`, `_initSyncBtnLabel`
+   - `push.js`: `_pushSubscribe`, `_pushTest`, `registerSW`, `_urlBase64ToUint8Array`, `_isStandalonePWA`, `_initPushBtn`. Imports `_getSyncKey/_setSyncKey` from sync.js to share passphrase state.
+   - `pullRecord` dispatches `bets:changed` + `grades:changed` CustomEvents instead of calling renders directly — no upward imports.
 
-5. **`weather.js`** (~80 lines) — `fetchWeather`, `updateWeatherForTime`, `_windDir`, `_compassDeg`, `_COMPASS_DEGS`. Could fold into `utils.js`.
+5. ~~**`weather.js`**~~ ✅ Done (~69 lines)
+   - Moved: `_COMPASS_DEGS`, `_compassDeg`, `_windDir`, `fetchWeather`
+   - `updateWeatherForTime` stays in app.js (1-liner that coordinates `fetchWeather` + `setDay`; `setDay` is a DOM-toggle helper that lives alongside the other game-time toggles)
+   - `_windFieldRelative` in app.js imports `_COMPASS_DEGS` from weather.js
 
 6. **`pitcher.js` expansion — pitcher orchestration** (~250 lines)
    - `selectPitcher`, `onPitcherSearch`, `loadPitcherStatcast`, `loadPitcherForm`, `loadPitcherSplits`
@@ -226,7 +236,7 @@ Current state: ~3,043 lines (down from 6,156 original, −50.6%). Math, state, c
 
 ### Target
 
-After extraction #4: ~2,800 lines — orchestration + bootstrap only.
+After extraction #5: ~2,818 lines — orchestration + bootstrap only.
 
 ### Risk-mitigation rules
 
