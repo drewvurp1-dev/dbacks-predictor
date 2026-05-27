@@ -23,7 +23,7 @@ import pybaseball as pb  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_PATH = REPO_ROOT / "data" / "pitch_arsenal.json"
 MIN_PITCHES_PITCHER = 20
-MIN_PA_BATTER = 25
+MIN_PA_BATTER = 5
 NAME_COL = "last_name, first_name"
 
 
