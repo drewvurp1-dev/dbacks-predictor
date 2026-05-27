@@ -157,10 +157,13 @@ export function _renderPitchMatchup() {
     const usageBar = `<div class="matchup-bar-wrap"><div class="matchup-bar" style="width:${Math.min(100, usage * 1.8)}%;background:${usageBarColor};"></div></div>`;
 
     if (!br || (br.pa || 0) < 15) {
+      const sampleNote = !br
+        ? '— no Savant data —'
+        : `— only ${br.pa} PA (need 15) —`;
       return `<div class="matchup-row">
         <div class="matchup-pitch">${name}</div>
         <div class="matchup-usage">${usageBar}<span class="matchup-usage-pct">${usage.toFixed(0)}%</span></div>
-        <div class="matchup-stats" style="color:#666;">— insufficient batter sample —</div>
+        <div class="matchup-stats" style="color:#666;">${sampleNote}</div>
       </div>`;
     }
 
