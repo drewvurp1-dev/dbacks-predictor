@@ -267,11 +267,13 @@ async function checkCharterPoll() {
       : (charters[todayOpp]?.home_airport || null);
     if (!destAirport) return;
 
-    // Timing bounds: scout/poll from 48h before the series opener's first pitch
-    // through 12h after. This covers same-day charters, off-day travel, and
-    // getaway-game-night departures regardless of how long ago the getaway game was.
+    // Timing bounds: scout/poll from 60h before the series opener's first pitch
+    // through 12h after. 60h (vs 48h) ensures the window opens well before a
+    // same-day post-game charter departure (e.g. 5 PM game-day flight when the
+    // opener is 2.5 days away), so AeroDataBox can be queried while the flight
+    // is still in "SCHEDULED" state and the dashboard shows the ETD.
     const openerFirstPitch = new Date(game.gameDate).getTime();
-    if (Date.now() < openerFirstPitch - 48 * 3600000) return;
+    if (Date.now() < openerFirstPitch - 60 * 3600000) return;
     if (Date.now() > openerFirstPitch + 12 * 3600000) return;
 
     const etdKey = `${todayYmd}|${trackedTeamAbbr}`;
