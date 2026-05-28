@@ -337,19 +337,18 @@
       return;
     }
 
-    // Series-opener: read from the poller's cache. The hourly cron warms it
-    // during the T+3h to T+8h window after the getaway-game first pitch.
+    // Series-opener: try the poller cache first, fall back to a live lookup
+    // if nothing is cached yet. The server's 15-min in-process cache bounds
+    // quota to at most one AeroDataBox call per 15-min window.
     el.className = 'dash-charter';
-    el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-spinner">${trackedTeam} → ${destAirport}: waiting for poller…</span>`;
+    el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-spinner">${trackedTeam} → ${destAirport}…</span>`;
 
     try {
-      const r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}/cached?destAirport=${destAirport}`);
+      let r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}/cached?destAirport=${destAirport}`);
       if (r.status === 204) {
-        const html = `<span class="dch-plane">✈</span><span>${trackedTeam} → ${destAirport}</span><span class="dch-spinner">checking for scheduled departure…</span>`;
-        el.className = 'dash-charter';
-        el.innerHTML = html;
-        _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = '';
-        return;
+        // Cache empty — make a live call so we can show SCHEDULED/EN ROUTE/LANDED
+        // immediately instead of a placeholder.
+        r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}?destAirport=${destAirport}`);
       }
       const d = await r.json();
       if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
