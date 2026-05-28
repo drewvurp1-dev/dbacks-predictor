@@ -10,7 +10,7 @@
 // on top without circular dependencies.
 
 import {
-  SEASON, CORBET_ROSTER, DEFAULT_WEIGHTS,
+  SEASON, CORBET_ROSTER, DEFAULT_WEIGHTS, MC_CONFIDENCE_MIN,
   GRADE_LOG_KEY, FACTOR_PERF_KEY, FACTOR_WEIGHTS_KEY, PENDING_KEY,
 } from './constants.js';
 import { S, log, activeRoster } from './state.js';
@@ -145,7 +145,7 @@ export function _getTopBets(n=3){
     if(pg.lowData)return;
     pg.bets.forEach(b=>{
       if(b.propKey==='batter_home_runs')return;
-      if(b.mcConfidence!=null&&b.mcConfidence>=85&&b.edgeStrength!=='none'&&!b.insufficient)
+      if(b.mcConfidence!=null&&b.mcConfidence>=MC_CONFIDENCE_MIN&&b.edgeStrength!=='none'&&!b.insufficient)
         qualified.push({...b,playerName:pg.playerName});
     });
   });

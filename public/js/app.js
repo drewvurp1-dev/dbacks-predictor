@@ -1149,7 +1149,17 @@ function generateCorbetBets(score,factors,rawMarketMap){
       const imbalance=Math.abs(sideShare-0.5);
       if(imbalance<minImbalance){minImbalance=imbalance;effectiveLine=l;}
     }
-    const line=effectiveLine!=null?effectiveLine:0.5;
+    let line=effectiveLine!=null?effectiveLine:0.5;
+    // Total Bases 0.5 is a near-lock with no betting value. Promote to 1.5 when
+    // the book actually posts that line, BEFORE computing any probabilities —
+    // otherwise modelProb/marketProb/EV/MC are computed at 0.5 while the card
+    // displays 1.5 (the old post-hoc relabel produced exactly that mismatch).
+    // If 1.5 isn't posted we keep 0.5 so the math stays consistent with the
+    // line shown.
+    if(propKey==='batter_total_bases'&&line<=0.5
+       &&(mkt.overByLine[1.5]?.length)&&(mkt.underByLine[1.5]?.length)){
+      line=1.5;
+    }
     const calcOver=mkt.overByLine[line]||[];
     const calcUnder=mkt.underByLine[line]||[];
     const overBest=mkt.overBestByLine[line]||null;
@@ -1549,7 +1559,6 @@ async function loadCorbet(){
             b.mcConfidence=monteCarloConfidence(b.propKey,b.line,snap.score,b.marketOverProb,b.direction);
           }
         });
-        bets.forEach(b=>{if(b.propKey==='batter_total_bases'&&b.line<=0.5)b.line=1.5;});
         bets.forEach(b=>{b._playerName=player.name;b._playerScore=snap.score;b._playerId=player.id;});
         allPlayerBets.push({playerName:player.name,bets,lowData:(S.players[player.id]?.lowData||false)});
       }catch(e){

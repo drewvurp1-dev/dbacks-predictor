@@ -8,6 +8,7 @@ import * as api from '../api.js';
 import { _renderPitcherCard, _renderBestMatchup } from './render.js';
 import { _getTopBets } from '../bets.js';
 import { bookAbbrev } from '../betting.js';
+import { MC_CONFIDENCE_MIN } from '../constants.js';
 import { _COMPASS_DEGS } from '../weather.js';
 
 // ── Team momentum bar (dashboard top strip) ─────────────────────────────────
@@ -81,7 +82,7 @@ export function _renderMvpBanner(){
   (S.allPlayerBets||[]).forEach(pg=>{
     if(pg.lowData)return;
     const bestBet=pg.bets
-      .filter(b=>!b.insufficient&&b.edgeStrength!=='none'&&b.mcConfidence>=80)
+      .filter(b=>!b.insufficient&&b.edgeStrength!=='none'&&b.mcConfidence>=MC_CONFIDENCE_MIN)
       .sort((a,b)=>(b.ev??b.absDelta/100)-(a.ev??a.absDelta/100))[0];
     if(!bestBet)return;
     candidates.push({playerName:pg.playerName,bet:bestBet});

@@ -596,16 +596,13 @@ export function modelProbability(propKey,line,score,_components){
 
   p+=Math.max(-6,Math.min(6,trendAdj));
 
-  // Learned Platt correction (identity until enough graded bets accumulate).
-  // Capture the pre-calibration value + blend components for the caller before
-  // applying, so refits train on the raw probability rather than a corrected one.
-  const _rawP=p;
-  p=applyCalibration(propKey,p);
-  if(_components){_components.raw=_rawP;_components.scoreBase=_scoreBase;_components.rateBase=_rateBase;}
-
-  // Line-specific hard clamps applied last. Each tier tightens as the prop
-  // becomes harder to clear — at score=20 a hitter's true probability of ≥3 TB
-  // is ~2%, so a 20pp floor (the old uniform clamp) was structurally wrong.
+  // Line-specific hard clamps applied as a pre-calibration sanity bound. Each
+  // tier tightens as the prop becomes harder to clear — at score=20 a hitter's
+  // true probability of ≥3 TB is ~2%, so a 20pp floor (the old uniform clamp)
+  // was structurally wrong. These run BEFORE applyCalibration so the learned
+  // Platt correction is the final word and can't be silently clipped in the
+  // tails (a clamp-last ordering would erase a correction that pulls a prop
+  // below the floor — exactly where calibration matters most).
   if(propKey==='batter_hits'){
     if(line<=0.5)      p=Math.max(38,Math.min(82,p));  // ≥1 hit
     else if(line<=1.5) p=Math.max(20,Math.min(65,p));  // ≥2 hits
@@ -642,6 +639,14 @@ export function modelProbability(propKey,line,score,_components){
   } else{
     p=Math.max(5,Math.min(95,p));
   }
+
+  // Learned Platt correction (identity until enough graded bets accumulate).
+  // Capture the pre-calibration value + blend components for the caller before
+  // applying, so refits train on the (clamped) raw probability that is the
+  // actual input to calibration — never on an already-corrected value.
+  const _rawP=p;
+  p=applyCalibration(propKey,p);
+  if(_components){_components.raw=_rawP;_components.scoreBase=_scoreBase;_components.rateBase=_rateBase;}
 
   return p;
 }

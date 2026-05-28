@@ -14,6 +14,12 @@ export const SEASON = 2026;
 // win-prob estimates, which our model doesn't).
 export const KELLY_FRACTION = 0.125;
 
+// ── Monte Carlo edge-stability gate ──────────────────────────────────────────
+// Minimum monteCarloConfidence (% of noisy-score sims where the edge holds) for
+// a bet to qualify as recommended. Shared by _getTopBets (player stars /
+// auto-save) and the dashboard best-bets strip so both agree on what qualifies.
+export const MC_CONFIDENCE_MIN = 85;
+
 // ── Roster ───────────────────────────────────────────────────────────────────
 export const CORBET_ROSTER = [
   { name: 'Corbin Carroll',   id: '682998' },
