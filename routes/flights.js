@@ -221,7 +221,11 @@ function readCached(abbr, destAirport) {
   const cacheKey = `${abbr}|${destAirport || ''}`;
   const entry = _cache[cacheKey];
   if (!entry) return null;
-  return { data: entry.data, ageMs: Date.now() - entry.ts };
+  const ageMs = Date.now() - entry.ts;
+  // Treat stale entries as a miss so the client's live fallback fires and
+  // fetches fresh AeroDataBox data rather than looping on an old EN ROUTE state.
+  if (ageMs >= TTL_TODAY) return null;
+  return { data: entry.data, ageMs };
 }
 
 // GET /flights/team/:abbr  — most recent charter movement for the team.

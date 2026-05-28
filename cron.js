@@ -326,7 +326,14 @@ async function checkCharterPoll() {
       return;
     }
     const arrival = result.data?.arrival;
-    if (arrival?.arrActualUtc && new Date(arrival.arrActualUtc).getTime() <= Date.now()) {
+    // Mirror the client's landed logic: arrActualUtc OR a status string that
+    // indicates the plane is on the ground. AeroDataBox often updates status
+    // before populating arrActualUtc, so checking both avoids missing landings.
+    const statusLc = (arrival?.status || '').toLowerCase();
+    const arrivedByStatus = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
+    const hasLanded = (arrival?.arrActualUtc && new Date(arrival.arrActualUtc).getTime() <= Date.now())
+                   || arrivedByStatus;
+    if (hasLanded) {
       await markLanded(game.gamePk);
       console.log(`[cron] charter ${trackedTeamAbbr} landed at ${arrival.to} — polling stopped (gamePk=${game.gamePk})`);
     } else {
