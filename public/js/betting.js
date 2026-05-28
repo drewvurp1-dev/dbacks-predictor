@@ -1,7 +1,7 @@
 // Sportsbook / odds primitives: conversions, devig, Kelly, and book-name
 // shorthand. All pure functions — no S, no DOM, no fetch.
 
-import { BOOK_ABBREVS, KELLY_FRACTION } from './constants.js';
+import { BOOK_ABBREVS } from './constants.js';
 
 // ── Odds-format conversions ─────────────────────────────────────────────────
 // American → implied probability (returns a percentage, 0–100).
@@ -15,17 +15,6 @@ export function americanToDecimal(price) {
   price = Number(price);
   if (!price) return null;
   return price > 0 ? price / 100 + 1 : 100 / Math.abs(price) + 1;
-}
-
-// ── Kelly sizing ────────────────────────────────────────────────────────────
-// Eighth-Kelly fraction (0–1 range; 0 means no bet). Conservative sizing to
-// dampen variance from model error — full Kelly assumes perfect win-prob
-// estimates.
-export function kellyFraction(modelProb, odds) {
-  if (!odds) return 0;
-  const b = odds > 0 ? odds / 100 : 100 / Math.abs(odds);
-  const p = modelProb / 100, q = 1 - p;
-  return Math.max(0, (b * p - q) / b) * KELLY_FRACTION;
 }
 
 // ── Devig ───────────────────────────────────────────────────────────────────

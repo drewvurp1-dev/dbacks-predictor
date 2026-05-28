@@ -8,12 +8,6 @@
 // and every fetch URL across app.js + pitcher.js follows.
 export const SEASON = 2026;
 
-// ── Kelly sizing ────────────────────────────────────────────────────────────
-// Fraction of full Kelly stake to apply. 0.125 = eighth-Kelly — conservative
-// sizing that dampens variance from model error (full Kelly assumes perfect
-// win-prob estimates, which our model doesn't).
-export const KELLY_FRACTION = 0.125;
-
 // ── Monte Carlo edge-stability gate ──────────────────────────────────────────
 // Minimum monteCarloConfidence (% of sims where the edge holds) for a bet to
 // qualify as recommended. Shared by _getTopBets (player stars / auto-save) and
