@@ -89,15 +89,22 @@ export function fitPlatt(xs, ys, lambda = CAL_PRIOR_LAMBDA) {
   return { a, b };
 }
 
-// Grid-search the blend weight W that minimizes log-loss of W·score+(1−W)·rate,
-// then shrink toward DEFAULT_BLEND_W by sample size. score/rate are 0–100.
-export function fitBlend(scoreBases, rateBases, ys) {
+// Grid-search the blend weight W that minimizes log-loss of
+//   W·score + (1−W)·rate + adjOffset
+// then shrink toward DEFAULT_BLEND_W by sample size. score/rate/adjOffset are in
+// pp (0–100 scale). adjOffset is the sum of the additive corrections
+// modelProbability layers on top of the blend (park, TTO, pitch-mix, Statcast,
+// trend); holding it fixed while searching W makes the fit target match the
+// production probability instead of the bare blend. Pass a zero-filled array for
+// legacy bets that predate offset instrumentation.
+export function fitBlend(scoreBases, rateBases, adjOffsets, ys) {
   let best = DEFAULT_BLEND_W, bestLoss = Infinity;
   for (let wi = 0; wi <= 20; wi++) {
     const w = wi / 20;
     let loss = 0;
     for (let i = 0; i < ys.length; i++) {
-      const p = _clamp01((w * scoreBases[i] + (1 - w) * rateBases[i]) / 100);
+      const adj = adjOffsets[i] || 0;
+      const p = _clamp01((w * scoreBases[i] + (1 - w) * rateBases[i] + adj) / 100);
       loss -= ys[i] ? Math.log(p) : Math.log(1 - p);
     }
     if (loss < bestLoss) { bestLoss = loss; best = w; }
@@ -140,10 +147,13 @@ export function recalibrate(betLog) {
     // sb/rb/sy stay index-aligned with each other (the blend training set); xs/ys
     // include every settled bet for the Platt fit. The two sets differ because
     // only instrumented bets carry component snapshots.
-    const bucket = byProp[key] || (byProp[key] = { xs: [], ys: [], sb: [], rb: [], sy: [], n: 0 });
+    const bucket = byProp[key] || (byProp[key] = { xs: [], ys: [], sb: [], rb: [], adj: [], sy: [], n: 0 });
     bucket.xs.push(x); bucket.ys.push(pair.y); bucket.n++;
     if (typeof b.scoreBase === 'number' && typeof b.rateBase === 'number') {
-      bucket.sb.push(b.scoreBase); bucket.rb.push(b.rateBase); bucket.sy.push(pair.y);
+      bucket.sb.push(b.scoreBase); bucket.rb.push(b.rateBase);
+      // Legacy bets (pre-offset instrumentation) carry no adjOffset → treat as 0.
+      bucket.adj.push(typeof b.adjOffset === 'number' ? b.adjOffset : 0);
+      bucket.sy.push(pair.y);
     }
   }
 
@@ -152,7 +162,7 @@ export function recalibrate(betLog) {
   for (const [key, d] of Object.entries(byProp)) {
     if (d.n >= MIN_CAL_SAMPLE) cal[key] = { ...fitPlatt(d.xs, d.ys), n: d.n };
     // Blend re-tune needs the component snapshots, which only modern bets carry.
-    if (d.sb.length >= MIN_BLEND_SAMPLE) blends[key] = fitBlend(d.sb, d.rb, d.sy);
+    if (d.sb.length >= MIN_BLEND_SAMPLE) blends[key] = fitBlend(d.sb, d.rb, d.adj, d.sy);
   }
   if (g.ys.length >= MIN_GLOBAL_CAL_SAMPLE) cal._global = { ...fitPlatt(g.xs, g.ys), n: g.ys.length };
 
