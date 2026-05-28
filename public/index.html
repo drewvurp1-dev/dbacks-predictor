@@ -387,6 +387,12 @@
           <div id="cal-summary" style="font-size:11px;color:#888;font-family:'Chakra Petch',monospace;margin-bottom:14px;text-align:center;"></div>
 
           <div class="cal-section">
+            <div class="cal-section-title">LIVE MODEL CORRECTIONS</div>
+            <div class="cal-section-note">Auto-applied to new predictions. Each prop fits its own correction once enough graded bets accumulate; below threshold it stays uncorrected (or uses the pooled fit).</div>
+            <div id="cal-corrections" class="cal-table"></div>
+          </div>
+
+          <div class="cal-section">
             <div class="cal-section-title">CALIBRATION BY PREDICTED PROBABILITY</div>
             <div class="cal-section-note">If the model is well-calibrated, "Avg Pred" should match "Hit Rate" in each bucket.</div>
             <div id="cal-prob-table" class="cal-table"></div>
@@ -511,7 +517,7 @@
   </div>
 </div>
 
-<script type="module" src="/js/app.js?v=59"></script>
+<script type="module" src="/js/app.js?v=60"></script>
 <script src="/js/charter.js?v=18"></script>
 
 </body>
