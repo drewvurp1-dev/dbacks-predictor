@@ -418,7 +418,11 @@ async function autoLoadNextGame(){
         const currVenue=game.venue?.name;
         const daysBetween=(new Date(game.officialDate)-new Date(prevGame.officialDate))/(1000*60*60*24);
         const travelSel=document.getElementById('travel-select');
-        if(prevVenue&&currVenue&&prevVenue!==currVenue&&daysBetween<=2){
+        // Only flag travel fatigue when the prior game was the immediately
+        // preceding day (no rest buffer). daysBetween>=2 means at least one
+        // full off day between the road game and this one, so the team is
+        // rested — no fatigue penalty regardless of the venue change.
+        if(prevVenue&&currVenue&&prevVenue!==currVenue&&daysBetween<=1){
           const prevUTC=new Date(prevGame.gameDate);
           const prevMSTHour=(prevUTC.getUTCHours()-7+24)%24;
           travelSel.value=prevMSTHour>=21?'redeye':'same';
