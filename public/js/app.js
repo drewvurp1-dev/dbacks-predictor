@@ -17,7 +17,7 @@ import {
   modelProbability, monteCarloConfidence,
 } from './predict.js';
 import {
-  impliedProb, americanToDecimal, kellyFraction,
+  impliedProb, americanToDecimal,
   _medianImpliedProb, devig,
 } from './betting.js';
 import {
@@ -84,7 +84,7 @@ function rebuildPlayerSelect(roster){
 
 // (_COMPASS_DEGS, _compassDeg, _windDir moved to weather.js)
 
-// (gaussianRandom moved to predict.js; kellyFraction moved to betting.js)
+// (gaussianRandom moved to predict.js)
 
 // (_computePitcherMetrics + _FIP_CONSTANT + _LG_HRFB moved to pitcher.js)
 

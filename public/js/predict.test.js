@@ -235,12 +235,12 @@ test('modelProbability — Hits 0.5 monotonically increases in score (avg batter
   assert.ok(at50 < at80, `at50=${at50}, at80=${at80}`);
 });
 
-test('modelProbability — HR 0.5 respects clamps [5, 45]', () => {
+test('modelProbability — HR 0.5 respects clamps [3, 45]', () => {
   setupAverageBatter();
-  // Even at extreme scores HR shouldn't exceed 45 or drop below 5
+  // Even at extreme scores HR shouldn't exceed 45 or drop below the 3pp floor
   for (const score of [5, 50, 95]) {
     const p = modelProbability('batter_home_runs', 0.5, score);
-    assert.ok(p >= 5 && p <= 45, `score=${score} → ${p}`);
+    assert.ok(p >= 3 && p <= 45, `score=${score} → ${p}`);
   }
 });
 

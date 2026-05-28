@@ -454,6 +454,11 @@ export function modelProbability(propKey,line,score,_components){
     // rate by today's expected PAs vs league average — high-PA games produce
     // proportionally more RBI opportunities. League avg RBI/G ~0.43.
     const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2);
+    // Threshold note: the Poisson props use 1−CDF(floor(line)) = P(X > floor(line)),
+    // while the binomial props use _binomGE(…, ceil(line+ε)) = P(X ≥ ceil(line+ε)).
+    // These are equivalent for every line (the strict-vs-nonstrict difference
+    // cancels the floor-vs-ceil difference), so the two conventions agree — don't
+    // "fix" one to match the other.
     const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
     // Score-based component dropped from 60% → 25% weight. Anchors recalibrated
     // so league-avg score (50) produces league-avg P(≥1 RBI) of ~33% rather
@@ -621,46 +626,52 @@ export function modelProbability(propKey,line,score,_components){
   // learned weight relative to the probability the model actually emits.
   const _adjOffset=(_blendBase!=null)?(p-_blendBase):0;
 
-  // Line-specific hard clamps applied as a pre-calibration sanity bound. Each
-  // tier tightens as the prop becomes harder to clear — at score=20 a hitter's
-  // true probability of ≥3 TB is ~2%, so a 20pp floor (the old uniform clamp)
-  // was structurally wrong. These run BEFORE applyCalibration so the learned
-  // Platt correction is the final word and can't be silently clipped in the
-  // tails (a clamp-last ordering would erase a correction that pulls a prop
-  // below the floor — exactly where calibration matters most).
+  // Line-specific hard clamps applied as a pre-calibration sanity bound. These
+  // run BEFORE applyCalibration so the learned Platt correction is the final
+  // word and can't be silently clipped in the tails.
+  //
+  // FLOORS are deliberately set to conservative *validity backstops* — roughly
+  // the lowest plausible true probability for a real MLB starter — NOT to a
+  // minimum belief. The old floors (e.g. 38pp for ≥1 hit) sat above the genuine
+  // worst-case probability of weak bats in tough matchups, so they suppressed
+  // legitimate Under convictions and, when the market sat below the floor, could
+  // even flip a marginal call to a spurious Over. The rate model already bounds
+  // these distributions naturally; the floor only guards against absurd
+  // extrapolation. CEILINGS are kept tight — capping an over-confident Over is
+  // the conservative direction for a betting tool.
   if(propKey==='batter_hits'){
-    if(line<=0.5)      p=Math.max(38,Math.min(82,p));  // ≥1 hit
-    else if(line<=1.5) p=Math.max(20,Math.min(65,p));  // ≥2 hits
-    else               p=Math.max(8, Math.min(40,p));  // ≥3 hits (rare)
+    if(line<=0.5)      p=Math.max(22,Math.min(82,p));  // ≥1 hit
+    else if(line<=1.5) p=Math.max(10,Math.min(65,p));  // ≥2 hits
+    else               p=Math.max(4, Math.min(40,p));  // ≥3 hits (rare)
   } else if(propKey==='batter_total_bases'){
-    if(line<=0.5)      p=Math.max(25,Math.min(80,p));  // ≥1 TB
-    else if(line<=1.5) p=Math.max(15,Math.min(70,p));  // ≥2 TB
-    else if(line<=2.5) p=Math.max(7, Math.min(55,p));  // ≥3 TB
-    else               p=Math.max(3, Math.min(35,p));  // ≥4 TB
+    if(line<=0.5)      p=Math.max(12,Math.min(80,p));  // ≥1 TB
+    else if(line<=1.5) p=Math.max(8, Math.min(70,p));  // ≥2 TB
+    else if(line<=2.5) p=Math.max(4, Math.min(55,p));  // ≥3 TB
+    else               p=Math.max(2, Math.min(35,p));  // ≥4 TB
   } else if(propKey==='batter_home_runs'){
-    p=Math.max(5,Math.min(45,p));
+    p=Math.max(3,Math.min(45,p));
   } else if(propKey==='batter_walks'){
-    if(line<=0.5)      p=Math.max(15,Math.min(65,p));  // ≥1 walk
-    else if(line<=1.5) p=Math.max(6, Math.min(40,p));  // ≥2 walks
-    else               p=Math.max(2, Math.min(25,p));  // ≥3 walks
+    if(line<=0.5)      p=Math.max(8, Math.min(65,p));  // ≥1 walk
+    else if(line<=1.5) p=Math.max(3, Math.min(40,p));  // ≥2 walks
+    else               p=Math.max(1, Math.min(25,p));  // ≥3 walks
   } else if(propKey==='batter_strikeouts'){
-    if(line<=0.5)      p=Math.max(25,Math.min(78,p));  // ≥1 K
-    else if(line<=1.5) p=Math.max(15,Math.min(65,p));  // ≥2 K
-    else if(line<=2.5) p=Math.max(8, Math.min(50,p));  // ≥3 K
-    else               p=Math.max(3, Math.min(30,p));  // ≥4 K
+    if(line<=0.5)      p=Math.max(12,Math.min(78,p));  // ≥1 K
+    else if(line<=1.5) p=Math.max(7, Math.min(65,p));  // ≥2 K
+    else if(line<=2.5) p=Math.max(4, Math.min(50,p));  // ≥3 K
+    else               p=Math.max(2, Math.min(30,p));  // ≥4 K
   } else if(propKey==='batter_rbis'){
-    if(line<=0.5)      p=Math.max(15,Math.min(65,p));  // ≥1 RBI
-    else if(line<=1.5) p=Math.max(7, Math.min(45,p));  // ≥2 RBI
-    else               p=Math.max(3, Math.min(28,p));  // ≥3 RBI
+    if(line<=0.5)      p=Math.max(8, Math.min(65,p));  // ≥1 RBI
+    else if(line<=1.5) p=Math.max(4, Math.min(45,p));  // ≥2 RBI
+    else               p=Math.max(2, Math.min(28,p));  // ≥3 RBI
   } else if(propKey==='batter_runs_scored'){
-    if(line<=0.5)      p=Math.max(18,Math.min(70,p));  // ≥1 run
-    else if(line<=1.5) p=Math.max(8, Math.min(50,p));  // ≥2 runs
-    else               p=Math.max(3, Math.min(30,p));  // ≥3 runs
+    if(line<=0.5)      p=Math.max(10,Math.min(70,p));  // ≥1 run
+    else if(line<=1.5) p=Math.max(4, Math.min(50,p));  // ≥2 runs
+    else               p=Math.max(2, Math.min(30,p));  // ≥3 runs
   } else if(propKey==='batter_hits_runs_rbis'){
-    if(line<=1.5)      p=Math.max(20,Math.min(75,p));  // ≥2 H+R+RBI
-    else if(line<=2.5) p=Math.max(12,Math.min(60,p));  // ≥3
-    else if(line<=3.5) p=Math.max(6, Math.min(45,p));  // ≥4
-    else               p=Math.max(3, Math.min(30,p));  // ≥5
+    if(line<=1.5)      p=Math.max(12,Math.min(75,p));  // ≥2 H+R+RBI
+    else if(line<=2.5) p=Math.max(7, Math.min(60,p));  // ≥3
+    else if(line<=3.5) p=Math.max(4, Math.min(45,p));  // ≥4
+    else               p=Math.max(2, Math.min(30,p));  // ≥5
   } else{
     p=Math.max(5,Math.min(95,p));
   }

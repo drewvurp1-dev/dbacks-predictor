@@ -1,9 +1,9 @@
-// Unit tests for betting.js — odds conversions, Kelly, devig. All pure.
+// Unit tests for betting.js — odds conversions, devig. All pure.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  impliedProb, americanToDecimal, kellyFraction,
+  impliedProb, americanToDecimal,
   _medianImpliedProb, devig, bookAbbrev,
 } from './betting.js';
 
@@ -45,36 +45,6 @@ test('americanToDecimal — +150 = 2.5', () => {
 
 test('americanToDecimal — -110 ≈ 1.909', () => {
   assert.ok(Math.abs(americanToDecimal(-110) - 1.909) < 0.001);
-});
-
-// ── kellyFraction ───────────────────────────────────────────────────────────
-test('kellyFraction — null odds returns 0', () => {
-  assert.equal(kellyFraction(60, null), 0);
-  assert.equal(kellyFraction(60, 0), 0);
-});
-
-test('kellyFraction — no edge (modelProb < implied) returns 0', () => {
-  // At +100 implied is 50%. If we model 40% we have no edge.
-  assert.equal(kellyFraction(40, 100), 0);
-});
-
-test('kellyFraction — positive edge returns positive fraction', () => {
-  // 60% on +100 → b=1, p=0.6, q=0.4 → (1*0.6 - 0.4)/1 = 0.2 → eighth-Kelly = 0.025
-  const f = kellyFraction(60, 100);
-  assert.ok(Math.abs(f - 0.025) < 1e-9);
-});
-
-test('kellyFraction — returns eighth-Kelly (1/8 of full)', () => {
-  // 70% on +100: full Kelly = 0.4; eighth = 0.05
-  const f = kellyFraction(70, 100);
-  assert.ok(Math.abs(f - 0.05) < 1e-9);
-});
-
-test('kellyFraction — negative odds handled correctly', () => {
-  // -200 implies 66.67%. Model at 75% → b=0.5, p=0.75, q=0.25
-  // (0.5*0.75 - 0.25)/0.5 = 0.25 → eighth-Kelly = 0.03125
-  const f = kellyFraction(75, -200);
-  assert.ok(Math.abs(f - 0.03125) < 1e-9);
 });
 
 // ── _medianImpliedProb ──────────────────────────────────────────────────────
