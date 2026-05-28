@@ -258,7 +258,7 @@ function _renderPLSparkline(graded){
   });
   let cum=0;const points=[0];
   sorted.forEach(b=>{
-    if(b.result==='win'){const o=b.odds;cum+=o>0?o/100:100/Math.abs(o);}
+    if(b.result==='win'){const o=b.odds||(-110);cum+=o>0?o/100:100/Math.abs(o);}
     else if(b.result==='loss'){cum-=1;}
     points.push(cum);
   });
