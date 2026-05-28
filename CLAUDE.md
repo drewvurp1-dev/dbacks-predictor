@@ -192,7 +192,7 @@ Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. Th
 
 ## app.js Consolidation — Remaining Work
 
-Current state: ~2,551 lines (down from 6,156 original, −58.6%). Math, state, constants, betting, pitcher metrics + orchestration (selectPitcher, onPitcherSearch, loadPitcherStatcast), player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards / pitcher-tab renderer, the bet-log + grading subsystem, the bet-record / grade-panel / calibration / CorBET-bets renderers, and the live weather fetch + park-relative wind helpers have all been extracted. What remains is UI orchestration + data-loader functions.
+Current state: ~1,945 lines (down from 6,156 original, −68.4%). Math, state, constants, betting, pitcher metrics + orchestration (selectPitcher, onPitcherSearch, loadPitcherStatcast), player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards / pitcher-tab renderer, the bet-log + grading subsystem, the bet-record / grade-panel / calibration / CorBET-bets renderers, the live weather fetch + park-relative wind helpers, and the dashboard (schedule strip / team momentum / game banner / player rows) have all been extracted. What remains is the prediction orchestrators (`calcPrediction` + `runPrediction` + `loadCorbet` and the per-player CSV / MLB helpers it depends on), the auto game loader, and bootstrap.
 
 ### Planned extractions (ordered by value/risk)
 
@@ -227,18 +227,24 @@ Current state: ~2,551 lines (down from 6,156 original, −58.6%). Math, state, c
    - `selectPitcher` dispatches a `pitcher:selected` CustomEvent (detail `{id, name, fullReload}`) — app.js listens and re-fires `loadMatchupStats()` + either `loadDashboard()` (full reload) or `_renderPitcherCard()`. No upward imports.
    - `loadPitcherForm` / `loadPitcherSplits` already lived in pitcher.js from item #1.
 
-7. **`ui/dashboard.js`** (~400 lines) — `renderDashboard`, schedule strip, team momentum, charter strip integration. Heavy DOM, medium risk.
+7. ~~**`ui/dashboard.js`**~~ ✅ Done (~622 lines)
+   - Moved: `renderDashboard` (+ `_lineupAnalysisText`, `_matchupCardHtml`, `_splitsCardHtml`, `_recentFormHtml`, `togglePlayerCard`), `_renderGameBanner` (+ `_windFieldRelative`), `loadTwoWeekSchedule` (+ `_renderScheduleCell`, `_shortVenue`), `loadTeamMomentum`, and the legacy `_renderMvpBanner` block (kept for potential re-enable)
+   - Imports `_renderPitcherCard`/`_renderBestMatchup` from `ui/render.js`, `_getTopBets` from `bets.js`, `bookAbbrev` from `betting.js`, `_COMPASS_DEGS` from `weather.js`, and `S`/`activeRoster` from `state.js`. No upward imports.
+   - Charter strip is rendered by `charter.js` (classic script) — `loadDashboard` still calls `window.renderDashboardCharter()` directly.
 
 ### What stays in app.js permanently
 
 - Bootstrap (the init calls at the bottom)
 - `ACTIONS` event-delegation map + `_dispatchAction`
 - `runPrediction` + `calcPrediction` (top-level orchestrators touching every module)
+- `loadDashboard` (orchestrator: charter strip → arsenal warm → corbet or render)
+- `loadCorbet` + `_corbetFetch*` / `_corbetExtractStatcast` helpers (per-player CSV/MLB plumbing for predictions)
+- `autoLoadNextGame` (one-time boot path that wires every subsystem)
 - Tiny cross-cutting helpers
 
 ### Target
 
-After extraction #6: ~2,551 lines — orchestration + bootstrap only.
+After extraction #7: ~1,945 lines — orchestration + bootstrap + corbet/prediction plumbing.
 
 ### Risk-mitigation rules
 
