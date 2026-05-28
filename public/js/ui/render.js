@@ -3,7 +3,7 @@
 // shared building blocks the stat-grid renderers compose on top of.
 
 import { S, activeRoster } from '../state.js';
-import { PITCH_NAMES, STAT_INFO } from '../constants.js';
+import { PITCH_NAMES, PITCH_TYPES, STAT_INFO } from '../constants.js';
 import { loadPitcherForm, loadPitcherSplits } from '../pitcher.js';
 
 // ── Stat tooltip ────────────────────────────────────────────────────────────
@@ -442,6 +442,86 @@ export function renderFactorCards(factors, catTotals) {
   };
   setMini('batter', catTotals?.batter || 0);
   setMini('pitcher', catTotals?.pitcher || 0);
+}
+
+// ── Pitcher Stats tab (modal: panel-pitcher) ────────────────────────────────
+// Top-level renderer for the Pitcher Analysis modal. Called from
+// pitcher.js:selectPitcher after season stats land. _renderPitcherSeasonBoxes
+// fills in the season grid; it's also re-invoked from loadPitcherStatcast once
+// xFIP/SIERA become computable.
+export function renderPitcherTab(st, last3, daysRest, lastOuting, hand, name, fip, k9, kPct, bbPct, era, whip, ip, kbb, hr9) {
+  const empty = document.getElementById('pitcher-tab-empty');
+  const content = document.getElementById('pitcher-tab-content');
+  if (empty) empty.classList.add('hidden');
+  if (content) content.classList.remove('hidden');
+  const header = document.getElementById('pitcher-tab-header');
+  if (header) header.textContent = `📋 ${name} · Pitcher Analysis`;
+  _renderPitcherSeasonBoxes();
+  const ptPitchmix = document.getElementById('pt-pitchmix');
+  if (ptPitchmix) {
+    ptPitchmix.innerHTML = PITCH_TYPES.map(pt => {
+      const p = S.pitcherPitches[pt] || 0;
+      if (!p) return '';
+      return `<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p > 35 ? '#A71930' : '#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;
+    }).join('');
+  }
+  const ptRecent = document.getElementById('pt-recent');
+  if (ptRecent) {
+    ptRecent.innerHTML = last3.length
+      ? last3.map(g => `<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K <span style="color:#999;margin-left:8px;">${g.stat.numberOfPitches || '—'} pitches</span></div>`).join('')
+      : '<span style="color:#777;">No recent game log available.</span>';
+  }
+  const ptWorkload = document.getElementById('pt-workload');
+  if (ptWorkload) {
+    ptWorkload.innerHTML = `<div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>${lastOuting ? `<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches || '—'}</strong></div>` : ''}${daysRest !== '—' && daysRest < 4 ? '<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>' : ''}${daysRest !== '—' && daysRest >= 5 ? '<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>' : ''}`;
+  }
+}
+
+// Renders the season stat boxes (ERA, FIP, xFIP, SIERA, WHIP, K-BB%, HR/9, …).
+// Called from renderPitcherTab on initial load and again from loadPitcherStatcast
+// once xFIP/SIERA become computable. Pulls everything off S.pitcher.{st,advanced}.
+export function _renderPitcherSeasonBoxes() {
+  const p = S.pitcher;
+  if (!p?.st || !document.getElementById('pt-season')) return;
+  const st = p.st;
+  const pa = parseInt(st.battersFaced) || 1;
+  const era = parseFloat(st.era);
+  const whip = parseFloat(st.whip);
+  const ip = st.inningsPitched || '—';
+  const kPct = st.strikeOuts ? ((st.strikeOuts / pa) * 100).toFixed(1) + '%' : '—';
+  const bbPct = st.baseOnBalls ? ((st.baseOnBalls / pa) * 100).toFixed(1) + '%' : '—';
+  const k9 = st.strikeOuts && st.inningsPitched ? ((st.strikeOuts / parseFloat(st.inningsPitched)) * 9).toFixed(1) : '—';
+  const fip = p.advanced?.fip != null ? p.advanced.fip.toFixed(2) : '—';
+  const kbb = p.advanced?.kbbPct != null ? p.advanced.kbbPct.toFixed(1) + '%' : '—';
+  const hr9 = p.advanced?.hr9 != null ? p.advanced.hr9.toFixed(2) : '—';
+  const eraC = era <= 3.50 ? 'good' : era >= 5.00 ? 'bad' : '';
+  const whipC = whip <= 1.10 ? 'good' : whip >= 1.40 ? 'bad' : '';
+  const fipNum = parseFloat(fip);
+  const fipC = !isNaN(fipNum) ? (fipNum < 3.50 ? 'good' : fipNum > 4.50 ? 'bad' : '') : '';
+  const xfipNum = p.advanced?.xfip;
+  const xfipC = xfipNum != null ? (xfipNum < 3.50 ? 'good' : xfipNum > 4.50 ? 'bad' : '') : '';
+  const xfipDisplay = xfipNum != null ? xfipNum.toFixed(2) : '—';
+  const sieraNum = p.advanced?.siera;
+  const sieraC = sieraNum != null ? (sieraNum < 3.50 ? 'good' : sieraNum > 4.50 ? 'bad' : '') : '';
+  const sieraDisplay = sieraNum != null ? sieraNum.toFixed(2) : '—';
+  const kbbNum = parseFloat(kbb);
+  const kbbC = !isNaN(kbbNum) ? (kbbNum >= 15 ? 'good' : kbbNum <= 8 ? 'bad' : '') : '';
+  const hr9Num = parseFloat(hr9);
+  const hr9C = !isNaN(hr9Num) ? (hr9Num <= 0.9 ? 'good' : hr9Num >= 1.5 ? 'bad' : '') : '';
+  document.getElementById('pt-season').innerHTML = [
+    ['ERA', era ? parseFloat(era).toFixed(2) : '—', eraC, 'Earned run average', STAT_INFO.ERA],
+    ['FIP', fip, fipC, 'Fielding independent (strips luck)', STAT_INFO.FIP],
+    ['xFIP', xfipDisplay, xfipC, 'FIP w/ normalized HR/FB', STAT_INFO.XFIP],
+    ['SIERA', sieraDisplay, sieraC, 'Skill-based ERA: K, BB, batted-ball mix', STAT_INFO.SIERA],
+    ['WHIP', whip ? parseFloat(whip).toFixed(2) : '—', whipC, 'Walks + hits per IP', STAT_INFO.WHIP],
+    ['K-BB%', kbb, kbbC, 'Skill gap — best K predictor', STAT_INFO.KBBPCT],
+    ['HR/9', hr9, hr9C, 'Home runs allowed per 9 IP', STAT_INFO.HR9],
+    ['K%', kPct, parseFloat(kPct) >= 25 ? 'good' : parseFloat(kPct) <= 18 ? 'bad' : '', 'Strikeout rate', STAT_INFO.KPCT_P],
+    ['BB%', bbPct, parseFloat(bbPct) <= 6 ? 'good' : parseFloat(bbPct) >= 10 ? 'bad' : '', 'Walk rate', STAT_INFO.BBPCT_P],
+    ['IP', ip, '', 'Innings pitched', STAT_INFO.IP],
+    ['K/9', k9, '', 'Strikeouts per 9', STAT_INFO.K9],
+    ['GS', st.gamesStarted || '—', '', 'Games started', STAT_INFO.GS],
+  ].map(([l, v, c, ctx, info]) => statBox(l, v, ctx, c, info)).join('');
 }
 
 // ── Pitcher form (last 3 starts) ────────────────────────────────────────────

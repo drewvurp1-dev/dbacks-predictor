@@ -192,7 +192,7 @@ Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. Th
 
 ## app.js Consolidation — Remaining Work
 
-Current state: ~2,818 lines (down from 6,156 original, −54.2%). Math, state, constants, betting, pitcher metrics, player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards, the bet-log + grading subsystem, the bet-record / grade-panel / calibration / CorBET-bets renderers, and the live weather fetch + park-relative wind helpers have all been extracted. What remains is UI orchestration + data-loader functions.
+Current state: ~2,551 lines (down from 6,156 original, −58.6%). Math, state, constants, betting, pitcher metrics + orchestration (selectPitcher, onPitcherSearch, loadPitcherStatcast), player stats, modal lifecycle, stat-grid rendering, the dashboard pitcher card / prediction-summary / factor cards / pitcher-tab renderer, the bet-log + grading subsystem, the bet-record / grade-panel / calibration / CorBET-bets renderers, and the live weather fetch + park-relative wind helpers have all been extracted. What remains is UI orchestration + data-loader functions.
 
 ### Planned extractions (ordered by value/risk)
 
@@ -221,9 +221,11 @@ Current state: ~2,818 lines (down from 6,156 original, −54.2%). Math, state, c
    - `updateWeatherForTime` stays in app.js (1-liner that coordinates `fetchWeather` + `setDay`; `setDay` is a DOM-toggle helper that lives alongside the other game-time toggles)
    - `_windFieldRelative` in app.js imports `_COMPASS_DEGS` from weather.js
 
-6. **`pitcher.js` expansion — pitcher orchestration** (~250 lines)
-   - `selectPitcher`, `onPitcherSearch`, `loadPitcherStatcast`, `loadPitcherForm`, `loadPitcherSplits`
-   - Touches DOM extensively. Higher risk — do after render.js stabilizes.
+6. ~~**`pitcher.js` expansion — pitcher orchestration**~~ ✅ Done (~267 lines)
+   - Moved to `pitcher.js`: `setThrows`, `buildPitchMixGrid`, `onPitcherSearch`, `selectPitcher`, `loadPitcherStatcast`
+   - Moved to `ui/render.js`: `renderPitcherTab`, `_renderPitcherSeasonBoxes`
+   - `selectPitcher` dispatches a `pitcher:selected` CustomEvent (detail `{id, name, fullReload}`) — app.js listens and re-fires `loadMatchupStats()` + either `loadDashboard()` (full reload) or `_renderPitcherCard()`. No upward imports.
+   - `loadPitcherForm` / `loadPitcherSplits` already lived in pitcher.js from item #1.
 
 7. **`ui/dashboard.js`** (~400 lines) — `renderDashboard`, schedule strip, team momentum, charter strip integration. Heavy DOM, medium risk.
 
@@ -236,7 +238,7 @@ Current state: ~2,818 lines (down from 6,156 original, −54.2%). Math, state, c
 
 ### Target
 
-After extraction #5: ~2,818 lines — orchestration + bootstrap only.
+After extraction #6: ~2,551 lines — orchestration + bootstrap only.
 
 ### Risk-mitigation rules
 

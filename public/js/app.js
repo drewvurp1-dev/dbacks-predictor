@@ -1,7 +1,7 @@
 // ═══════════ IMPORTS ═════════════════════════════════════════════════════════
 import {
   SEASON,
-  ALLOWED_BOOKS, PITCH_TYPES, PITCH_NAMES, PROP_NAMES,
+  ALLOWED_BOOKS, PROP_NAMES,
   UMP_DB, VENUE_MAP, STAT_INFO, DEFAULT_WEIGHTS,
   ODDS_CACHE_KEY,
 } from './constants.js';
@@ -20,7 +20,11 @@ import {
   impliedProb, americanToDecimal, kellyFraction,
   _medianImpliedProb, devig, bookAbbrev,
 } from './betting.js';
-import { _computePitcherMetrics, _loadPitchArsenal, normalizePitchMix } from './pitcher.js';
+import {
+  _loadPitchArsenal,
+  setThrows, buildPitchMixGrid,
+  onPitcherSearch, selectPitcher,
+} from './pitcher.js';
 import {
   _factorial, _poissonCDF,
   _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
@@ -218,7 +222,7 @@ function setOddsLockBadge(savedAt){
 }
 
 // ═══════════ TOGGLES ══════════════════════════════════════════════════════════
-function setThrows(v){S.pitcherThrows=v;document.getElementById('throws-R').classList.toggle('active',v==='R');document.getElementById('throws-L').classList.toggle('active',v==='L');}
+// (setThrows moved to pitcher.js)
 function setHome(v){S.isHome=v;document.getElementById('loc-home').classList.toggle('active',v);document.getElementById('loc-away').classList.toggle('active',!v);}
 function setDay(v){S.dayGame=v;document.getElementById('time-day').classList.toggle('active',v);document.getElementById('time-night').classList.toggle('active',!v);}
 function setRoof(v){S.roofClosed=v;document.getElementById('roof-closed').classList.toggle('active',v);document.getElementById('roof-open').classList.toggle('active',!v);}
@@ -227,7 +231,7 @@ function toggleManual(){S.pitcherManual=!S.pitcherManual;document.getElementById
 function toggleWeatherManual(){S.weatherManual=!S.weatherManual;document.getElementById('weather-manual').classList.toggle('hidden',!S.weatherManual);}
 
 // ═══════════ PITCH MIX ════════════════════════════════════════════════════════
-function buildPitchMixGrid(cid,pitches){document.getElementById(cid).innerHTML=PITCH_TYPES.map(pt=>`<div class="pitch-mix-item"><span class="pitch-mix-label">${pt}</span><input type="range" min="0" max="60" value="${pitches[pt]||0}" data-action="pitch-mix-slider" data-pitch="${pt}" style="flex:1;accent-color:#A71930"><span style="font-size:11px;color:#ccc;font-family:\'Chakra Petch\',monospace;min-width:28px;text-align:right">${pitches[pt]||0}%</span></div>`).join('');}
+// (buildPitchMixGrid moved to pitcher.js)
 function buildPitchMixManual(){buildPitchMixGrid('pitch-mix-grid-manual',S.pitcherPitches);}
 
 // ═══════════ PLAYER LOADING ═══════════════════════════════════════════════════
@@ -266,286 +270,15 @@ async function loadGameLog(){
   }catch(e){ S.recentGameLog=null; }
 }
 
-
-// ═══════════ PITCHER SEARCH ════════════════════════════════════════════════════
-let pitcherTimer=null;
-async function onPitcherSearch(val){
-  clearTimeout(pitcherTimer);
-  if(val.length<2){hide('pitcher-search-results');return;}
-  pitcherTimer=setTimeout(async()=>{
-    try{
-      const d=await api.mlbPersonSearch(val);
-      const pitchers=(d.people||[]).filter(p=>p.primaryPosition?.type==='Pitcher').slice(0,8);
-      if(!pitchers.length){hide('pitcher-search-results');return;}
-      document.getElementById('pitcher-search-results').innerHTML=pitchers.map(p=>`<div class="search-result-item" data-action="select-pitcher" data-pitcher-id="${p.id}" data-pitcher-name="${p.fullName.replace(/"/g,'&quot;')}"><span>${p.fullName}</span><span class="sr-pos">${p.pitchHand?.code||'?'}HP</span></div>`).join('');
-      show('pitcher-search-results');
-    }catch(e){console.warn('Pitcher search failed:',e.message);hide('pitcher-search-results');}
-  },300);
-}
-
-async function selectPitcher(id,name){
-  hide('pitcher-search-results');
-  document.getElementById('pitcher-search').value=name;
-  hide('pitcher-loaded');hide('pitcher-pitch-mix');
-  show('pitcher-spinner');hide('pitcher-error');
-  try{
-    const [sd,gd,pd]=await Promise.all([
-      api.mlbPitcherSeason(id),
-      api.mlbPitcherGameLog(id),
-      api.mlbPerson(id),
-    ]);
-    const st=sd?.stats?.[0]?.splits?.[0]?.stat??{};
-    const gameLogs=gd?.stats?.[0]?.splits??[];
-    const last3=gameLogs.slice(-3).reverse();
-    const person=pd?.people?.[0]??{};
-    const hand=person.pitchHand?.code??'R';
-    S.pitcherThrows=hand;setThrows(hand);
-    let daysRest='—';
-    if(gameLogs.length){const ld=new Date(gameLogs[gameLogs.length-1].date);daysRest=Math.round((new Date()-ld)/(1000*60*60*24));}
-    const lastOuting=gameLogs.length?gameLogs[gameLogs.length-1].stat:null;
-    // Bullpen / opener detection: flag if all of last 3 outings are under 45 pitches
-    const bullpenGame=last3.length>=3&&last3.every(g=>(g.stat?.numberOfPitches||0)<45);
-    const advanced=_computePitcherMetrics(st,null);
-    S.pitcher={id,name,hand,st,last3,daysRest,lastOuting,bullpenGame,advanced};
-    const era=parseFloat(st.era)||null;
-    const whip=parseFloat(st.whip)||null;
-    const ip=st.inningsPitched||'—';
-    const pa=st.battersFaced||1;
-    const kPct=st.strikeOuts?((st.strikeOuts/pa)*100).toFixed(1)+'%':'—';
-    const bbPct=st.baseOnBalls?((st.baseOnBalls/pa)*100).toFixed(1)+'%':'—';
-    const k9=st.strikeOuts&&st.inningsPitched?((st.strikeOuts/parseFloat(st.inningsPitched))*9).toFixed(1):'—';
-    const fip=advanced.fip!=null?advanced.fip.toFixed(2):'—';
-    const kbb=advanced.kbbPct!=null?advanced.kbbPct.toFixed(1)+'%':'—';
-    const hr9=advanced.hr9!=null?advanced.hr9.toFixed(2):'—';
-    document.getElementById('pitcher-hand-badge').textContent=`${hand}HP · ${name}`;
-    document.getElementById('pitcher-loaded').innerHTML=`<div class="pitcher-loaded"><div class="pl-hand">Throws ${hand==='L'?'Left':'Right'}</div><div class="pl-name">${name}</div><div class="pl-stats"><span>ERA <strong>${era?era.toFixed(2):'—'}</strong></span><span>FIP <strong>${fip}</strong></span><span>WHIP <strong>${whip?whip.toFixed(2):'—'}</strong></span><span>K-BB% <strong>${kbb}</strong></span><span>HR/9 <strong>${hr9}</strong></span><span>K/9 <strong>${k9}</strong></span><span>Days Rest <strong>${daysRest}</strong></span>${lastOuting?`<span>Last PC <strong>${lastOuting.numberOfPitches||'—'}</strong></span>`:''}</div></div>`;
-    show('pitcher-loaded');
-    const mix=hand==='L'?{'4-Seam FB':35,'Sinker':5,'Cutter':10,'Slider':20,'Curveball':10,'Changeup':15,'Splitter':5}:{'4-Seam FB':35,'Sinker':10,'Cutter':8,'Slider':22,'Curveball':10,'Changeup':12,'Splitter':3};
-    Object.assign(S.pitcherPitches,mix);
-    buildPitchMixGrid('pitch-mix-grid',S.pitcherPitches);
-    show('pitcher-pitch-mix');
-    renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip,kbb,hr9);
-    loadPitcherStatcast(id);
-    loadMatchupStats();
-    // If bets were already loaded without pitcher data, re-run with the new pitcher
-    if(S.players){
-      // Pitcher changed after dashboard loaded — full re-run so scores use new pitcher data
-      S.allPlayerBets=null;S.players=null;loadDashboard();
-    }else{_renderPitcherCard();}
-  }catch(e){setText('pitcher-error','⚠ Could not load pitcher stats.');show('pitcher-error');}
-  finally{hide('pitcher-spinner');}
-}
-
-function renderPitcherTab(st,last3,daysRest,lastOuting,hand,name,fip,k9,kPct,bbPct,era,whip,ip,kbb,hr9){
-  hide('pitcher-tab-empty');show('pitcher-tab-content');
-  document.getElementById('pitcher-tab-header').textContent=`📋 ${name} · Pitcher Analysis`;
-  const eraC=era<=3.50?'good':era>=5.00?'bad':'';
-  const whipC=whip<=1.10?'good':whip>=1.40?'bad':'';
-  const fipNum=parseFloat(fip);
-  const fipC=!isNaN(fipNum)?(fipNum<3.50?'good':fipNum>4.50?'bad':''):'';
-  _renderPitcherSeasonBoxes();
-  document.getElementById('pt-pitchmix').innerHTML=PITCH_TYPES.map(pt=>{const p=S.pitcherPitches[pt]||0;if(!p)return'';return`<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;}).join('');
-  document.getElementById('pt-recent').innerHTML=last3.length?last3.map(g=>`<div style="padding:4px 0;border-bottom:1px solid #0e0c22;">${g.date} — ${g.stat.inningsPitched}IP, ${g.stat.hits}H, ${g.stat.earnedRuns}ER, ${g.stat.strikeOuts}K <span style="color:#999;margin-left:8px;">${g.stat.numberOfPitches||'—'} pitches</span></div>`).join(''):'<span style="color:#777;">No recent game log available.</span>';
-  document.getElementById('pt-workload').innerHTML=`<div>Days since last outing: <strong style="color:#ccc;">${daysRest}</strong></div>${lastOuting?`<div>Last outing pitch count: <strong style="color:#ccc;">${lastOuting.numberOfPitches||'—'}</strong></div>`:''}${daysRest!=='—'&&daysRest<4?'<div style="color:#e74c3c;margin-top:4px;">⚠ Short rest — possible fatigue factor</div>':''}${daysRest!=='—'&&daysRest>=5?'<div style="color:#2ecc71;margin-top:4px;">✓ Well-rested</div>':''}`;
-}
-
-// Renders the season stat boxes (ERA, FIP, xFIP, SIERA, WHIP, K-BB%, HR/9, …).
-// Called from renderPitcherTab on initial load and again from loadPitcherStatcast
-// once xFIP/SIERA become computable. Pulls everything off S.pitcher.{st,advanced}.
-function _renderPitcherSeasonBoxes(){
-  const p=S.pitcher;
-  if(!p?.st||!document.getElementById('pt-season'))return;
-  const st=p.st;
-  const pa=parseInt(st.battersFaced)||1;
-  const era=parseFloat(st.era);
-  const whip=parseFloat(st.whip);
-  const ip=st.inningsPitched||'—';
-  const kPct=st.strikeOuts?((st.strikeOuts/pa)*100).toFixed(1)+'%':'—';
-  const bbPct=st.baseOnBalls?((st.baseOnBalls/pa)*100).toFixed(1)+'%':'—';
-  const k9=st.strikeOuts&&st.inningsPitched?((st.strikeOuts/parseFloat(st.inningsPitched))*9).toFixed(1):'—';
-  const fip=p.advanced?.fip!=null?p.advanced.fip.toFixed(2):'—';
-  const kbb=p.advanced?.kbbPct!=null?p.advanced.kbbPct.toFixed(1)+'%':'—';
-  const hr9=p.advanced?.hr9!=null?p.advanced.hr9.toFixed(2):'—';
-  const eraC=era<=3.50?'good':era>=5.00?'bad':'';
-  const whipC=whip<=1.10?'good':whip>=1.40?'bad':'';
-  const fipNum=parseFloat(fip);
-  const fipC=!isNaN(fipNum)?(fipNum<3.50?'good':fipNum>4.50?'bad':''):'';
-  const xfipNum=p.advanced?.xfip;
-  const xfipC=xfipNum!=null?(xfipNum<3.50?'good':xfipNum>4.50?'bad':''):'';
-  const xfipDisplay=xfipNum!=null?xfipNum.toFixed(2):'—';
-  const sieraNum=p.advanced?.siera;
-  const sieraC=sieraNum!=null?(sieraNum<3.50?'good':sieraNum>4.50?'bad':''):'';
-  const sieraDisplay=sieraNum!=null?sieraNum.toFixed(2):'—';
-  const kbbNum=parseFloat(kbb);
-  const kbbC=!isNaN(kbbNum)?(kbbNum>=15?'good':kbbNum<=8?'bad':''):'';
-  const hr9Num=parseFloat(hr9);
-  const hr9C=!isNaN(hr9Num)?(hr9Num<=0.9?'good':hr9Num>=1.5?'bad':''):'';
-  document.getElementById('pt-season').innerHTML=[['ERA',era?parseFloat(era).toFixed(2):'—',eraC,'Earned run average',STAT_INFO.ERA],['FIP',fip,fipC,'Fielding independent (strips luck)',STAT_INFO.FIP],['xFIP',xfipDisplay,xfipC,'FIP w/ normalized HR/FB',STAT_INFO.XFIP],['SIERA',sieraDisplay,sieraC,'Skill-based ERA: K, BB, batted-ball mix',STAT_INFO.SIERA],['WHIP',whip?parseFloat(whip).toFixed(2):'—',whipC,'Walks + hits per IP',STAT_INFO.WHIP],['K-BB%',kbb,kbbC,'Skill gap — best K predictor',STAT_INFO.KBBPCT],['HR/9',hr9,hr9C,'Home runs allowed per 9 IP',STAT_INFO.HR9],['K%',kPct,parseFloat(kPct)>=25?'good':parseFloat(kPct)<=18?'bad':'','Strikeout rate',STAT_INFO.KPCT_P],['BB%',bbPct,parseFloat(bbPct)<=6?'good':parseFloat(bbPct)>=10?'bad':'','Walk rate',STAT_INFO.BBPCT_P],['IP',ip,'','Innings pitched',STAT_INFO.IP],['K/9',k9,'','Strikeouts per 9',STAT_INFO.K9],['GS',st.gamesStarted||'—','','Games started',STAT_INFO.GS]].map(([l,v,c,ctx,info])=>statBox(l,v,ctx,c,info)).join('');
-}
-
-async function loadPitcherStatcast(pitcherId){
-  const el=document.getElementById('pt-statcast');
-  if(!el)return;
-  el.innerHTML='<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Loading pitcher Statcast...</div>';
-  const pid=String(pitcherId);
-
-  const safeRows=(text,label)=>{
-    if(!text||text.trim().startsWith('<')){console.warn(`[PitcherStatcast] ${label} returned HTML or empty`);return[];}
-    const rows=parseCSV(text);
-    log(`[PitcherStatcast] ${label}: ${rows.length} rows, cols:`,rows[0]?Object.keys(rows[0]).join(', '):'none');
-    return rows;
-  };
-  const findRow=(rows,label)=>{
-    const row=rows.find(r=>String(r.player_id||'').trim()===pid);
-    log(`[PitcherStatcast] ${label} match for pid ${pid}:`,row?'found':'not found');
-    return row||null;
-  };
-  const col=(row,...keys)=>{if(!row)return null;for(const k of keys){const v=row[k];if(v!=null&&v!=='')return v;}return null;};
-  const fmtPct=(v,digits=1)=>{const n=parseFloat(v);return isNaN(n)?'—':n.toFixed(digits)+'%';};
-  const fmtVal=(v,digits=2)=>{const n=parseFloat(v);return isNaN(n)?'—':n.toFixed(digits);};
-
-  try{
-    const [scRes,expRes,cswRes,bbRes]=await Promise.allSettled([
-      api.savantStatcast('pitcher'),
-      api.savantExpected('pitcher'),
-      api.savantCsw(),
-      api.savantBattedBall('pitcher'),
-    ]);
-
-    const scRows  = safeRows(scRes.status==='fulfilled'?scRes.value:'',  'statcast');
-    const expRows = safeRows(expRes.status==='fulfilled'?expRes.value:'', 'expected');
-    const cswRows = safeRows(cswRes.status==='fulfilled'?cswRes.value:'', 'arsenal');
-    const bbRows  = safeRows(bbRes.status==='fulfilled'?bbRes.value:'',   'batted-ball');
-
-    const scRow  = findRow(scRows,  'statcast');
-    const expRow = findRow(expRows, 'expected');
-    // Batted-ball leaderboard keys by `id` rather than `player_id`. Rates are
-    // returned as decimals (0.45 = 45%) — multiply by 100 for display/usage.
-    const bbRow = bbRows.find(r=>String(r.id||r.player_id||'').trim()===pid) || null;
-
-    // Pitch-arsenal: one row per pitch type — weighted average across all pitches
-    const arsenalRows=cswRows.filter(r=>String(r.player_id||'').trim()===pid);
-    log('[PitcherStatcast] arsenal rows for pid:',arsenalRows.length);
-    const weightedAvg=(field)=>{
-      if(!arsenalRows.length)return null;
-      let total=0,weighted=0;
-      arsenalRows.forEach(r=>{
-        const usage=parseFloat(r.pitch_usage||0)||0;
-        const val=parseFloat(r[field]||0)||0;
-        weighted+=val*usage; total+=usage;
-      });
-      return total>0?(weighted/total).toFixed(1):null;
-    };
-    const whiffRaw   = weightedAvg('whiff_percent');
-    const kPctRaw    = weightedAvg('k_percent');
-    const putAwayRaw = weightedAvg('put_away');
-
-    // Statcast pitcher: Barrel%, HH%, Avg EV.
-    // GB% and FB% come from the batted-ball leaderboard (true rates) — the `gb`
-    // and `fbld` columns on the statcast endpoint are avg EV mph on those
-    // batted-ball types, not rates.
-    const gbDecimal   = bbRow ? parseFloat(bbRow.gb_rate) : NaN;
-    const fbDecimal   = bbRow ? parseFloat(bbRow.fb_rate) : NaN;
-    const gbRaw        = isFinite(gbDecimal) ? gbDecimal*100 : null;
-    const fbRaw        = isFinite(fbDecimal) ? fbDecimal*100 : null;
-    const brlRaw       = col(scRow,'brl_percent','brl_pa');
-    const hhRaw        = col(scRow,'ev95percent','hard_hit_percent');
-    const evRaw        = col(scRow,'avg_hit_speed','avg_exit_velocity');
-
-    // Expected pitcher: xwOBA against, xERA
-    const xwobaRaw     = col(expRow,'est_woba','xwoba');
-    const xeraRaw      = col(expRow,'xera','xERA');
-
-    const whiffPct     = fmtPct(whiffRaw);
-    const kPct         = fmtPct(kPctRaw);
-    const putAway      = fmtPct(putAwayRaw);
-    const gbPct        = fmtPct(gbRaw);
-    const fbPct        = fmtPct(fbRaw);
-    const brlAgainst   = fmtPct(brlRaw);
-    const hhAgainst    = fmtPct(hhRaw);
-    const avgEVAgainst = evRaw?fmtVal(evRaw,1)+' mph':'—';
-    const xwobaPct     = fmtVal(xwobaRaw,3);
-    const xERAVal      = fmtVal(xeraRaw,2);
-
-    // Color thresholds must match STAT_INFO entries below (otherwise the box
-     // color contradicts what the tooltip says is good/avg/bad).
-    const whiffC  = whiffPct!=='—'?(parseFloat(whiffPct)>=30?'good':parseFloat(whiffPct)<=20?'bad':''):'';
-    const kC      = kPct!=='—'?(parseFloat(kPct)>=25?'good':parseFloat(kPct)<=18?'bad':''):'';
-    const putAwayC= putAway!=='—'?(parseFloat(putAway)>=22?'good':parseFloat(putAway)<=15?'bad':''):'';
-    const gbC     = gbPct!=='—'?(parseFloat(gbPct)>=50?'good':parseFloat(gbPct)<=38?'bad':''):'';
-    const brlC    = brlAgainst!=='—'?(parseFloat(brlAgainst)<=4?'good':parseFloat(brlAgainst)>=10?'bad':''):'';
-    const hhC     = hhAgainst!=='—'?(parseFloat(hhAgainst)<=35?'good':parseFloat(hhAgainst)>=45?'bad':''):'';
-    const xeraC   = xERAVal!=='—'?(parseFloat(xERAVal)<=3.50?'good':parseFloat(xERAVal)>=5.00?'bad':''):'';
-
-    S.pitcherStatcast={
-      whiff:    parseFloat(whiffRaw)||null,
-      kPct:     parseFloat(kPctRaw)||null,
-      putAway:  parseFloat(putAwayRaw)||null,
-      gbPct:    parseFloat(gbRaw)||null,
-      fbPct:    parseFloat(fbRaw)||null,
-      brlAgainst: parseFloat(brlRaw)||null,
-      hhAgainst:  parseFloat(hhRaw)||null,
-      xwoba:    parseFloat(xwobaRaw)||null,
-      xera:     parseFloat(xeraRaw)||null,
-    };
-
-    // Recompute pitcher metrics now that FB% is available — gives us xFIP and SIERA
-    if(S.pitcher?.st){
-      S.pitcher.advanced=_computePitcherMetrics(S.pitcher.st,S.pitcherStatcast);
-      _renderPitcherSeasonBoxes();
-    }
-
-    const boxes=[
-      statBox('Whiff%',    whiffPct,     'Whiff rate per pitch',       whiffC,   STAT_INFO.WHIFF_P),
-      statBox('K%',        kPct,         'Strikeout rate',             kC,       STAT_INFO.KPCT_P),
-      statBox('Put Away%', putAway,      '2-strike put-away rate',     putAwayC, STAT_INFO.PUTAWAY),
-      statBox('GB%',       gbPct,        'Ground ball rate',           gbC,      STAT_INFO.GB_P),
-      statBox('FB%',       fbPct,        'Fly ball rate',              '',       STAT_INFO.FB_P),
-      statBox('Barrel% vs',brlAgainst,   'Barrels allowed',            brlC,     STAT_INFO.BARREL_VS),
-      statBox('HH% vs',   hhAgainst,    'Hard contact allowed',       hhC,      STAT_INFO.HH_VS),
-      statBox('Avg EV vs',avgEVAgainst, 'Avg exit velo against',      '',       STAT_INFO.EV_VS),
-      statBox('xwOBA vs', xwobaPct,     'Expected wOBA against',      '',       STAT_INFO.XWOBA_VS),
-      statBox('xERA',     xERAVal,      'Expected ERA',               xeraC,    STAT_INFO.XERA),
-    ].join('');
-
-    if(!scRow&&!expRow&&arsenalRows.length===0){
-      el.innerHTML='<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">No Statcast data found for this pitcher.</div>';
-    }else{
-      el.innerHTML=boxes;
-    }
-
-    // Update S.pitcherPitches with real Statcast usage so the Pitcher Stats tab
-    // and scoring both use actual pitch mix instead of the generic hand default.
-    // Sweeper/slurve fold into Slider/Splitter since PITCH_TYPES doesn't split them.
-    const CODE_TO_TYPE={FF:'4-Seam FB',SI:'Sinker',FC:'Cutter',SL:'Slider',ST:'Slider',SV:'Slider',CU:'Curveball',KC:'Curveball',CH:'Changeup',FS:'Splitter',FO:'Splitter'};
-    const arsenalPit=S.pitchArsenal?.pitchers?.[pid];
-    // Accumulate raw fractional usages first; normalize+round once at the end so
-    // the integer percentages sum to exactly 100 (largest-remainder method).
-    const rawMix=Object.fromEntries(PITCH_TYPES.map(t=>[t,0]));
-    if(arsenalRows.length){
-      // Live Savant (min=3 per pitch type) — most complete; prefer over local cache
-      for(const r of arsenalRows){
-        const type=CODE_TO_TYPE[r.pitch_type];
-        if(type)rawMix[type]+=parseFloat(r.pitch_usage||0);
-      }
-    }else if(arsenalPit){
-      // Fallback: local cache (min=50 per pitch type) — may miss low-volume pitches
-      for(const[code,data] of Object.entries(arsenalPit.pitches)){
-        const type=CODE_TO_TYPE[code];
-        if(type)rawMix[type]+=(data.usage||0);
-      }
-    }
-    const newMix=normalizePitchMix(rawMix);
-    if(Object.values(newMix).some(v=>v>0)){
-      Object.assign(S.pitcherPitches,newMix);
-      buildPitchMixGrid('pitch-mix-grid',S.pitcherPitches);
-      document.getElementById('pt-pitchmix').innerHTML=PITCH_TYPES.map(pt=>{const p=S.pitcherPitches[pt]||0;if(!p)return'';return`<div class="pitch-row"><span class="pitch-label">${pt}</span><div class="pitch-bar-wrap"><div class="pitch-bar" style="width:${p}%;background:${p>35?'#A71930':'#3a3560'}"></div></div><span class="pitch-pct">${p}%</span></div>`;}).join('');
-    }
-  }catch(e){
-    console.error('[PitcherStatcast] Error:',e);
-    el.innerHTML=`<div style="font-size:11px;color:#777;font-family:\'Chakra Petch\',monospace;grid-column:span 3;">Pitcher Statcast unavailable.</div>`;
-  }
-}
+// (onPitcherSearch, selectPitcher, loadPitcherStatcast moved to pitcher.js;
+//  renderPitcherTab + _renderPitcherSeasonBoxes moved to ui/render.js.
+//  pitcher.js dispatches `pitcher:selected` so we can re-fire the matchup +
+//  dashboard loaders without pitcher.js importing upward.)
+document.addEventListener('pitcher:selected', (e) => {
+  loadMatchupStats();
+  if (e.detail?.fullReload) loadDashboard();
+  else _renderPitcherCard();
+});
 
 // ═══════════ UMPIRE ════════════════════════════════════════════════════════════
 
