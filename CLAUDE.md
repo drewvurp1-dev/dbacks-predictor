@@ -262,8 +262,9 @@ After extraction #7: ~1,945 lines — orchestration + bootstrap + corbet/predict
 ## Git Workflow
 
 - Develop on a feature branch (`claude/...`)
-- After pushing, create a PR and squash-merge to `main` via the GitHub MCP tools
-- Use `git rebase origin/main` if the branch has fallen behind before merging
+- **After every push, ALWAYS create a PR and squash-merge to `main` via the GitHub MCP tools — no exceptions, even for small fixes**
+- If the merge fails with a conflict, run `git fetch origin main && git rebase origin/main`, force-push with `--force-with-lease`, then retry the merge
+- Use `git rebase origin/main` proactively if the branch has fallen behind before merging
 
 ## Custom Agents (.claude/agents/)
 
