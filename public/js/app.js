@@ -59,6 +59,7 @@ import {
 import {
   pushRecord, pullRecord, _initSyncBtnLabel,
 } from './sync.js';
+import { loadCalibration, recalibrate } from './calibrate.js';
 import {
   _pushSubscribe, _pushTest, _initPushBtn, registerSW,
 } from './push.js';
@@ -99,7 +100,7 @@ document.addEventListener('modal:closed', () => _renderPitcherCard());
 // bets.js owns S.betLog + the gradeLog/pending/perf/weights stores and emits
 // these events on mutation. We re-render the affected panels from here so
 // bets.js stays free of upward imports (ui/record.js — PR3 — will take over).
-document.addEventListener('bets:changed',   () => renderRecord());
+document.addEventListener('bets:changed',   () => { renderRecord(); recalibrate(S.betLog); });
 document.addEventListener('grades:changed', () => renderGradePanel());
 
 function openPlayerDetails(playerId) {
@@ -1178,7 +1179,8 @@ function generateCorbetBets(score,factors,rawMarketMap){
     }
     const dv=devig(calcOver,calcUnder);
     if(!dv)return;
-    const modelProb=modelProbability(propKey,line,score);
+    const _comp={};
+    const modelProb=modelProbability(propKey,line,score,_comp);
     if(modelProb===null){log('[props]',propKey,'line',line,'modelProb null');return;}
 
     const delta=modelProb-dv.overProb;
@@ -1214,6 +1216,10 @@ function generateCorbetBets(score,factors,rawMarketMap){
       delta,absDelta,ev,edgeStrength,marketConfidence,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
+      // Calibration breadcrumbs — modelProbRaw is the pre-Platt probability, and
+      // scoreBase/rateBase are the blend inputs. Persisted on save so calibrate.js
+      // can re-fit the Platt correction + blend weight from graded outcomes.
+      modelProbRaw:_comp.raw??null,scoreBase:_comp.scoreBase??null,rateBase:_comp.rateBase??null,
       overBest,underBest,
       books:mkt.books||[],
       odds:bestOdds?.price||0,
@@ -1941,6 +1947,8 @@ document.addEventListener('change', _dispatchAction);
 // data-action delegation above. window.S is still set in state.js for
 // charter.js (classic script) which reads it directly.
 
+loadCalibration();         // load persisted Platt/blend params into memory
+recalibrate(S.betLog);     // refit from the current bet log (catches synced grades) before any prediction runs
 onStadiumChange();
 loadPlayer();
 dedupePending(); // remove legacy duplicate Pending Grade cards

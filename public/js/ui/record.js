@@ -9,6 +9,10 @@ import { show, hide, setText } from '../utils.js';
 import { bookAbbrev, devig } from '../betting.js';
 import { modelProbability } from '../predict.js';
 import {
+  getCalibrationParams, getGlobalCalibration, getBlendWeight, isBlendTuned,
+} from '../calibrate.js';
+import { DEFAULT_BLEND_W, MIN_CAL_SAMPLE } from '../constants.js';
+import {
   gradePerformance,
   getPending, getGradeLog, getFactorPerf, getFactorWeights,
 } from '../bets.js';
@@ -431,6 +435,50 @@ function _calProfit(odds){
   return odds>0?odds/100:100/Math.abs(odds);
 }
 
+const _CAL_PROP_LABEL={
+  batter_hits:'Hits',batter_total_bases:'Total Bases',batter_home_runs:'Home Runs',
+  batter_rbis:'RBI',batter_walks:'Walks',batter_strikeouts:'Strikeouts',
+  batter_runs_scored:'Runs',batter_hits_runs_rbis:'H+R+RBI',
+};
+const _sig=z=>1/(1+Math.exp(-z));
+const _logit=p=>Math.log(p/(1-p));
+
+// "Live Model Corrections" table — reflects exactly what calibrate.js applies to
+// new predictions. Per prop: settled count, Platt status (+ the shift it puts on
+// a representative 60% Over read), and the learned blend weight vs the default.
+function renderCalibrationCorrections(settled){
+  const el=document.getElementById('cal-corrections');
+  if(!el)return;
+  const counts={};
+  settled.forEach(b=>{if(b.propKey)counts[b.propKey]=(counts[b.propKey]||0)+1;});
+  const global=getGlobalCalibration();
+  const props=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  const header=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 110px 1fr;"><span>Prop</span><span>Graded</span><span>Calibration</span><span>Blend (score wt)</span></div>`;
+  let rows='';
+  props.forEach(k=>{
+    const n=counts[k];
+    const params=getCalibrationParams(k);
+    let calCell;
+    if(params){
+      const shift=_sig(params.a*_logit(0.6)+params.b)*100-60;
+      const cls=Math.abs(shift)<=2?'cal-cell-neutral':shift>0?'cal-cell-good':'cal-cell-bad';
+      calCell=`<span class="${cls}">Active · ${shift>0?'+':''}${shift.toFixed(1)}% @60</span>`;
+    }else if(global){
+      calCell=`<span class="cal-cell-muted">Pooled · ${n}/${MIN_CAL_SAMPLE}</span>`;
+    }else{
+      calCell=`<span class="cal-cell-muted">Building · ${n}/${MIN_CAL_SAMPLE}</span>`;
+    }
+    const w=getBlendWeight(k);
+    const tuned=isBlendTuned(k);
+    const wCls=tuned?(Math.abs(w-DEFAULT_BLEND_W)>=0.02?'cal-cell-neutral':'cal-cell-muted'):'cal-cell-muted';
+    const wTxt=tuned?`${(w*100).toFixed(0)}% (tuned)`:`${(DEFAULT_BLEND_W*100).toFixed(0)}% (default)`;
+    rows+=`<div class="cal-row" style="grid-template-columns:1fr 56px 110px 1fr;"><span class="cal-cell-neutral">${_CAL_PROP_LABEL[k]||k}</span><span class="cal-cell-muted">${n}</span>${calCell}<span class="${wCls}">${wTxt}</span></div>`;
+  });
+  if(!rows)rows=`<div class="cal-row cal-empty-row">No graded bets yet — corrections stay off until data accumulates.</div>`;
+  const globalNote=global?`<div class="cal-section-note" style="margin-top:6px;">Pooled fallback active (${global.n} bets) — used for props below their own ${MIN_CAL_SAMPLE}-bet threshold.</div>`:'';
+  el.innerHTML=header+rows+globalNote;
+}
+
 export function renderCalibration(){
   // Eligible: graded (W/L/P) AND has modelProb captured at save time.
   // Pushes are excluded from hit-rate math but counted in totals.
@@ -445,6 +493,12 @@ export function renderCalibration(){
   const pendingOld=(S.betLog||[]).filter(b=>b.modelProb==null).length;
   summary.innerHTML=`${all.length} graded bet${all.length===1?'':'s'} with model data` +
     (pendingOld?` · ${pendingOld} older bet${pendingOld===1?'':'s'} excluded (no model data captured)`:'');
+
+  // ─── 0. Live corrections — what calibrate.js is currently applying ────────
+  // Shows, per prop, the settled-bet count, whether the Platt correction is
+  // live (and how much it shifts a typical 60% read), and the score↔rate blend
+  // weight vs the 25% default. Mirrors what modelProbability applies to new bets.
+  renderCalibrationCorrections(settled);
 
   // ─── 1. Predicted-probability calibration ─────────────────────────────────
   // Bucket bets by their predicted win prob (direction-adjusted). Compare avg

@@ -10,6 +10,7 @@ import {
   _shrunkRate, _binomGE, _convolveTBge, _log5,
   _handSplit, _poissonCDF,
 } from './player.js';
+import { applyCalibration, getBlendWeight } from './calibrate.js';
 
 // ── Gaussian sampler (Box–Muller) ───────────────────────────────────────────
 export function gaussianRandom(mean, std) {
@@ -179,11 +180,20 @@ export function _pitchMatchupReason(direction, propKey) {
 // Composes player rate stats, pitcher rate stats, park/weather, lineup
 // protection, pitch-matchup, recent form trend, and a score-based residual
 // into a single Over probability for the given prop + line.
-export function modelProbability(propKey,line,score){
+// `_components`, when supplied, is filled with the score-only / rate-only blend
+// inputs and the pre-calibration probability — generateCorbetBets passes one so
+// each saved bet records the data calibrate.js needs to re-tune later.
+export function modelProbability(propKey,line,score,_components){
   const ss=S.seasonStat;
   const pa=ss?.plateAppearances||1;
   const gamePAs=_gamePAs();
   let p=null;
+
+  // Learned score↔rate blend weight (defaults to DEFAULT_BLEND_W when untuned).
+  // _blend records the two components so calibrate.js can fit W from outcomes.
+  const blendW=getBlendWeight(propKey);
+  let _scoreBase=null,_rateBase=null;
+  const _blend=(sb,rb)=>{_scoreBase=sb;_rateBase=rb;return sb*blendW+rb*(1-blendW);};
 
   // Piecewise linear interpolation between three anchor points (score 20/50/80).
   // Linearly extrapolates outside [s1, s3] using the nearest segment's slope, so
@@ -236,14 +246,15 @@ export function modelProbability(propKey,line,score){
     const expectedAB=gamePAs*abPerPA;
     const k=Math.ceil(line+1e-9);
     const rateBase=_binomGE(expectedAB,pHit,k)*100;
-    // Score-based component (40%) so Grade-and-Learn weight adjustments produce
-    // a visible signal. Captures contact-quality factors the rate model doesn't see.
+    // Keep a small score-based component (25%) so contact-quality signals the
+    // rate model doesn't see (whiff, HH%, handOps) still influence the final
+    // probability. Anchors recalibrated for realistic ceilings.
     let scoreBase;
     if(line<=0.5)      scoreBase=lerp3(score,20,45,50,60,80,72);
     else if(line<=1.5) scoreBase=lerp3(score,20,15,50,28,80,42);
     else if(line<=2.5) scoreBase=lerp3(score,20, 3,50, 8,80,18);
     else               scoreBase=lerp3(score,20, 1,50, 3,80, 7);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
     // Pitch-mix wOBA delta — captures matchup signal beyond season-wide AVG/BAA.
     {const mu=_pitchMatchupFactor();
      if(mu)p+=Math.max(-3,Math.min(3,mu.wobaDelta*150));}
@@ -305,9 +316,8 @@ export function modelProbability(propKey,line,score){
     const k=Math.ceil(line+1e-9);
     const rateBase=_convolveTBge(perAB,expectedAB,k)*100;
 
-    // Score-based component (40%) — captures contact-quality and OPS-vs-hand
-    // signals beyond what season counting stats see, and lets Grade-and-Learn
-    // weight adjustments visibly affect output. Anchors recalibrated for
+    // Score-based component (25%) — captures contact-quality and OPS-vs-hand
+    // signals beyond what season counting stats see. Anchors recalibrated for
     // realistic ceilings (top of the 80-score band ≈ what a true .470-SLG bat
     // produces under typical AB volume).
     let scoreBase;
@@ -315,7 +325,7 @@ export function modelProbability(propKey,line,score){
     else if(line<=1.5) scoreBase=lerp3(score,20,18,50,32,80,50);
     else if(line<=2.5) scoreBase=lerp3(score,20, 8,50,16,80,30);
     else               scoreBase=lerp3(score,20, 3,50, 7,80,16);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
 
     // Pitch-mix wOBA delta — small additive bonus.
     {const mu=_pitchMatchupFactor();
@@ -346,7 +356,7 @@ export function modelProbability(propKey,line,score){
     const pHRrate=_log5(bHR_PA,pHR_PA,LG_HR_PA);
     const k=Math.ceil(line+1e-9);
     const rateBase=_binomGE(gamePAs,pHRrate,k)*100;
-    // Score-based component (40%) — captures barrel%, OPS-vs-hand, and other
+    // Score-based component (25%) — captures barrel%, OPS-vs-hand, and other
     // contact-quality signals the season HR rate misses (esp. for small-sample
     // rookies where xHR/PA leads HR/PA). Line-specific anchors keep blends
     // realistic at HR 1.5+ where the prop is genuinely rare.
@@ -354,7 +364,7 @@ export function modelProbability(propKey,line,score){
     if(line<=0.5)      scoreBase=lerp3(score,20, 4,50, 9,80,18);
     else if(line<=1.5) scoreBase=lerp3(score,20,0.2,50,0.5,80,1.8);
     else               scoreBase=lerp3(score,20,0.05,50,0.1,80,0.4);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
     p+=_ttopBonus();
     // Barrel% retained at the same magnitude — it's the single best predictor
     // of HR rate and can lead season HR/PA for hot-contact hitters. Cap ±2pp.
@@ -377,12 +387,13 @@ export function modelProbability(propKey,line,score){
     // P(walks ≥ k) over gamePAs Bernoulli trials. k = smallest integer > line,
     // so line=0.5→k=1, line=1.5→k=2, line=2.5→k=3, etc.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    // scoreBase weight (40%) retains influence for ump/recent-form/days-rest
-    // factors the binomial doesn't see, and lets Grade-and-Learn adjustments
-    // show up in output. Anchor at 80 trimmed to 42 to avoid overshooting
-    // elite-OBP rookies (old 60% + 48 anchor → 48% even when binomial was ~32%).
+    // scoreBase weight dropped 60% → 25% and anchor at 80 trimmed from 48 to
+    // 42. The binomial on shrunken BB rate is the principled signal here;
+    // score retains weight for ump/recent-form/days-rest factors the binomial
+    // doesn't see. Old weighting could push elite-OBP rookies to 48% on Walks
+    // 0.5 even when the matchup binomial sat at ~32%.
     const scoreBase=lerp3(score,20,15,50,28,80,42);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
   }
   else if(propKey==='batter_strikeouts'){
     // League avg K rate ~22% batter / ~22% pitcher. K rate stabilizes ~60 PA → priorN=40.
@@ -408,16 +419,17 @@ export function modelProbability(propKey,line,score){
     const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj+matchupK);
     // P(strikeouts ≥ k) over gamePAs Bernoulli trials. Generalized for any line.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    // scoreBase weight (40%) with line-specific anchors that mirror the
-    // binomial's natural distribution. Old single-anchor (28/48/68) was
-    // line-agnostic, overshooting K 1.5+ for high-K matchups (model 54%
-    // vs binomial truth ~34%) while merely tracking the binomial on K 0.5.
+    // scoreBase weight dropped 60% → 25% with line-specific anchors that
+    // mirror the binomial's natural distribution across the population at
+    // each line. Old single-anchor (28/48/68) was line-agnostic, which
+    // overshot K 1.5+ for high-K matchups (model 54% vs binomial truth ~34%)
+    // while merely tracking the binomial on K 0.5.
     let scoreBase;
     if(line<=0.5)      scoreBase=lerp3(score,20,35,50,50,80,65);
     else if(line<=1.5) scoreBase=lerp3(score,20,10,50,20,80,38);
     else if(line<=2.5) scoreBase=lerp3(score,20, 3,50, 8,80,22);
     else               scoreBase=lerp3(score,20, 1,50, 3,80,10);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
   }
   else if(propKey==='batter_rbis'){
     // Poisson on shrunken RBI/G is the principled signal. Scale the per-game
@@ -425,10 +437,11 @@ export function modelProbability(propKey,line,score){
     // proportionally more RBI opportunities. League avg RBI/G ~0.43.
     const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2);
     const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
-    // Score-based component (40%). Anchors calibrated so league-avg score (50)
-    // produces league-avg P(≥1 RBI) of ~33%.
+    // Score-based component dropped from 60% → 25% weight. Anchors recalibrated
+    // so league-avg score (50) produces league-avg P(≥1 RBI) of ~33% rather
+    // than the old 28% which biased toward Under across the board.
     const scoreBase=lerp3(score,20,15,50,30,80,42);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
     // Protection cut from ±5pp to ±3pp — strong protection behind you keeps
     // pitchers from intentionally walking you, but the effect is smaller than
     // the previous magnitude implied.
@@ -439,22 +452,26 @@ export function modelProbability(propKey,line,score){
     // Poisson on shrunken Runs/G. League avg ~0.55. PA-scaled like RBI.
     const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2);
     const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
-    // scoreBase weight (40%). Anchors calibrated so a true elite leadoff bat
-    // (score=80, runs/G ~0.85) blends to ~57%, matching observed market
-    // consensus on leadoff Runs Over 0.5 props.
+    // scoreBase weight dropped 50% → 25%. Anchors recalibrated so a true elite
+    // leadoff bat (score=80, runs/G ~0.85) blends to ~57%, matching observed
+    // market consensus on leadoff Runs Over 0.5 props. Old anchor of 50@80
+    // combined with 50/50 blend let the prop extrapolate to 60%+ on hot bats
+    // batting low in the order — exactly the Waldschmidt failure mode.
     const scoreBase=lerp3(score,20,15,50,35,80,50);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
     // Protection cut from ±5 → ±3 — captured partly by OBP-loaded score.
     if(S.lineupProtection?.tier==='strong')p+=3;
     else if(S.lineupProtection?.tier==='weak')p-=3;
   }
   else if(propKey==='batter_hits_runs_rbis'){
     const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs);
-    // Score-based component (40%). The Bayesian-shrunk empirical CDF (or
-    // Poisson fallback) is the principled signal; score captures contextual
-    // factors (weather, umpire, matchup) and lets Grade-and-Learn show up.
+    // scoreBase weight dropped 50% → 25%, matching the pattern applied to
+    // every other rate-based prop. The Bayesian-shrunk empirical CDF (or
+    // Poisson fallback) is the principled signal here; the heavy 50% score
+    // weight was pulling low-stat-line starters' projections down by ~25pp
+    // even when their per-PA bottom-up math said they were a coin flip.
     const scoreBase=lerp3(score,20,20,50,38,80,60);
-    p=scoreBase*0.40+rateBase*0.60;
+    p=_blend(scoreBase,rateBase);
     // Composite of hits (no protection effect) + runs + RBI (both protection-sensitive).
     // Roughly 2/3 the magnitude of RBI/Runs since hits are unaffected.
     if(S.lineupProtection?.tier==='strong')p+=3;
@@ -578,6 +595,13 @@ export function modelProbability(propKey,line,score){
   }
 
   p+=Math.max(-6,Math.min(6,trendAdj));
+
+  // Learned Platt correction (identity until enough graded bets accumulate).
+  // Capture the pre-calibration value + blend components for the caller before
+  // applying, so refits train on the raw probability rather than a corrected one.
+  const _rawP=p;
+  p=applyCalibration(propKey,p);
+  if(_components){_components.raw=_rawP;_components.scoreBase=_scoreBase;_components.rateBase=_rateBase;}
 
   // Line-specific hard clamps applied last. Each tier tightens as the prop
   // becomes harder to clear — at score=20 a hitter's true probability of ≥3 TB
