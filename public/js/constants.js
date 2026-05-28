@@ -15,10 +15,17 @@ export const SEASON = 2026;
 export const KELLY_FRACTION = 0.125;
 
 // ── Monte Carlo edge-stability gate ──────────────────────────────────────────
-// Minimum monteCarloConfidence (% of noisy-score sims where the edge holds) for
-// a bet to qualify as recommended. Shared by _getTopBets (player stars /
-// auto-save) and the dashboard best-bets strip so both agree on what qualifies.
-export const MC_CONFIDENCE_MIN = 85;
+// Minimum monteCarloConfidence (% of sims where the edge holds) for a bet to
+// qualify as recommended. Shared by _getTopBets (player stars / auto-save) and
+// the dashboard best-bets strip so both agree on what qualifies.
+//
+// Tuned for the two-channel MC (score + rate-model uncertainty). The prior
+// score-only MC saturated near 100%, so its gate sat at 85; the wider, honest
+// distribution needs a lower bar to admit the same caliber of edge (~2–3pp for
+// well-sampled bats, more for small samples — which is the intended behavior).
+// NOTE: this is a modeled estimate — re-tune empirically once enough graded
+// bets accumulate to measure hit-rate by MC bucket (see renderCalibration).
+export const MC_CONFIDENCE_MIN = 75;
 
 // ── Roster ───────────────────────────────────────────────────────────────────
 export const CORBET_ROSTER = [

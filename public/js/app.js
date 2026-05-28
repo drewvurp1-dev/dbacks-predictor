@@ -1226,10 +1226,11 @@ function generateCorbetBets(score,factors,rawMarketMap){
       delta,absDelta,ev,edgeStrength,marketConfidence,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
-      // Calibration breadcrumbs — modelProbRaw is the pre-Platt probability, and
-      // scoreBase/rateBase are the blend inputs. Persisted on save so calibrate.js
+      // Calibration breadcrumbs — modelProbRaw is the pre-Platt probability,
+      // scoreBase/rateBase are the blend inputs, and adjOffset is the additive
+      // correction layered on top of the blend. Persisted on save so calibrate.js
       // can re-fit the Platt correction + blend weight from graded outcomes.
-      modelProbRaw:_comp.raw??null,scoreBase:_comp.scoreBase??null,rateBase:_comp.rateBase??null,
+      modelProbRaw:_comp.raw??null,scoreBase:_comp.scoreBase??null,rateBase:_comp.rateBase??null,adjOffset:_comp.adjOffset??null,
       overBest,underBest,
       books:mkt.books||[],
       odds:bestOdds?.price||0,

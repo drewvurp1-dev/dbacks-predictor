@@ -74,6 +74,24 @@ export function _mcVariance() {
   return Math.max(4.5, Math.min(15, sigma));
 }
 
+// ── Rate-model uncertainty (probability space, pp) ───────────────────────────
+// _mcVariance perturbs the *score*, but score only drives the scoreBase channel
+// (~40% of the blend); the rate model (binomial / convolution on season counting
+// stats) is score-independent, so a score-only Monte Carlo treats the dominant
+// signal as certain and saturates near 100% confidence. This returns the
+// sampling uncertainty of the rate estimate in percentage points so the MC loop
+// can perturb the assembled probability directly. The season rates are estimated
+// from PA observations, so their error shrinks with sample size: well-sampled
+// bats (≥400 PA) carry ~3pp, mid-sample (~150 PA) ~6pp, and tiny/zero samples
+// ~9pp. Returned value is an independent Gaussian σ added on top of the score
+// channel's contribution.
+export function _rateUncertaintyPp() {
+  const pa = parseInt(S.seasonStat?.plateAppearances) || 0;
+  if (pa <= 0) return 9;
+  const capped = Math.min(pa, 400);
+  return Math.max(3, Math.min(9, 3 + (400 - capped) / 400 * 6));
+}
+
 // ── Pitch-mix matchup ───────────────────────────────────────────────────────
 // Pitch-mix vs batter weakness. Loaded once per page from /pitch-arsenal (a
 // snapshot of Baseball Savant pitcher arsenal + batter pitch-arsenal
@@ -192,8 +210,8 @@ export function modelProbability(propKey,line,score,_components){
   // Learned score↔rate blend weight (defaults to DEFAULT_BLEND_W when untuned).
   // _blend records the two components so calibrate.js can fit W from outcomes.
   const blendW=getBlendWeight(propKey);
-  let _scoreBase=null,_rateBase=null;
-  const _blend=(sb,rb)=>{_scoreBase=sb;_rateBase=rb;return sb*blendW+rb*(1-blendW);};
+  let _scoreBase=null,_rateBase=null,_blendBase=null;
+  const _blend=(sb,rb)=>{_scoreBase=sb;_rateBase=rb;_blendBase=sb*blendW+rb*(1-blendW);return _blendBase;};
 
   // Piecewise linear interpolation between three anchor points (score 20/50/80).
   // Linearly extrapolates outside [s1, s3] using the nearest segment's slope, so
@@ -596,6 +614,13 @@ export function modelProbability(propKey,line,score,_components){
 
   p+=Math.max(-6,Math.min(6,trendAdj));
 
+  // Additive offset layered on top of the score↔rate blend (park, TTO, pitch-mix,
+  // Statcast, recent-form trend). Captured pre-clamp so calibrate.js's blend
+  // re-tune can hold these corrections fixed while it searches W — the old fit
+  // optimized W against the bare blend and ignored every adjustment, biasing the
+  // learned weight relative to the probability the model actually emits.
+  const _adjOffset=(_blendBase!=null)?(p-_blendBase):0;
+
   // Line-specific hard clamps applied as a pre-calibration sanity bound. Each
   // tier tightens as the prop becomes harder to clear — at score=20 a hitter's
   // true probability of ≥3 TB is ~2%, so a 20pp floor (the old uniform clamp)
@@ -646,23 +671,36 @@ export function modelProbability(propKey,line,score,_components){
   // actual input to calibration — never on an already-corrected value.
   const _rawP=p;
   p=applyCalibration(propKey,p);
-  if(_components){_components.raw=_rawP;_components.scoreBase=_scoreBase;_components.rateBase=_rateBase;}
+  if(_components){_components.raw=_rawP;_components.scoreBase=_scoreBase;_components.rateBase=_rateBase;_components.adjOffset=_adjOffset;}
 
   return p;
 }
 
 // ── Monte Carlo confidence ──────────────────────────────────────────────────
-// % of noisy-score simulations where the edge holds. Requires S player fields
-// to be swapped in before calling (same window as generateCorbetBets).
+// % of simulations where the edge holds — an "edge stability" measure, not a win
+// probability. Two independent noise sources are combined so the result reflects
+// the model's *total* uncertainty rather than only its sensitivity to the score
+// input:
+//   1. Score channel — perturb the score and re-run modelProbability, which
+//      propagates the noise through the blend, clamps and calibration exactly as
+//      production does. This captures only the scoreBase contribution.
+//   2. Rate channel — add a Gaussian in probability space (pp) sized by
+//      _rateUncertaintyPp, representing the sampling error of the season-rate
+//      inputs that the score channel can't see. Without this the MC saturated
+//      near 100% for any edge, making the confidence gate effectively binary on
+//      delta and blind to small-sample players.
 export function monteCarloConfidence(propKey, line, score, marketOverProb, direction = 'Over', N = 2000) {
-  let edgeCount = 0;
+  let edgeCount = 0, valid = 0;
   const isUnder = String(direction).toLowerCase() === 'under';
-  const sigma = _mcVariance();
+  const sigmaScore = _mcVariance();
+  const sigmaRate = _rateUncertaintyPp();
   for (let i = 0; i < N; i++) {
-    const ns = Math.max(4, Math.min(96, gaussianRandom(score, sigma)));
+    const ns = Math.max(4, Math.min(96, gaussianRandom(score, sigmaScore)));
     const prob = modelProbability(propKey, line, ns);
     if (prob === null) continue;
-    if (isUnder ? prob < marketOverProb : prob > marketOverProb) edgeCount++;
+    valid++;
+    const noisyProb = Math.max(0, Math.min(100, prob + gaussianRandom(0, sigmaRate)));
+    if (isUnder ? noisyProb < marketOverProb : noisyProb > marketOverProb) edgeCount++;
   }
-  return (edgeCount / N) * 100;
+  return valid ? (edgeCount / valid) * 100 : 0;
 }

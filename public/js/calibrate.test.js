@@ -47,14 +47,51 @@ test('fitPlatt — recovers an under-confident model (a>1)', () => {
 test('fitBlend — favors the rate component when it is the predictive one', () => {
   // rate perfectly separates outcomes; score is constant noise. Best raw weight
   // is ~0, shrunk toward DEFAULT by sample size — so below the default either way.
-  const sb = [], rb = [], ys = [];
+  const sb = [], rb = [], adj = [], ys = [];
   for (let i = 0; i < 60; i++) {
     const win = i % 2 === 0;
-    sb.push(50); rb.push(win ? 72 : 28); ys.push(win ? 1 : 0);
+    sb.push(50); rb.push(win ? 72 : 28); adj.push(0); ys.push(win ? 1 : 0);
   }
-  const w = fitBlend(sb, rb, ys);
+  const w = fitBlend(sb, rb, adj, ys);
   assert.ok(w < DEFAULT_BLEND_W, `w=${w} should be below default ${DEFAULT_BLEND_W}`);
   assert.ok(w >= 0, `w=${w} out of range`);
+});
+
+// ── fitBlend accounts for the additive offset ────────────────────────────────
+test('fitBlend — a positive adjOffset shifts the fitted weight vs ignoring it', () => {
+  // score and rate are each weakly predictive with independent noise, so the
+  // optimum is interior. A large constant positive offset pushes probabilities
+  // toward saturation, which changes the loss-minimizing blend — proving the
+  // offset is actually folded into the fit rather than dropped. (Verified
+  // direction: a +offset lowers the fitted W in this regime.) A seeded PRNG
+  // keeps the dataset deterministic.
+  const rng = (seed => () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; })(42);
+  const build = adjConst => {
+    const sb = [], rb = [], adj = [], ys = [];
+    for (let i = 0; i < 600; i++) {
+      const win = rng() < 0.5;
+      sb.push(50 + (win ? 12 : -12) + (rng() - 0.5) * 30);
+      rb.push(50 + (win ? 12 : -12) + (rng() - 0.5) * 30);
+      adj.push(adjConst); ys.push(win ? 1 : 0);
+    }
+    return [sb, rb, adj, ys];
+  };
+  const wNoOffset = fitBlend(...build(0));
+  const wOffset = fitBlend(...build(20));
+  assert.ok(wOffset !== wNoOffset, `offset should change the fit (got ${wOffset} vs ${wNoOffset})`);
+  assert.ok(wOffset >= 0 && wOffset <= 1, `wOffset=${wOffset} out of range`);
+});
+
+// ── recalibrate threads adjOffset through to fitBlend ─────────────────────────
+test('fitBlend — legacy bets with no adjOffset are treated as zero offset', () => {
+  // Missing/non-numeric offsets must not throw or NaN out the loss.
+  const sb = [], rb = [], adj = [], ys = [];
+  for (let i = 0; i < 50; i++) {
+    const win = i % 2 === 0;
+    sb.push(60); rb.push(win ? 70 : 30); adj.push(undefined); ys.push(win ? 1 : 0);
+  }
+  const w = fitBlend(sb, rb, adj, ys);
+  assert.ok(Number.isFinite(w) && w >= 0 && w <= 1, `w=${w} should be a valid weight`);
 });
 
 // ── End-to-end: recalibrate then apply ───────────────────────────────────────

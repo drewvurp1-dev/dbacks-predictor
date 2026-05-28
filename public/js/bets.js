@@ -126,7 +126,7 @@ export function saveBet(key, btn){
   const playerName=b._playerName||S.playerName;
   const bet={id:Date.now(),date,player:playerName,playerId:_playerIdByName(playerName),opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore||S.lastScore,result:null,
     modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
-    modelProbRaw:b.modelProbRaw??null,scoreBase:b.scoreBase??null,rateBase:b.rateBase??null,
+    modelProbRaw:b.modelProbRaw??null,scoreBase:b.scoreBase??null,rateBase:b.rateBase??null,adjOffset:b.adjOffset??null,
     propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null};
   S.betLog.unshift(bet);
   localStorage.setItem('corbetRecord',JSON.stringify(S.betLog));
@@ -193,7 +193,7 @@ export function autoSaveAtFirstPitch(){
     const betOdds=b.direction?.toLowerCase()==='over'?b.overBest?.price:b.underBest?.price;
     S.betLog.unshift({id:Date.now()+i,date,player:b.playerName,playerId:_playerIdByName(b.playerName),opponent:S.opposingTeamAbbr||'',prop,odds:betOdds,rating,score:b._playerScore,result:null,
       modelProb:b.modelProb??null,mcConfidence:b.mcConfidence??null,marketOverProb:b.marketOverProb??null,
-      modelProbRaw:b.modelProbRaw??null,scoreBase:b.scoreBase??null,rateBase:b.rateBase??null,
+      modelProbRaw:b.modelProbRaw??null,scoreBase:b.scoreBase??null,rateBase:b.rateBase??null,adjOffset:b.adjOffset??null,
       propKey:b.propKey??null,direction:b.direction??null,line:b.line??null,ev:b.ev??null});
     added++;
   });

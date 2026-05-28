@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { S } from './state.js';
 import {
-  gaussianRandom, _slumpPenalty, _mcVariance,
+  gaussianRandom, _slumpPenalty, _mcVariance, _rateUncertaintyPp,
   _pitchMatchupReason, modelProbability, monteCarloConfidence,
 } from './predict.js';
 
@@ -99,6 +99,20 @@ test('_mcVariance — small sample (<50 PA) inflates sigma', () => {
   S.seasonStat = { plateAppearances: 30 };
   const smallSample = _mcVariance();
   assert.ok(smallSample > stable);
+});
+
+// ── _rateUncertaintyPp ──────────────────────────────────────────────────────
+test('_rateUncertaintyPp — clamps to [3, 9] and shrinks with sample size', () => {
+  S.seasonStat = { plateAppearances: 600 };
+  const wellSampled = _rateUncertaintyPp();
+  S.seasonStat = { plateAppearances: 150 };
+  const midSample = _rateUncertaintyPp();
+  S.seasonStat = { plateAppearances: 0 };
+  const noSample = _rateUncertaintyPp();
+  assert.equal(wellSampled, 3, `well-sampled should floor at 3, got ${wellSampled}`);
+  assert.equal(noSample, 9, `zero PA should ceil at 9, got ${noSample}`);
+  assert.ok(midSample > wellSampled && midSample < noSample,
+    `mid (${midSample}) should sit between ${wellSampled} and ${noSample}`);
 });
 
 // ── _pitchMatchupReason ─────────────────────────────────────────────────────
