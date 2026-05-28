@@ -230,15 +230,16 @@ export async function loadTwoWeekSchedule(){
   const el=document.getElementById('dash-schedule');
   if(!el)return;
   try{
-    // Anchor the 14-day grid on the Sunday-of-this-week so the rows always
-    // align to calendar weeks (mon-sun) regardless of when the page loads.
-    const todayD=new Date();
-    const dow=todayD.getUTCDay(); // 0=Sun … 6=Sat
-    const startD=new Date(todayD); startD.setUTCDate(startD.getUTCDate()-dow);
+    // Anchor the 14-day grid on the Sunday-of-this-week using Arizona time
+    // (UTC-7 year-round, no DST) so the calendar day is correct for MST users
+    // near UTC midnight. Same offset technique used in autoLoadNextGame.
+    const nowMST=new Date(Date.now()-7*60*60*1000);
+    const dow=nowMST.getUTCDay(); // 0=Sun … 6=Sat in MST
+    const todayKey=nowMST.toISOString().split('T')[0];
+    const startD=new Date(Date.UTC(nowMST.getUTCFullYear(),nowMST.getUTCMonth(),nowMST.getUTCDate()-dow));
     const endD=new Date(startD.getTime()+13*24*60*60*1000);
     const start=startD.toISOString().split('T')[0];
     const end=endD.toISOString().split('T')[0];
-    const todayKey=todayD.toISOString().split('T')[0];
     const d=await api.mlbScheduleRange(start, end, 'probablePitcher,team');
 
     // Index games by their officialDate so we can fall through to OFF DAY for missing days
