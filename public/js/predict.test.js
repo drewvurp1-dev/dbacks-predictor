@@ -254,6 +254,29 @@ test('modelProbability — protection tier shifts RBI/Runs', () => {
   assert.ok(strong > weak, `strong=${strong}, weak=${weak}`);
 });
 
+// ── Pitcher sensitivity of the run-scoring props (regression) ────────────────
+// RBI / Runs / H+R+RBI used to be nearly pitcher-blind: their rate channel was
+// built from the batter's own season rate, so swinging the opposing pitcher from
+// elite to batting-practice moved the projection only ~1pp (vs ~7pp for Hits).
+// _pitcherRunEnvMult fixed that. Lock in that facing a worse pitcher meaningfully
+// raises the projection for each run-scoring prop.
+test('modelProbability — RBI/Runs/H+R+RBI respond to opposing pitcher quality', () => {
+  setupAverageBatter();
+  const elite = { battersFaced: 330, strikeOuts: 105, baseOnBalls: 18,
+                  atBats: 300, hits: 62, homeRuns: 6, doubles: 11, triples: 0, whip: 0.95, avg: '.205' };
+  const bp    = { battersFaced: 340, strikeOuts: 45, baseOnBalls: 40,
+                  atBats: 300, hits: 90, homeRuns: 18, doubles: 20, triples: 2, whip: 1.65, avg: '.300' };
+  const cases = [['batter_rbis', 0.5], ['batter_runs_scored', 0.5], ['batter_hits_runs_rbis', 1.5]];
+  for (const [prop, line] of cases) {
+    S.pitcher = { id: 999, hand: 'R', st: elite, bullpenGame: false, last3: [] };
+    const vsElite = modelProbability(prop, line, 50);
+    S.pitcher = { id: 999, hand: 'R', st: bp, bullpenGame: false, last3: [] };
+    const vsBP = modelProbability(prop, line, 50);
+    assert.ok(vsBP - vsElite >= 4,
+      `${prop} should swing >=4pp on pitcher quality (was ~1pp pre-fix): elite=${vsElite} bp=${vsBP}`);
+  }
+});
+
 // ── monteCarloConfidence ────────────────────────────────────────────────────
 test('monteCarloConfidence — output in [0, 100]', () => {
   setupAverageBatter();
