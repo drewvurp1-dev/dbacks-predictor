@@ -8,7 +8,7 @@ import {
   _factorial, _poissonCDF,
   _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
-  _extractSplitStat, _handSplit,
+  _extractSplitStat, _handSplit, _pitcherRunEnvMult,
 } from './player.js';
 
 // ── _factorial ──────────────────────────────────────────────────────────────
@@ -258,4 +258,71 @@ test('_handSplit — falls back to S.pitcherThrows when pitcher.hand missing', (
   S.pitcher = {};  // no hand
   S.pitcherThrows = 'L';
   assert.deepEqual(_handSplit(), { ops: 0.8 });
+});
+
+// ── _pitcherRunEnvMult ──────────────────────────────────────────────────────
+// Opposing-pitcher run-environment multiplier for the (otherwise pitcher-blind)
+// RBI / Runs / H+R+RBI props. Reads S.pitcher.st.
+const ELITE_ARM = { st: { atBats: 300, hits: 62, homeRuns: 6, doubles: 11, triples: 0,
+  battersFaced: 330, baseOnBalls: 18 } };          // stingy: low OBP/SLG against
+const AVG_ARM = { st: { atBats: 300, hits: 75, homeRuns: 10, doubles: 15, triples: 1,
+  battersFaced: 330, baseOnBalls: 28 } };          // ~league OBP/SLG against
+const BP_ARM = { st: { atBats: 300, hits: 90, homeRuns: 18, doubles: 20, triples: 2,
+  battersFaced: 340, baseOnBalls: 40 } };          // batting-practice arm
+
+test('_pitcherRunEnvMult — no pitcher loaded returns neutral 1.0', () => {
+  S.pitcher = null;
+  assert.equal(_pitcherRunEnvMult(), 1.0);
+});
+
+test('_pitcherRunEnvMult — tiny sample (<50 BF) returns neutral 1.0', () => {
+  S.pitcher = { st: { battersFaced: 30, hits: 10, baseOnBalls: 4, atBats: 28, homeRuns: 1, doubles: 2, triples: 0 } };
+  assert.equal(_pitcherRunEnvMult(), 1.0);
+});
+
+test('_pitcherRunEnvMult — average arm sits near 1.0', () => {
+  S.pitcher = AVG_ARM;
+  const m = _pitcherRunEnvMult();
+  assert.ok(Math.abs(m - 1.0) < 0.05, `expected ~1.0 got ${m}`);
+});
+
+test('_pitcherRunEnvMult — elite arm suppresses (<1), BP arm inflates (>1)', () => {
+  S.pitcher = ELITE_ARM; const me = _pitcherRunEnvMult();
+  S.pitcher = BP_ARM;    const mb = _pitcherRunEnvMult();
+  assert.ok(me < 0.95, `elite should suppress, got ${me}`);
+  assert.ok(mb > 1.05, `BP arm should inflate, got ${mb}`);
+  assert.ok(me < mb, 'elite must be below BP arm');
+});
+
+test('_pitcherRunEnvMult — clamped to [0.80, 1.25]', () => {
+  // Absurdly stingy line — every batter retired, no baserunners.
+  S.pitcher = { st: { battersFaced: 300, hits: 10, baseOnBalls: 2, atBats: 290, homeRuns: 0, doubles: 1, triples: 0 } };
+  assert.ok(_pitcherRunEnvMult() >= 0.80 - 1e-9);
+  // Absurdly hittable line.
+  S.pitcher = { st: { battersFaced: 300, hits: 150, baseOnBalls: 60, atBats: 240, homeRuns: 40, doubles: 40, triples: 5 } };
+  assert.ok(_pitcherRunEnvMult() <= 1.25 + 1e-9);
+});
+
+test('_pitcherRunEnvMult — bullpen game blends 40% toward league', () => {
+  S.pitcher = { ...ELITE_ARM, bullpenGame: true };
+  const blended = _pitcherRunEnvMult();
+  S.pitcher = { ...ELITE_ARM, bullpenGame: false };
+  const raw = _pitcherRunEnvMult();
+  // Blending toward 1.0 pulls a sub-1.0 multiplier upward (closer to neutral).
+  assert.ok(blended > raw, `bullpen blend should pull toward 1.0: blended=${blended} raw=${raw}`);
+});
+
+// ── _hrrOverPct runEnvMult parameter ────────────────────────────────────────
+test('_hrrOverPct — runEnvMult scales the projection (suppress < neutral < inflate)', () => {
+  const ss = { hits: 50, runs: 28, rbi: 30, gamesPlayed: 50 };
+  const suppress = _hrrOverPct(1.5, ss, null, 4.2, 0.85);
+  const neutral  = _hrrOverPct(1.5, ss, null, 4.2, 1.0);
+  const inflate  = _hrrOverPct(1.5, ss, null, 4.2, 1.18);
+  assert.ok(suppress < neutral, `suppress(${suppress}) should be < neutral(${neutral})`);
+  assert.ok(inflate > neutral, `inflate(${inflate}) should be > neutral(${neutral})`);
+});
+
+test('_hrrOverPct — runEnvMult defaults to 1.0 (backward compatible)', () => {
+  const ss = { hits: 50, runs: 28, rbi: 30, gamesPlayed: 50 };
+  assert.equal(_hrrOverPct(1.5, ss, null, 4.2), _hrrOverPct(1.5, ss, null, 4.2, 1.0));
 });

@@ -6,7 +6,7 @@ import { S } from './state.js';
 import { PITCH_NAMES } from './constants.js';
 import { _parkFactors } from './utils.js';
 import {
-  _gamePAs, _ttopBonus, _hrrOverPct,
+  _gamePAs, _ttopBonus, _hrrOverPct, _pitcherRunEnvMult,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
   _handSplit, _poissonCDF,
 } from './player.js';
@@ -452,8 +452,10 @@ export function modelProbability(propKey,line,score,_components){
   else if(propKey==='batter_rbis'){
     // Poisson on shrunken RBI/G is the principled signal. Scale the per-game
     // rate by today's expected PAs vs league average — high-PA games produce
-    // proportionally more RBI opportunities. League avg RBI/G ~0.43.
-    const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2);
+    // proportionally more RBI opportunities — AND by the opposing pitcher's run
+    // environment (_pitcherRunEnvMult), without which this branch was nearly
+    // pitcher-blind: facing an ace barely moved the projection. League avg RBI/G ~0.43.
+    const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2)*_pitcherRunEnvMult();
     // Threshold note: the Poisson props use 1−CDF(floor(line)) = P(X > floor(line)),
     // while the binomial props use _binomGE(…, ceil(line+ε)) = P(X ≥ ceil(line+ε)).
     // These are equivalent for every line (the strict-vs-nonstrict difference
@@ -472,8 +474,11 @@ export function modelProbability(propKey,line,score,_components){
     else if(S.lineupProtection?.tier==='weak')p-=3;
   }
   else if(propKey==='batter_runs_scored'){
-    // Poisson on shrunken Runs/G. League avg ~0.55. PA-scaled like RBI.
-    const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2);
+    // Poisson on shrunken Runs/G. League avg ~0.55. PA-scaled like RBI, and
+    // scaled by the opposing pitcher's run environment (_pitcherRunEnvMult) — a
+    // pitcher who allows few baserunners and little extra-base contact suppresses
+    // the batter's chance to come around to score, not just his RBI chances.
+    const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2)*_pitcherRunEnvMult();
     const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
     // scoreBase weight dropped 50% → 25%. Anchors recalibrated so a true elite
     // leadoff bat (score=80, runs/G ~0.85) blends to ~57%, matching observed
@@ -487,7 +492,7 @@ export function modelProbability(propKey,line,score,_components){
     else if(S.lineupProtection?.tier==='weak')p-=3;
   }
   else if(propKey==='batter_hits_runs_rbis'){
-    const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs);
+    const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs,_pitcherRunEnvMult());
     // scoreBase weight dropped 50% → 25%, matching the pattern applied to
     // every other rate-based prop. The Bayesian-shrunk empirical CDF (or
     // Poisson fallback) is the principled signal here; the heavy 50% score

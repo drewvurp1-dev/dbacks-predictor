@@ -104,15 +104,19 @@ export function _ttopBonus() {
 // recent appearance rate at full PA can have his Over 0.5 probability deflated
 // from ~60% to ~20% by this alone, which is exactly the failure mode we hit on
 // Del Castillo 2026-05-25.
-export function _hrrOverPct(line, ss, recentLog, gamePAs) {
+export function _hrrOverPct(line, ss, recentLog, gamePAs, runEnvMult = 1) {
   const k = Math.floor(line);
   // Always compute the Poisson estimate — it's both the no-data fallback AND
   // the Bayesian prior we shrink the empirical CDF toward. The summed-rate
   // Poisson is biased high (events are correlated within a game), but it's a
   // reasonable mean-of-population prior at the rate level we care about.
+  // runEnvMult folds in the opposing pitcher's run environment (see
+  // _pitcherRunEnvMult) — the R and RBI components of H+R+RBI are otherwise
+  // pitcher-blind. It scales the Poisson mean, and since the empirical CDF is
+  // shrunk toward that mean, it propagates partially through the empirical path too.
   const paMult = gamePAs ? gamePAs / 4.2 : 1.0;
   const totalHRR = (parseInt(ss?.hits) || 0) + (parseInt(ss?.runs) || 0) + (parseInt(ss?.rbi) || 0);
-  const hrrPG = _shrunkRate(totalHRR, parseInt(ss?.gamesPlayed) || 0, 1.6, 60) * paMult;
+  const hrrPG = _shrunkRate(totalHRR, parseInt(ss?.gamesPlayed) || 0, 1.6, 60) * paMult * runEnvMult;
   const poissonOver = (1 - _poissonCDF(hrrPG, k)) * 100;
   if (recentLog?.length) {
     const playedGames = recentLog.filter(g => (parseInt(g.stat?.plateAppearances) || parseInt(g.stat?.atBats) || 0) > 0);
@@ -142,6 +146,47 @@ export function _shrunkRate(numerator, denominator, leagueAvg, priorN) {
   if (!denominator || denominator <= 0) return leagueAvg;
   const n = denominator;
   return (numerator + priorN * leagueAvg) / (n + priorN);
+}
+
+// ── Opposing-pitcher run-environment multiplier ─────────────────────────────
+// RBI / Runs / H+R+RBI projections are built from the BATTER's own per-game rate
+// scaled by lineup PAs. Left alone they are nearly pitcher-blind — only WHIP
+// nudges expected PAs (±8%), so a run-producer keeps essentially his full season
+// rate whether he faces an ace or a batting-practice arm. Hits/TB/HR/K/BB all
+// fold in the pitcher via log-5; this gives the run-scoring props the same hook.
+//
+// Returns a multiplier on the per-game run rate: <1 suppresses (facing a good
+// arm), >1 inflates. Driven by two pitcher signals computed from the season line:
+//   • on-base-against  (h+bb)/BF — baserunners ahead of the hitter, league ~.315
+//   • slugging-against TB/AB      — extra-base / drive-in environment, league ~.400
+// Both Bayesian-shrunk to league (priorN=200; rate-against stabilizes slowly),
+// then blended 60/40 toward on-base since baserunners gate RBI opportunity more
+// than raw power does. Clamped to [0.80, 1.25] so a small-sample line can't
+// dominate, and gated behind a 50-BF minimum. Bullpen games blend 40% toward
+// league since the listed arm isn't representative of who the hitters face.
+//
+// Note: the "score" composite (calcPrediction) already reflects pitcher quality,
+// but at only 40% blend weight and via general ERA/SIERA/whiff factors — the same
+// dual-sourcing the log-5 props already have (pitcher in both score AND rate). So
+// this keeps the run-scoring props consistent with the rest, not double-counting
+// beyond what every other prop already does.
+export function _pitcherRunEnvMult() {
+  const pst = S.pitcher?.st;
+  if (!pst) return 1.0;
+  const bf = parseInt(pst.battersFaced) || 0;
+  if (bf < 50) return 1.0;                       // too little data to trust
+  const h   = parseInt(pst.hits) || 0;
+  const bb  = parseInt(pst.baseOnBalls) || 0;
+  const hr  = parseInt(pst.homeRuns) || 0;
+  const dbl = parseInt(pst.doubles) || 0;
+  const trp = parseInt(pst.triples) || 0;
+  const ab  = parseInt(pst.atBats) || bf;
+  const singles = Math.max(0, h - hr - dbl - trp);
+  const obA  = _shrunkRate(h + bb, bf, 0.315, 200);
+  const slgA = _shrunkRate(singles + 2 * dbl + 3 * trp + 4 * hr, ab || 1, 0.400, 200);
+  let mult = (obA / 0.315) * 0.6 + (slgA / 0.400) * 0.4;
+  if (S.pitcher?.bullpenGame) mult = mult * 0.4 + 1.0 * 0.6;
+  return Math.max(0.80, Math.min(1.25, mult));
 }
 
 // ── Distribution helpers (binomial + total-bases convolution) ───────────────
