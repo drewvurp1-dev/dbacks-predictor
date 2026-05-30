@@ -308,6 +308,22 @@ test('modelProbability — H+R+RBI never below Hits at the same line', () => {
   }
 });
 
+test('modelProbability — Runs/RBI Poisson tail falls off across lines', () => {
+  // Regression: runs/RBI scoreBase used to be line-agnostic (tuned for the 0.5
+  // ≥1 line), which injected a ~35-50% floor onto higher lines and pushed
+  // Runs Over 1.5 to ~28% against a ~3% market. The alt lines must now drop
+  // sharply and stay in a realistic range for a single batter.
+  setupAverageBatter();
+  for (const prop of ['batter_runs_scored', 'batter_rbis']) {
+    const p05 = modelProbability(prop, 0.5, 70);
+    const p15 = modelProbability(prop, 1.5, 70);
+    const p25 = modelProbability(prop, 2.5, 70);
+    assert.ok(p05 > p15 && p15 > p25, `${prop}: expected 0.5>1.5>2.5, got ${p05}/${p15}/${p25}`);
+    // ≥2 runs/RBI for one batter realistically tops out well under 25%.
+    assert.ok(p15 < 25, `${prop} Over 1.5 = ${p15}, expected < 25`);
+  }
+});
+
 // ── monteCarloConfidence ────────────────────────────────────────────────────
 test('monteCarloConfidence — output in [0, 100]', () => {
   setupAverageBatter();

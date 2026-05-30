@@ -392,13 +392,18 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .phantom-chk:hover { color: #ccc; border-color: #2a2550; }
 .phantom-chk input { margin: 0; cursor: pointer; }
 /* Dark-blue translucent overlay on the main probability bar, sized to the
-   alt line's model Over%. Multiple overlays stack via rgba transparency so
+   alt line's market Over%. Multiple overlays stack via rgba transparency so
    overlapping regions read as darker. */
-.phantom-overlay { position: absolute; top: 0; left: 0; height: 22px; background: rgba(26, 58, 138, 0.55); display: flex; align-items: center; justify-content: center; font: 9px 'Chakra Petch', monospace; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); white-space: nowrap; overflow: hidden; transition: width 0.4s; border-right: 1px solid rgba(90, 158, 217, 0.85); pointer-events: auto; }
+.phantom-overlay { position: absolute; top: 0; left: 0; height: 22px; box-sizing: border-box; background: rgba(26, 58, 138, 0.55); display: flex; align-items: center; justify-content: center; font: 9px 'Chakra Petch', monospace; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); white-space: nowrap; overflow: hidden; transition: width 0.4s; border: 1px solid rgba(20, 44, 120, 0.95); border-radius: 6px; pointer-events: auto; z-index: 1; }
+/* Light-blue vertical marker on the bar at the alt line's model Over% — the
+   phantom counterpart to the main line's white prob-bar-model-marker. */
+.phantom-model-marker { position: absolute; top: 0; width: 2px; height: 22px; background: #7fb8e8; transform: translateX(-50%); pointer-events: none; border-radius: 1px; box-shadow: 0 0 4px rgba(127, 184, 232, 0.7); z-index: 3; }
 /* Stacked marker rows below the bar — one per checked alt line. Each
-   absolute-positions a light-blue label at the alt line's market Over%. */
-.phantom-marker-slot { position: relative; height: 14px; margin-top: 1px; }
-.phantom-marker-label { position: absolute; transform: translateX(-50%); font: 8px 'Chakra Petch', monospace; color: #5a9ed9; white-space: nowrap; text-align: center; cursor: help; }
+   absolute-positions a light-blue model arrow at the alt line's model Over%.
+   The ▲ tip sits on its own centred line so it marks the exact position. */
+.phantom-marker-slot { position: relative; height: 22px; margin-top: 2px; }
+.phantom-marker-label { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; line-height: 1.1; font: 8px 'Chakra Petch', monospace; color: #5a9ed9; white-space: nowrap; text-align: center; cursor: help; }
+.phantom-marker-tip { font-size: 9px; line-height: 1; }
 
 /* ── CorBET ── */
 .corbet-header { background: linear-gradient(135deg, #001a18, #002822); border: 1px solid #009A8B; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
