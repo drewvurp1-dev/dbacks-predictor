@@ -154,9 +154,11 @@ export function togglePhantom(betKey,line,on){
   const markerHost=document.querySelector(`[data-phantom-marker-host="${CSS.escape(betKey)}"]`);
   if(!barHost||!markerHost)return;
   // The global dispatcher listens on click+input+change, so a single checkbox
-  // interaction fires this 3x. Remove any prior overlay+marker for this line
-  // first so the handler is idempotent regardless of how many events route through.
+  // interaction fires this 3x. Remove any prior overlay+model-line+marker for
+  // this line first so the handler is idempotent regardless of how many events
+  // route through.
   barHost.querySelectorAll(`.phantom-overlay[data-phantom-line="${line}"]`).forEach(el=>el.remove());
+  barHost.querySelectorAll(`.phantom-model-marker[data-phantom-line="${line}"]`).forEach(el=>el.remove());
   markerHost.querySelectorAll(`.phantom-marker-slot[data-phantom-line="${line}"]`).forEach(el=>el.remove());
   if(!on)return;
   const al=(b.altLines||[]).find(x=>x.line===line);
@@ -203,7 +205,8 @@ export function togglePhantom(betKey,line,on){
   if(underBest?.price!=null)tipParts.push(`Best Under: ${fmtOdds(underBest.price)} ${bookAbbrev(underBest.book||'')}`);
   const tip=tipParts.join(' · ');
 
-  // Dark-blue translucent overlay on the bar at market Over% width.
+  // Dark-blue translucent, dark-blue-bordered overlay on the bar at market
+  // Over% width.
   const overlay=document.createElement('div');
   overlay.className='phantom-overlay';
   overlay.dataset.phantomLine=String(line);
@@ -211,6 +214,15 @@ export function togglePhantom(betKey,line,on){
   overlay.title=tip;
   overlay.textContent=`Market ${cached.marketOverProb.toFixed(0)}% (${line})`;
   barHost.appendChild(overlay);
+
+  // Light-blue vertical MODEL marker on the bar at the model Over% position —
+  // the phantom counterpart to the main line's white prob-bar-model-marker.
+  const modelMarker=document.createElement('div');
+  modelMarker.className='phantom-model-marker';
+  modelMarker.dataset.phantomLine=String(line);
+  modelMarker.style.left=modelLeft+'%';
+  modelMarker.title=tip;
+  barHost.appendChild(modelMarker);
 
   // Light-blue MODEL arrow below the bar at the model Over% position. The ▲
   // sits on its own centred line so its tip marks the exact position; the
