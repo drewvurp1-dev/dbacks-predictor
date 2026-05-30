@@ -185,11 +185,12 @@ export function togglePhantom(betKey,line,on){
     cached=b._phantomCache[line]={modelProb,marketOverProb:dv.overProb,marketUnderProb:dv.underProb,overBest:al.overBest,underBest:al.underBest};
   }
 
-  // Both overlay (model) and marker (market) are always referenced to the
-  // Over side, matching the main bar's convention (Over% on the left, white
-  // model triangle = main line's Over% position).
-  const modelOverW=Math.max(0,Math.min(100,cached.modelProb)).toFixed(1);
-  const marketLeft=Math.max(1,Math.min(99,cached.marketOverProb)).toFixed(1);
+  // Mirror the main bar's convention: the BAR is the market and the ARROW is
+  // the model. The overlay is sized to the alt line's market Over%; the model
+  // arrow points at the model's Over% position (both referenced to the Over
+  // side, like the main bar's green Over segment + white model marker).
+  const marketOverW=Math.max(0,Math.min(100,cached.marketOverProb)).toFixed(1);
+  const modelLeft=Math.max(1,Math.min(99,cached.modelProb)).toFixed(1);
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
   const overBest=cached.overBest;
   const underBest=cached.underBest;
@@ -202,20 +203,22 @@ export function togglePhantom(betKey,line,on){
   if(underBest?.price!=null)tipParts.push(`Best Under: ${fmtOdds(underBest.price)} ${bookAbbrev(underBest.book||'')}`);
   const tip=tipParts.join(' · ');
 
-  // Dark-blue translucent overlay on the bar at model Over% width.
+  // Dark-blue translucent overlay on the bar at market Over% width.
   const overlay=document.createElement('div');
   overlay.className='phantom-overlay';
   overlay.dataset.phantomLine=String(line);
-  overlay.style.width=modelOverW+'%';
+  overlay.style.width=marketOverW+'%';
   overlay.title=tip;
-  overlay.textContent=`Model ${cached.modelProb.toFixed(0)}% (${line})`;
+  overlay.textContent=`Market ${cached.marketOverProb.toFixed(0)}% (${line})`;
   barHost.appendChild(overlay);
 
-  // Light-blue marker label below the bar at market Over% position.
+  // Light-blue MODEL arrow below the bar at the model Over% position. The ▲
+  // sits on its own centred line so its tip marks the exact position; the
+  // value label sits beneath it (mirrors the main-line "▲ Model X%" marker).
   const slot=document.createElement('div');
   slot.className='phantom-marker-slot';
   slot.dataset.phantomLine=String(line);
-  slot.innerHTML=`<div class="phantom-marker-label" style="left:${marketLeft}%;" title="${tip.replace(/"/g,'&quot;')}">▲ Market ${cached.marketOverProb.toFixed(0)}% (${line})</div>`;
+  slot.innerHTML=`<div class="phantom-marker-label" style="left:${modelLeft}%;" title="${tip.replace(/"/g,'&quot;')}"><span class="phantom-marker-tip">▲</span><span>Model ${cached.modelProb.toFixed(0)}% (${line})</span></div>`;
 
   // Insert in ascending line order so the stacked marker rows stay sorted.
   const existing=Array.from(markerHost.querySelectorAll('.phantom-marker-slot'));
