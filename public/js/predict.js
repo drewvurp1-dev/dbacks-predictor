@@ -462,10 +462,15 @@ export function modelProbability(propKey,line,score,_components){
     // cancels the floor-vs-ceil difference), so the two conventions agree — don't
     // "fix" one to match the other.
     const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
-    // Score-based component dropped from 60% → 25% weight. Anchors recalibrated
-    // so league-avg score (50) produces league-avg P(≥1 RBI) of ~33% rather
-    // than the old 28% which biased toward Under across the board.
-    const scoreBase=lerp3(score,20,15,50,30,80,42);
+    // Line-specific anchors. The 0.5 anchors put league-avg score (50) at the
+    // league-avg P(≥1 RBI) of ~30%. Higher lines need their own (much lower)
+    // anchors — ≥2 RBI is uncommon (~8-16% for elites) — otherwise the 0.5
+    // anchors inject a ~30-42% floor that swamps the Poisson tail on alt lines.
+    let scoreBase;
+    if(line<=0.5)      scoreBase=lerp3(score,20,15,50,30,80,42);   // ≥1 RBI
+    else if(line<=1.5) scoreBase=lerp3(score,20, 3,50, 8,80,16);   // ≥2 RBI
+    else if(line<=2.5) scoreBase=lerp3(score,20,0.5,50,2.0,80, 5); // ≥3 RBI
+    else               scoreBase=lerp3(score,20,0.1,50,0.6,80,1.8);// ≥4 RBI
     p=_blend(scoreBase,rateBase);
     // Protection cut from ±5pp to ±3pp — strong protection behind you keeps
     // pitchers from intentionally walking you, but the effect is smaller than
@@ -480,12 +485,17 @@ export function modelProbability(propKey,line,score,_components){
     // the batter's chance to come around to score, not just his RBI chances.
     const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2)*_pitcherRunEnvMult();
     const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
-    // scoreBase weight dropped 50% → 25%. Anchors recalibrated so a true elite
-    // leadoff bat (score=80, runs/G ~0.85) blends to ~57%, matching observed
-    // market consensus on leadoff Runs Over 0.5 props. Old anchor of 50@80
-    // combined with 50/50 blend let the prop extrapolate to 60%+ on hot bats
-    // batting low in the order — exactly the Waldschmidt failure mode.
-    const scoreBase=lerp3(score,20,15,50,35,80,50);
+    // Line-specific anchors. The 0.5 anchors put a true elite leadoff bat
+    // (score=80, runs/G ~0.85) at ~57%, matching market consensus on leadoff
+    // Runs Over 0.5. Higher lines need their own (much lower) anchors: a single
+    // batter scoring ≥2 runs is rare (~10-15% even for elites), so reusing the
+    // 0.5 anchors there injected a ~35-50% floor that swamped the Poisson tail
+    // and pushed Runs Over 1.5 to ~28% against a 3% market — a phantom edge.
+    let scoreBase;
+    if(line<=0.5)      scoreBase=lerp3(score,20,15,50,35,80,50);   // ≥1 run
+    else if(line<=1.5) scoreBase=lerp3(score,20, 2,50, 7,80,14);   // ≥2 runs
+    else if(line<=2.5) scoreBase=lerp3(score,20,0.3,50,1.5,80, 4); // ≥3 runs
+    else               scoreBase=lerp3(score,20,0.1,50,0.5,80,1.5);// ≥4 runs
     p=_blend(scoreBase,rateBase);
     // Protection cut from ±5 → ±3 — captured partly by OBP-loaded score.
     if(S.lineupProtection?.tier==='strong')p+=3;
@@ -666,12 +676,14 @@ export function modelProbability(propKey,line,score,_components){
     else               p=Math.max(2, Math.min(30,p));  // ≥4 K
   } else if(propKey==='batter_rbis'){
     if(line<=0.5)      p=Math.max(8, Math.min(65,p));  // ≥1 RBI
-    else if(line<=1.5) p=Math.max(4, Math.min(45,p));  // ≥2 RBI
-    else               p=Math.max(2, Math.min(28,p));  // ≥3 RBI
+    else if(line<=1.5) p=Math.max(3, Math.min(26,p));  // ≥2 RBI
+    else if(line<=2.5) p=Math.max(1, Math.min(12,p));  // ≥3 RBI
+    else               p=Math.max(0.5,Math.min(6, p)); // ≥4 RBI
   } else if(propKey==='batter_runs_scored'){
     if(line<=0.5)      p=Math.max(10,Math.min(70,p));  // ≥1 run
-    else if(line<=1.5) p=Math.max(4, Math.min(50,p));  // ≥2 runs
-    else               p=Math.max(2, Math.min(30,p));  // ≥3 runs
+    else if(line<=1.5) p=Math.max(3, Math.min(24,p));  // ≥2 runs
+    else if(line<=2.5) p=Math.max(1, Math.min(10,p));  // ≥3 runs
+    else               p=Math.max(0.5,Math.min(5, p)); // ≥4 runs
   } else if(propKey==='batter_hits_runs_rbis'){
     if(line<=1.5)      p=Math.max(12,Math.min(75,p));  // ≥2 H+R+RBI
     else if(line<=2.5) p=Math.max(7, Math.min(60,p));  // ≥3
