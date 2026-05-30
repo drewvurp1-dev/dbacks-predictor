@@ -1121,6 +1121,10 @@ function corbetReasoning(propKey,direction,propScore){
 
 // (probToAmerican moved to ui/record.js — only used there)
 
+// Props whose only canonical line is 0.5 and is naturally lopsided, so the
+// alt-ladder line reject in generateCorbetBets must not be applied to them.
+const SINGLE_LINE_PROPS=new Set(['batter_strikeouts','batter_walks']);
+
 function generateCorbetBets(score,factors,rawMarketMap){
   const results=[];
   Object.entries(rawMarketMap).forEach(([propKey,mkt])=>{
@@ -1133,6 +1137,13 @@ function generateCorbetBets(score,factors,rawMarketMap){
     ].map(Number));
     let effectiveLine=null;
     let minImbalance=Infinity;
+    // Single-threshold props (strikeouts, walks) have one canonical line at 0.5
+    // that is *naturally* lopsided: a hitter usually strikes out at least once,
+    // and usually does NOT walk. The alt-ladder reject below was written for
+    // HRR/HR ladder markets (0.5/1.5/2.5 rungs) where extreme rungs produce
+    // phantom devig edges — applying it to these props wrongly rejects their
+    // legitimate main line, so we skip the reject for them.
+    const isSingleLineProp=SINGLE_LINE_PROPS.has(propKey);
     for(const l of [...allLines]){
       const oArr=mkt.overByLine[l]||[];
       const uArr=mkt.underByLine[l]||[];
@@ -1142,7 +1153,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
       // Reject alt-ladder rungs (one side >85% raw implied) — books post these
       // as ladders for HRR/HR markets, and devig produces phantom 95% edges.
       const sideShare=rO/(rO+rU);
-      if(sideShare>0.85||sideShare<0.15){
+      if(!isSingleLineProp&&(sideShare>0.85||sideShare<0.15)){
         log('[props]',propKey,'line',l,'rejected: sideShare='+sideShare.toFixed(2),'over='+rO.toFixed(1)+'% under='+rU.toFixed(1)+'%');
         continue;
       }
