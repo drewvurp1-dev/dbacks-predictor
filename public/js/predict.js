@@ -687,6 +687,19 @@ export function modelProbability(propKey,line,score,_components){
   // actual input to calibration — never on an already-corrected value.
   const _rawP=p;
   p=applyCalibration(propKey,p);
+
+  // Monotonicity floor: H+R+RBI strictly contains Hits — a single hit is itself
+  // ≥1 H+R+RBI — so P(HRR over L) can never fall below P(Hits over L) at the same
+  // line. The two props run on independent paths (Hits = binomial log-5; HRR =
+  // _hrrOverPct's summed-rate Poisson scaled by _pitcherRunEnvMult) with no shared
+  // floor, so a strong-pitcher game can suppress the composite below its own hits
+  // component and produce contradictory Over/Under picks (Hits Over + HRR Under,
+  // which can never both cash). Enforce the invariant on the final probability.
+  if(propKey==='batter_hits_runs_rbis'){
+    const hitsOver=modelProbability('batter_hits',line,score);
+    if(hitsOver!==null&&p<hitsOver)p=hitsOver;
+  }
+
   if(_components){_components.raw=_rawP;_components.scoreBase=_scoreBase;_components.rateBase=_rateBase;_components.adjOffset=_adjOffset;}
 
   return p;
