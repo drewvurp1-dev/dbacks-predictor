@@ -277,6 +277,37 @@ test('modelProbability — RBI/Runs/H+R+RBI respond to opposing pitcher quality'
   }
 });
 
+// ── H+R+RBI ⊇ Hits monotonicity floor (regression) ──────────────────────────
+// H+R+RBI strictly contains Hits: any hit is itself ≥1 H+R+RBI, so for the same
+// line P(HRR over) must be ≥ P(Hits over). The two props run on independent code
+// paths (Hits = binomial log-5; HRR = _hrrOverPct Poisson scaled by
+// _pitcherRunEnvMult) with no shared floor — before the floor a strong-pitcher
+// game suppressed the composite below its own hits component, producing
+// contradictory picks (Hits Over + HRR Under can never both cash). The most
+// stressful case is a cold contact hitter (high hit rate, no run/RBI production)
+// facing an elite arm that drives _pitcherRunEnvMult toward its 0.80 floor.
+test('modelProbability — H+R+RBI never below Hits at the same line', () => {
+  setupAverageBatter();
+  // Cold run/RBI line vs a strong arm — the configuration that triggered the bug.
+  S.seasonStat = {
+    plateAppearances: 220, atBats: 200, hits: 58,
+    homeRuns: 2, doubles: 8, triples: 0,
+    rbi: 12, strikeOuts: 55, baseOnBalls: 18,
+    runs: 14, gamesPlayed: 60, avg: '.290',
+  };
+  const elite = { battersFaced: 330, strikeOuts: 105, baseOnBalls: 18,
+                  atBats: 300, hits: 62, homeRuns: 6, doubles: 11, triples: 0, whip: 0.95, avg: '.205' };
+  S.pitcher = { id: 999, hand: 'R', st: elite, bullpenGame: false, last3: [] };
+  for (const line of [0.5, 1.5, 2.5]) {
+    for (const score of [10, 30, 50, 70, 90]) {
+      const hrr = modelProbability('batter_hits_runs_rbis', line, score);
+      const hits = modelProbability('batter_hits', line, score);
+      assert.ok(hrr >= hits - 1e-9,
+        `HRR(${hrr}) must be >= Hits(${hits}) at line=${line} score=${score}`);
+    }
+  }
+});
+
 // ── monteCarloConfidence ────────────────────────────────────────────────────
 test('monteCarloConfidence — output in [0, 100]', () => {
   setupAverageBatter();
