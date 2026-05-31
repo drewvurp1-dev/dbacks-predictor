@@ -373,8 +373,8 @@ test('_pitcherStuffMult — no pitcher / no advanced metrics returns neutral 1.0
   assert.equal(_pitcherStuffMult(), 1.0);
 });
 
-test('_pitcherStuffMult — under 10 IP returns neutral 1.0 (metrics not stable)', () => {
-  S.pitcher = { st: { inningsPitched: '8.0' }, advanced: { siera: 2.5, xfip: 2.6, fip: 2.7 } };
+test('_pitcherStuffMult — under 8 IP returns neutral 1.0 (metrics not stable)', () => {
+  S.pitcher = { st: { inningsPitched: '7.0' }, advanced: { siera: 2.5, xfip: 2.6, fip: 2.7 } };
   assert.equal(_pitcherStuffMult(), 1.0);
 });
 
