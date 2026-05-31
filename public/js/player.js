@@ -17,6 +17,37 @@ export function _poissonCDF(lambda, k) {
   return p;
 }
 
+// ── Negative-binomial tail — P(X > k) for an overdispersed count ─────────────
+// Per-game RBI and Runs are CLUMPY: most games a hitter has zero opportunity
+// (no men on, doesn't come around to score), then occasionally a multi-RBI
+// burst. A Poisson with the season mean understates the zero-mass and so
+// overstates P(≥1) — at the RBI league mean λ≈0.43 Poisson gives 34.9% but the
+// empirical ≥1-RBI rate is ~30%. The negative binomial adds a dispersion
+// parameter `r` (smaller r = more overdispersion / fatter zero); as r→∞ it
+// collapses to the Poisson. We parameterize by the same mean `lambda` so the
+// branch's PA-scaling and run-environment multiplier still feed in unchanged.
+//
+//   X ~ NB(r, p) with p = r/(r+lambda), mean = lambda
+//   P(X = i) = C(i+r-1, i) · p^r · (1-p)^i
+//
+// Returns P(X > k) = 1 − Σ_{i=0..k} P(X=i), matching the Poisson props'
+// 1−CDF(floor(line)) = P(X > floor(line)) convention so the threshold semantics
+// are identical — only the distribution shape changes. Falls back to the
+// Poisson tail when r is non-finite or non-positive.
+export function _negBinomTailGT(lambda, r, k) {
+  if (!(r > 0) || !isFinite(r)) return 1 - _poissonCDF(lambda, k);
+  if (lambda <= 0) return 0;
+  const p = r / (r + lambda);
+  // P(X=0) = p^r; recur P(X=i) = P(X=i-1) · (i+r-1)/i · (1-p).
+  let term = Math.pow(p, r);
+  let cdf = term;
+  for (let i = 1; i <= k; i++) {
+    term *= ((i + r - 1) / i) * (1 - p);
+    cdf += term;
+  }
+  return Math.max(0, Math.min(1, 1 - cdf));
+}
+
 // ── Expected plate appearances per game ─────────────────────────────────────
 // Expected plate appearances for the batter in this game. Drives binomial K/BB
 // probabilities directly, and a PA-vs-league multiplier (see _paMultiplier) for

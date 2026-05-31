@@ -8,8 +8,17 @@ import { _parkFactors } from './utils.js';
 import {
   _gamePAs, _ttopBonus, _hrrOverPct, _pitcherRunEnvMult,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
-  _handSplit, _poissonCDF,
+  _handSplit, _poissonCDF, _negBinomTailGT,
 } from './player.js';
+
+// Negative-binomial dispersion (r) for the clumpy per-game run/RBI counts.
+// Smaller r = fatter zero-mass = more correction away from Poisson. RBI is the
+// most overdispersed (a hitter needs men on base to drive in), so it gets the
+// strongest pull; Runs is only mildly overdispersed (reaching base then being
+// driven in is closer to memoryless), so it stays near Poisson to avoid
+// manufacturing a phantom UNDER edge on leadoff bats where Poisson already
+// matches the market. r→∞ would reproduce the old Poisson behavior exactly.
+const NB_DISPERSION = { batter_rbis: 1.3, batter_runs_scored: 4.0 };
 import { applyCalibration, getBlendWeight } from './calibrate.js';
 
 // ── Gaussian sampler (Box–Muller) ───────────────────────────────────────────
@@ -495,12 +504,13 @@ export function modelProbability(propKey,line,score,_components){
     // environment (_pitcherRunEnvMult), without which this branch was nearly
     // pitcher-blind: facing an ace barely moved the projection. League avg RBI/G ~0.43.
     const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2)*_pitcherRunEnvMult();
-    // Threshold note: the Poisson props use 1−CDF(floor(line)) = P(X > floor(line)),
-    // while the binomial props use _binomGE(…, ceil(line+ε)) = P(X ≥ ceil(line+ε)).
-    // These are equivalent for every line (the strict-vs-nonstrict difference
-    // cancels the floor-vs-ceil difference), so the two conventions agree — don't
-    // "fix" one to match the other.
-    const rateBase=(1-_poissonCDF(rbiPG,Math.floor(line)))*100;
+    // Negative binomial (not Poisson) on the per-game RBI rate — RBIs are clumpy
+    // and zero-inflated, so a Poisson at the season mean overstates P(≥1) by
+    // ~5pp (λ=0.43 → Poisson 34.9% vs empirical ~30%). NB with the same mean
+    // shifts mass onto 0. Threshold note: NB tail is P(X > floor(line)), matching
+    // the binomial props' _binomGE(…, ceil(line+ε)) = P(X ≥ ceil(line+ε)) — the
+    // strict-vs-nonstrict and floor-vs-ceil differences cancel, so don't "fix" it.
+    const rateBase=_negBinomTailGT(rbiPG,NB_DISPERSION.batter_rbis,Math.floor(line))*100;
     // Line-specific anchors. The 0.5 anchors put league-avg score (50) at the
     // league-avg P(≥1 RBI) of ~30%. Higher lines need their own (much lower)
     // anchors — ≥2 RBI is uncommon (~8-16% for elites) — otherwise the 0.5
@@ -523,7 +533,12 @@ export function modelProbability(propKey,line,score,_components){
     // pitcher who allows few baserunners and little extra-base contact suppresses
     // the batter's chance to come around to score, not just his RBI chances.
     const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2)*_pitcherRunEnvMult();
-    const rateBase=(1-_poissonCDF(runPG,Math.floor(line)))*100;
+    // Negative binomial like RBI, but only mildly overdispersed (r=4.0) — runs
+    // are closer to memoryless than RBIs, and at the run league mean (~0.55)
+    // Poisson's ~42% P(≥1) already matches the leadoff Over market, so a heavy
+    // correction here would manufacture a phantom UNDER edge. r=4 nudges the
+    // zero-mass up a touch without distorting the calibrated 0.5-line anchor.
+    const rateBase=_negBinomTailGT(runPG,NB_DISPERSION.batter_runs_scored,Math.floor(line))*100;
     // Line-specific anchors. The 0.5 anchors put a true elite leadoff bat
     // (score=80, runs/G ~0.85) at ~57%, matching market consensus on leadoff
     // Runs Over 0.5. Higher lines need their own (much lower) anchors: a single
