@@ -66,6 +66,79 @@ export function _computePitcherMetrics(st, statcast) {
   return { fip, xfip, siera, kbbPct, hr9 };
 }
 
+// ── Venue-adjusted pitcher line ─────────────────────────────────────────────
+// The model scores the opposing pitcher off his SEASON aggregate, which is blind
+// to the home/road platoon. A pitcher who is dominant in a pitcher-friendly home
+// park but ordinary on the road reads as merely league-average, so the bats' own
+// season rates dominate the log-5 combine and the slate fills with phantom Overs.
+//
+// This blends the pitcher's home (or road — whichever venue he is actually in)
+// split into the season line via sample-size shrinkage: each venue RATE is mixed
+// toward the season rate with weight w = venueBF / (venueBF + VENUE_PRIOR_BF),
+// then re-applied to the SEASON denominators (AB / BF / IP unchanged). Keeping the
+// denominators at the season sample means every downstream Bayesian shrinkage
+// prior (BAA priorN=200, per-event 200-300, run-env 200) still sees the true
+// sample size — the venue blend only shifts the rate, it doesn't fabricate
+// confidence. A tiny early-season split (e.g. 19 BF) barely nudges (w≈0.16); a
+// stabilized split (250+ BF) carries real weight (w≈0.71).
+const VENUE_PRIOR_BF = 100;
+
+export function _blendVenueLine(st, venue) {
+  if (!st || !venue) return st;
+  const vBF = parseInt(venue.battersFaced) || 0;
+  const sAB = parseInt(st.atBats)        || 0;
+  const sBF = parseInt(st.battersFaced)  || 0;
+  const sIP = parseFloat(st.inningsPitched) || 0;
+  if (vBF < 1 || !sAB || !sBF || !sIP) return st;
+  const w = vBF / (vBF + VENUE_PRIOR_BF);
+  const vAB = parseInt(venue.atBats) || 0;
+  const num  = k => parseInt(st[k])    || 0;
+  const vnum = k => parseInt(venue[k]) || 0;
+  // Blend a season rate toward the venue rate, then re-apply to the season
+  // denominator. Rounded to match the parseInt() the downstream consumers apply.
+  const mix = (sKey, vKey, sDen, vDen, den) => {
+    const sr = sDen ? num(sKey)  / sDen : 0;
+    const vr = vDen ? vnum(vKey) / vDen : sr;
+    return Math.round(((1 - w) * sr + w * vr) * den);
+  };
+  const eraS = parseFloat(st.era),  eraV = parseFloat(venue.era);
+  const whipS = parseFloat(st.whip), whipV = parseFloat(venue.whip);
+  const blend = (a, b) => (isFinite(a) && isFinite(b)) ? (1 - w) * a + w * b
+    : (isFinite(a) ? a : b);
+  const H = mix('hits', 'hits', sAB, vAB, sAB);
+  return {
+    ...st,
+    hits:        H,
+    homeRuns:    mix('homeRuns',    'homeRuns',    sAB, vAB, sAB),
+    doubles:     mix('doubles',     'doubles',     sAB, vAB, sAB),
+    triples:     mix('triples',     'triples',     sAB, vAB, sAB),
+    baseOnBalls: mix('baseOnBalls', 'baseOnBalls', sBF, vBF, sBF),
+    strikeOuts:  mix('strikeOuts',  'strikeOuts',  sBF, vBF, sBF),
+    hitByPitch:  mix('hitByPitch',  'hitByPitch',  sBF, vBF, sBF),
+    avg:  (sAB ? H / sAB : 0).toFixed(3).replace(/^0/, ''),
+    era:  isFinite(eraS)  ? blend(eraS,  eraV ).toFixed(2) : st.era,
+    whip: isFinite(whipS) ? blend(whipS, whipV).toFixed(2) : st.whip,
+    // atBats / battersFaced / inningsPitched intentionally left at season values.
+  };
+}
+
+// Recompute S.pitcher.stEff + advancedEff for the venue the pitcher is currently
+// in (home when the D-backs hitters are away, i.e. !S.isHome). Idempotent — safe
+// to call on every prediction so a home/away toggle re-applies the right split.
+// Leaves stEff null when there is no usable split (model falls back to season).
+export function applyPitcherVenue() {
+  const p = S.pitcher;
+  if (!p) return;
+  if (!p.splits) { p.stEff = null; p.advancedEff = null; p.venueApplied = null; return; }
+  const pitcherAtHome = !S.isHome;
+  const venue = pitcherAtHome ? p.splits.h : p.splits.a;
+  const eff = _blendVenueLine(p.st, venue);
+  if (eff === p.st) { p.stEff = null; p.advancedEff = null; p.venueApplied = null; return; }
+  p.stEff = eff;
+  p.advancedEff = _computePitcherMetrics(eff, S.pitcherStatcast);
+  p.venueApplied = pitcherAtHome ? 'home' : 'away';
+}
+
 // ── Pitch mix normalization ─────────────────────────────────────────────────
 // Savant arsenal data has two sources of rounding loss: (1) each pitch_usage
 // is already truncated to 1 decimal upstream, (2) Savant's min=3 filter drops
@@ -206,12 +279,18 @@ export async function selectPitcher(id, name) {
   hide('pitcher-loaded'); hide('pitcher-pitch-mix');
   show('pitcher-spinner'); hide('pitcher-error');
   try {
-    const [sd, gd, pd] = await Promise.all([
+    const [sd, gd, pd, spd] = await Promise.all([
       api.mlbPitcherSeason(id),
       api.mlbPitcherGameLog(id),
       api.mlbPerson(id),
+      api.mlbPitcherSplits(id).catch(() => null),
     ]);
     const st = sd?.stats?.[0]?.splits?.[0]?.stat ?? {};
+    // Home/road splits — blended into the season line at score time by
+    // applyPitcherVenue() so the model isn't venue-blind (see _blendVenueLine).
+    const splitByCode = {};
+    (spd?.stats?.[0]?.splits ?? []).forEach(s => { if (s.split?.code) splitByCode[s.split.code] = s.stat; });
+    const splits = { h: splitByCode.h || null, a: splitByCode.a || null };
     const gameLogs = gd?.stats?.[0]?.splits ?? [];
     const last3 = gameLogs.slice(-3).reverse();
     const person = pd?.people?.[0] ?? {};
@@ -223,7 +302,8 @@ export async function selectPitcher(id, name) {
     // Bullpen / opener detection: flag if all of last 3 outings are under 45 pitches
     const bullpenGame = last3.length >= 3 && last3.every(g => (g.stat?.numberOfPitches || 0) < 45);
     const advanced = _computePitcherMetrics(st, null);
-    S.pitcher = { id, name, hand, st, last3, daysRest, lastOuting, bullpenGame, advanced };
+    S.pitcher = { id, name, hand, st, splits, last3, daysRest, lastOuting, bullpenGame, advanced };
+    applyPitcherVenue();
     const era = parseFloat(st.era) || null;
     const whip = parseFloat(st.whip) || null;
     const ip = st.inningsPitched || '—';
@@ -373,6 +453,7 @@ export async function loadPitcherStatcast(pitcherId) {
     // Recompute pitcher metrics now that FB% is available — gives us xFIP and SIERA
     if (S.pitcher?.st) {
       S.pitcher.advanced = _computePitcherMetrics(S.pitcher.st, S.pitcherStatcast);
+      applyPitcherVenue(); // refresh stEff/advancedEff now that FB%/GB% (xFIP/SIERA) are available
       _renderPitcherSeasonBoxes();
     }
 

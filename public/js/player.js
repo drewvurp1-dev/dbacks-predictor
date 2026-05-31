@@ -88,7 +88,7 @@ export function _gamePAs() {
     // signal without compounding HR effects three ways.
     const parkRunF = rfClosed ? 1.0 : hitF;
     // WHIP delta — league avg ~1.30. Elite 1.00 → -3% PAs, poor 1.50 → +2% PAs.
-    const whip = parseFloat(S.pitcher?.st?.whip);
+    const whip = parseFloat(S.pitcher?.stEff?.whip ?? S.pitcher?.st?.whip);
     const pitcherPaF = isFinite(whip) ? 1.0 + (whip - 1.30) * 0.10 : 1.0;
     const env = parkRunF * pitcherPaF;
     // Cap the combined multiplier at ±8% to keep extreme matchups from compounding.
@@ -202,7 +202,10 @@ export function _shrunkRate(numerator, denominator, leagueAvg, priorN) {
 // this keeps the run-scoring props consistent with the rest, not double-counting
 // beyond what every other prop already does.
 export function _pitcherRunEnvMult() {
-  const pst = S.pitcher?.st;
+  // Venue-blended line (home/road split shrunk into the season aggregate; see
+  // pitcher.js _blendVenueLine) so the run-environment multiplier reflects where
+  // the pitcher is actually throwing. Falls back to the raw season line.
+  const pst = S.pitcher?.stEff || S.pitcher?.st;
   if (!pst) return 1.0;
   const bf = parseInt(pst.battersFaced) || 0;
   if (bf < 50) return 1.0;                       // too little data to trust

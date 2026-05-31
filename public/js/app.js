@@ -24,6 +24,7 @@ import {
   _loadPitchArsenal,
   setThrows, buildPitchMixGrid,
   onPitcherSearch, selectPitcher,
+  applyPitcherVenue,
 } from './pitcher.js';
 import {
   _factorial, _poissonCDF,
@@ -553,8 +554,13 @@ function calcPrediction(){
     if(ls?.ops){const a=(ls.ops-0.720)*35;add(S.isHome?'Home':'Away',ls.ops.toFixed(3)+' OPS',a,`OPS ${ls.ops.toFixed(3)} ${S.isHome?'at home':'on the road'}`);}
   }
   if(S.pitcher?.st){
-    const era=parseFloat(S.pitcher.st.era);
-    const adv=S.pitcher.advanced||{};
+    // Refresh the venue-blended line for the current home/away state, then score
+    // off it so the home/road split feeds Pitcher Quality + the rate model. Falls
+    // back to the raw season line when no usable split exists.
+    applyPitcherVenue();
+    const pst=S.pitcher.stEff||S.pitcher.st;
+    const era=parseFloat(pst.era);
+    const adv=S.pitcher.advancedEff||S.pitcher.advanced||{};
     // Use SIERA > xFIP > FIP > ERA in order of predictive value. The factor
     // label is unified so factor-learning isn't split across four buckets that
     // depend on which advanced metric was available; the specific metric used
@@ -564,6 +570,18 @@ function calcPrediction(){
     if(!isNaN(trueERA)&&trueERA!=null){
       const a=(trueERA-4.00)*4;
       add('Pitcher Quality',`${trueLabel} ${trueERA.toFixed(2)}`,a,trueERA<3.25?'Elite arm':trueERA<4.00?'Above-average':trueERA<5.00?'League-average':'Hittable pitcher','pitcher');
+    }
+    // Transparency note when the venue (home/road) split materially shifted the
+    // pitcher's effective line. Carries no score of its own — the effect is
+    // already baked into Pitcher Quality + the rate model via the blended line —
+    // it just surfaces WHY the projection diverges from the raw season number.
+    if(S.pitcher.venueApplied){
+      const seasonBaa=parseFloat(S.pitcher.st?.avg),effBaa=parseFloat(pst.avg);
+      if(isFinite(seasonBaa)&&isFinite(effBaa)&&Math.abs(effBaa-seasonBaa)>=0.008){
+        const where=S.pitcher.venueApplied==='home'?'at home':'on the road';
+        add('Venue Split',`${effBaa.toFixed(3).replace(/^0/,'')} BAA ${where}`,0,
+          `Pitcher's ${where} split blended into his season line (sample-weighted) — effective BAA ${effBaa.toFixed(3).replace(/^0/,'')} vs ${seasonBaa.toFixed(3).replace(/^0/,'')} season`,'pitcher');
+      }
     }
     // ERA-FIP divergence reveals luck/regression — show only when gap is meaningful
     if(adv.fip!=null&&!isNaN(era)){

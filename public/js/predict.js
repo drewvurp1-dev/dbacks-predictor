@@ -250,6 +250,12 @@ export function modelProbability(propKey,line,score,_components){
   const gamePAs=_gamePAs();
   let p=null;
 
+  // Venue-blended pitcher line (home/road split shrunk into the season aggregate;
+  // see pitcher.js _blendVenueLine). Falls back to the raw season line when no
+  // usable split exists. Read for every pitcher rate below so the log-5 combine
+  // sees the pitcher's actual venue performance, not just his season-wide number.
+  const pst=S.pitcher?.stEff||S.pitcher?.st;
+
   // Learned score↔rate blend weight (defaults to DEFAULT_BLEND_W when untuned).
   // _blend records the two components so calibrate.js can fit W from outcomes.
   const blendW=getBlendWeight(propKey);
@@ -288,9 +294,9 @@ export function modelProbability(propKey,line,score,_components){
     // Pitcher hits-allowed rate (BAA). Shrunk to league with priorN=200
     // since BAA stabilizes slowly. Bullpen games: blend listed pitcher 40% /
     // league-average reliever BAA (~.235) 60% — mirrors the K/BB logic.
-    const pAvgRaw=parseFloat(S.pitcher?.st?.avg);
-    const pAB=parseInt(S.pitcher?.st?.atBats)||0;
-    const pH=parseInt(S.pitcher?.st?.hits)||0;
+    const pAvgRaw=parseFloat(pst?.avg);
+    const pAB=parseInt(pst?.atBats)||0;
+    const pH=parseInt(pst?.hits)||0;
     let pRate=(pAB>0)
       ?_shrunkRate(pH,pAB,LG_AVG,200)
       :(isFinite(pAvgRaw)?pAvgRaw:LG_AVG);
@@ -346,11 +352,11 @@ export function modelProbability(propKey,line,score,_components){
     const r_b3B=_shrunkRate(b3B,bAB||1,LG_3B,200);
     const r_bHR=_shrunkRate(bHR,bAB||1,LG_HR,150);
 
-    const pAB=parseInt(S.pitcher?.st?.atBats)||0;
-    const pH=parseInt(S.pitcher?.st?.hits)||0;
-    const pHR_=parseInt(S.pitcher?.st?.homeRuns)||0;
-    const p2B_=parseInt(S.pitcher?.st?.doubles)||0;
-    const p3B_=parseInt(S.pitcher?.st?.triples)||0;
+    const pAB=parseInt(pst?.atBats)||0;
+    const pH=parseInt(pst?.hits)||0;
+    const pHR_=parseInt(pst?.homeRuns)||0;
+    const p2B_=parseInt(pst?.doubles)||0;
+    const p3B_=parseInt(pst?.triples)||0;
     const p1B_=Math.max(0,pH-pHR_-p2B_-p3B_);
     let r_p1B=pAB>0?_shrunkRate(p1B_,pAB,LG_1B,200):LG_1B;
     let r_p2B=pAB>0?_shrunkRate(p2B_,pAB,LG_2B,250):LG_2B;
@@ -415,8 +421,8 @@ export function modelProbability(propKey,line,score,_components){
     const bPA=parseInt(ss?.plateAppearances)||0;
     const bHR=parseInt(ss?.homeRuns)||0;
     const bHR_PA=_shrunkRate(bHR,bPA||1,LG_HR_PA,150);
-    const pPA=parseInt(S.pitcher?.st?.battersFaced)||0;
-    const pHRCount=parseInt(S.pitcher?.st?.homeRuns)||0;
+    const pPA=parseInt(pst?.battersFaced)||0;
+    const pHRCount=parseInt(pst?.homeRuns)||0;
     let pHR_PA=pPA>0?_shrunkRate(pHRCount,pPA,LG_HR_PA,200):LG_HR_PA;
     if(S.pitcher?.bullpenGame) pHR_PA=pHR_PA*0.4+LG_HR_PA*0.6;
     const pHRrate=_log5(bHR_PA,pHR_PA,LG_HR_PA);
@@ -443,8 +449,8 @@ export function modelProbability(propKey,line,score,_components){
     // Handedness-specific BB rate (BB stabilizes a bit slower than K — require ≥100 PA).
     const hs=_handSplit();
     const bbF=(hs?.pa>=100&&hs?.bb!=null)?_shrunkRate(hs.bb,hs.pa,overallBBF,60):overallBBF;
-    const pitcherPA=S.pitcher?.st?.battersFaced||1;
-    let pBBF=S.pitcher?.st?.baseOnBalls?_shrunkRate(parseInt(S.pitcher.st.baseOnBalls)||0,pitcherPA,0.08,80):0.08;
+    const pitcherPA=pst?.battersFaced||1;
+    let pBBF=pst?.baseOnBalls?_shrunkRate(parseInt(pst.baseOnBalls)||0,pitcherPA,0.08,80):0.08;
     // Bullpen games: hitters face multiple relievers. Blend listed pitcher's BB rate
     // toward league-average reliever BB/PA (~8.5% — BB/9 ≈ 3.2 over ~4.3 PA/IP).
     // 40% listed / 60% reliever pool.
@@ -469,8 +475,8 @@ export function modelProbability(propKey,line,score,_components){
     // adjustment captures the handedness gap without small-sample noise.
     const hs=_handSplit();
     const kF=(hs?.pa>=80&&hs?.k!=null)?_shrunkRate(hs.k,hs.pa,overallKF,40):overallKF;
-    const pitcherPA=S.pitcher?.st?.battersFaced||1;
-    let pKF=S.pitcher?.st?.strikeOuts?_shrunkRate(parseInt(S.pitcher.st.strikeOuts)||0,pitcherPA,0.22,60):0.22;
+    const pitcherPA=pst?.battersFaced||1;
+    let pKF=pst?.strikeOuts?_shrunkRate(parseInt(pst.strikeOuts)||0,pitcherPA,0.22,60):0.22;
     // Bullpen games: hitters face multiple relievers, not just the listed arm. Blend the
     // listed pitcher's K rate toward league-average reliever K/PA (~23.5% — relievers
     // strike out batters at a higher clip than starters, K/9 ≈ 9.0 over ~4.3 PA/IP).
