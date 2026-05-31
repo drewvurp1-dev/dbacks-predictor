@@ -6,7 +6,7 @@ import { S } from './state.js';
 import { PITCH_NAMES } from './constants.js';
 import { _parkFactors } from './utils.js';
 import {
-  _gamePAs, _ttopBonus, _hrrOverPct, _pitcherRunEnvMult,
+  _gamePAs, _ttopBonus, _hrrOverPct, _pitcherRunEnvMult, _pitcherStuffMult,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
   _handSplit, _poissonCDF, _negBinomTailGT,
 } from './player.js';
@@ -291,14 +291,15 @@ export function modelProbability(propKey,line,score,_components){
     const bRate=(hs?.pa>=100&&hs?.ab>0)
       ?_shrunkRate(parseInt(hs.h)||0,hs.ab,overallRate,80)
       :_shrunkRate(overallH,overallAB||1,LG_AVG,80);
-    // Pitcher hits-allowed rate (BAA). Shrunk to league with priorN=200
-    // since BAA stabilizes slowly. Bullpen games: blend listed pitcher 40% /
-    // league-average reliever BAA (~.235) 60% — mirrors the K/BB logic.
+    // Pitcher hits-allowed rate (BAA). Shrunk to league with priorN=100
+    // (lowered from 200 — a 200 prior flattened genuine aces to league-average
+    // and drove the model's phantom Over edges). Bullpen games: blend listed
+    // pitcher 40% / league-average reliever BAA (~.235) 60% — mirrors K/BB.
     const pAvgRaw=parseFloat(pst?.avg);
     const pAB=parseInt(pst?.atBats)||0;
     const pH=parseInt(pst?.hits)||0;
     let pRate=(pAB>0)
-      ?_shrunkRate(pH,pAB,LG_AVG,200)
+      ?_shrunkRate(pH,pAB,LG_AVG,100)
       :(isFinite(pAvgRaw)?pAvgRaw:LG_AVG);
     if(S.pitcher?.bullpenGame)pRate=pRate*0.4+0.235*0.6;
     // Log-5 combine batter × pitcher × league.
@@ -306,16 +307,19 @@ export function modelProbability(propKey,line,score,_components){
     const pp=Math.max(0.05,Math.min(0.55,pRate));
     const num=b*pp/LG_AVG;
     const den=num+(1-b)*(1-pp)/(1-LG_AVG);
-    const pHit=den>0?num/den:b;
+    // Stuff multiplier — applies the pitcher's DIPS skill (SIERA/xFIP/FIP) that
+    // the results-based BAA above can't see, so an elite arm suppresses the
+    // hit rate even before his BAA stabilizes. Clamp keeps it a valid prob.
+    const pHit=Math.max(0.02,Math.min(0.60,(den>0?num/den:b)*_pitcherStuffMult()));
     // Expected AB = PA * (1 - BB - HBP). HBP ~1% of PA league-wide.
     const overallBBF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,60):0.09;
     const abPerPA=Math.max(0.78,Math.min(0.94,1-overallBBF-0.01));
     const expectedAB=gamePAs*abPerPA;
     const k=Math.ceil(line+1e-9);
     const rateBase=_binomGE(expectedAB,pHit,k)*100;
-    // Keep a small score-based component (25%) so contact-quality signals the
-    // rate model doesn't see (whiff, HH%, handOps) still influence the final
-    // probability. Anchors recalibrated for realistic ceilings.
+    // Keep a score-based component (DEFAULT_BLEND_W=40%) so contact-quality
+    // signals the rate model doesn't see (whiff, HH%, handOps) still influence
+    // the final probability. Anchors recalibrated for realistic ceilings.
     let scoreBase;
     if(line<=0.5)      scoreBase=lerp3(score,20,45,50,60,80,72);
     else if(line<=1.5) scoreBase=lerp3(score,20,15,50,28,80,42);
@@ -358,10 +362,10 @@ export function modelProbability(propKey,line,score,_components){
     const p2B_=parseInt(pst?.doubles)||0;
     const p3B_=parseInt(pst?.triples)||0;
     const p1B_=Math.max(0,pH-pHR_-p2B_-p3B_);
-    let r_p1B=pAB>0?_shrunkRate(p1B_,pAB,LG_1B,200):LG_1B;
-    let r_p2B=pAB>0?_shrunkRate(p2B_,pAB,LG_2B,250):LG_2B;
-    let r_p3B=pAB>0?_shrunkRate(p3B_,pAB,LG_3B,300):LG_3B;
-    let r_pHR=pAB>0?_shrunkRate(pHR_,pAB,LG_HR,200):LG_HR;
+    let r_p1B=pAB>0?_shrunkRate(p1B_,pAB,LG_1B,120):LG_1B;
+    let r_p2B=pAB>0?_shrunkRate(p2B_,pAB,LG_2B,150):LG_2B;
+    let r_p3B=pAB>0?_shrunkRate(p3B_,pAB,LG_3B,250):LG_3B;
+    let r_pHR=pAB>0?_shrunkRate(pHR_,pAB,LG_HR,120):LG_HR;
     if(S.pitcher?.bullpenGame){
       r_p1B=r_p1B*0.4+LG_1B*0.6;
       r_p2B=r_p2B*0.4+LG_2B*0.6;
@@ -369,10 +373,14 @@ export function modelProbability(propKey,line,score,_components){
       r_pHR=r_pHR*0.4+LG_HR*0.6;
     }
 
-    let q1B=_log5(r_b1B,r_p1B,LG_1B);
-    let q2B=_log5(r_b2B,r_p2B,LG_2B);
-    let q3B=_log5(r_b3B,r_p3B,LG_3B);
-    let qHR=_log5(r_bHR,r_pHR,LG_HR);
+    // Stuff multiplier — fold the pitcher's DIPS skill into every event class so
+    // an elite arm suppresses extra-base contact before his rate-against
+    // stabilizes (the results-based shrunk rates above can't see it).
+    const _sm=_pitcherStuffMult();
+    let q1B=_log5(r_b1B,r_p1B,LG_1B)*_sm;
+    let q2B=_log5(r_b2B,r_p2B,LG_2B)*_sm;
+    let q3B=_log5(r_b3B,r_p3B,LG_3B)*_sm;
+    let qHR=_log5(r_bHR,r_pHR,LG_HR)*_sm;
     // Sanity cap: total hit prob shouldn't exceed plausible AVG ceiling.
     const totalHit=q1B+q2B+q3B+qHR;
     if(totalHit>0.55){const s=0.55/totalHit;q1B*=s;q2B*=s;q3B*=s;qHR*=s;}
@@ -386,8 +394,8 @@ export function modelProbability(propKey,line,score,_components){
     const k=Math.ceil(line+1e-9);
     const rateBase=_convolveTBge(perAB,expectedAB,k)*100;
 
-    // Score-based component (25%) — captures contact-quality and OPS-vs-hand
-    // signals beyond what season counting stats see. Anchors recalibrated for
+    // Score-based component (DEFAULT_BLEND_W=40%) — captures contact-quality and
+    // OPS-vs-hand signals beyond what season counting stats see. Anchors for
     // realistic ceilings (top of the 80-score band ≈ what a true .470-SLG bat
     // produces under typical AB volume).
     let scoreBase;
@@ -423,12 +431,14 @@ export function modelProbability(propKey,line,score,_components){
     const bHR_PA=_shrunkRate(bHR,bPA||1,LG_HR_PA,150);
     const pPA=parseInt(pst?.battersFaced)||0;
     const pHRCount=parseInt(pst?.homeRuns)||0;
-    let pHR_PA=pPA>0?_shrunkRate(pHRCount,pPA,LG_HR_PA,200):LG_HR_PA;
+    let pHR_PA=pPA>0?_shrunkRate(pHRCount,pPA,LG_HR_PA,120):LG_HR_PA;
     if(S.pitcher?.bullpenGame) pHR_PA=pHR_PA*0.4+LG_HR_PA*0.6;
-    const pHRrate=_log5(bHR_PA,pHR_PA,LG_HR_PA);
+    // Stuff multiplier — an elite arm's HR-suppression skill (captured by DIPS)
+    // before his HR-against rate stabilizes over a meaningful sample.
+    const pHRrate=Math.max(0.001,Math.min(0.12,_log5(bHR_PA,pHR_PA,LG_HR_PA)*_pitcherStuffMult()));
     const k=Math.ceil(line+1e-9);
     const rateBase=_binomGE(gamePAs,pHRrate,k)*100;
-    // Score-based component (25%) — captures barrel%, OPS-vs-hand, and other
+    // Score-based component (DEFAULT_BLEND_W=40%) — captures barrel%, OPS-vs-hand, and other
     // contact-quality signals the season HR rate misses (esp. for small-sample
     // rookies where xHR/PA leads HR/PA). Line-specific anchors keep blends
     // realistic at HR 1.5+ where the prop is genuinely rare.
@@ -459,7 +469,7 @@ export function modelProbability(propKey,line,score,_components){
     // P(walks ≥ k) over gamePAs Bernoulli trials. k = smallest integer > line,
     // so line=0.5→k=1, line=1.5→k=2, line=2.5→k=3, etc.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    // scoreBase weight dropped 60% → 25% and anchor at 80 trimmed from 48 to
+    // scoreBase weight dropped 60% → DEFAULT_BLEND_W (40%) and anchor at 80 trimmed from 48 to
     // 42. The binomial on shrunken BB rate is the principled signal here;
     // score retains weight for ump/recent-form/days-rest factors the binomial
     // doesn't see. Old weighting could push elite-OBP rookies to 48% on Walks
@@ -491,7 +501,7 @@ export function modelProbability(propKey,line,score,_components){
     const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj+matchupK);
     // P(strikeouts ≥ k) over gamePAs Bernoulli trials. Generalized for any line.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    // scoreBase weight dropped 60% → 25% with line-specific anchors that
+    // scoreBase weight dropped 60% → DEFAULT_BLEND_W (40%) with line-specific anchors that
     // mirror the binomial's natural distribution across the population at
     // each line. Old single-anchor (28/48/68) was line-agnostic, which
     // overshot K 1.5+ for high-K matchups (model 54% vs binomial truth ~34%)
@@ -563,7 +573,7 @@ export function modelProbability(propKey,line,score,_components){
   }
   else if(propKey==='batter_hits_runs_rbis'){
     const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs,_pitcherRunEnvMult());
-    // scoreBase weight dropped 50% → 25%, matching the pattern applied to
+    // scoreBase weight dropped 50% → DEFAULT_BLEND_W (40%), matching the pattern applied to
     // every other rate-based prop. The Bayesian-shrunk empirical CDF (or
     // Poisson fallback) is the principled signal here; the heavy 50% score
     // weight was pulling low-stat-line starters' projections down by ~25pp

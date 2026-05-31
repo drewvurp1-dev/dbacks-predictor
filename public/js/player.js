@@ -190,8 +190,10 @@ export function _shrunkRate(numerator, denominator, leagueAvg, priorN) {
 // arm), >1 inflates. Driven by two pitcher signals computed from the season line:
 //   • on-base-against  (h+bb)/BF — baserunners ahead of the hitter, league ~.315
 //   • slugging-against TB/AB      — extra-base / drive-in environment, league ~.400
-// Both Bayesian-shrunk to league (priorN=200; rate-against stabilizes slowly),
-// then blended 60/40 toward on-base since baserunners gate RBI opportunity more
+// Both Bayesian-shrunk to league (priorN=120; rate-against stabilizes slowly,
+// but a 200 prior flattened genuine aces to league-average and was a primary
+// cause of the model's phantom Over edges), then blended 60/40 toward on-base
+// since baserunners gate RBI opportunity more
 // than raw power does. Clamped to [0.80, 1.25] so a small-sample line can't
 // dominate, and gated behind a 50-BF minimum. Bullpen games blend 40% toward
 // league since the listed arm isn't representative of who the hitters face.
@@ -216,11 +218,43 @@ export function _pitcherRunEnvMult() {
   const trp = parseInt(pst.triples) || 0;
   const ab  = parseInt(pst.atBats) || bf;
   const singles = Math.max(0, h - hr - dbl - trp);
-  const obA  = _shrunkRate(h + bb, bf, 0.315, 200);
-  const slgA = _shrunkRate(singles + 2 * dbl + 3 * trp + 4 * hr, ab || 1, 0.400, 200);
+  const obA  = _shrunkRate(h + bb, bf, 0.315, 120);
+  const slgA = _shrunkRate(singles + 2 * dbl + 3 * trp + 4 * hr, ab || 1, 0.400, 120);
   let mult = (obA / 0.315) * 0.6 + (slgA / 0.400) * 0.4;
   if (S.pitcher?.bullpenGame) mult = mult * 0.4 + 1.0 * 0.6;
   return Math.max(0.80, Math.min(1.25, mult));
+}
+
+// ── Opposing-pitcher "stuff" multiplier (skill-based, results-independent) ──
+// The log-5 props fold in the pitcher via his BAA / HR-against, but those are
+// RESULTS stats: they need a large sample to stabilize and are heavily shrunk
+// toward league, so a genuinely elite arm with a short or lucky-looking line
+// (e.g. an early-season ace sitting on a sub-1.00 ERA over 15 IP) collapses to
+// ~league-average inside the rate model. The betting market prices the
+// pitcher's STUFF — K-BB%, whiff, batted-ball mix — long before the BAA
+// stabilizes, which is exactly why the model kept manufacturing phantom Over
+// edges against good pitchers: its probability barely moved while the market's
+// did. This multiplier injects that skill signal using the best available DIPS
+// estimator (SIERA > xFIP > FIP), which describes true talent independent of
+// the BAA the log-5 already consumes — so it adds the signal the rate model is
+// blind to rather than double-counting the one it already has.
+//
+// Returns a multiplier on the batter's offensive event rates: <1 vs a good arm,
+// >1 vs a weak one. League-average DIPS ~4.00 → 1.0. Slope 0.085/run, clamped to
+// [0.82, 1.18] so one extreme number can't run away with the prop. Gated behind
+// ip>=10 (the advanced metrics are null below that). Bullpen games blend 40%
+// toward neutral since the listed arm isn't representative of who hitters face.
+export function _pitcherStuffMult() {
+  const adv = S.pitcher?.advanced;
+  const st  = S.pitcher?.st;
+  if (!adv || !st) return 1.0;
+  const ip = parseFloat(st.inningsPitched) || 0;
+  if (ip < 10) return 1.0;
+  const dips = adv.siera ?? adv.xfip ?? adv.fip;
+  if (dips == null || !isFinite(dips)) return 1.0;
+  let mult = 1 + (dips - 4.00) * 0.085;
+  if (S.pitcher?.bullpenGame) mult = mult * 0.4 + 1.0 * 0.6;
+  return Math.max(0.82, Math.min(1.18, mult));
 }
 
 // ── Distribution helpers (binomial + total-bases convolution) ───────────────

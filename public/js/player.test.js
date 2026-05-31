@@ -8,7 +8,7 @@ import {
   _factorial, _poissonCDF, _negBinomTailGT,
   _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
-  _extractSplitStat, _handSplit, _pitcherRunEnvMult,
+  _extractSplitStat, _handSplit, _pitcherRunEnvMult, _pitcherStuffMult,
 } from './player.js';
 
 // ── _factorial ──────────────────────────────────────────────────────────────
@@ -361,6 +361,54 @@ test('_pitcherRunEnvMult — bullpen game blends 40% toward league', () => {
   const raw = _pitcherRunEnvMult();
   // Blending toward 1.0 pulls a sub-1.0 multiplier upward (closer to neutral).
   assert.ok(blended > raw, `bullpen blend should pull toward 1.0: blended=${blended} raw=${raw}`);
+});
+
+// ── _pitcherStuffMult ───────────────────────────────────────────────────────
+// DIPS-skill (SIERA/xFIP/FIP) multiplier on the batter's offensive event rates.
+// Reads S.pitcher.advanced + S.pitcher.st. <1 vs a good arm, >1 vs a weak one.
+test('_pitcherStuffMult — no pitcher / no advanced metrics returns neutral 1.0', () => {
+  S.pitcher = null;
+  assert.equal(_pitcherStuffMult(), 1.0);
+  S.pitcher = { st: { inningsPitched: '70.0' } }; // advanced missing
+  assert.equal(_pitcherStuffMult(), 1.0);
+});
+
+test('_pitcherStuffMult — under 10 IP returns neutral 1.0 (metrics not stable)', () => {
+  S.pitcher = { st: { inningsPitched: '8.0' }, advanced: { siera: 2.5, xfip: 2.6, fip: 2.7 } };
+  assert.equal(_pitcherStuffMult(), 1.0);
+});
+
+test('_pitcherStuffMult — league-average DIPS (~4.00) sits at 1.0', () => {
+  S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: 4.0, xfip: 4.0, fip: 4.0 } };
+  assert.ok(Math.abs(_pitcherStuffMult() - 1.0) < 1e-9);
+});
+
+test('_pitcherStuffMult — ace suppresses (<1), weak arm inflates (>1)', () => {
+  S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: 2.8, xfip: 3.0, fip: 2.9 } };
+  const ace = _pitcherStuffMult();
+  S.pitcher = { st: { inningsPitched: '60.0' }, advanced: { siera: 5.4, xfip: 5.2, fip: 5.3 } };
+  const weak = _pitcherStuffMult();
+  assert.ok(ace < 1.0, `ace should suppress, got ${ace}`);
+  assert.ok(weak > 1.0, `weak arm should inflate, got ${weak}`);
+  assert.ok(ace < weak, 'ace must be below weak arm');
+});
+
+test('_pitcherStuffMult — prefers SIERA over xFIP over FIP', () => {
+  S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: 2.8, xfip: 9.9, fip: 9.9 } };
+  const bySiera = _pitcherStuffMult();
+  S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: null, xfip: 2.8, fip: 9.9 } };
+  const byXfip = _pitcherStuffMult();
+  S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: null, xfip: null, fip: 2.8 } };
+  const byFip = _pitcherStuffMult();
+  assert.ok(Math.abs(bySiera - byXfip) < 1e-9 && Math.abs(byXfip - byFip) < 1e-9,
+    `all three should resolve to the same 2.8 DIPS value: ${bySiera}/${byXfip}/${byFip}`);
+});
+
+test('_pitcherStuffMult — clamped to [0.82, 1.18]', () => {
+  S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: 1.0, xfip: 1.0, fip: 1.0 } };
+  assert.ok(_pitcherStuffMult() >= 0.82 - 1e-9);
+  S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: 9.0, xfip: 9.0, fip: 9.0 } };
+  assert.ok(_pitcherStuffMult() <= 1.18 + 1e-9);
 });
 
 // ── _hrrOverPct runEnvMult parameter ────────────────────────────────────────
