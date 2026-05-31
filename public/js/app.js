@@ -568,7 +568,11 @@ function calcPrediction(){
     const trueERA=adv.siera??adv.xfip??adv.fip??era;
     const trueLabel=adv.siera!=null?'SIERA':adv.xfip!=null?'xFIP':adv.fip!=null?'FIP':'ERA';
     if(!isNaN(trueERA)&&trueERA!=null){
-      const a=(trueERA-4.00)*4;
+      // Slope widened ×4 → ×6: an ace (SIERA ~2.8) now pushes ~−7 instead of −5.
+      // The score channel was too timid against elite arms — paired with the
+      // results-based rate model, the model's Over prob barely moved off a good
+      // pitcher while the market dropped hard, producing phantom Over edges.
+      const a=(trueERA-4.00)*6;
       add('Pitcher Quality',`${trueLabel} ${trueERA.toFixed(2)}`,a,trueERA<3.25?'Elite arm':trueERA<4.00?'Above-average':trueERA<5.00?'League-average':'Hittable pitcher','pitcher');
     }
     // Transparency note when the venue (home/road) split materially shifted the
@@ -623,7 +627,7 @@ function calcPrediction(){
     }
   } else {
     const mEra=parseFloat(document.getElementById('m-pitcher-era')?.value);
-    if(!isNaN(mEra)){const a=(mEra-4.00)*4;add('Pitcher Quality',`ERA ${mEra.toFixed(2)}`,a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher','pitcher');}
+    if(!isNaN(mEra)){const a=(mEra-4.00)*6;add('Pitcher Quality',`ERA ${mEra.toFixed(2)}`,a,mEra<3.25?'Elite arm':mEra<4.00?'Above-average':mEra<5.00?'League-average':'Hittable pitcher','pitcher');}
   }
   if(S.matchupStats&&S.matchupStats.ab>=5){
     const{ops,ab}=S.matchupStats;
@@ -1262,6 +1266,27 @@ function generateCorbetBets(score,factors,rawMarketMap){
       edgeStrength=absDelta>=10?'strong':absDelta>=6?'moderate':absDelta>=3?'small':'none';
     }
 
+    // Channel-agreement guard — the recommendation runs on the blended modelProb
+    // (score channel + rate channel), but the rate channel is the principled,
+    // distribution-based signal. When the pick is carried ENTIRELY by score-
+    // channel optimism while the rate model itself lands on the opposite side of
+    // the market, that's the phantom-edge signature that produced Overs against
+    // good pitchers: the score nudged the blend past the market, but the
+    // bottom-up math disagrees. Downgrade such picks one notch (strong→moderate→
+    // small→none) and flag them, rather than silently recommending. Skip when the
+    // disagreement is marginal (rate within 3pp of market) — that's just noise.
+    let channelConflict=false;
+    const _rb=_comp.rateBase;
+    if(_rb!=null){
+      const rateSaysOver=_rb>dv.overProb;
+      const pickIsOver=direction==='Over';
+      const margin=Math.abs(_rb-dv.overProb);
+      if(rateSaysOver!==pickIsOver&&margin>=3&&edgeStrength!=='none'){
+        edgeStrength=edgeStrength==='strong'?'moderate':edgeStrength==='moderate'?'small':'none';
+        channelConflict=true;
+      }
+    }
+
     // Market-confidence flag based on raw imbalance at the selected line. Heavily
     // asymmetric markets (sideShare far from 50/50) are harder to devig accurately —
     // we can't tell if the imbalance is "real" matchup signal or a book-shaded line.
@@ -1273,7 +1298,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
 
     results.push({
       prop:PROP_NAMES[propKey],propKey,line,direction,
-      delta,absDelta,ev,edgeStrength,marketConfidence,
+      delta,absDelta,ev,edgeStrength,marketConfidence,channelConflict,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
       // Calibration breadcrumbs — modelProbRaw is the pre-Platt probability,

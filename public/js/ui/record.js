@@ -78,6 +78,7 @@ export function renderCorbetBets(){
           ${showSave?`<button data-action="save-bet" data-bk="${betKey.replace(/"/g,'&quot;')}" style="background:#0e0c22;border:1px solid #1e1b3a;border-radius:4px;color:#888;font-family:\'Chakra Petch\',monospace;font-size:9px;cursor:pointer;padding:3px 8px;letter-spacing:1px;text-transform:uppercase;">+ Save</button>`:''}
         </div>
         ${b.conflict?`<div style="background:#1a0808;border:1px solid #4a1010;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e74c3c;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;">⚠ CONFLICT — Direction contradicts Total Bases recommendation. No edge shown.</div>`:''}
+        ${b.channelConflict&&!b.conflict?`<div style="background:#1a1408;border:1px solid #4a3a10;border-radius:6px;padding:6px 10px;margin:6px 0 8px;font-size:9px;color:#e6a23c;font-family:\'Chakra Petch\',monospace;letter-spacing:1px;" data-tip="The recommendation is carried by the score channel, but the bottom-up rate model lands on the opposite side of the market — often a strong-pitcher spot. Edge downgraded one notch.">⚠ SOFT EDGE — Rate model disagrees with the score channel. Confidence downgraded.</div>`:''}
         ${b.edgeStrength!=='none'
           ?`<div style="background:${dirBg};border:1px solid ${dirBorder};border-radius:8px;padding:10px 14px;margin:8px 0 12px;display:flex;justify-content:space-between;align-items:center;">
               <div>

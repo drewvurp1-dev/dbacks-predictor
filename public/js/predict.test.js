@@ -272,6 +272,34 @@ test('modelProbability — protection tier shifts RBI/Runs', () => {
   assert.ok(strong > weak, `strong=${strong}, weak=${weak}`);
 });
 
+// ── Hits/TB/HR pitcher-quality suppression (regression) ──────────────────────
+// The over-bias bug: the log-5 rate channel only saw the pitcher's heavily
+// shrunk BAA/HR-rate, so an elite arm collapsed to ~league-average and the
+// model's Over prob barely moved off a good pitcher while the market dropped
+// hard — manufacturing phantom Over edges. The fix lightens the shrinkage and
+// folds in a DIPS-skill (SIERA/xFIP/FIP) multiplier. Hold score neutral (50) so
+// this isolates the rate channel. The same two arms used by the run-scoring
+// test below — but here we also vary the advanced metrics that drive the stuff
+// multiplier, since the BAA-only signal was the part that was too weak.
+test('modelProbability — Hits/TB/HR suppress meaningfully vs an elite arm', () => {
+  setupAverageBatter();
+  const eliteSt = { battersFaced: 330, strikeOuts: 105, baseOnBalls: 18, inningsPitched: '78.0',
+                    atBats: 300, hits: 62, homeRuns: 6, doubles: 11, triples: 0, whip: 0.95, avg: '.205' };
+  const bpSt    = { battersFaced: 340, strikeOuts: 45, baseOnBalls: 40, inningsPitched: '64.0',
+                    atBats: 300, hits: 90, homeRuns: 18, doubles: 20, triples: 2, whip: 1.65, avg: '.300' };
+  const eliteAdv = { siera: 2.85, xfip: 3.05, fip: 2.95, kbbPct: 26, hr9: 0.69 };
+  const bpAdv    = { siera: 5.35, xfip: 5.15, fip: 5.25, kbbPct: 4, hr9: 2.5 };
+  const cases = [['batter_hits', 0.5], ['batter_total_bases', 1.5], ['batter_home_runs', 0.5]];
+  for (const [prop, line] of cases) {
+    S.pitcher = { id: 999, hand: 'R', st: eliteSt, advanced: eliteAdv, bullpenGame: false, last3: [] };
+    const vsElite = modelProbability(prop, line, 50);
+    S.pitcher = { id: 999, hand: 'R', st: bpSt, advanced: bpAdv, bullpenGame: false, last3: [] };
+    const vsBP = modelProbability(prop, line, 50);
+    assert.ok(vsBP - vsElite >= 5,
+      `${prop} Over should swing >=5pp on pitcher quality (was ~1-2pp pre-fix): elite=${vsElite} bp=${vsBP}`);
+  }
+});
+
 // ── Pitcher sensitivity of the run-scoring props (regression) ────────────────
 // RBI / Runs / H+R+RBI used to be nearly pitcher-blind: their rate channel was
 // built from the batter's own season rate, so swinging the opposing pitcher from
