@@ -516,6 +516,7 @@ export function renderDashboard(){
     return`<div class="dash-prow" id="dpr-${pid}">
       <div class="dash-prow-header" data-action="toggle-player-card" data-player-id="${pid}">
         <span class="dash-prow-order">${orderLabel}</span>
+        ${snap.pos?`<span class="dash-prow-pos">${snap.pos}</span>`:''}
         <span class="dash-prow-name">${player.name}</span>${lowDataBadge}
         <span class="dash-prow-statline">AVG ${avgStr} &nbsp; OPS ${opsStr}</span>
         <button class="dash-prow-more" data-action="open-player-stats" data-player-id="${pid}">More Stats ›</button>

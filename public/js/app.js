@@ -513,7 +513,7 @@ async function loadLineupContext(dv){
     show('lineup-content');
 
     // Use confirmed lineup as the active CorBET roster
-    const newRoster=stats.map(p=>({name:p.name,id:String(p.id),order:p.order||null}));
+    const newRoster=stats.map(p=>({name:p.name,id:String(p.id),order:p.order||null,pos:p.pos||null}));
     S.lineupRoster=newRoster;
     rebuildPlayerSelect(newRoster);
     // If bets are already on screen with stale roster, regenerate them
@@ -1420,6 +1420,7 @@ async function loadCorbet(){
           splits:mlbStats.splits,seasonStat:mlbStats.seasonStat,rispStat:mlbStats.rispStat,
           recentGameLog:mlbStats.recentGameLog,matchupStats:mlbStats.matchupStats,statcast,
           order:player.order||null,
+          pos:player.pos||null,
           lowData:(mlbStats.seasonStat?.plateAppearances||0)<50};
       }catch(e){
         console.warn(`Player load failed for ${player.name} (${player.id}):`,e.message);
