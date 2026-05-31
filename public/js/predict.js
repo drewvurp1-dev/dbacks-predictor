@@ -116,7 +116,7 @@ export function _pitchMatchupFactor() {
   if (!pit || !bat) return cacheMiss(null);
 
   // Batter baseline — weighted by PA per pitch type, all pitches the batter has faced.
-  let bWhiffSum = 0, bWobaSum = 0, bKSum = 0, bPaTotal = 0;
+  let bWhiffSum = 0, bWobaSum = 0, bKSum = 0, bBaSum = 0, bSlgSum = 0, bPaTotal = 0;
   for (const pt in bat.pitches) {
     const r = bat.pitches[pt];
     const w = r.pa || 0;
@@ -124,55 +124,81 @@ export function _pitchMatchupFactor() {
     bWhiffSum += (r.whiff || 0) * w;
     bWobaSum  += (r.woba  || 0) * w;
     bKSum     += (r.k_pct || 0) * w;
+    bBaSum    += (r.ba    || 0) * w;
+    bSlgSum   += (r.slg   || 0) * w;
     bPaTotal  += w;
   }
-  if (bPaTotal < 60) return cacheMiss(null); // need a meaningful baseline
+  if (bPaTotal < 50) return cacheMiss(null); // need a meaningful baseline
 
   const baseWhiff = bWhiffSum / bPaTotal;
   const baseWoba  = bWobaSum  / bPaTotal;
   const baseK     = bKSum     / bPaTotal;
+  // BA/SLG baseline: prefer true season AVG/SLG (the arsenal-weighted average is
+  // skewed high because Savant only includes pitch types the batter has seen enough
+  // of). Fall back to the arsenal-weighted figure when season stats aren't loaded.
+  const ssMatch = S.seasonStat;
+  const seasonBa  = ssMatch?.avg != null ? parseFloat(ssMatch.avg) : NaN;
+  const seasonSlg = ssMatch?.slg != null ? parseFloat(ssMatch.slg) : NaN;
+  const baseBa  = Number.isFinite(seasonBa)  ? seasonBa  : bBaSum  / bPaTotal;
+  const baseSlg = Number.isFinite(seasonSlg) ? seasonSlg : bSlgSum / bPaTotal;
 
   // Expected matchup — re-weight batter's per-pitch rates by the pitcher's usage%.
-  // Only count pitches the batter has faced ≥20 times (skip noise from rare pitches).
-  let expWhiff = 0, expWoba = 0, expK = 0, usageCovered = 0;
+  // Only count pitches the batter has faced ≥10 times (skip noise from rare pitches).
+  let expWhiff = 0, expWoba = 0, expK = 0, expBa = 0, expSlg = 0, usageCovered = 0;
   const detail = [];
   for (const pt in pit.pitches) {
     const pu = pit.pitches[pt].usage || 0;
     const br = bat.pitches[pt];
-    if (!br || (br.pa || 0) < 20 || !pu) continue;
+    if (!br || (br.pa || 0) < 10 || !pu) continue;
     expWhiff += pu * (br.whiff || 0);
     expWoba  += pu * (br.woba  || 0);
     expK     += pu * (br.k_pct || 0);
+    expBa    += pu * (br.ba    || 0);
+    expSlg   += pu * (br.slg   || 0);
     usageCovered += pu;
-    detail.push({ pt, usage: pu, whiff: br.whiff || 0, k: br.k_pct || 0, woba: br.woba || 0 });
+    detail.push({ pt, usage: pu, whiff: br.whiff || 0, k: br.k_pct || 0, woba: br.woba || 0, ba: br.ba || 0, slg: br.slg || 0 });
   }
-  // Require ≥60% of pitcher's mix to be covered by batter's known per-pitch rates.
-  if (usageCovered < 60) return cacheMiss(null);
+  // Require ≥50% of pitcher's mix to be covered by batter's known per-pitch rates.
+  if (usageCovered < 50) return cacheMiss(null);
   expWhiff /= usageCovered;
   expWoba  /= usageCovered;
   expK     /= usageCovered;
+  expBa    /= usageCovered;
+  expSlg   /= usageCovered;
 
   const whiffDelta = expWhiff - baseWhiff;
   const kDelta     = expK     - baseK;
   const wobaDelta  = expWoba  - baseWoba;
+  const baDelta    = expBa    - baseBa;
+  const slgDelta   = expSlg   - baseSlg;
 
   // Pick the single pitch type whose contribution moves K% the most — that's what
   // we'll mention in the analysis line ("heavy SL: batter Ks 28% on it vs 22% baseline").
   detail.sort((a, b) => (b.usage * Math.abs(b.k - baseK)) - (a.usage * Math.abs(a.k - baseK)));
   const top = detail[0];
   const pitchLabel = PITCH_NAMES[top?.pt] || top?.pt || '';
+  // Pitch that most moves the batter's AVG — surfaced in the hits-prop reasoning.
+  const baSorted = [...detail].sort((a, b) => (b.usage * Math.abs(b.ba - baseBa)) - (a.usage * Math.abs(a.ba - baseBa)));
+  const baTop = baSorted[0];
+  const baPitchLabel = PITCH_NAMES[baTop?.pt] || baTop?.pt || '';
 
   return cacheMiss({
     kDeltaPp: kDelta,
     wobaDelta: wobaDelta,
     whiffDelta: whiffDelta,
-    baseWhiff, baseK, baseWoba,
-    expWhiff,  expK,  expWoba,
+    baDelta: baDelta,
+    slgDelta: slgDelta,
+    baseWhiff, baseK, baseWoba, baseBa, baseSlg,
+    expWhiff,  expK,  expWoba,  expBa,  expSlg,
     primaryPitch: top?.pt,
     primaryPitchName: pitchLabel,
     primaryUsage: top?.usage,
     primaryBatterK: top?.k,
     primaryBatterWhiff: top?.whiff,
+    baPitch: baTop?.pt,
+    baPitchName: baPitchLabel,
+    baPitchUsage: baTop?.usage,
+    baPitchBa: baTop?.ba,
   });
 }
 
@@ -182,14 +208,22 @@ export function _pitchMatchupReason(direction, propKey) {
   const m = _pitchMatchupFactor();
   if (!m) return null;
   const isK = propKey === 'batter_strikeouts';
-  const helpsOver = isK ? (m.kDeltaPp > 0) : (m.wobaDelta > 0);
-  const meaningful = isK ? Math.abs(m.kDeltaPp) >= 2 : Math.abs(m.wobaDelta) >= 0.015;
+  const isHits = propKey === 'batter_hits';
+  // Hits leans on AVG-vs-pitch; K leans on K%-vs-pitch; everything else on wOBA.
+  const helpsOver = isK ? (m.kDeltaPp > 0) : isHits ? (m.baDelta > 0) : (m.wobaDelta > 0);
+  const meaningful = isK ? Math.abs(m.kDeltaPp) >= 2
+    : isHits ? Math.abs(m.baDelta) >= 0.020
+    : Math.abs(m.wobaDelta) >= 0.015;
   if (!meaningful) return null;
   // Match direction — only surface when matchup supports the bet direction
   const supports = (direction === 'over' && helpsOver) || (direction === 'under' && !helpsOver);
   if (!supports) return null;
   if (isK) {
     return `${m.primaryUsage.toFixed(0)}% ${m.primaryPitchName} (${m.primaryBatterK.toFixed(0)}% K vs ${m.baseK.toFixed(0)}% base)`;
+  }
+  if (isHits && m.baPitchUsage != null) {
+    const fmt = v => v.toFixed(3).replace(/^0/, '');
+    return `${m.baPitchUsage.toFixed(0)}% ${m.baPitchName} (${fmt(m.baPitchBa)} BA vs ${fmt(m.baseBa)} base)`;
   }
   return `${m.primaryUsage.toFixed(0)}% ${m.primaryPitchName} mix (${(m.wobaDelta > 0 ? '+' : '')}${m.wobaDelta.toFixed(3)} wOBA matchup)`;
 }
@@ -273,9 +307,12 @@ export function modelProbability(propKey,line,score,_components){
     else if(line<=2.5) scoreBase=lerp3(score,20, 3,50, 8,80,18);
     else               scoreBase=lerp3(score,20, 1,50, 3,80, 7);
     p=_blend(scoreBase,rateBase);
-    // Pitch-mix wOBA delta — captures matchup signal beyond season-wide AVG/BAA.
+    // Pitch-mix matchup — captures signal beyond season-wide AVG/BAA. For hits we
+    // lead with AVG-vs-pitch-type (the direct hit signal: e.g. a .280 bat vs a
+    // pitcher's primary 4-seam) and keep a smaller wOBA-quality term.
     {const mu=_pitchMatchupFactor();
-     if(mu)p+=Math.max(-3,Math.min(3,mu.wobaDelta*150));}
+     if(mu){p+=Math.max(-4,Math.min(4,mu.baDelta*32));
+            p+=Math.max(-2,Math.min(2,mu.wobaDelta*100));}}
     p+=_ttopBonus();
     // NOTE: PA volume and WHIP signal are already inside the binomial via
     // gamePAs and pitcher BAA — no separate paDelta or WHIP adjustment.
@@ -345,9 +382,11 @@ export function modelProbability(propKey,line,score,_components){
     else               scoreBase=lerp3(score,20, 3,50, 7,80,16);
     p=_blend(scoreBase,rateBase);
 
-    // Pitch-mix wOBA delta — small additive bonus.
+    // Pitch-mix matchup — total bases keys on SLG-vs-pitch-type (extra-base signal),
+    // with a smaller wOBA-quality term layered on.
     {const mu=_pitchMatchupFactor();
-     if(mu)p+=Math.max(-3,Math.min(3,mu.wobaDelta*180));}
+     if(mu){p+=Math.max(-3,Math.min(3,mu.slgDelta*13));
+            p+=Math.max(-2,Math.min(2,mu.wobaDelta*100));}}
     p+=_ttopBonus();
     // Statcast contact-quality bumps at half their previous magnitude — the
     // multinomial already captures season HR/2B rates, so these only correct

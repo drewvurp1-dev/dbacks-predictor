@@ -98,7 +98,8 @@ export function _renderPitchMatchup() {
 
   // Compute the batter's baseline. Use MLB API season stats for BA/SLG/K% — they're
   // accurate full-season numbers. The Statcast pitch-arsenal data only covers pitch types
-  // with ≥25 PA, which skews the weighted average high (harder pitches get excluded).
+  // above the refresh minPA floor, which skews the weighted average high (harder pitches
+  // the batter has seen rarely still get excluded below that floor).
   // wOBA isn't in the MLB API so we still derive it from the Statcast-weighted average.
   let bWoba = 0, bWhiff = 0, bPA = 0;
   if (bat) {
@@ -156,10 +157,10 @@ export function _renderPitchMatchup() {
     const usageBarColor = usage >= 30 ? '#A71930' : usage >= 15 ? '#7a3560' : '#3a3560';
     const usageBar = `<div class="matchup-bar-wrap"><div class="matchup-bar" style="width:${Math.min(100, usage * 1.8)}%;background:${usageBarColor};"></div></div>`;
 
-    if (!br || (br.pa || 0) < 15) {
+    if (!br || (br.pa || 0) < 5) {
       const sampleNote = !br
         ? '— no Savant data —'
-        : `— only ${br.pa} PA (need 15) —`;
+        : `— only ${br.pa} PA (need 5) —`;
       return `<div class="matchup-row">
         <div class="matchup-pitch">${name}</div>
         <div class="matchup-usage">${usageBar}<span class="matchup-usage-pct">${usage.toFixed(0)}%</span></div>
