@@ -1242,8 +1242,8 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .bet-log-item.bet-pending { opacity: 1; }
 
   /* Grade log: each game is its own card.
-     Row 1: date · player · outcome badge
-     Row 2: SCORE n · PERF n · model badge
+     Row 1: date · player · model badge (Accurate/Close/Off — prediction calibration)
+     Row 2: SCORE n · PERF n · outcome badge (Poor/Avg/Great — pairs with PERF)
      Row 3: stat line (full width) */
   #grade-log-headers { display: none !important; }
   .grade-log-row {
@@ -1261,12 +1261,14 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   /* spans: 1=date, 2=score, 3=player, 4=stat-line, 5=perf, 6=outcome, 7=model */
   .grade-log-row > span:nth-child(1) { grid-row: 1; grid-column: 1; font-size: 10px; color: #6a6a8a; letter-spacing: 0.5px; align-self: center; }
   .grade-log-row > span:nth-child(3) { grid-row: 1; grid-column: 2; font-size: 12px; font-weight: 700; color: #E8DFC8 !important; }
-  .grade-log-row > span:nth-child(6) { grid-row: 1; grid-column: 3; justify-self: end; align-self: center; }
+  /* Model badge (child 7) → top row by the name; outcome badge (child 6) drops
+     to the SCORE/PERF row so it sits beside the PERF value it grades. */
+  .grade-log-row > span:nth-child(7) { grid-row: 1; grid-column: 3; justify-self: end; align-self: center; }
   .grade-log-row > span:nth-child(2) { grid-row: 2; grid-column: 1; font-size: 14px !important; font-weight: 800; align-self: center; }
   .grade-log-row > span:nth-child(2)::before { content: 'SCORE '; font-size: 9px; color: #6a6a8a; font-weight: 600; letter-spacing: 0.5px; margin-right: 3px; }
-  .grade-log-row > span:nth-child(5) { grid-row: 2; grid-column: 2; font-size: 12px !important; color: #aaa !important; align-self: center; }
+  .grade-log-row > span:nth-child(5) { grid-row: 2; grid-column: 2; font-size: 12px !important; font-weight: 700; align-self: center; }
   .grade-log-row > span:nth-child(5)::before { content: 'PERF '; font-size: 9px; color: #6a6a8a; font-weight: 600; letter-spacing: 0.5px; margin-right: 3px; }
-  .grade-log-row > span:nth-child(7) { grid-row: 2; grid-column: 3; justify-self: end; align-self: center; }
+  .grade-log-row > span:nth-child(6) { grid-row: 2; grid-column: 3; justify-self: end; align-self: center; }
   .grade-log-row > span:nth-child(4) { grid-row: 3; grid-column: 1 / -1; font-size: 12px; color: #ccc !important; line-height: 1.3; padding-top: 2px; border-top: 1px solid #14132c; margin-top: 2px; }
   /* Edit/Delete actions: thin row at the very bottom of the card, right-aligned. */
   .grade-log-row .grade-row-actions { grid-row: 4; grid-column: 1 / -1; justify-self: end; align-self: center; margin-top: -2px; }

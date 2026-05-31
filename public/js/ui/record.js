@@ -687,10 +687,15 @@ export async function renderGradePanel() {
     hide('grade-log-empty');
     document.getElementById('grade-log-headers').classList.remove('hidden');
     const outcomeLabels = { great:'🔥 Great', good:'✅ Good', avg:'😐 Average', poor:'❌ Poor' };
+    // Mirror the .outcome-badge colors so the PERF value is tinted to match its
+    // badge — makes it obvious the Poor/Average/Great sticker grades PERF (the
+    // actual line), not the SCORE (the model's prediction).
+    const outcomeColors = { great:'#2ecc71', good:'#a8e063', avg:'#f39c12', poor:'#e74c3c' };
     document.getElementById('grade-log').innerHTML = log.map(g => {
       // Recompute on render so historical entries always reflect the current formula.
       // Stored g.grade.perfScore is frozen at grade time and may be stale after a formula tweak.
       const live = gradePerformance(g.actual, g.score);
+      const perfColor = outcomeColors[live.outcome] || '#888';
       const modelLabels = { accurate: 'Accurate', close: 'Close', off: 'Off' };
       const modelLabel = modelLabels[live.accuracy] || 'Off';
       const modelClass = live.accuracy || 'off';
@@ -701,8 +706,8 @@ export async function renderGradePanel() {
         <span style="font-family:\'Chakra Petch\',monospace;font-size:13px;font-weight:800;color:#A71930;">${g.score}</span>
         <span style="color:#aaa;font-family:\'Chakra Petch\',monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${playerLast}</span>
         <span style="color:#ccc;font-family:\'Chakra Petch\',monospace;font-size:11px;">${g.actual.summary||`${g.actual.hits}H ${g.actual.totalBases}TB`}</span>
-        <span style="color:#888;font-family:\'Chakra Petch\',monospace;font-size:11px;" title="Performance score">${live.perfScore}</span>
-        <span class="outcome-badge ${live.outcome}">${outcomeLabels[live.outcome]||live.outcome}</span>
+        <span style="color:${perfColor};font-family:\'Chakra Petch\',monospace;font-size:11px;font-weight:700;" title="Performance score (0–150) — grades the actual line. This, not SCORE, drives the outcome badge.">${live.perfScore}</span>
+        <span class="outcome-badge ${live.outcome}" title="Performance grade — based on PERF (${live.perfScore}), the actual line. Not the model SCORE (${g.score}).">${outcomeLabels[live.outcome]||live.outcome}</span>
         <span class="model-badge ${modelClass}" title="Actual ${Math.round(live.perfScore)} vs Expected ${Math.round(live.expectedPerf)} (residual ${residualText})">${modelLabel}</span>
         <span class="grade-row-actions">
           <button class="grade-row-edit" data-action="edit-grade" data-grade-id="${g.id}" title="Edit stats (MLB API correction)">✎</button>
