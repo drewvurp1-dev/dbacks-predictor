@@ -87,7 +87,15 @@ def main(season: int):
     print(f"[arsenal]   {len(pitcher_df)} pitcher rows", flush=True)
 
     print(f"[arsenal] Pulling batter arsenal for {season}...", flush=True)
-    batter_df = pb.statcast_batter_pitch_arsenal(season)
+    # pybaseball / Savant default to minPA=25, which silently drops every pitch type
+    # a batter has seen fewer than 25 times (e.g. a starter's secondary sinker/sweeper).
+    # Request the lower MIN_PA_BATTER floor so those pitches survive — we still apply
+    # the same threshold below as a guard for older pybaseball versions.
+    try:
+        batter_df = pb.statcast_batter_pitch_arsenal(season, minPA=MIN_PA_BATTER)
+    except TypeError:
+        # Older pybaseball without a minPA kwarg — falls back to the default floor.
+        batter_df = pb.statcast_batter_pitch_arsenal(season)
     print(f"[arsenal]   {len(batter_df)} batter rows", flush=True)
 
     pitchers = _build_pitcher_index(pitcher_df)

@@ -143,7 +143,7 @@ test('_pitchMatchupReason — null when matchup signal is below threshold', () =
   assert.equal(_pitchMatchupReason('over', 'batter_strikeouts'), null);
 });
 
-test('_pitchMatchupReason — non-K prop, positive wOBA delta supports Over direction', () => {
+test('_pitchMatchupReason — wOBA-keyed prop (TB), positive delta supports Over direction', () => {
   S.pitcher = { id: 1 };
   S.playerId = 'X';
   S.pitchMatchupCached = {
@@ -154,9 +154,27 @@ test('_pitchMatchupReason — non-K prop, positive wOBA delta supports Over dire
       primaryBatterK: 0, baseK: 0,
     },
   };
+  const over = _pitchMatchupReason('over', 'batter_total_bases');
+  const under = _pitchMatchupReason('under', 'batter_total_bases');
+  assert.ok(over !== null, 'over should have reason when wOBA delta supports it');
+  assert.equal(under, null, 'under should be null when matchup favors over');
+});
+
+test('_pitchMatchupReason — Hits prop keys on AVG-vs-pitch (baDelta), supports Over direction', () => {
+  S.pitcher = { id: 1 };
+  S.playerId = 'X';
+  S.pitchMatchupCached = {
+    pid: 1, bid: 'X',
+    value: {
+      kDeltaPp: 0, wobaDelta: 0, baDelta: 0.060,  // strong AVG matchup, neutral wOBA
+      baPitchUsage: 51, baPitchName: '4-Seam FB', baPitchBa: 0.280, baseBa: 0.190,
+      primaryUsage: 51, primaryPitchName: '4-Seam FB', primaryBatterK: 0, baseK: 0,
+    },
+  };
   const over = _pitchMatchupReason('over', 'batter_hits');
   const under = _pitchMatchupReason('under', 'batter_hits');
-  assert.ok(over !== null, 'over should have reason when wOBA delta supports it');
+  assert.ok(over !== null, 'over should have reason when AVG matchup supports it');
+  assert.ok(/BA/.test(over), `reason should cite BA, got: ${over}`);
   assert.equal(under, null, 'under should be null when matchup favors over');
 });
 
