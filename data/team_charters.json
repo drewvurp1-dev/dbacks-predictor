@@ -1,6 +1,7 @@
 {
-  "_README": "Team charter registry. `tails` = dedicated charter aircraft N-numbers (e.g. DET's N313TR). `callsigns` = flight numbers for pooled charters where the airframe rotates per trip (e.g. DL8884 for NYY on Delta's VIP 757 pool, UA3782 for LAD on United's 737 MAX pool). Sources: airliners.net 2025/2026 MLB charters threads, FlyerTalk, individual X/Twitter spotter sightings, AirlineGeeks. Recheck each season — Delta's DL88xx block and United's UA37xx block shift annually as teams change operators (e.g. WSH was on AA9721 through 2025; rumored to move to Delta for 2026). NYM and HOU were both reported sharing DL8883 in 2025 — likely one is misattributed, verify per-team via FlightAware before trusting.",
+  "_README": "Team charter registry. `tails` = dedicated charter aircraft N-numbers (e.g. DET's N313TR). `callsigns` = flight numbers for pooled charters where the airframe rotates per trip (e.g. DL8884 for NYY on Delta's VIP 757 pool, UA3782 for LAD on United's 737 MAX pool). Sources: airliners.net 2025/2026 MLB charters threads, FlyerTalk, individual X/Twitter spotter sightings, AirlineGeeks. Recheck each season — Delta's DL88xx block and United's UA37xx block shift annually. HOU uses a private Fertitta-owned 767 (N625HR) rather than a pooled Delta charter — no standard callsign. TOR: Air Canada Jetz (ACA prefix) is the charter operator despite WestJet being the marketing sponsor. ATH+TEX used New Pacific Airlines (RVF) through Nov 2025 when NPA ceased operations/filed Ch.7 — both teams need new operators confirmed for 2026. DET: Olympia Aviation LLC (ICAO: DRW) operates N313TR; exact filed flight number unconfirmed in public spotter sources.",
   "ARI": { "name": "Arizona Diamondbacks",      "home_airport": "PHX", "tails": [],          "callsigns": ["DL8876"] },
+  "ATH": { "name": "Athletics",                 "home_airport": "SMF", "tails": [],          "callsigns": ["RVF8602"], "notes": "New Pacific Airlines (RVF) ceased ops Nov 2025 — callsign likely stale for 2026, replacement operator unconfirmed" },
   "ATL": { "name": "Atlanta Braves",            "home_airport": "ATL", "tails": [],          "callsigns": ["DL8877"] },
   "BAL": { "name": "Baltimore Orioles",         "home_airport": "BWI", "tails": [],          "callsigns": ["DL8878"] },
   "BOS": { "name": "Boston Red Sox",            "home_airport": "BOS", "tails": [],          "callsigns": ["DL8879"] },
@@ -9,8 +10,8 @@
   "CIN": { "name": "Cincinnati Reds",           "home_airport": "CVG", "tails": [],          "callsigns": ["DL8880"] },
   "CLE": { "name": "Cleveland Guardians",       "home_airport": "CLE", "tails": [],          "callsigns": ["UA3778"] },
   "COL": { "name": "Colorado Rockies",          "home_airport": "DEN", "tails": [],          "callsigns": ["UA3779"] },
-  "DET": { "name": "Detroit Tigers",            "home_airport": "DTW", "tails": ["N313TR"],  "callsigns": [] },
-  "HOU": { "name": "Houston Astros",            "home_airport": "IAH", "tails": [],          "callsigns": ["DL8883"] },
+  "DET": { "name": "Detroit Tigers",            "home_airport": "DTW", "tails": ["N313TR"],  "callsigns": [], "notes": "Olympia Aviation LLC (ICAO: DRW) — exact filed flight number unconfirmed; AeroDataBox may resolve via tail N313TR directly" },
+  "HOU": { "name": "Houston Astros",            "home_airport": "IAH", "tails": ["N625HR"],  "callsigns": [], "notes": "Private Fertitta-owned Boeing 767-300ER; not a pooled Delta charter — no standard DAL8xxx callsign. Track via tail N625HR." },
   "KC":  { "name": "Kansas City Royals",        "home_airport": "MCI", "tails": [],          "callsigns": ["UA3780"] },
   "LAA": { "name": "Los Angeles Angels",        "home_airport": "SNA", "tails": [],          "callsigns": ["UA3781"] },
   "LAD": { "name": "Los Angeles Dodgers",       "home_airport": "LAX", "tails": [],          "callsigns": ["UA3782"] },
@@ -19,7 +20,6 @@
   "MIN": { "name": "Minnesota Twins",           "home_airport": "MSP", "tails": [],          "callsigns": ["DL8882"] },
   "NYM": { "name": "New York Mets",             "home_airport": "JFK", "tails": [],          "callsigns": ["DL8883"] },
   "NYY": { "name": "New York Yankees",          "home_airport": "EWR", "tails": [],          "callsigns": ["DL8884"] },
-  "ATH": { "name": "Athletics",                 "home_airport": "SMF", "tails": [],          "callsigns": [] },
   "PHI": { "name": "Philadelphia Phillies",     "home_airport": "PHL", "tails": [],          "callsigns": ["DL8885"] },
   "PIT": { "name": "Pittsburgh Pirates",        "home_airport": "PIT", "tails": [],          "callsigns": ["UA3784"] },
   "SD":  { "name": "San Diego Padres",          "home_airport": "SAN", "tails": [],          "callsigns": ["DL8887"] },
@@ -27,7 +27,7 @@
   "SEA": { "name": "Seattle Mariners",          "home_airport": "SEA", "tails": [],          "callsigns": ["DL8889"] },
   "STL": { "name": "St. Louis Cardinals",       "home_airport": "STL", "tails": [],          "callsigns": ["DL8886"] },
   "TB":  { "name": "Tampa Bay Rays",            "home_airport": "TPA", "tails": [],          "callsigns": ["DL8890"] },
-  "TEX": { "name": "Texas Rangers",             "home_airport": "DFW", "tails": [],          "callsigns": [] },
-  "TOR": { "name": "Toronto Blue Jays",         "home_airport": "YYZ", "tails": [],          "callsigns": [] },
+  "TEX": { "name": "Texas Rangers",             "home_airport": "DFW", "tails": [],          "callsigns": ["RVF8621"], "notes": "New Pacific Airlines (RVF) ceased ops Nov 2025 — callsign likely stale for 2026, replacement operator unconfirmed" },
+  "TOR": { "name": "Toronto Blue Jays",         "home_airport": "YYZ", "tails": [],          "callsigns": ["ACA7031"], "notes": "Air Canada Jetz (ACA) operates despite WestJet being marketing sponsor; A320-200 ~70 all-business-class seats" },
   "WSH": { "name": "Washington Nationals",      "home_airport": "IAD", "tails": [],          "callsigns": ["AA9721"] }
 }
