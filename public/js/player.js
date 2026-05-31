@@ -249,12 +249,12 @@ export function _pitcherStuffMult() {
   const st  = S.pitcher?.st;
   if (!adv || !st) return 1.0;
   const ip = parseFloat(st.inningsPitched) || 0;
-  if (ip < 10) return 1.0;
+  if (ip < 8) return 1.0;
   const dips = adv.siera ?? adv.xfip ?? adv.fip;
   if (dips == null || !isFinite(dips)) return 1.0;
-  let mult = 1 + (dips - 4.00) * 0.085;
+  let mult = 1 + (dips - 4.00) * 0.10;
   if (S.pitcher?.bullpenGame) mult = mult * 0.4 + 1.0 * 0.6;
-  return Math.max(0.82, Math.min(1.18, mult));
+  return Math.max(0.76, Math.min(1.16, mult));
 }
 
 // ── Distribution helpers (binomial + total-bases convolution) ───────────────
