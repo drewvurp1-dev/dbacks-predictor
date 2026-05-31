@@ -871,7 +871,15 @@ function scoreIndividualProp(propKey){
   const windDir=roofClosed?'calm':_windDir();
   const umpAdj=S.umpire?(UMP_DB[S.umpire.fullName]?.adj||0):0;
   const protTier=S.lineupProtection?.tier;
-  const rispAvg=parseFloat(S.rispStat?.avg)||null;
+  // RISP BA, Bayesian-shrunk toward league RISP avg (~.250). The raw split is a
+  // tiny, sac-fly-inflated sample (commonly 25-40 AB) that never stabilizes, so
+  // reading it unshrunk injected phantom RBI/H+R+RBI score points — a 27-AB .349
+  // RISP line was adding ~+12.6 pts to the RBI score (Moreno 2026-05-30). priorN=80
+  // keeps a hot RISP streak from dominating while still rewarding a genuinely
+  // strong full-season RISP profile. Falls back to null when no RISP AB exist.
+  const rispH=parseInt(S.rispStat?.hits)||0;
+  const rispAB=parseInt(S.rispStat?.atBats)||0;
+  const rispAvg=rispAB>0?_shrunkRate(rispH,rispAB,0.250,80):null;
 
   if(propKey==='batter_hits'){
     if(avg!=null)        score+=(avg-0.247)*150;
@@ -920,7 +928,20 @@ function scoreIndividualProp(propKey){
   }
   else if(propKey==='batter_rbis'){
     if(rispAvg!=null)    score+=(rispAvg-0.244)*120;
-    if(slg!=null)        score+=(slg-0.405)*60;
+    // Prefer the handedness-split SLG vs the listed pitcher's hand when it has
+    // stabilized (>=100 PA), shrunk toward the batter's overall SLG. The RBI
+    // branch was the only score branch with no platoon term, so a strong-side
+    // SLG was driving RBI projections even when the batter faces his weak side
+    // (Moreno: .420 overall / .393 vs RHP / .500 vs LHP — facing a RHP tonight
+    // his power plays down, but the overall SLG hid that). TB/Runs/H+R+RBI
+    // already fold the hand split in via handOps, so this only patches RBI.
+    // _shrunkRate expects count num/denom, so pass slg*pa as the numerator to
+    // shrink the rate toward the overall-SLG prior weighted by PA.
+    const hSlg=parseFloat(handSplit?.slg);
+    const handSlg=handSplit?.pa>=100&&isFinite(hSlg)
+      ?_shrunkRate(hSlg*handSplit.pa,handSplit.pa,slg??0.405,120)
+      :slg;
+    if(handSlg!=null)    score+=(handSlg-0.405)*60;
     if(protTier==='strong') score+=5;
     else if(protTier==='weak') score-=5;
     if(pEra!=null)       score-=(pEra-4.00)*3.5;
