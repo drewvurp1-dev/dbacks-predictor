@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { S } from './state.js';
 import {
-  _factorial, _poissonCDF,
+  _factorial, _poissonCDF, _negBinomTailGT,
   _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
   _extractSplitStat, _handSplit, _pitcherRunEnvMult,
@@ -35,6 +35,57 @@ test('_poissonCDF — monotonically increases in k', () => {
   const c = _poissonCDF(2, 5);
   assert.ok(a < b);
   assert.ok(b < c);
+});
+
+// ── _negBinomTailGT ───────────────────────────────────────────────────────────
+test('_negBinomTailGT — large r collapses to the Poisson tail', () => {
+  // As r→∞ the negative binomial converges to the Poisson with the same mean.
+  const lambda = 0.55;
+  const nb = _negBinomTailGT(lambda, 1e6, 0);
+  const pois = 1 - _poissonCDF(lambda, 0);
+  assert.ok(Math.abs(nb - pois) < 1e-3);
+});
+
+test('_negBinomTailGT — overdispersion lowers P(>0) vs Poisson at same mean', () => {
+  // The whole point of #3: at the RBI mean, NB(r=1.3) must sit BELOW the Poisson
+  // ~34.9% and near the empirical ~30%.
+  const lambda = 0.43;
+  const nb = _negBinomTailGT(lambda, 1.3, 0);
+  const pois = 1 - _poissonCDF(lambda, 0);
+  assert.ok(nb < pois);                 // correction is downward
+  assert.ok(nb > 0.27 && nb < 0.33);    // lands in the empirical ~30% band
+});
+
+test('_negBinomTailGT — lambda<=0 returns 0', () => {
+  assert.equal(_negBinomTailGT(0, 1.3, 0), 0);
+  assert.equal(_negBinomTailGT(-1, 1.3, 0), 0);
+});
+
+test('_negBinomTailGT — non-positive/non-finite r falls back to Poisson tail', () => {
+  const lambda = 0.5;
+  assert.equal(_negBinomTailGT(lambda, 0, 0), 1 - _poissonCDF(lambda, 0));
+  assert.equal(_negBinomTailGT(lambda, -2, 0), 1 - _poissonCDF(lambda, 0));
+  assert.equal(_negBinomTailGT(lambda, Infinity, 0), 1 - _poissonCDF(lambda, 0));
+});
+
+test('_negBinomTailGT — tail is monotonically decreasing in k', () => {
+  const a = _negBinomTailGT(1.2, 1.5, 0);
+  const b = _negBinomTailGT(1.2, 1.5, 1);
+  const c = _negBinomTailGT(1.2, 1.5, 2);
+  assert.ok(a > b);
+  assert.ok(b > c);
+  assert.ok(c >= 0);
+});
+
+test('_negBinomTailGT — stays within [0,1]', () => {
+  for (const lam of [0.1, 0.43, 0.55, 1.2, 3.0]) {
+    for (const r of [0.5, 1.3, 4.0, 20]) {
+      for (const k of [0, 1, 2, 3]) {
+        const v = _negBinomTailGT(lam, r, k);
+        assert.ok(v >= 0 && v <= 1);
+      }
+    }
+  }
 });
 
 // ── _shrunkRate ─────────────────────────────────────────────────────────────
