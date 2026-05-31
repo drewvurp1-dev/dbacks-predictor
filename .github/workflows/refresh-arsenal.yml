@@ -1,0 +1,39 @@
+name: Refresh Pitch Arsenal
+
+on:
+  schedule:
+    # 9 AM UTC = 2 AM MST / 6 AM EDT — before first lineups post
+    - cron: '0 9 * * *'
+  workflow_dispatch:  # manual trigger from GitHub UI or phone
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install pybaseball
+        run: pip install pybaseball
+
+      - name: Run arsenal refresh
+        run: python3 scripts/refresh_pitch_arsenal.py
+
+      - name: Commit updated arsenal data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet data/pitch_arsenal.json; then
+            echo "No changes to pitch_arsenal.json — skipping commit."
+          else
+            git add data/pitch_arsenal.json
+            git commit -m "chore: refresh pitch_arsenal.json [skip ci]"
+            git push
+          fi
