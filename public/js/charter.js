@@ -222,8 +222,9 @@
   // Auto-fires the charter lookup on series-opener days, displays a colored
   // flag based on body-clock arrival, hides itself otherwise.
 
-  // In-page cache so re-renders within a session don't re-fire the lookup.
-  const _dashCache = { key: null, html: null, cls: null, ts: 0 };
+  // Per-flight in-page cache keyed by "gameDate|team|dest" so re-renders
+  // within a session don't re-fire AeroDataBox lookups.
+  const _dashCacheMap = new Map();
   const DASH_TTL = 15 * 60 * 1000;
 
   // Check if today's game is a series opener by comparing today's opponent to
@@ -286,105 +287,59 @@
     const prevHome = prev?.teams?.home?.team?.id === 109;
     const prevOppId = prev ? (prevHome ? prev.teams?.away?.team?.id : prev.teams?.home?.team?.id) : null;
     const prevOpp = prevOppId ? (TEAM_ID_TO_ABBR[prevOppId] || null) : null;
-    const result = { opp, homeGame: isHome, gameDate: today.officialDate, prevOpp };
+    const result = { opp, homeGame: isHome, gameDate: today.officialDate, prevOpp, prevWasAway: prev ? !prevHome : false };
     _scheduleCache = { ts: Date.now(), data: result, err: null };
     return result;
   }
 
-  window.renderDashboardCharter = async function () {
-    const el = document.getElementById('dash-charter-strip');
-    if (!el) return;
-    el.classList.remove('hidden');
-
-    // Fetch game context directly from MLB schedule — self-sufficient,
-    // doesn't depend on app.js state being populated correctly. The
-    // /mlb/* proxy is free, no AeroDataBox credits burned here.
-    const ctx = await loadGameContext();
-    if (!ctx || !ctx.opp) {
-      const detail = _scheduleCache.err || 'no upcoming game found';
-      el.className = 'dash-charter';
-      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">${detail}</span>`;
-      return;
+  // Fetch and render one flight; returns { html, tierClass, hidden }.
+  // Checks _dashCacheMap first; populates it on a live fetch.
+  async function fetchOneFlight(team, dest, gameDate) {
+    const key = `${gameDate}|${team}|${dest}`;
+    const cached = _dashCacheMap.get(key);
+    if (cached && Date.now() - cached.ts < DASH_TTL) {
+      return { html: cached.html, tierClass: cached.cls };
     }
-
-    const opp = ctx.opp;
-    const homeGame = ctx.homeGame;
-    const gameDate = ctx.gameDate;
-    const trackedTeam = homeGame ? opp   : 'ARI';
-    const destAirport = homeGame ? 'PHX' : (OPP_AIRPORTS[opp] || null);
-    if (!destAirport) {
-      el.className = 'dash-charter';
-      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">unknown destination for ${opp}</span>`;
-      return;
-    }
-
-    const cacheKey = `${gameDate}|${trackedTeam}|${destAirport}`;
-    if (_dashCache.key === cacheKey && Date.now() - _dashCache.ts < DASH_TTL) {
-      el.className = `dash-charter ${_dashCache.cls || ''}`.trim();
-      el.innerHTML = _dashCache.html;
-      return;
-    }
-
-    // Series-opener detection uses the prevOpp we already pulled, no extra call.
-    const seriesOpener = !ctx.prevOpp || ctx.prevOpp !== opp;
-
-    // Mid-series days: passive line, no AeroDataBox call.
-    if (!seriesOpener) {
-      const passiveHtml = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">mid-series · no new travel today</span>`;
-      el.className = 'dash-charter';
-      el.innerHTML = passiveHtml;
-      _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = passiveHtml; _dashCache.cls = '';
-      return;
-    }
-
-    // Series-opener: try the poller cache first, fall back to a live lookup
-    // if nothing is cached yet. The server's 15-min in-process cache bounds
-    // quota to at most one AeroDataBox call per 15-min window.
-    el.className = 'dash-charter';
-    el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-spinner">${trackedTeam} → ${destAirport}…</span>`;
 
     try {
-      let r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}/cached?destAirport=${destAirport}`);
+      // Try the server's in-process cache first (no AeroDataBox credit burned).
+      // Fall back to a live lookup if nothing is cached yet.
+      let r = await fetch(`/flights/team/${encodeURIComponent(team)}/cached?destAirport=${dest}`);
       if (r.status === 204) {
-        // Cache empty — make a live call so we can show SCHEDULED/EN ROUTE/LANDED
-        // immediately instead of a placeholder.
-        r = await fetch(`/flights/team/${encodeURIComponent(trackedTeam)}?destAirport=${destAirport}`);
+        r = await fetch(`/flights/team/${encodeURIComponent(team)}?destAirport=${dest}`);
       }
       const d = await r.json();
       if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
 
       const hasIds = (d.tails && d.tails.length) || (d.callsigns && d.callsigns.length);
       if (r.status === 503 || (d.note && !hasIds)) {
-        el.classList.add('hidden');
-        return;
+        return { html: '', tierClass: '', hidden: true };
       }
       if (!d.arrival) {
         const ids = [...(d.tails || []), ...(d.callsigns || [])].join(', ') || '—';
         const flightCount = d.raw_flight_count || 0;
         const detail = flightCount > 0
-          ? `${flightCount} flights found, none into ${destAirport}`
+          ? `${flightCount} flights found, none into ${dest}`
           : `no ${ids} flights in last 48h`;
-        const html = `<span class="dch-plane">✈</span><span class="dch-route">${trackedTeam} → ${destAirport}</span><span class="dch-spinner">${detail}</span><span style="color:#444;font-size:9px;">${ids}</span>`;
-        el.className = 'dash-charter';
-        el.innerHTML = html;
-        _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = '';
-        return;
+        const html = `<span class="dch-plane">✈</span><span class="dch-route">${team} → ${dest}</span><span class="dch-spinner">${detail}</span><span style="color:#444;font-size:9px;">${ids}</span>`;
+        _dashCacheMap.set(key, { html, cls: '', ts: Date.now() });
+        return { html, tierClass: '' };
       }
+
       const a = d.arrival;
       const idTxt = a.callsign && (a.source || '').startsWith('callsign:')
         ? a.callsign
         : (a.tail || a.callsign || '—');
-      const route = `${trackedTeam} ${a.from || '???'} → <strong>${a.to || '???'}</strong>`;
+      const route = `${team} ${a.from || '???'} → <strong>${a.to || '???'}</strong>`;
 
       // Phase detection — trust actualTime fields when present, fall back to
       // AeroDataBox's status field since that's the authoritative phase marker
       // and actualTime is often null even on flights AeroDataBox knows landed.
       const statusLc = (a.status || '').toLowerCase();
-      const arrivedByStatus  = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
-      const enRouteByStatus  = /(en[-\s]?route|departed|airborne|approaching)/.test(statusLc);
+      const arrivedByStatus = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
+      const enRouteByStatus = /(en[-\s]?route|departed|airborne|approaching)/.test(statusLc);
       const landed   = !!a.arrActualUtc || arrivedByStatus;
       const departed = !landed && (!!a.depActualUtc || enRouteByStatus);
-      // Best-available timestamps for the display layer (actual > scheduled).
       const displayArrUtc = a.arrActualUtc || a.arrScheduledUtc;
       const displayDepUtc = a.depActualUtc || a.depScheduledUtc;
 
@@ -409,7 +364,6 @@
           <span style="color:#444;font-size:9px;">${idTxt}</span>
         `;
       } else if (departed) {
-        // In the air — show departure delta vs scheduled, plus best-guess arrival.
         const etaUtc = a.arrEstimatedUtc || a.arrScheduledUtc;
         const depDelayMin = (a.depScheduledUtc && a.depActualUtc)
           ? Math.round((new Date(a.depActualUtc) - new Date(a.depScheduledUtc)) / 60000)
@@ -427,7 +381,6 @@
           <span style="color:#444;font-size:9px;">${idTxt}</span>
         `;
       } else {
-        // Scheduled — show planned departure and arrival.
         html = `
           <span class="dch-plane">✈</span>
           <span class="dch-route">${route}</span>
@@ -436,11 +389,84 @@
           <span style="color:#444;font-size:9px;">${idTxt}</span>
         `;
       }
-      el.className = `dash-charter ${tierClass}`.trim();
-      el.innerHTML = html;
-      _dashCache.key = cacheKey; _dashCache.ts = Date.now(); _dashCache.html = html; _dashCache.cls = tierClass;
+      _dashCacheMap.set(key, { html, cls: tierClass, ts: Date.now() });
+      return { html, tierClass };
     } catch (e) {
+      return { html: '', tierClass: '', hidden: true };
+    }
+  }
+
+  window.renderDashboardCharter = async function () {
+    const el = document.getElementById('dash-charter-strip');
+    if (!el) return;
+    el.classList.remove('hidden');
+
+    // Fetch game context directly from MLB schedule — self-sufficient,
+    // doesn't depend on app.js state being populated correctly. The
+    // /mlb/* proxy is free, no AeroDataBox credits burned here.
+    const ctx = await loadGameContext();
+    if (!ctx || !ctx.opp) {
+      const detail = _scheduleCache.err || 'no upcoming game found';
+      el.className = 'dash-charter';
+      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">${detail}</span>`;
+      return;
+    }
+
+    const { opp, homeGame, gameDate } = ctx;
+
+    // Series-opener detection uses the prevOpp we already pulled, no extra call.
+    const seriesOpener = !ctx.prevOpp || ctx.prevOpp !== opp;
+
+    // Mid-series days: passive line, no AeroDataBox call.
+    if (!seriesOpener) {
+      el.className = 'dash-charter';
+      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">mid-series · no new travel today</span>`;
+      return;
+    }
+
+    // Build the list of flights to track for this series opener.
+    // Dual-track when D-backs host AND they're returning from a road trip
+    // (prevWasAway = their last game was also away from PHX).
+    const flights = [];
+    if (homeGame) {
+      flights.push({ team: opp, dest: 'PHX' });
+      if (ctx.prevWasAway) flights.push({ team: 'ARI', dest: 'PHX' });
+    } else {
+      const dest = OPP_AIRPORTS[opp] || null;
+      if (!dest) {
+        el.className = 'dash-charter';
+        el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">unknown destination for ${opp}</span>`;
+        return;
+      }
+      flights.push({ team: 'ARI', dest });
+    }
+
+    el.className = 'dash-charter';
+    el.innerHTML = flights.map(f =>
+      `<span class="dch-plane">✈</span><span class="dch-spinner">${f.team} → ${f.dest}…</span>`
+    ).join('');
+
+    // Fetch all tracked flights in parallel — caching inside fetchOneFlight
+    // bounds AeroDataBox quota to one call per flight per 15-min window.
+    const results = await Promise.all(flights.map(f => fetchOneFlight(f.team, f.dest, gameDate)));
+    const visible = results.filter(r => !r.hidden);
+
+    if (!visible.length) {
       el.classList.add('hidden');
+      return;
+    }
+
+    if (visible.length === 1) {
+      el.className = `dash-charter ${visible[0].tierClass}`.trim();
+      el.innerHTML = visible[0].html;
+    } else {
+      // Dual-track: stack two rows; apply the worst tier to the container
+      // so the border colour reflects the most-concerning flight.
+      const tierRank = { 'dch-critical': 3, 'dch-red': 2, 'dch-yellow': 1, '': 0 };
+      const worstTier = visible.reduce((best, r) =>
+        (tierRank[r.tierClass] || 0) > (tierRank[best] || 0) ? r.tierClass : best, '');
+      el.className = `dash-charter dch-dual ${worstTier}`.trim();
+      el.innerHTML = visible.map(r => `<div class="dch-row">${r.html}</div>`).join('');
     }
   };
 

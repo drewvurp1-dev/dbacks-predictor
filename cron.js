@@ -204,27 +204,29 @@ const _etdCache   = {};  // { key: etdMs }
 const _etdScoutTs = {};  // { key: lastAttemptMs }
 const SCOUT_RETRY_MS = 2 * 3600 * 1000; // retry scout at most once per 2h
 
-async function isLanded(gamePk) {
+async function isLanded(gamePk, team) {
+  const type = `charter_landed_${team.toLowerCase()}`;
   if (pool()) {
     try {
       const { rowCount } = await pool().query(
         'SELECT 1 FROM notification_log WHERE game_pk=$1 AND type=$2',
-        [String(gamePk), 'charter_landed']
+        [String(gamePk), type]
       );
       return rowCount > 0;
     } catch (e) {
-      return _landedMemory.has(String(gamePk));
+      return _landedMemory.has(`${gamePk}:${team}`);
     }
   }
-  return _landedMemory.has(String(gamePk));
+  return _landedMemory.has(`${gamePk}:${team}`);
 }
-async function markLanded(gamePk) {
-  _landedMemory.add(String(gamePk));
+async function markLanded(gamePk, team) {
+  _landedMemory.add(`${gamePk}:${team}`);
+  const type = `charter_landed_${team.toLowerCase()}`;
   if (pool()) {
     try {
       await pool().query(
         'INSERT INTO notification_log (game_pk, type) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [String(gamePk), 'charter_landed']
+        [String(gamePk), type]
       );
     } catch (e) { /* memory set is the fallback */ }
   }
@@ -242,7 +244,6 @@ async function checkCharterPoll() {
     if (!game || !game.gamePk || !game.gameDate) return;
     const detail = game?.status?.detailedState || '';
     if (/Postponed|Cancelled|Suspended/i.test(detail)) return;
-    if (await isLanded(game.gamePk)) return;
 
     const isHome = game.teams?.home?.team?.id === DBACKS_TEAM_ID;
     const todayOpp = isHome
@@ -252,20 +253,31 @@ async function checkCharterPoll() {
 
     const todayYmd = azDate();
     const prevDbacksGame = await fetchRecentGameForTeam(DBACKS_TEAM_ID, todayYmd);
+    let dbacksPrevAway = false;
     if (prevDbacksGame) {
       const prevHome = prevDbacksGame.teams?.home?.team?.id === DBACKS_TEAM_ID;
       const prevOpp = prevHome
         ? prevDbacksGame.teams.away?.team?.abbreviation
         : prevDbacksGame.teams.home?.team?.abbreviation;
       if (prevOpp === todayOpp) return; // mid-series, no travel
+      dbacksPrevAway = !prevHome;
     }
 
-    const trackedTeamAbbr = isHome ? todayOpp : 'ARI';
     const charters = loadCharters();
-    const destAirport = isHome
-      ? 'PHX'
-      : (charters[todayOpp]?.home_airport || null);
-    if (!destAirport) return;
+
+    // Build list of teams to track for this series opener.
+    // Home game: opponent flying into PHX is always tracked; D-backs are also
+    //   tracked when they're returning from a road trip (prevGame was away).
+    // Away game: D-backs flying to the opponent's home airport.
+    const toTrack = [];
+    if (isHome) {
+      toTrack.push({ team: todayOpp, dest: 'PHX' });
+      if (dbacksPrevAway) toTrack.push({ team: 'ARI', dest: 'PHX' });
+    } else {
+      const dest = charters[todayOpp]?.home_airport || null;
+      if (!dest) return;
+      toTrack.push({ team: 'ARI', dest });
+    }
 
     // Timing bounds: scout/poll from 60h before the series opener's first pitch
     // through 12h after. 60h (vs 48h) ensures the window opens well before a
@@ -276,71 +288,75 @@ async function checkCharterPoll() {
     if (Date.now() < openerFirstPitch - 60 * 3600000) return;
     if (Date.now() > openerFirstPitch + 12 * 3600000) return;
 
-    const etdKey = `${todayYmd}|${trackedTeamAbbr}`;
+    for (const { team, dest } of toTrack) {
+      if (await isLanded(game.gamePk, team)) continue;
 
-    // ── Phase 1: ETD scout ─────────────────────────────────────────────────
-    // Call lookupTeam (with its own 15-min cache) to fetch the scheduled
-    // departure time before the flight actually departs. AeroDataBox returns
-    // pre-departure flights with departure.scheduledTime.utc populated, so
-    // this populates the /cached endpoint with "SCHEDULED" state for the
-    // dashboard and lets us open the poll window right at departure time
-    // rather than at a fixed T+3h offset.
-    if (!_etdCache[etdKey]) {
-      const lastScout = _etdScoutTs[etdKey] || 0;
-      if (Date.now() - lastScout >= SCOUT_RETRY_MS) {
-        _etdScoutTs[etdKey] = Date.now();
-        const scout = await flightsRouter.lookupTeam(trackedTeamAbbr, destAirport);
-        if (scout.status === 200) {
-          const arr = scout.data?.arrival;
-          // Only trust ETD when the flight is confirmed into the right airport.
-          if (arr && arr.to === destAirport && arr.depScheduledUtc) {
-            const etdMs = new Date(arr.depScheduledUtc).getTime();
-            if (!isNaN(etdMs)) {
-              _etdCache[etdKey] = etdMs;
-              console.log(`[cron] charter ${trackedTeamAbbr} ETD scouted: ${arr.depScheduledUtc}`);
+      const etdKey = `${todayYmd}|${team}`;
+
+      // ── Phase 1: ETD scout ───────────────────────────────────────────────
+      // Call lookupTeam (with its own 15-min cache) to fetch the scheduled
+      // departure time before the flight actually departs. AeroDataBox returns
+      // pre-departure flights with departure.scheduledTime.utc populated, so
+      // this populates the /cached endpoint with "SCHEDULED" state for the
+      // dashboard and lets us open the poll window right at departure time
+      // rather than at a fixed T+3h offset.
+      if (!_etdCache[etdKey]) {
+        const lastScout = _etdScoutTs[etdKey] || 0;
+        if (Date.now() - lastScout >= SCOUT_RETRY_MS) {
+          _etdScoutTs[etdKey] = Date.now();
+          const scout = await flightsRouter.lookupTeam(team, dest);
+          if (scout.status === 200) {
+            const arr = scout.data?.arrival;
+            // Only trust ETD when the flight is confirmed into the right airport.
+            if (arr && arr.to === dest && arr.depScheduledUtc) {
+              const etdMs = new Date(arr.depScheduledUtc).getTime();
+              if (!isNaN(etdMs)) {
+                _etdCache[etdKey] = etdMs;
+                console.log(`[cron] charter ${team} ETD scouted: ${arr.depScheduledUtc}`);
+              }
             }
           }
         }
       }
-    }
 
-    // ── Phase 2: polling window ────────────────────────────────────────────
-    const etdMs = _etdCache[etdKey];
-    // Open at ETD; fall back to 6h before opener first pitch if no schedule found.
-    const windowStart = etdMs ?? (openerFirstPitch - 6 * 3600000);
-    const windowEnd   = etdMs ? etdMs + 6 * 3600000 : openerFirstPitch + 2 * 3600000;
+      // ── Phase 2: polling window ──────────────────────────────────────────
+      const etdMs = _etdCache[etdKey];
+      // Open at ETD; fall back to 6h before opener first pitch if no schedule found.
+      const windowStart = etdMs ?? (openerFirstPitch - 6 * 3600000);
+      const windowEnd   = etdMs ? etdMs + 6 * 3600000 : openerFirstPitch + 2 * 3600000;
 
-    if (Date.now() < windowStart) {
-      if (etdMs) {
-        const minUntil = Math.round((windowStart - Date.now()) / 60000);
-        console.log(`[cron] charter ${trackedTeamAbbr} ETD in ${minUntil} min — poll window not open yet`);
+      if (Date.now() < windowStart) {
+        if (etdMs) {
+          const minUntil = Math.round((windowStart - Date.now()) / 60000);
+          console.log(`[cron] charter ${team} ETD in ${minUntil} min — poll window not open yet`);
+        }
+        continue;
       }
-      return;
-    }
-    if (Date.now() > windowEnd) return;
+      if (Date.now() > windowEnd) continue;
 
-    // ── Active poll ────────────────────────────────────────────────────────
-    const result = await flightsRouter.lookupTeam(trackedTeamAbbr, destAirport);
-    if (!result || result.status !== 200) {
-      console.log(`[cron] charter poll: lookup status=${result?.status}`);
-      return;
-    }
-    const arrival = result.data?.arrival;
-    // Mirror the client's landed logic: arrActualUtc OR a status string that
-    // indicates the plane is on the ground. AeroDataBox often updates status
-    // before populating arrActualUtc, so checking both avoids missing landings.
-    const statusLc = (arrival?.status || '').toLowerCase();
-    const arrivedByStatus = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
-    const hasLanded = (arrival?.arrActualUtc && new Date(arrival.arrActualUtc).getTime() <= Date.now())
-                   || arrivedByStatus;
-    if (hasLanded) {
-      await markLanded(game.gamePk);
-      console.log(`[cron] charter ${trackedTeamAbbr} landed at ${arrival.to} — polling stopped (gamePk=${game.gamePk})`);
-    } else {
-      const refMs = etdMs ?? (openerFirstPitch - 6 * 3600000);
-      const minSince = Math.round((Date.now() - refMs) / 60000);
-      const tag = etdMs ? 'ETD' : 'T-6h';
-      console.log(`[cron] charter ${trackedTeamAbbr}→${destAirport}: +${minSince}min from ${tag}, not landed`);
+      // ── Active poll ──────────────────────────────────────────────────────
+      const result = await flightsRouter.lookupTeam(team, dest);
+      if (!result || result.status !== 200) {
+        console.log(`[cron] charter poll: ${team} lookup status=${result?.status}`);
+        continue;
+      }
+      const arrival = result.data?.arrival;
+      // Mirror the client's landed logic: arrActualUtc OR a status string that
+      // indicates the plane is on the ground. AeroDataBox often updates status
+      // before populating arrActualUtc, so checking both avoids missing landings.
+      const statusLc = (arrival?.status || '').toLowerCase();
+      const arrivedByStatus = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
+      const hasLanded = (arrival?.arrActualUtc && new Date(arrival.arrActualUtc).getTime() <= Date.now())
+                     || arrivedByStatus;
+      if (hasLanded) {
+        await markLanded(game.gamePk, team);
+        console.log(`[cron] charter ${team} landed at ${arrival.to} — polling stopped (gamePk=${game.gamePk})`);
+      } else {
+        const refMs = etdMs ?? (openerFirstPitch - 6 * 3600000);
+        const minSince = Math.round((Date.now() - refMs) / 60000);
+        const tag = etdMs ? 'ETD' : 'T-6h';
+        console.log(`[cron] charter ${team}→${dest}: +${minSince}min from ${tag}, not landed`);
+      }
     }
   } catch (err) {
     console.error('[cron] checkCharterPoll error:', err.message);
