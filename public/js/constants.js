@@ -255,7 +255,7 @@ export const SYNC_LAST_TS_KEY    = 'corbetLastSync';
 // graded samples accumulate (shrunk toward identity / default below threshold).
 export const CALIBRATION_KEY      = 'calibration_v1';   // { propKey:{a,b,n}, _global:{a,b,n} }
 export const BLEND_WEIGHTS_KEY    = 'blendWeights_v1';  // { propKey: w }
-export const DEFAULT_BLEND_W       = 0.30;  // score-component weight; rate model gets (1 − W)
+export const DEFAULT_BLEND_W       = 0.25;  // score-component weight; rate model gets (1 − W)
 export const MIN_CAL_SAMPLE        = 25;    // settled bets for a prop before its own Platt fit
 export const MIN_GLOBAL_CAL_SAMPLE = 40;    // pooled settled bets before the global Platt fallback
 export const MIN_BLEND_SAMPLE      = 40;    // instrumented+settled bets before re-tuning the blend

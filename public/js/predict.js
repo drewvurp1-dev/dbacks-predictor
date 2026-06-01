@@ -85,7 +85,7 @@ export function _mcVariance() {
 
 // ── Rate-model uncertainty (probability space, pp) ───────────────────────────
 // _mcVariance perturbs the *score*, but score only drives the scoreBase channel
-// (~40% of the blend); the rate model (binomial / convolution on season counting
+// (~25% of the blend); the rate model (binomial / convolution on season counting
 // stats) is score-independent, so a score-only Monte Carlo treats the dominant
 // signal as certain and saturates near 100% confidence. This returns the
 // sampling uncertainty of the rate estimate in percentage points so the MC loop
@@ -317,7 +317,7 @@ export function modelProbability(propKey,line,score,_components){
     const expectedAB=gamePAs*abPerPA;
     const k=Math.ceil(line+1e-9);
     const rateBase=_binomGE(expectedAB,pHit,k)*100;
-    // Keep a score-based component (DEFAULT_BLEND_W=40%) so contact-quality
+    // Keep a score-based component (DEFAULT_BLEND_W=25%) so contact-quality
     // signals the rate model doesn't see (whiff, HH%, handOps) still influence
     // the final probability. Anchors recalibrated for realistic ceilings.
     let scoreBase;
@@ -394,7 +394,7 @@ export function modelProbability(propKey,line,score,_components){
     const k=Math.ceil(line+1e-9);
     const rateBase=_convolveTBge(perAB,expectedAB,k)*100;
 
-    // Score-based component (DEFAULT_BLEND_W=40%) — captures contact-quality and
+    // Score-based component (DEFAULT_BLEND_W=25%) — captures contact-quality and
     // OPS-vs-hand signals beyond what season counting stats see. Anchors for
     // realistic ceilings (top of the 80-score band ≈ what a true .470-SLG bat
     // produces under typical AB volume).
@@ -438,7 +438,7 @@ export function modelProbability(propKey,line,score,_components){
     const pHRrate=Math.max(0.001,Math.min(0.12,_log5(bHR_PA,pHR_PA,LG_HR_PA)*_pitcherStuffMult()));
     const k=Math.ceil(line+1e-9);
     const rateBase=_binomGE(gamePAs,pHRrate,k)*100;
-    // Score-based component (DEFAULT_BLEND_W=40%) — captures barrel%, OPS-vs-hand, and other
+    // Score-based component (DEFAULT_BLEND_W=25%) — captures barrel%, OPS-vs-hand, and other
     // contact-quality signals the season HR rate misses (esp. for small-sample
     // rookies where xHR/PA leads HR/PA). Line-specific anchors keep blends
     // realistic at HR 1.5+ where the prop is genuinely rare.
@@ -469,7 +469,7 @@ export function modelProbability(propKey,line,score,_components){
     // P(walks ≥ k) over gamePAs Bernoulli trials. k = smallest integer > line,
     // so line=0.5→k=1, line=1.5→k=2, line=2.5→k=3, etc.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    // scoreBase weight dropped 60% → DEFAULT_BLEND_W (40%) and anchor at 80 trimmed from 48 to
+    // scoreBase weight dropped 60% → DEFAULT_BLEND_W (25%) and anchor at 80 trimmed from 48 to
     // 42. The binomial on shrunken BB rate is the principled signal here;
     // score retains weight for ump/recent-form/days-rest factors the binomial
     // doesn't see. Old weighting could push elite-OBP rookies to 48% on Walks
@@ -501,7 +501,7 @@ export function modelProbability(propKey,line,score,_components){
     const blended=Math.min(0.45,kF*0.55+pKF*0.45+whiffAdj+matchupK);
     // P(strikeouts ≥ k) over gamePAs Bernoulli trials. Generalized for any line.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
-    // scoreBase weight dropped 60% → DEFAULT_BLEND_W (40%) with line-specific anchors that
+    // scoreBase weight dropped 60% → DEFAULT_BLEND_W (25%) with line-specific anchors that
     // mirror the binomial's natural distribution across the population at
     // each line. Old single-anchor (28/48/68) was line-agnostic, which
     // overshot K 1.5+ for high-K matchups (model 54% vs binomial truth ~34%)
@@ -573,7 +573,7 @@ export function modelProbability(propKey,line,score,_components){
   }
   else if(propKey==='batter_hits_runs_rbis'){
     const rateBase=_hrrOverPct(line,ss,S.recentGameLog,gamePAs,_pitcherRunEnvMult());
-    // scoreBase weight dropped 50% → DEFAULT_BLEND_W (40%), matching the pattern applied to
+    // scoreBase weight dropped 50% → DEFAULT_BLEND_W (25%), matching the pattern applied to
     // every other rate-based prop. The Bayesian-shrunk empirical CDF (or
     // Poisson fallback) is the principled signal here; the heavy 50% score
     // weight was pulling low-stat-line starters' projections down by ~25pp
