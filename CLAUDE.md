@@ -262,6 +262,7 @@ After extraction #7: ~1,945 lines — orchestration + bootstrap + corbet/predict
 ## Git Workflow
 
 - Develop on a feature branch (`claude/...`)
+- **`PRSM`** (e.g. when the user types "prsm") = **Create a Pull Request and Squash-Merge** it to `main` via the GitHub MCP tools.
 - **After every push, ALWAYS create a PR and squash-merge to `main` via the GitHub MCP tools — no exceptions, even for small fixes**
 - If the merge fails with a conflict, run `git fetch origin main && git rebase origin/main`, force-push with `--force-with-lease`, then retry the merge
 - Use `git rebase origin/main` proactively if the branch has fallen behind before merging
