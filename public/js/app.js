@@ -30,7 +30,7 @@ import {
   _factorial, _poissonCDF,
   _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
-  _extractSplitStat, _handSplit,
+  _extractSplitStat, _handSplit, _seasonWoba,
 } from './player.js';
 import { openModal, closeModal } from './ui/modal.js';
 import * as api from './api.js';
@@ -1744,6 +1744,7 @@ function renderStatsTab(){
     statBox('OBP',  ss.obp,   `${ss.baseOnBalls}BB`,          _v(ss.obp)>=0.360?'good':_v(ss.obp)<=0.290?'bad':'', STAT_INFO.OBP)+
     statBox('SLG',  ss.slg,   `${ss.totalBases}TB`,           _v(ss.slg)>=0.470?'good':_v(ss.slg)<=0.350?'bad':'', STAT_INFO.SLG)+
     statBox('OPS',  ss.ops,   'OBP + SLG',                    _v(ss.ops)>=0.830?'good':_v(ss.ops)<=0.640?'bad':'', STAT_INFO.OPS)+
+    (()=>{const w=_seasonWoba(ss);return statBox('wOBA', w!=null?w.toFixed(3).replace(/^0/,''):'—', 'Weighted OBA', w==null?'':(w>=0.370?'good':w<=0.290?'bad':''), STAT_INFO.WOBA);})()+
     statBox('BABIP',ss.babip, 'Balls in play avg',            _v(ss.babip)>=0.340?'good':_v(ss.babip)<=0.270?'bad':'', STAT_INFO.BABIP)+
     statBox('AB/HR',ss.atBatsPerHomeRun?_v(ss.atBatsPerHomeRun).toFixed(1):'—', 'At-bats per HR', _abhrC, STAT_INFO.ABHR);
   const _bbkRaw=ss.baseOnBalls&&ss.strikeOuts?(ss.baseOnBalls/ss.strikeOuts):null;

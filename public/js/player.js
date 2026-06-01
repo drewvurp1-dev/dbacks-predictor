@@ -335,3 +335,27 @@ export function _handSplit() {
   if (!hand || !S.splits) return null;
   return hand === 'L' ? S.splits.vl : S.splits.vr;
 }
+
+// Standard wOBA linear weights. The MLB Stats API season line doesn't carry wOBA,
+// so we reconstruct it from its counting components. Weights are FanGraphs' recent
+// multi-year constants — they drift ~±0.01 yearly but the components dominate, so a
+// fixed set is plenty accurate for a displayed rate stat. Denominator follows the
+// FanGraphs definition: AB + BB − IBB + SF + HBP.
+const _WOBA_W = { bb: 0.690, hbp: 0.722, b1: 0.888, b2: 1.271, b3: 1.616, hr: 2.101 };
+
+// Compute season wOBA from an MLB Stats API hitting stat object. Returns a number,
+// or null when the line lacks the fields / has no qualifying denominator.
+export function _seasonWoba(ss) {
+  if (!ss) return null;
+  const n = v => parseInt(v) || 0;
+  const ab = n(ss.atBats), bb = n(ss.baseOnBalls), ibb = n(ss.intentionalWalks);
+  const hbp = n(ss.hitByPitch), sf = n(ss.sacFlies);
+  const h = n(ss.hits), b2 = n(ss.doubles), b3 = n(ss.triples), hr = n(ss.homeRuns);
+  const b1 = Math.max(0, h - b2 - b3 - hr);
+  const ubb = Math.max(0, bb - ibb);
+  const denom = ab + bb - ibb + sf + hbp;
+  if (denom <= 0) return null;
+  const num = _WOBA_W.bb * ubb + _WOBA_W.hbp * hbp
+    + _WOBA_W.b1 * b1 + _WOBA_W.b2 * b2 + _WOBA_W.b3 * b3 + _WOBA_W.hr * hr;
+  return num / denom;
+}

@@ -8,7 +8,7 @@ import {
   _factorial, _poissonCDF, _negBinomTailGT,
   _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
-  _extractSplitStat, _handSplit, _pitcherRunEnvMult, _pitcherStuffMult,
+  _extractSplitStat, _handSplit, _pitcherRunEnvMult, _pitcherStuffMult, _seasonWoba,
 } from './player.js';
 
 // ── _factorial ──────────────────────────────────────────────────────────────
@@ -424,4 +424,31 @@ test('_hrrOverPct — runEnvMult scales the projection (suppress < neutral < inf
 test('_hrrOverPct — runEnvMult defaults to 1.0 (backward compatible)', () => {
   const ss = { hits: 50, runs: 28, rbi: 30, gamesPlayed: 50 };
   assert.equal(_hrrOverPct(1.5, ss, null, 4.2), _hrrOverPct(1.5, ss, null, 4.2, 1.0));
+});
+
+// ── _seasonWoba ─────────────────────────────────────────────────────────────
+test('_seasonWoba — null inputs / empty denominator return null', () => {
+  assert.equal(_seasonWoba(null), null);
+  assert.equal(_seasonWoba({ atBats: 0, baseOnBalls: 0 }), null);
+});
+
+test('_seasonWoba — all-singles line equals w1B (denominator = AB)', () => {
+  // 100 AB, 30 singles, nothing else → wOBA = 0.888 * 30 / 100
+  const w = _seasonWoba({ atBats: 100, hits: 30, doubles: 0, triples: 0, homeRuns: 0,
+    baseOnBalls: 0, intentionalWalks: 0, hitByPitch: 0, sacFlies: 0 });
+  assert.ok(Math.abs(w - 0.2664) < 1e-6, `expected 0.2664, got ${w}`);
+});
+
+test('_seasonWoba — IBB removed from walk credit and denominator', () => {
+  const withIbb = _seasonWoba({ atBats: 50, hits: 10, doubles: 0, triples: 0, homeRuns: 0,
+    baseOnBalls: 10, intentionalWalks: 4, hitByPitch: 0, sacFlies: 0 });
+  // uBB = 6, denom = 50 + 10 - 4 = 56, num = 0.888*10 + 0.690*6
+  const expected = (0.888 * 10 + 0.690 * 6) / 56;
+  assert.ok(Math.abs(withIbb - expected) < 1e-9, `expected ${expected}, got ${withIbb}`);
+});
+
+test('_seasonWoba — extra-base hits weighted above singles', () => {
+  const singles = _seasonWoba({ atBats: 100, hits: 20, doubles: 0, triples: 0, homeRuns: 0, baseOnBalls: 0, intentionalWalks: 0, hitByPitch: 0, sacFlies: 0 });
+  const homers  = _seasonWoba({ atBats: 100, hits: 20, doubles: 0, triples: 0, homeRuns: 20, baseOnBalls: 0, intentionalWalks: 0, hitByPitch: 0, sacFlies: 0 });
+  assert.ok(homers > singles, `HR line (${homers}) should exceed singles line (${singles})`);
 });
