@@ -456,9 +456,11 @@
       return;
     }
 
+    const refreshBtn = '<button class="dch-refresh" data-action="refresh-charter" title="Refresh charter status">↻</button>';
+
     if (visible.length === 1) {
       el.className = `dash-charter ${visible[0].tierClass}`.trim();
-      el.innerHTML = visible[0].html;
+      el.innerHTML = visible[0].html + refreshBtn;
     } else {
       // Dual-track: stack two rows; apply the worst tier to the container
       // so the border colour reflects the most-concerning flight.
@@ -466,8 +468,15 @@
       const worstTier = visible.reduce((best, r) =>
         (tierRank[r.tierClass] || 0) > (tierRank[best] || 0) ? r.tierClass : best, '');
       el.className = `dash-charter dch-dual ${worstTier}`.trim();
-      el.innerHTML = visible.map(r => `<div class="dch-row">${r.html}</div>`).join('');
+      el.innerHTML = visible.map(r => `<div class="dch-row">${r.html}</div>`).join('') + refreshBtn;
     }
+  };
+
+  // Bust the per-flight cache and re-render the dashboard strip immediately.
+  // Exposed so app.js's 'refresh-charter' ACTIONS entry can call it.
+  window.refreshDashboardCharter = function () {
+    _dashCacheMap.clear();
+    window.renderDashboardCharter();
   };
 
   // ── Setup panel: auto-detect opponent + home/away from app's loaded game ────
