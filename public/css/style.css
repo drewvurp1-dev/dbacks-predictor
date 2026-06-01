@@ -542,6 +542,9 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-charter.dch-critical { border-left-color: #ff3838; background: #2a0a0a; }
 .dash-charter.dch-critical .dch-flag { color: #ff3838; font-weight: 700; text-transform: uppercase; }
 .dash-charter .dch-spinner { color: #555; }
+.dash-charter .dch-refresh { margin-left: auto; background: transparent; border: none; color: #444; font-size: 14px; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.dash-charter .dch-refresh:hover { color: #009A8B; }
+.dash-charter.dch-dual .dch-refresh { align-self: flex-end; margin-top: 6px; }
 .dash-charter.dch-dual { flex-direction: column; align-items: flex-start; gap: 0; }
 .dash-charter.dch-dual .dch-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; padding: 4px 0; }
 .dash-charter.dch-dual .dch-row + .dch-row { border-top: 1px solid #1a1a2e; margin-top: 4px; padding-top: 8px; }

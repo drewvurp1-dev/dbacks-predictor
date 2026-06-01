@@ -167,7 +167,7 @@ async function checkFirstPitch() {
 //      T+3h if AeroDataBox has no schedule yet), polls every 30 min until
 //      the charter lands or the window closes.
 //
-// ~3–5 upstream calls total per series opener (1–2 scouts + active polls).
+// ~5–8 upstream calls total per series opener (1–2 scouts + active polls).
 
 let _charters = null;
 function loadCharters() {
@@ -379,8 +379,8 @@ function start() {
   }
 
   if (process.env.AERODATABOX_API_KEY) {
-    cron.schedule('*/30 * * * *', checkCharterPoll);
-    console.log('[cron] scheduled charter poller every 30min (ETD-triggered after getaway game)');
+    cron.schedule('*/10 * * * *', checkCharterPoll);
+    console.log('[cron] scheduled charter poller every 10min (ETD-triggered after getaway game)');
   } else {
     console.log('[cron] charter poller disabled (AERODATABOX_API_KEY not set)');
   }
