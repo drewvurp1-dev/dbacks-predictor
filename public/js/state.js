@@ -43,6 +43,14 @@ function _loadRecordSort() {
   return { key: 'date', dir: 'desc' };
 }
 
+// Dashboard "Top 5 Bets" panel sort mode: 'ev' (biggest expected value) or
+// 'delta' (biggest model-vs-market edge). Persisted across sessions.
+function _loadTopBetsSort() {
+  if (typeof localStorage === 'undefined') return 'ev';
+  const s = localStorage.getItem('corbetTopBetsSort');
+  return s === 'delta' ? 'delta' : 'ev';
+}
+
 // ── State object ────────────────────────────────────────────────────────────
 export const S = {
   splits: null, seasonStat: null, rispStat: null,
@@ -57,6 +65,7 @@ export const S = {
   recentGameLog: null,
   lastScore: null, lastPrediction: null,
   recordSort: _loadRecordSort(),
+  topBetsSort: _loadTopBetsSort(),
   betLog: _loadBetLog(),
 };
 

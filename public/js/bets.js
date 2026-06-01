@@ -138,7 +138,13 @@ export function saveBet(key, btn){
 // Single source of truth for "top N bets". All three callers (dashboard panel,
 // player-row star icons, auto-save to localStorage) must use this so the lowData
 // filter and MC threshold stay consistent.
-export function _getTopBets(n=3){
+// sortBy selects the dominant ranking key for the dashboard "Top N" panel:
+//   'ev'      → biggest expected value first
+//   'delta'   → biggest model-vs-market edge (|Δ| in pp) first
+//   'default' → edge-strength tier first (used by auto-save / star icons so
+//               the once-per-game snapshot stays stable regardless of the UI
+//               toggle). All three share the same qualification filter.
+export function _getTopBets(n=3,sortBy='default'){
   if(!S.allPlayerBets)return[];
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
   const qualified=[];
@@ -151,7 +157,14 @@ export function _getTopBets(n=3){
     });
   });
   const _rankEv=b=>(b.ev??b.absDelta/100)*(b.propKey==='batter_home_runs'?0.7:1);
-  qualified.sort((a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0)||_rankEv(b)-_rankEv(a)||(b.mcConfidence||0)-(a.mcConfidence||0));
+  const _rankDelta=b=>(b.absDelta??0)*(b.propKey==='batter_home_runs'?0.7:1);
+  const _byEdge=(a,b)=>(edgeOrder[b.edgeStrength]||0)-(edgeOrder[a.edgeStrength]||0);
+  const _byMc=(a,b)=>(b.mcConfidence||0)-(a.mcConfidence||0);
+  let _cmp;
+  if(sortBy==='ev')        _cmp=(a,b)=>_rankEv(b)-_rankEv(a)||_byEdge(a,b)||_byMc(a,b);
+  else if(sortBy==='delta')_cmp=(a,b)=>_rankDelta(b)-_rankDelta(a)||_byEdge(a,b)||_byMc(a,b);
+  else                     _cmp=(a,b)=>_byEdge(a,b)||_rankEv(b)-_rankEv(a)||_byMc(a,b);
+  qualified.sort(_cmp);
   // Hits O/U 1.5 and TB O/U 1.5 on the same player are highly correlated; if
   // both qualify, keep only the better-EV side so the next-best independent
   // bet can take the other slot.
