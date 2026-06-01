@@ -542,6 +542,9 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-charter.dch-critical { border-left-color: #ff3838; background: #2a0a0a; }
 .dash-charter.dch-critical .dch-flag { color: #ff3838; font-weight: 700; text-transform: uppercase; }
 .dash-charter .dch-spinner { color: #555; }
+.dash-charter.dch-dual { flex-direction: column; align-items: flex-start; gap: 0; }
+.dash-charter.dch-dual .dch-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; padding: 4px 0; }
+.dash-charter.dch-dual .dch-row + .dch-row { border-top: 1px solid #1a1a2e; margin-top: 4px; padding-top: 8px; }
 .dash-pitcher-name { font-family: 'Orbitron', monospace; font-size: 12px; color: #E8DFC8; font-weight: 800; letter-spacing: 0.5px; }
 .dash-pitcher-meta { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #888; margin-top: 3px; }
 .dash-pitcher-btn { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #009A8B; background: transparent; border: 1px solid #009A8B; padding: 6px 12px; border-radius: 5px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
