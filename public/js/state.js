@@ -9,6 +9,7 @@
 // window at module load. DEBUG / log are exported too.
 
 import { CORBET_ROSTER } from './constants.js';
+import { safeParseJSON } from './utils.js';
 
 // ── Persisted reads (run at module load) ────────────────────────────────────
 // Repair any duplicate IDs from a prior bug where autoSaveTopBets used the
@@ -16,7 +17,9 @@ import { CORBET_ROSTER } from './constants.js';
 // stored it as undefined.
 function _loadBetLog() {
   if (typeof localStorage === 'undefined') return [];
-  const list = JSON.parse(localStorage.getItem('corbetRecord') || '[]');
+  // Guarded parse: a corrupt/non-array corbetRecord must not throw here — this
+  // runs at state.js module-eval, so a throw takes down the entire app graph.
+  const list = safeParseJSON(localStorage.getItem('corbetRecord'), []);
   const seen = new Set();
   let repaired = false;
   list.forEach((b, i) => {
