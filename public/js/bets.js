@@ -587,9 +587,9 @@ function updateFactorPerf(factors, actual, gradeResult) {
 //      Shrinks raw hit rate toward 0.5 by an amount proportional to sample weakness.
 //      Factor with 5 fires/4 hits (raw 80%) → posterior 56% (modest signal).
 //      Factor with 100 fires/80 hits (raw 80%) → posterior 75% (strong signal).
-//   2. Continuous adjustment: 1 + (postRate - 0.5) * 0.8, capped at [0.5, 1.5].
-//      Cap widened (was [0.7, 1.3]) so that learning produces a visible effect
-//      given that scoreBase is only 40% of the final probability blend.
+//   2. Continuous adjustment: 1 + (postRate - 0.5) * 0.6, capped at [0.7, 1.3].
+//      A tight cap keeps a short, noisy run of recent games from overfitting a
+//      factor's weight (and thus the score) to an extreme.
 //   3. Minimum 10 fires before any adjustment — even with shrinkage, <10 is noise.
 function autoAdjustWeights(perf, gameCount) {
   const weights = getFactorWeights();
@@ -599,8 +599,8 @@ function autoAdjustWeights(perf, gameCount) {
     const defaultW = DEFAULT_WEIGHTS[factor];
     if (!defaultW) return;
     const postRate = (data.hits + ALPHA / 2) / (data.fires + ALPHA);
-    let mult = 1 + (postRate - 0.5) * 0.8;
-    mult = Math.max(0.5, Math.min(1.5, mult));
+    let mult = 1 + (postRate - 0.5) * 0.6;
+    mult = Math.max(0.7, Math.min(1.3, mult));
     weights[factor] = Math.round(defaultW * mult * 10) / 10;
   });
   saveFactorWeights(weights);
