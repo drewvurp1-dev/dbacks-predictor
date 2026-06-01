@@ -160,6 +160,27 @@ test('_pitchMatchupReason — wOBA-keyed prop (TB), positive delta supports Over
   assert.equal(under, null, 'under should be null when matchup favors over');
 });
 
+test('_pitchMatchupReason — wOBA line names the wOBA-driving pitch, not the K-driving one', () => {
+  S.pitcher = { id: 1 };
+  S.playerId = 'X';
+  // Mirrors the Moreno bug: the K-impact "primary" pitch (a low-wOBA changeup the
+  // batter is weak against) differs from the pitch driving the positive wOBA delta
+  // (a high-usage fastball). The wOBA line should cite the fastball, not the change.
+  S.pitchMatchupCached = {
+    pid: 1, bid: 'X',
+    value: {
+      kDeltaPp: 0, wobaDelta: 0.024,
+      primaryUsage: 16, primaryPitchName: 'change',  // K-selected
+      primaryBatterK: 0, baseK: 0,
+      wobaPitchUsage: 42, wobaPitchName: '4-Seam FB', // wOBA-selected
+    },
+  };
+  const over = _pitchMatchupReason('over', 'batter_total_bases');
+  assert.ok(/4-Seam FB/.test(over), `wOBA line should cite the fastball, got: ${over}`);
+  assert.ok(!/change/.test(over), `wOBA line should not cite the changeup, got: ${over}`);
+  assert.ok(/\+0\.024/.test(over), `wOBA line should show the positive delta, got: ${over}`);
+});
+
 test('_pitchMatchupReason — Hits prop keys on AVG-vs-pitch (baDelta), supports Over direction', () => {
   S.pitcher = { id: 1 };
   S.playerId = 'X';
