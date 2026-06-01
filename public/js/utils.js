@@ -1,6 +1,23 @@
 // Pure utility helpers. No S, no fetch, no app-specific logic — safe to import
 // from anywhere.
 
+// ── Safe JSON parse for persisted (localStorage) reads ──────────────────────
+// A single corrupt/truncated localStorage value (mobile PWAs evict and partially
+// write storage all the time) must never throw at module-eval / bootstrap time —
+// a throw there cascades through the ES-module graph and bricks the whole app so
+// neither players nor bets ever load, and a refresh can't fix it because the bad
+// value persists. Returns `fallback` on null input, parse error, or a type
+// mismatch against the fallback's shape (array vs plain object).
+export function safeParseJSON(raw, fallback) {
+  if (raw == null) return fallback;
+  let v;
+  try { v = JSON.parse(raw); } catch { return fallback; }
+  if (Array.isArray(fallback) && !Array.isArray(v)) return fallback;
+  if (fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+      && (v == null || typeof v !== 'object' || Array.isArray(v))) return fallback;
+  return v;
+}
+
 // ── DOM ID shorthand ────────────────────────────────────────────────────────
 export function show(id)  { document.getElementById(id)?.classList.remove('hidden'); }
 export function hide(id)  { document.getElementById(id)?.classList.add('hidden'); }

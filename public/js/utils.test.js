@@ -3,7 +3,33 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCSV } from './utils.js';
+import { parseCSV, safeParseJSON } from './utils.js';
+
+test('safeParseJSON — valid array round-trips', () => {
+  assert.deepEqual(safeParseJSON('[{"id":1}]', []), [{ id: 1 }]);
+});
+
+test('safeParseJSON — valid object round-trips', () => {
+  assert.deepEqual(safeParseJSON('{"a":1}', {}), { a: 1 });
+});
+
+test('safeParseJSON — null/missing raw returns fallback', () => {
+  assert.deepEqual(safeParseJSON(null, []), []);
+  assert.deepEqual(safeParseJSON(undefined, { x: 1 }), { x: 1 });
+});
+
+test('safeParseJSON — corrupt/truncated JSON returns fallback (no throw)', () => {
+  // This is the bootstrap-bricking case: a truncated corbetRecord must not throw.
+  assert.deepEqual(safeParseJSON('[{"id":1,"prop":"Hits"', []), []);
+  assert.deepEqual(safeParseJSON('{not json', {}), {});
+});
+
+test('safeParseJSON — type mismatch against fallback shape returns fallback', () => {
+  assert.deepEqual(safeParseJSON('"a string"', []), []);   // string where array expected
+  assert.deepEqual(safeParseJSON('[1,2,3]', {}), {});       // array where object expected
+  assert.deepEqual(safeParseJSON('null', []), []);          // null where array expected
+  assert.deepEqual(safeParseJSON('42', { d: 1 }), { d: 1 });// number where object expected
+});
 
 test('parseCSV — empty input returns []', () => {
   assert.deepEqual(parseCSV(''), []);

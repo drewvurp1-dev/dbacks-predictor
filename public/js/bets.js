@@ -14,6 +14,7 @@ import {
   GRADE_LOG_KEY, FACTOR_PERF_KEY, FACTOR_WEIGHTS_KEY, PENDING_KEY,
 } from './constants.js';
 import { S, log, activeRoster } from './state.js';
+import { safeParseJSON } from './utils.js';
 import * as api from './api.js';
 
 const _betsChanged   = () => document.dispatchEvent(new CustomEvent('bets:changed'));
@@ -76,9 +77,9 @@ function _isPastDate(date){
 
 // ── localStorage stores ──────────────────────────────────────────────────────
 
-export function getGradeLog()     { return JSON.parse(localStorage.getItem(GRADE_LOG_KEY)||'[]'); }
+export function getGradeLog()     { return safeParseJSON(localStorage.getItem(GRADE_LOG_KEY), []); }
 export function getFactorPerf()   {
-  const raw = JSON.parse(localStorage.getItem(FACTOR_PERF_KEY)||'{}');
+  const raw = safeParseJSON(localStorage.getItem(FACTOR_PERF_KEY), {});
   // One-shot migration: collapse legacy metric-specific pitcher labels into the
   // unified 'Pitcher Quality' bucket so the learning panel doesn't double-list
   // them after the consolidation. The merged result is persisted so the merge
@@ -96,8 +97,8 @@ export function getFactorPerf()   {
   if (dirty) localStorage.setItem(FACTOR_PERF_KEY, JSON.stringify(out));
   return out;
 }
-export function getFactorWeights(){ return JSON.parse(localStorage.getItem(FACTOR_WEIGHTS_KEY)||JSON.stringify(DEFAULT_WEIGHTS)); }
-export function getPending()      { return JSON.parse(localStorage.getItem(PENDING_KEY)||'[]'); }
+export function getFactorWeights(){ return safeParseJSON(localStorage.getItem(FACTOR_WEIGHTS_KEY), { ...DEFAULT_WEIGHTS }); }
+export function getPending()      { return safeParseJSON(localStorage.getItem(PENDING_KEY), []); }
 
 export function saveGradeLog(d)     { localStorage.setItem(GRADE_LOG_KEY, JSON.stringify(d)); }
 export function saveFactorPerf(d)   { localStorage.setItem(FACTOR_PERF_KEY, JSON.stringify(d)); }
