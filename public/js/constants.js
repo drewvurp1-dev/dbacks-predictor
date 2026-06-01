@@ -128,6 +128,7 @@ export const STAT_INFO = {
   OBP:   { title:'On-Base % (H+BB+HBP ÷ PA)',      good:'≥ .360',   avg:'~ .315',  bad:'≤ .290' },
   SLG:   { title:'Slugging % (TB ÷ AB)',           good:'≥ .470',   avg:'~ .400',  bad:'≤ .350' },
   OPS:   { title:'On-base + Slugging',             good:'≥ .830',   avg:'~ .715',  bad:'≤ .640', note:'Elite ≥ .900' },
+  WOBA:  { title:'wOBA — weighted On-Base Average', good:'≥ .370',  avg:'~ .320',  bad:'≤ .290', note:'Reconstructed from season counting stats with standard linear weights' },
   BABIP: { title:'BA on Balls in Play',            good:'≥ .340',   avg:'~ .295',  bad:'≤ .270', note:'Above .340 may signal luck; below .270, bad luck' },
   ABHR:  { title:'At-bats per HR (lower = power)', good:'≤ 18',     avg:'30 – 40', bad:'50+',    note:'Elite power: ≤ 15' },
   // ── Batter discipline ──

@@ -190,6 +190,15 @@ export function _pitchMatchupFactor() {
   const baSorted = [...detail].sort((a, b) => (b.usage * Math.abs(b.ba - baseBa)) - (a.usage * Math.abs(a.ba - baseBa)));
   const baTop = baSorted[0];
   const baPitchLabel = PITCH_NAMES[baTop?.pt] || baTop?.pt || '';
+  // Pitch that most drives the wOBA delta *in the direction the delta points* —
+  // surfaced in the wOBA-keyed (TB/HR/etc.) reasoning. Selecting by raw |Δ| would
+  // pick a pitch that pulls the opposite way (e.g. a changeup the batter is weak
+  // against) while the net delta is positive, which reads as inverted. Ranking by
+  // signed contribution keeps the named pitch consistent with the delta's sign.
+  const wobaSorted = [...detail].sort((a, b) =>
+    Math.sign(wobaDelta) * ((b.woba - baseWoba) * b.usage - (a.woba - baseWoba) * a.usage));
+  const wobaTop = wobaSorted[0];
+  const wobaPitchLabel = PITCH_NAMES[wobaTop?.pt] || wobaTop?.pt || '';
 
   return cacheMiss({
     kDeltaPp: kDelta,
@@ -208,6 +217,10 @@ export function _pitchMatchupFactor() {
     baPitchName: baPitchLabel,
     baPitchUsage: baTop?.usage,
     baPitchBa: baTop?.ba,
+    wobaPitch: wobaTop?.pt,
+    wobaPitchName: wobaPitchLabel,
+    wobaPitchUsage: wobaTop?.usage,
+    wobaPitchWoba: wobaTop?.woba,
   });
 }
 
@@ -234,7 +247,11 @@ export function _pitchMatchupReason(direction, propKey) {
     const fmt = v => v.toFixed(3).replace(/^0/, '');
     return `${m.baPitchUsage.toFixed(0)}% ${m.baPitchName} (${fmt(m.baPitchBa)} BA vs ${fmt(m.baseBa)} base)`;
   }
-  return `${m.primaryUsage.toFixed(0)}% ${m.primaryPitchName} mix (${(m.wobaDelta > 0 ? '+' : '')}${m.wobaDelta.toFixed(3)} wOBA matchup)`;
+  // Prefer the pitch that drives the wOBA delta in its own direction; fall back to
+  // the K-selected primary pitch for cached payloads that predate wobaPitch*.
+  const wUsage = m.wobaPitchUsage != null ? m.wobaPitchUsage : m.primaryUsage;
+  const wName  = m.wobaPitchName  != null ? m.wobaPitchName  : m.primaryPitchName;
+  return `${wUsage.toFixed(0)}% ${wName} mix (${(m.wobaDelta > 0 ? '+' : '')}${m.wobaDelta.toFixed(3)} wOBA matchup)`;
 }
 
 // ── Per-prop probability model ──────────────────────────────────────────────
