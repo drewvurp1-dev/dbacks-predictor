@@ -474,6 +474,13 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .rec-sort-btn { background: #0e0c22; border: 1px solid #1e1b3a; color: #888; font-family: 'Chakra Petch', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
 .rec-sort-btn:hover { color: #ccc; border-color: #2a2750; }
 .rec-sort-btn.active { background: #1a1730; color: #E8DFC8; border-color: #009A8B; }
+.tb-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tb-sort-toggle { display: inline-flex; gap: 0; flex-shrink: 0; }
+.tb-sort-btn { background: #0e0c22; border: 1px solid #1e1b3a; color: #888; font-family: 'Chakra Petch', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 9px; cursor: pointer; }
+.tb-sort-btn:first-child { border-radius: 4px 0 0 4px; }
+.tb-sort-btn:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+.tb-sort-btn:hover { color: #ccc; border-color: #2a2750; }
+.tb-sort-btn.active { background: #1a1730; color: #E8DFC8; border-color: #009A8B; }
 .bet-log-item { display: grid; grid-template-columns: 70px 90px 36px 1fr 50px 54px 96px 22px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #0e0c22; font-family: 'Chakra Petch', monospace; font-size: 11px; }
 .bet-log-item.bet-pending { opacity: 0.55; }
 .bet-log-item .bli-date { color: #888; }

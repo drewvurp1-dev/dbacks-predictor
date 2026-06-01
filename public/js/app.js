@@ -69,7 +69,7 @@ import {
 } from './weather.js';
 import {
   loadTeamMomentum, loadTwoWeekSchedule,
-  _renderGameBanner, renderDashboard, togglePlayerCard,
+  _renderGameBanner, renderDashboard, togglePlayerCard, setTopBetsSort,
 } from './ui/dashboard.js';
 
 function rebuildPlayerSelect(roster){
@@ -1972,6 +1972,7 @@ const ACTIONS = {
   'set-roof':           (el) => setRoof(el.dataset.value === 'true'),
   'toggle-factor-card': (el) => toggleFactorCard(el.dataset.value),
   'set-record-sort':    (el) => setRecordSort(el.dataset.value),
+  'set-top-bets-sort':  (el) => setTopBetsSort(el.dataset.value),
 
   // ── Bet finder (Add bet form) ────────────────────────────────────────────
   'abf-set-dir':    (el) => abfSetDir(el.dataset.value),

@@ -401,6 +401,17 @@ function _windFieldRelative(){
   return {label,kind};
 }
 
+// Toggle the "Top 5 Bets" panel between EV% and Δ% ranking. Persisted so the
+// choice sticks across reloads. Re-renders the dashboard to re-sort the panel
+// (and the matching star icons on the player rows).
+export function setTopBetsSort(mode){
+  const m=mode==='delta'?'delta':'ev';
+  if(S.topBetsSort===m)return;
+  S.topBetsSort=m;
+  localStorage.setItem('corbetTopBetsSort',m);
+  renderDashboard();
+}
+
 // ── Main dashboard render: best-bets list + collapsible player rows ─────────
 export function renderDashboard(){
   _renderGameBanner();
@@ -409,9 +420,15 @@ export function renderDashboard(){
   const fmtOdds=p=>p!=null?(p>0?'+':'')+p:'—';
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
 
+  // Reflect the active Top-5 sort mode on the toggle buttons
+  const tbSort=S.topBetsSort==='delta'?'delta':'ev';
+  document.querySelectorAll('.tb-sort-btn').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.value===tbSort);
+  });
+
   // Top 5 bets — only when props are available
   if(S.allPlayerBets&&S.allPlayerBets.length){
-    const topBets=_getTopBets(5);
+    const topBets=_getTopBets(5,tbSort);
     const _tbIdByName={};
     activeRoster().forEach(p=>{_tbIdByName[p.name]=p.id;});
     document.getElementById('dash-best-bets').innerHTML=topBets.length
@@ -444,7 +461,7 @@ export function renderDashboard(){
 
   // Pre-compute top-5 set so star icons can be applied per bet row.
   // Shared helper ensures lowData filter matches the Top 5 panel.
-  const topBetsKeys=new Set(_getTopBets(5).map(b=>`${b.playerName}_${b.propKey}_${b.direction}`));
+  const topBetsKeys=new Set(_getTopBets(5,tbSort).map(b=>`${b.playerName}_${b.propKey}_${b.direction}`));
 
   const orderedRoster=[...activeRoster()].sort((a,b)=>{
     const oa=S.players?.[a.id]?.order??99;

@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=30">
+<link rel="stylesheet" href="/css/style.css?v=31">
 </head>
 <body>
 
@@ -43,7 +43,13 @@
     <div id="dash-charter-strip" class="hidden"></div>
     <div id="dash-pitcher-card"></div>
     <div class="card">
-      <div class="card-header">Top 5 Bets · Stability ≥75% <span class="hdr-info" data-tip="Edge Stability % — fraction of model runs where this bet's edge direction holds under score noise. NOT a win probability. High values mean the edge is robust to small score variation.">ⓘ</span></div>
+      <div class="card-header tb-card-header">
+        <span>Top 5 Bets · Stability ≥75% <span class="hdr-info" data-tip="Edge Stability % — fraction of model runs where this bet's edge direction holds under score noise. NOT a win probability. High values mean the edge is robust to small score variation.">ⓘ</span></span>
+        <span class="tb-sort-toggle" title="Sort the Top 5 by Expected Value or by model-vs-market edge (Δ)">
+          <button class="tb-sort-btn" data-action="set-top-bets-sort" data-value="ev">EV%</button>
+          <button class="tb-sort-btn" data-action="set-top-bets-sort" data-value="delta">Δ%</button>
+        </span>
+      </div>
       <div class="card-body" id="dash-best-bets"><div class="dash-empty">Loading…</div></div>
     </div>
     <div id="dash-player-cards"></div>
@@ -517,7 +523,7 @@
   </div>
 </div>
 
-<script type="module" src="/js/app.js?v=72"></script>
+<script type="module" src="/js/app.js?v=73"></script>
 <script src="/js/charter.js?v=21"></script>
 
 </body>
