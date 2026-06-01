@@ -294,19 +294,27 @@
 
   // Fetch and render one flight; returns { html, tierClass, hidden }.
   // Checks _dashCacheMap first; populates it on a live fetch.
-  async function fetchOneFlight(team, dest, gameDate) {
+  // Pass forceRefresh=true to bypass both the client page cache and the server's
+  // in-process /cached endpoint, forcing a fresh AeroDataBox query.
+  async function fetchOneFlight(team, dest, gameDate, forceRefresh = false) {
     const key = `${gameDate}|${team}|${dest}`;
     const cached = _dashCacheMap.get(key);
-    if (cached && Date.now() - cached.ts < DASH_TTL) {
+    if (!forceRefresh && cached && Date.now() - cached.ts < DASH_TTL) {
       return { html: cached.html, tierClass: cached.cls };
     }
 
     try {
-      // Try the server's in-process cache first (no AeroDataBox credit burned).
-      // Fall back to a live lookup if nothing is cached yet.
-      let r = await fetch(`/flights/team/${encodeURIComponent(team)}/cached?destAirport=${dest}`);
-      if (r.status === 204) {
+      // On a forced refresh skip the /cached shortcut so we always hit AeroDataBox
+      // directly. Otherwise try the server's in-process cache first (no credit burned)
+      // and fall back to a live lookup only when the server has nothing cached yet.
+      let r;
+      if (forceRefresh) {
         r = await fetch(`/flights/team/${encodeURIComponent(team)}?destAirport=${dest}`);
+      } else {
+        r = await fetch(`/flights/team/${encodeURIComponent(team)}/cached?destAirport=${dest}`);
+        if (r.status === 204) {
+          r = await fetch(`/flights/team/${encodeURIComponent(team)}?destAirport=${dest}`);
+        }
       }
       const d = await r.json();
       if (d?.quota?.remaining != null) setCharterCredits(d.quota.remaining, d.quota.limit);
@@ -396,7 +404,7 @@
     }
   }
 
-  window.renderDashboardCharter = async function () {
+  window.renderDashboardCharter = async function (forceRefresh = false) {
     const el = document.getElementById('dash-charter-strip');
     if (!el) return;
     el.classList.remove('hidden');
@@ -448,7 +456,7 @@
 
     // Fetch all tracked flights in parallel — caching inside fetchOneFlight
     // bounds AeroDataBox quota to one call per flight per 15-min window.
-    const results = await Promise.all(flights.map(f => fetchOneFlight(f.team, f.dest, gameDate)));
+    const results = await Promise.all(flights.map(f => fetchOneFlight(f.team, f.dest, gameDate, forceRefresh)));
     const visible = results.filter(r => !r.hidden);
 
     if (!visible.length) {
@@ -472,11 +480,12 @@
     }
   };
 
-  // Bust the per-flight cache and re-render the dashboard strip immediately.
+  // Bust both the client page cache and the server's in-process cache, then
+  // re-render immediately with a fresh AeroDataBox call.
   // Exposed so app.js's 'refresh-charter' ACTIONS entry can call it.
   window.refreshDashboardCharter = function () {
     _dashCacheMap.clear();
-    window.renderDashboardCharter();
+    window.renderDashboardCharter(true); // forceRefresh → bypasses server /cached endpoint
   };
 
   // ── Setup panel: auto-detect opponent + home/away from app's loaded game ────

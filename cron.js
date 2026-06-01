@@ -322,8 +322,11 @@ async function checkCharterPoll() {
       // ── Phase 2: polling window ──────────────────────────────────────────
       const etdMs = _etdCache[etdKey];
       // Open at ETD; fall back to 6h before opener first pitch if no schedule found.
+      // The no-ETD windowEnd uses 8h post-first-pitch (vs the old 2h) to cover
+      // late-landing charters on night games where AeroDataBox had no pre-departure
+      // schedule entry for the cron's ETD scout to catch.
       const windowStart = etdMs ?? (openerFirstPitch - 6 * 3600000);
-      const windowEnd   = etdMs ? etdMs + 6 * 3600000 : openerFirstPitch + 2 * 3600000;
+      const windowEnd   = etdMs ? etdMs + 6 * 3600000 : openerFirstPitch + 8 * 3600000;
 
       if (Date.now() < windowStart) {
         if (etdMs) {
