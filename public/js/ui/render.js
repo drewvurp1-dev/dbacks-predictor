@@ -5,6 +5,7 @@
 import { S, activeRoster } from '../state.js';
 import { PITCH_NAMES, PITCH_TYPES, STAT_INFO } from '../constants.js';
 import { loadPitcherForm, loadPitcherSplits } from '../pitcher.js';
+import { getPlayerInflators } from '../bets.js';
 
 // ── Stat tooltip ────────────────────────────────────────────────────────────
 // Renders the ⓘ hover tooltip used inside statBox. `info` is either a free-form
@@ -414,11 +415,22 @@ export function buildPredictionSummary(factors) {
 // Renders the three category panels on the Prediction Score view + the two
 // mini summary bars at the top of the page. Pure DOM — `factors` and
 // `catTotals` are produced by calcPrediction in app.js.
-export function renderFactorCards(factors, catTotals) {
+export function renderFactorCards(factors, catTotals, playerName = S.playerName) {
   const colors = { positive: '#2ecc71', negative: '#e74c3c', neutral: '#f39c12' };
   const icons = { positive: '▲', negative: '▼', neutral: '●' };
+  // Pure-inflator ⚑ flags from this player's grade history (single source of
+  // truth in bets.js — same gated criteria as the Grade & Learn diagnostic).
+  // Only flag factors that are currently pushing the score UP (adj > 0): a known
+  // inflator firing negative tonight isn't inflating, so it shouldn't warn.
+  const inflators = getPlayerInflators(playerName);
+  const flagFor = f => {
+    if (!(f.adj > 0)) return '';
+    const inf = inflators.get(f.label);
+    if (!inf) return '';
+    return ` <span class="factor-inflator" title="⚑ Historically a false signal for ${playerName}: this factor fired positive on ${inf.badPos} of his bad games and never on a good one (over ${inf.goodGames} good games). Treat its boost with skepticism.">⚑</span>`;
+  };
   const fmtRows = fs => fs.length
-    ? fs.map(f => `<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('')
+    ? fs.map(f => `<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}${flagFor(f)}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('')
     : '<div style="font-size:11px;color:#555;font-family:\'Chakra Petch\',monospace;padding:4px 0;">No significant factors.</div>';
   const fmtNet = n => {
     const s = n > 0 ? '+' : '';

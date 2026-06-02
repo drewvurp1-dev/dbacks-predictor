@@ -549,6 +549,52 @@ export function gradePerformance(actual, predScore) {
   };
 }
 
+// ── Per-player factor diagnostics (pure-inflator ⚑) ──────────────────────────
+// A factor is a "pure inflator" for a player when it pushed the score UP on the
+// player's bad games and NEVER on a good one — it adds points with no (or
+// negative) correlation to outcomes for that hitter. Single source of truth for
+// the ⚑ flag, consumed by BOTH the Grade & Learn per-player table and the live
+// prediction factor cards, so the two can never disagree. Gated by sample size
+// to cut false alarms.
+export const INFLATOR_MIN_BAD = 3;   // factor must fire + on ≥ this many bad games
+export const INFLATOR_MIN_GOOD = 3;  // player needs ≥ this many good games for "never on a good one" to mean something
+
+// Sign of a factor's score contribution: prefer the stored adj (actual points
+// it moved the score); fall back to the impact label for legacy entries that
+// predate adj being persisted. Returns +1 / 0 / -1.
+export function factorSign(f){
+  if(typeof f.adj==='number')return f.adj>0?1:f.adj<0?-1:0;
+  return f.impact==='positive'?1:f.impact==='negative'?-1:0;
+}
+
+// Returns a Map(factorLabel → { badPos, goodGames }) of the pure-inflator
+// factors for a player (matched by name, as stored on grade-log entries).
+// Empty when the player lacks enough graded good games to judge.
+export function getPlayerInflators(playerName){
+  const out=new Map();
+  const name=(playerName||'').trim();
+  if(!name)return out;
+  const games=getGradeLog().filter(g=>(g.playerName||'').trim()===name);
+  const bad=[],good=[];
+  games.forEach(g=>(gradePerformance(g.actual,g.score).actuallyGood?good:bad).push(g));
+  if(!bad.length||good.length<INFLATOR_MIN_GOOD)return out;
+  const tally=new Map(); // label → { badPos, goodPos }
+  bad.forEach(g=>(g.factors||[]).forEach(f=>{
+    if(factorSign(f)<=0)return;
+    if(!tally.has(f.label))tally.set(f.label,{badPos:0,goodPos:0});
+    tally.get(f.label).badPos++;
+  }));
+  good.forEach(g=>(g.factors||[]).forEach(f=>{
+    if(factorSign(f)<=0)return;
+    const t=tally.get(f.label);
+    if(t)t.goodPos++;
+  }));
+  for(const[label,t]of tally){
+    if(t.goodPos===0&&t.badPos>=INFLATOR_MIN_BAD)out.set(label,{badPos:t.badPos,goodGames:good.length});
+  }
+  return out;
+}
+
 // Update factor performance stats after grading.
 //
 // Hit-rate semantics: a "hit" means the factor pushed the score in the
