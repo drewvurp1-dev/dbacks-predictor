@@ -641,19 +641,20 @@ function _renderPlayerAccuracy(log){
   const listEl=document.getElementById('player-acc-list');
   if(!listEl)return;
 
-  if(!log.length){
+  // Only attributed games — graded entries saved without a player name can't be
+  // rolled up under a real player, so they're skipped entirely.
+  const named=(log||[]).filter(g=>(g.playerName||'').trim());
+
+  if(!named.length){
     show('player-acc-empty');hide('player-acc-content');
     if(noteEl)noteEl.textContent='';
     return;
   }
 
   // Roll up by player. Recompute each grade live so the formula stays current.
-  // Graded entries with no playerName recorded (legacy/blank saves) collect under
-  // a single "Unknown" bucket rather than a cryptic "—" so it's clear they're
-  // unattributed games, not a real player.
   const byPlayer=new Map();
-  log.forEach(g=>{
-    const name=(g.playerName||'').trim()||'Unknown';
+  named.forEach(g=>{
+    const name=g.playerName.trim();
     if(!byPlayer.has(name))byPlayer.set(name,[]);
     byPlayer.get(name).push(g);
   });
@@ -670,8 +671,6 @@ function _renderPlayerAccuracy(log){
     const n=games.length;
     return{
       name,n,
-      isUnknown:name==='Unknown',
-      dates:games.map(g=>g.date).filter(Boolean),
       avgScore:scoreSum/n,
       goodRate:good/n,
       accRate:accurate/n,
@@ -681,7 +680,7 @@ function _renderPlayerAccuracy(log){
   }).sort((a,b)=>b.n-a.n||b.avgScore-a.avgScore);
 
   hide('player-acc-empty');show('player-acc-content');
-  if(noteEl)noteEl.textContent=`${rows.length} player${rows.length===1?'':'s'} · ${log.length} graded game${log.length===1?'':'s'}`;
+  if(noteEl)noteEl.textContent=`${rows.length} player${rows.length===1?'':'s'} · ${named.length} graded game${named.length===1?'':'s'}`;
 
   // Column widths live in CSS (.pacc-row) so the mobile media query can tighten
   // them — inline grid-template-columns would shadow any responsive override.
@@ -690,19 +689,13 @@ function _renderPlayerAccuracy(log){
     const last=_displayLast(r.name);
     const goodPct=Math.round(r.goodRate*100);
     const accPct=Math.round(r.accRate*100);
-    // Unknown bucket: name it plainly and put the game dates in the tooltip so
-    // the user can find those unattributed games in the Graded Game Log below.
-    const nameCls=r.isUnknown?'cal-cell-muted pacc-name':'cal-cell-neutral pacc-name';
-    const nameTitle=r.isUnknown
-      ?`${r.n} graded game${r.n===1?'':'s'} saved without a player name${r.dates.length?` (${r.dates.join(', ')})`:''}. Find them in the Graded Game Log below to remove or re-create.`
-      :r.name;
     // The (good/total) detail is wrapped so the mobile media query can hide it,
     // keeping just the percentage in the narrow column. Full counts stay in the tooltip.
     const bullishCell=r.bullishRate!=null
       ?`<span class="${_accRateCls(r.bullishRate)}" title="${r.bullishGood} good of ${r.bullishN} bullish prediction${r.bullishN===1?'':'s'}">${Math.round(r.bullishRate*100)}%<span class="pacc-detail"> (${r.bullishGood}/${r.bullishN})</span></span>`
       :`<span class="cal-cell-muted" title="No bullish predictions yet (no score ≥ ${_BULLISH_SCORE})">—</span>`;
     return`<div class="cal-row pacc-row">`+
-      `<span class="${nameCls}" title="${nameTitle}">${last}</span>`+
+      `<span class="cal-cell-neutral pacc-name" title="${r.name}">${last}</span>`+
       `<span class="cal-cell-muted">${r.n}</span>`+
       `<span class="cal-cell-neutral">${r.avgScore.toFixed(0)}</span>`+
       `<span class="${_accRateCls(r.goodRate)}">${goodPct}%</span>`+
