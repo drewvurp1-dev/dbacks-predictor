@@ -598,6 +598,96 @@ export function renderCalibration(){
   document.getElementById('cal-prop-table').innerHTML=propHeader+propRows;
 }
 
+// ═══════════ PER-PLAYER ACCURACY ════════════════════════════════════════════
+// Aggregates the grade log by player to answer "when the model rates this
+// player highly, how often does he actually have a good game?" Each graded
+// entry already carries playerName, the model score, and the actual line, so
+// this is a pure roll-up — recompute the grade live (like the log + chart) so
+// historical entries reflect the current performance formula.
+//
+// Columns:
+//   Games      — graded games for this player
+//   Avg Score  — mean model score across those games
+//   Good%      — share of games that were actually good (perf ≥ 40)
+//   Hit@Bullish— of games the model was bullish on (score ≥ 60, i.e. predicted
+//                "good"/"great"), how often the player actually delivered. This
+//                is the headline calibration number the user asked about.
+//   Acc%       — share of games the model graded "accurate" (bucket match)
+
+// A model score ≥ 60 maps to a predicted "good"/"great" outcome (mirrors the
+// predOutcome thresholds in gradePerformance).
+const _BULLISH_SCORE = 60;
+
+function _accRateCls(rate){
+  if(rate==null)return'cal-cell-muted';
+  return rate>=0.6?'cal-cell-good':rate>=0.45?'cal-cell-neutral':'cal-cell-bad';
+}
+
+function _renderPlayerAccuracy(log){
+  const emptyEl=document.getElementById('player-acc-empty');
+  const contentEl=document.getElementById('player-acc-content');
+  const noteEl=document.getElementById('player-acc-note');
+  const listEl=document.getElementById('player-acc-list');
+  if(!listEl)return;
+
+  if(!log.length){
+    show('player-acc-empty');hide('player-acc-content');
+    if(noteEl)noteEl.textContent='';
+    return;
+  }
+
+  // Roll up by player. Recompute each grade live so the formula stays current.
+  const byPlayer=new Map();
+  log.forEach(g=>{
+    const name=g.playerName||'—';
+    if(!byPlayer.has(name))byPlayer.set(name,[]);
+    byPlayer.get(name).push(g);
+  });
+
+  const rows=[...byPlayer.entries()].map(([name,games])=>{
+    let scoreSum=0,good=0,accurate=0,bullishN=0,bullishGood=0;
+    games.forEach(g=>{
+      const live=gradePerformance(g.actual,g.score);
+      scoreSum+=g.score;
+      if(live.actuallyGood)good++;
+      if(live.accuracy==='accurate')accurate++;
+      if(g.score>=_BULLISH_SCORE){bullishN++;if(live.actuallyGood)bullishGood++;}
+    });
+    const n=games.length;
+    return{
+      name,n,
+      avgScore:scoreSum/n,
+      goodRate:good/n,
+      accRate:accurate/n,
+      bullishN,bullishGood,
+      bullishRate:bullishN?bullishGood/bullishN:null,
+    };
+  }).sort((a,b)=>b.n-a.n||b.avgScore-a.avgScore);
+
+  hide('player-acc-empty');show('player-acc-content');
+  if(noteEl)noteEl.textContent=`${rows.length} player${rows.length===1?'':'s'} · ${log.length} graded game${log.length===1?'':'s'}`;
+
+  const cols='1fr 50px 60px 60px 96px 56px';
+  const header=`<div class="cal-row cal-header" style="grid-template-columns:${cols};"><span>Player</span><span>Games</span><span>Avg Scr</span><span>Good%</span><span title="When the model is high on this player (score ≥ ${_BULLISH_SCORE}), how often they actually had a good game.">Hit@Bullish</span><span>Acc%</span></div>`;
+  const body=rows.map(r=>{
+    const last=r.name.split(' ').pop();
+    const goodPct=Math.round(r.goodRate*100);
+    const accPct=Math.round(r.accRate*100);
+    const bullishCell=r.bullishRate!=null
+      ?`<span class="${_accRateCls(r.bullishRate)}" title="${r.bullishGood} good of ${r.bullishN} bullish prediction${r.bullishN===1?'':'s'}">${Math.round(r.bullishRate*100)}% (${r.bullishGood}/${r.bullishN})</span>`
+      :`<span class="cal-cell-muted" title="No bullish predictions yet (no score ≥ ${_BULLISH_SCORE})">—</span>`;
+    return`<div class="cal-row" style="grid-template-columns:${cols};">`+
+      `<span class="cal-cell-neutral" title="${r.name}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${last}</span>`+
+      `<span class="cal-cell-muted">${r.n}</span>`+
+      `<span class="cal-cell-neutral">${r.avgScore.toFixed(0)}</span>`+
+      `<span class="${_accRateCls(r.goodRate)}">${goodPct}%</span>`+
+      bullishCell+
+      `<span class="${_accRateCls(r.accRate)}">${accPct}%</span>`+
+    `</div>`;
+  }).join('');
+  listEl.innerHTML=header+body;
+}
+
 // ═══════════ GRADE PANEL ══════════════════════════════════════════════════════
 
 export async function renderGradePanel() {
@@ -611,6 +701,9 @@ export async function renderGradePanel() {
   const confColor = log.length >= 30 ? '#2ecc71' : log.length >= 15 ? '#a8e063' : log.length >= 5 ? '#f39c12' : '#999';
   document.getElementById('grade-confidence').textContent = `${log.length} games graded · ${confidence}`;
   document.getElementById('grade-confidence').style.color = confColor;
+
+  // Per-player accuracy roll-up
+  _renderPlayerAccuracy(log);
 
   // Pending predictions
   const pendingEl = document.getElementById('grade-pending-list');
