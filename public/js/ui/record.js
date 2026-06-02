@@ -667,17 +667,20 @@ function _renderPlayerAccuracy(log){
   hide('player-acc-empty');show('player-acc-content');
   if(noteEl)noteEl.textContent=`${rows.length} player${rows.length===1?'':'s'} · ${log.length} graded game${log.length===1?'':'s'}`;
 
-  const cols='1fr 50px 60px 60px 96px 56px';
-  const header=`<div class="cal-row cal-header" style="grid-template-columns:${cols};"><span>Player</span><span>Games</span><span>Avg Scr</span><span>Good%</span><span title="When the model is high on this player (score ≥ ${_BULLISH_SCORE}), how often they actually had a good game.">Hit@Bullish</span><span>Acc%</span></div>`;
+  // Column widths live in CSS (.pacc-row) so the mobile media query can tighten
+  // them — inline grid-template-columns would shadow any responsive override.
+  const header=`<div class="cal-row cal-header pacc-row"><span>Player</span><span>Gms</span><span>Avg</span><span>Good%</span><span title="When the model is high on this player (score ≥ ${_BULLISH_SCORE}), how often they actually had a good game.">Bull%</span><span>Acc%</span></div>`;
   const body=rows.map(r=>{
     const last=r.name.split(' ').pop();
     const goodPct=Math.round(r.goodRate*100);
     const accPct=Math.round(r.accRate*100);
+    // The (good/total) detail is wrapped so the mobile media query can hide it,
+    // keeping just the percentage in the narrow column. Full counts stay in the tooltip.
     const bullishCell=r.bullishRate!=null
-      ?`<span class="${_accRateCls(r.bullishRate)}" title="${r.bullishGood} good of ${r.bullishN} bullish prediction${r.bullishN===1?'':'s'}">${Math.round(r.bullishRate*100)}% (${r.bullishGood}/${r.bullishN})</span>`
+      ?`<span class="${_accRateCls(r.bullishRate)}" title="${r.bullishGood} good of ${r.bullishN} bullish prediction${r.bullishN===1?'':'s'}">${Math.round(r.bullishRate*100)}%<span class="pacc-detail"> (${r.bullishGood}/${r.bullishN})</span></span>`
       :`<span class="cal-cell-muted" title="No bullish predictions yet (no score ≥ ${_BULLISH_SCORE})">—</span>`;
-    return`<div class="cal-row" style="grid-template-columns:${cols};">`+
-      `<span class="cal-cell-neutral" title="${r.name}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${last}</span>`+
+    return`<div class="cal-row pacc-row">`+
+      `<span class="cal-cell-neutral pacc-name" title="${r.name}">${last}</span>`+
       `<span class="cal-cell-muted">${r.n}</span>`+
       `<span class="cal-cell-neutral">${r.avgScore.toFixed(0)}</span>`+
       `<span class="${_accRateCls(r.goodRate)}">${goodPct}%</span>`+
