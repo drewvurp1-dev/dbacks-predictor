@@ -15,7 +15,7 @@ import { DEFAULT_BLEND_W, MIN_CAL_SAMPLE } from '../constants.js';
 import {
   gradePerformance,
   getPending, getGradeLog, getFactorPerf, getFactorWeights,
-  factorSign, getPlayerInflators, INFLATOR_MIN_BAD, INFLATOR_MIN_GOOD,
+  factorSign, getPlayerInflators, getActiveInflators, INFLATOR_MIN_BAD, INFLATOR_MIN_GOOD,
 } from '../bets.js';
 
 // ═══════════ CORBET BETS ════════════════════════════════════════════════════
@@ -136,8 +136,15 @@ export function renderCorbetBets(){
         <div class="bet-reasoning">${b.reasoning}</div>
       </div>`;
     }).join('');
+    // ⚑ if a known pure-inflator factor is actively lifting this player's score
+    // — the model's edge on their Over recommendations may be hollow.
+    const _pid=pg.bets?.[0]?._playerId;
+    const _activeInf=getActiveInflators(pg.playerName,S.players?.[_pid]?.factors);
+    const _inflatorBadge=_activeInf.length
+      ?` <span class="inflator-badge" title="⚑ Model edge may be inflated — ${_activeInf.map(i=>i.label).join(', ')} ${_activeInf.length>1?'have':'has'} historically fired positive on ${pg.playerName}'s bad games and never on a good one. Treat these Over edges with skepticism.">⚑</span>`
+      :'';
     return`<div style="margin-bottom:18px;">
-      <div class="dash-player-header">${pg.playerName}</div>
+      <div class="dash-player-header">${pg.playerName}${_inflatorBadge}</div>
       ${cards}
     </div>`;
   }).join('');

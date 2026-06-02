@@ -595,6 +595,22 @@ export function getPlayerInflators(playerName){
   return out;
 }
 
+// Returns the pure-inflator factors that are CURRENTLY firing positive (adj > 0)
+// in a player's live prediction — i.e. an inflator that is actively lifting
+// tonight's score. Empty when the player has no known inflators or none of them
+// are pushing up in `factors`. Used to surface the ⚑ at the dashboard / bet
+// level, where it should appear only when an inflator is actually inflating now
+// (not merely because the player has a historical inflator that isn't in play).
+export function getActiveInflators(playerName, factors){
+  const inflators=getPlayerInflators(playerName);
+  if(!inflators.size||!factors)return[];
+  const out=[];
+  for(const f of factors){
+    if(f.adj>0&&inflators.has(f.label))out.push({label:f.label,...inflators.get(f.label)});
+  }
+  return out;
+}
+
 // Update factor performance stats after grading.
 //
 // Hit-rate semantics: a "hit" means the factor pushed the score in the
