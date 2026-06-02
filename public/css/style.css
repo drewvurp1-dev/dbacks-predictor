@@ -568,6 +568,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-best-bet-prop { font-size: 13px; font-weight: 800; color: #E8DFC8; font-family: Georgia, serif; }
 .dash-best-bet-right { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; }
 .dash-badge { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 4px; padding: 2px 6px; font-family: 'Chakra Petch', monospace; font-size: 9px; color: #009A8B; white-space: nowrap; }
+.dash-badge--prob { background: transparent; border: none; padding: 2px 2px; color: #8a86a8; font-style: italic; }
 .dash-empty { font-family: 'Chakra Petch', monospace; font-size: 11px; color: #555; padding: 8px 0; }
 /* ── Collapsible player lineup rows ── */
 #dash-player-cards { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; margin-bottom: 20px; }

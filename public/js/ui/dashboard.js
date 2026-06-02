@@ -440,6 +440,13 @@ export function renderDashboard(){
         const _tbBookBadge=_tbBest?.book?`<span class="dpb-book">${bookAbbrev(_tbBest.book)}</span>`:'';
         const _tbPid=_tbIdByName[b.playerName];
         const _tbAttrs=_tbPid?` class="dash-best-bet-row dash-best-bet-row--link" data-action="open-player-corbet" data-player-id="${_tbPid}" title="View CorBET bets for ${b.playerName}"`:' class="dash-best-bet-row"';
+        // Market% → Model% sticker for the picked side (Under flips both to the under side)
+        const _tbUnder=b.direction.toLowerCase()==='under';
+        const _tbMktP=_tbUnder?b.marketUnderProb:b.marketOverProb;
+        const _tbModP=_tbUnder?(b.modelProb!=null?100-b.modelProb:null):b.modelProb;
+        const _tbProbBadge=(_tbMktP!=null&&_tbModP!=null)
+          ?`<span class="dash-badge dash-badge--prob" title="Market-implied probability → model probability for this side">(${Math.round(_tbMktP)}% → ${Math.round(_tbModP)}%)</span>`
+          :'';
         return`<div${_tbAttrs}>
         <div class="dash-best-bet-left">
           <div class="dash-best-bet-player">${b.playerName}</div>
@@ -450,6 +457,7 @@ export function renderDashboard(){
           <span class="dash-badge" title="Edge stability % — not win probability">Stab ${b.mcConfidence.toFixed(0)}%</span>
           ${b.ev!=null?`<span class="dash-badge" title="Expected value — average return per $1 wagered at the best posted price">EV ${b.ev>=0?'+':''}${(b.ev*100).toFixed(1)}%</span>`:''}
           <span class="dash-badge" title="Model probability minus market-implied probability (percentage points)">Δ ${(b.delta>0?'+':'')+b.delta.toFixed(1)}%</span>
+          ${_tbProbBadge}
         </div>
       </div>`;}).join('')
       :'<div class="dash-empty">No bets meet the 85% MC threshold today.</div>';
