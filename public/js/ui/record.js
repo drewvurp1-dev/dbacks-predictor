@@ -623,6 +623,70 @@ function _accRateCls(rate){
   return rate>=0.6?'cal-cell-good':rate>=0.45?'cal-cell-neutral':'cal-cell-bad';
 }
 
+// Sign of a factor's contribution to the score. Prefer the stored adj (the
+// actual points it moved the score); fall back to the impact label for legacy
+// entries that predate adj being persisted. Returns +1 / 0 / -1.
+function _factorSign(f){
+  if(typeof f.adj==='number')return f.adj>0?1:f.adj<0?-1:0;
+  return f.impact==='positive'?1:f.impact==='negative'?-1:0;
+}
+
+// Per-player "what inflated the score" diagnostic. Splits the player's graded
+// games into good/bad (live-recomputed), then tallies which positive factors
+// fired on the BAD games — those are the candidates over-rating this player.
+// A factor that fires positive ONLY on bad games (never on good ones) is a pure
+// inflator and gets flagged. Read it as an investigation lead, not proof.
+function _playerAccDetail(games){
+  const bad=[],good=[];
+  games.forEach(g=>{
+    (gradePerformance(g.actual,g.score).actuallyGood?good:bad).push(g);
+  });
+  if(!bad.length)
+    return`<div class="pacc-diag"><div class="pacc-diag-title">No bad games graded — the model hasn't over-rated this player into a dud yet. Nothing to diagnose.</div></div>`;
+
+  const tally=new Map(); // label → { badPos, badAdjSum, hasAdj, goodPos }
+  bad.forEach(g=>(g.factors||[]).forEach(f=>{
+    if(_factorSign(f)<=0)return;
+    if(!tally.has(f.label))tally.set(f.label,{badPos:0,badAdjSum:0,hasAdj:false,goodPos:0});
+    const t=tally.get(f.label);
+    t.badPos++;
+    if(typeof f.adj==='number'){t.badAdjSum+=f.adj;t.hasAdj=true;}
+  }));
+  good.forEach(g=>(g.factors||[]).forEach(f=>{
+    if(_factorSign(f)<=0)return;
+    const t=tally.get(f.label);
+    if(t)t.goodPos++;
+  }));
+  if(!tally.size)
+    return`<div class="pacc-diag"><div class="pacc-diag-title">No positive factors recorded on the ${bad.length} bad game${bad.length===1?'':'s'} — the score wasn't inflated by tracked factors (or these are older entries without factor data).</div></div>`;
+
+  const ranked=[...tally.entries()]
+    .sort((a,b)=>b[1].badPos-a[1].badPos||b[1].badAdjSum-a[1].badAdjSum)
+    .slice(0,5);
+  const rows=ranked.map(([label,t])=>{
+    const avg=t.hasAdj?t.badAdjSum/t.badPos:null;
+    const flag=t.goodPos===0?` <span style="color:#e74c3c;" title="Fires positive only on his bad games — a pure inflator">⚑</span>`:'';
+    return`<div class="pacc-diag-row">`+
+      `<span class="cal-cell-neutral pacc-name">${label}${flag}</span>`+
+      `<span class="cal-cell-bad">${t.badPos}/${bad.length}</span>`+
+      `<span class="cal-cell-muted">${avg!=null?'+'+avg.toFixed(1):'—'}</span>`+
+    `</div>`;
+  }).join('');
+  return`<div class="pacc-diag">`+
+    `<div class="pacc-diag-title">Positive factors fired most on his ${bad.length} bad game${bad.length===1?'':'s'} — likely inflators:</div>`+
+    `<div class="pacc-diag-row pacc-diag-head"><span>Factor</span><span>On bad</span><span>Push</span></div>`+
+    rows+
+    `<div class="pacc-diag-foot">⚑ = fires positive only on bad games (pure inflator). Investigation lead, not proof — mind the sample size.</div>`+
+  `</div>`;
+}
+
+// Toggle the expanded factor diagnostic for a player row. Ephemeral UI state on
+// S — re-renders the table off the current grade log.
+export function togglePlayerAcc(name){
+  S.playerAccExpanded=S.playerAccExpanded===name?null:name;
+  _renderPlayerAccuracy(getGradeLog());
+}
+
 // Compact display name = last name, but keep a generational suffix attached so
 // "Lourdes Gurriel Jr." renders "Gurriel Jr." instead of a bare "Jr.".
 const _NAME_SUFFIXES = new Set(['jr','sr','ii','iii','iv','v']);
@@ -670,7 +734,7 @@ function _renderPlayerAccuracy(log){
     });
     const n=games.length;
     return{
-      name,n,
+      name,n,games,
       avgScore:scoreSum/n,
       goodRate:good/n,
       accRate:accurate/n,
@@ -689,19 +753,22 @@ function _renderPlayerAccuracy(log){
     const last=_displayLast(r.name);
     const goodPct=Math.round(r.goodRate*100);
     const accPct=Math.round(r.accRate*100);
+    const expanded=S.playerAccExpanded===r.name;
     // The (good/total) detail is wrapped so the mobile media query can hide it,
     // keeping just the percentage in the narrow column. Full counts stay in the tooltip.
     const bullishCell=r.bullishRate!=null
       ?`<span class="${_accRateCls(r.bullishRate)}" title="${r.bullishGood} good of ${r.bullishN} bullish prediction${r.bullishN===1?'':'s'}">${Math.round(r.bullishRate*100)}%<span class="pacc-detail"> (${r.bullishGood}/${r.bullishN})</span></span>`
       :`<span class="cal-cell-muted" title="No bullish predictions yet (no score ≥ ${_BULLISH_SCORE})">—</span>`;
-    return`<div class="cal-row pacc-row">`+
-      `<span class="cal-cell-neutral pacc-name" title="${r.name}">${last}</span>`+
+    // Whole row is a tap target — toggles the per-player factor diagnostic.
+    const row=`<div class="cal-row pacc-row pacc-clickable${expanded?' pacc-open':''}" data-action="toggle-player-acc" data-name="${r.name.replace(/"/g,'&quot;')}">`+
+      `<span class="cal-cell-neutral pacc-name" title="${r.name}"><span class="pacc-caret">${expanded?'▾':'▸'}</span>${last}</span>`+
       `<span class="cal-cell-muted">${r.n}</span>`+
       `<span class="cal-cell-neutral">${r.avgScore.toFixed(0)}</span>`+
       `<span class="${_accRateCls(r.goodRate)}">${goodPct}%</span>`+
       bullishCell+
       `<span class="${_accRateCls(r.accRate)}">${accPct}%</span>`+
     `</div>`;
+    return row+(expanded?_playerAccDetail(r.games):'');
   }).join('');
   listEl.innerHTML=header+body;
 }
