@@ -1883,7 +1883,7 @@ async function loadStatcast(playerId) {
 
 // ── Soft-market tooltip (fixed-position, avoids stacking-context issues on mobile) ──
 (function(){
-  const TIP_SEL='.dpb-soft-market[data-tip],.corbet-info[data-tip]';
+  const TIP_SEL='.dpb-soft-market[data-tip],.corbet-info[data-tip],.factor-inflator[data-tip],.inflator-badge[data-tip]';
   let tip=null, activeEl=null;
   function getOrCreate(){
     if(!tip){tip=document.createElement('div');tip.id='soft-market-tip';document.body.appendChild(tip);}

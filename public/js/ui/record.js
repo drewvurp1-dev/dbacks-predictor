@@ -141,7 +141,7 @@ export function renderCorbetBets(){
     const _pid=pg.bets?.[0]?._playerId;
     const _activeInf=getActiveInflators(pg.playerName,S.players?.[_pid]?.factors);
     const _inflatorBadge=_activeInf.length
-      ?` <span class="inflator-badge" title="⚑ Model edge may be inflated — ${_activeInf.map(i=>i.label).join(', ')} ${_activeInf.length>1?'have':'has'} historically fired positive on ${pg.playerName}'s bad games and never on a good one. Treat these Over edges with skepticism.">⚑</span>`
+      ?` <span class="inflator-badge" data-tip="Model edge may be inflated — ${_activeInf.map(i=>i.label).join(', ')} ${_activeInf.length>1?'have':'has'} historically fired positive on ${pg.playerName}'s bad games and never on a good one. Treat these Over edges with skepticism.">⚑</span>`
       :'';
     return`<div style="margin-bottom:18px;">
       <div class="dash-player-header">${pg.playerName}${_inflatorBadge}</div>
@@ -664,7 +664,7 @@ function _playerAccDetail(games,name){
     .slice(0,5);
   const rows=ranked.map(([label,t])=>{
     const avg=t.hasAdj?t.badAdjSum/t.badPos:null;
-    const flag=inflators.has(label)?` <span style="color:#e74c3c;" title="Pure inflator — fired positive on ${t.badPos} bad games and never on a good one (across ${good.length} good games)">⚑</span>`:'';
+    const flag=inflators.has(label)?` <span class="inflator-badge" data-tip="Pure inflator — fired positive on ${t.badPos} bad games and never on a good one (across ${good.length} good games)">⚑</span>`:'';
     return`<div class="pacc-diag-row">`+
       `<span class="cal-cell-neutral pacc-name">${label}${flag}</span>`+
       `<span class="cal-cell-bad">${t.badPos}/${bad.length}</span>`+
