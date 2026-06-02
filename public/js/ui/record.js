@@ -623,9 +623,20 @@ function _accRateCls(rate){
   return rate>=0.6?'cal-cell-good':rate>=0.45?'cal-cell-neutral':'cal-cell-bad';
 }
 
+// Compact display name = last name, but keep a generational suffix attached so
+// "Lourdes Gurriel Jr." renders "Gurriel Jr." instead of a bare "Jr.".
+const _NAME_SUFFIXES = new Set(['jr','sr','ii','iii','iv','v']);
+export function _displayLast(name){
+  if(!name)return'—';
+  const parts=name.trim().split(/\s+/);
+  if(parts.length<=1)return name;
+  const last=parts[parts.length-1];
+  if(_NAME_SUFFIXES.has(last.toLowerCase().replace(/\./g,'')))
+    return parts[parts.length-2]+' '+last;
+  return last;
+}
+
 function _renderPlayerAccuracy(log){
-  const emptyEl=document.getElementById('player-acc-empty');
-  const contentEl=document.getElementById('player-acc-content');
   const noteEl=document.getElementById('player-acc-note');
   const listEl=document.getElementById('player-acc-list');
   if(!listEl)return;
@@ -637,9 +648,12 @@ function _renderPlayerAccuracy(log){
   }
 
   // Roll up by player. Recompute each grade live so the formula stays current.
+  // Graded entries with no playerName recorded (legacy/blank saves) collect under
+  // a single "Unknown" bucket rather than a cryptic "—" so it's clear they're
+  // unattributed games, not a real player.
   const byPlayer=new Map();
   log.forEach(g=>{
-    const name=g.playerName||'—';
+    const name=(g.playerName||'').trim()||'Unknown';
     if(!byPlayer.has(name))byPlayer.set(name,[]);
     byPlayer.get(name).push(g);
   });
@@ -656,6 +670,8 @@ function _renderPlayerAccuracy(log){
     const n=games.length;
     return{
       name,n,
+      isUnknown:name==='Unknown',
+      dates:games.map(g=>g.date).filter(Boolean),
       avgScore:scoreSum/n,
       goodRate:good/n,
       accRate:accurate/n,
@@ -671,16 +687,22 @@ function _renderPlayerAccuracy(log){
   // them — inline grid-template-columns would shadow any responsive override.
   const header=`<div class="cal-row cal-header pacc-row"><span>Player</span><span>Gms</span><span>Avg</span><span>Good%</span><span title="When the model is high on this player (score ≥ ${_BULLISH_SCORE}), how often they actually had a good game.">Bull%</span><span>Acc%</span></div>`;
   const body=rows.map(r=>{
-    const last=r.name.split(' ').pop();
+    const last=_displayLast(r.name);
     const goodPct=Math.round(r.goodRate*100);
     const accPct=Math.round(r.accRate*100);
+    // Unknown bucket: name it plainly and put the game dates in the tooltip so
+    // the user can find those unattributed games in the Graded Game Log below.
+    const nameCls=r.isUnknown?'cal-cell-muted pacc-name':'cal-cell-neutral pacc-name';
+    const nameTitle=r.isUnknown
+      ?`${r.n} graded game${r.n===1?'':'s'} saved without a player name${r.dates.length?` (${r.dates.join(', ')})`:''}. Find them in the Graded Game Log below to remove or re-create.`
+      :r.name;
     // The (good/total) detail is wrapped so the mobile media query can hide it,
     // keeping just the percentage in the narrow column. Full counts stay in the tooltip.
     const bullishCell=r.bullishRate!=null
       ?`<span class="${_accRateCls(r.bullishRate)}" title="${r.bullishGood} good of ${r.bullishN} bullish prediction${r.bullishN===1?'':'s'}">${Math.round(r.bullishRate*100)}%<span class="pacc-detail"> (${r.bullishGood}/${r.bullishN})</span></span>`
       :`<span class="cal-cell-muted" title="No bullish predictions yet (no score ≥ ${_BULLISH_SCORE})">—</span>`;
     return`<div class="cal-row pacc-row">`+
-      `<span class="cal-cell-neutral pacc-name" title="${r.name}">${last}</span>`+
+      `<span class="${nameCls}" title="${nameTitle}">${last}</span>`+
       `<span class="cal-cell-muted">${r.n}</span>`+
       `<span class="cal-cell-neutral">${r.avgScore.toFixed(0)}</span>`+
       `<span class="${_accRateCls(r.goodRate)}">${goodPct}%</span>`+
@@ -797,7 +819,7 @@ export async function renderGradePanel() {
       const modelLabel = modelLabels[live.accuracy] || 'Off';
       const modelClass = live.accuracy || 'off';
       const residualText = live.residual > 0 ? `+${Math.round(live.residual)}` : `${Math.round(live.residual)}`;
-      const playerLast = g.playerName ? g.playerName.split(' ').pop() : '—';
+      const playerLast = g.playerName ? _displayLast(g.playerName) : '—';
       return `<div class="grade-log-row">
         <span style="color:#888;font-family:\'Chakra Petch\',monospace;font-size:11px;">${g.date}</span>
         <span style="font-family:\'Chakra Petch\',monospace;font-size:13px;font-weight:800;color:#A71930;">${g.score}</span>
