@@ -548,11 +548,27 @@ function calcPrediction(){
     factors.push({label:l,value:v,adj,impact:adj>2?'positive':adj<-2?'negative':'neutral',note:n,cat});
   };
   if(S.splits){
+    // Sample-size shrinkage for OPS-split factors. A part-time hitter's handedness
+    // or home/road OPS over a few dozen PA is mostly noise — regress the observed
+    // split toward the player's overall season OPS (best talent estimate) by PA
+    // count before scoring it, so a hot 40-PA split can't push +4 on its own.
+    // Platoon splits stabilize slower than venue splits, so they regress harder
+    // (larger K = more PA of prior weight). At full-season samples the shrinkage
+    // is negligible; it only bites on thin splits.
+    const PLATOON_SHRINK_PA=200, VENUE_SHRINK_PA=150;
+    const priorOps=parseFloat(S.seasonStat?.ops)||0.720;
+    const _shrinkOps=(ops,pa,k)=>((ops*(pa||0))+priorOps*k)/((pa||0)+k);
     const hand=S.pitcher?.hand||S.pitcherThrows;
     const hs=hand==='L'?S.splits.vl:S.splits.vr;
-    if(hs?.ops){const a=(hs.ops-0.720)*70;add(`vs ${hand}HP`,hs.ops.toFixed(3)+' OPS',a,`${a>0?'Hits well':'Struggles'} vs ${hand==='L'?'lefties':'righties'} this season`);}
+    if(hs?.ops){
+      const a=(_shrinkOps(hs.ops,hs.pa,PLATOON_SHRINK_PA)-0.720)*70;
+      add(`vs ${hand}HP`,hs.ops.toFixed(3)+` OPS · ${hs.pa||0}PA`,a,`${a>0?'Hits well':'Struggles'} vs ${hand==='L'?'lefties':'righties'} this season — regressed to ${hs.pa||0} PA sample`);
+    }
     const ls=S.isHome?S.splits.h:S.splits.a;
-    if(ls?.ops){const a=(ls.ops-0.720)*35;add(S.isHome?'Home':'Away',ls.ops.toFixed(3)+' OPS',a,`OPS ${ls.ops.toFixed(3)} ${S.isHome?'at home':'on the road'}`);}
+    if(ls?.ops){
+      const a=(_shrinkOps(ls.ops,ls.pa,VENUE_SHRINK_PA)-0.720)*35;
+      add(S.isHome?'Home':'Away',ls.ops.toFixed(3)+` OPS · ${ls.pa||0}PA`,a,`OPS ${ls.ops.toFixed(3)} ${S.isHome?'at home':'on the road'} — regressed to ${ls.pa||0} PA sample`);
+    }
   }
   if(S.pitcher?.st){
     // Refresh the venue-blended line for the current home/away state, then score
