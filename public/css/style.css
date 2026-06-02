@@ -1182,6 +1182,8 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   /* Best bets card */
   .dash-best-bet-right { justify-content: flex-start; margin-top: 4px; }
   .dash-best-bet-prop { font-size: 11px; }
+  /* Market%→Model% sticker is desktop/tablet only — it squishes the row on phones */
+  .dash-badge--prob { display: none; }
 
   /* Player row header — keep the stats button visible so batter
      stats are reachable in portrait. The inline statline is hidden
