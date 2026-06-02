@@ -648,6 +648,18 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 /* ── Per-player accuracy table ── */
 .pacc-row { grid-template-columns: 1fr 46px 46px 52px 88px 48px; font-family: 'Chakra Petch', monospace; font-size: 12px; }
 .pacc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pacc-clickable { cursor: pointer; }
+.pacc-clickable:hover { background: #0e0c22; }
+.pacc-open { background: #100d26; }
+.pacc-caret { display: inline-block; width: 12px; color: #777; font-size: 9px; }
+.pacc-open .pacc-caret { color: #5bc0de; }
+
+/* Per-player factor diagnostic (expanded row) */
+.pacc-diag { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 8px; padding: 10px 12px; margin: 2px 0 8px; font-family: 'Chakra Petch', monospace; }
+.pacc-diag-title { font-size: 10px; color: #bbb; margin-bottom: 8px; line-height: 1.5; }
+.pacc-diag-row { display: grid; grid-template-columns: 1fr 64px 56px; gap: 8px; align-items: center; font-size: 11px; padding: 3px 0; }
+.pacc-diag-head { color: #666; font-size: 8px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #1a1730; padding-bottom: 5px; }
+.pacc-diag-foot { font-size: 8px; color: #555; margin-top: 8px; line-height: 1.5; }
 
 /* ── Team momentum bar ── */
 .momentum-bar {
@@ -1315,6 +1327,7 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
      keeps real estate, shrink the font, and drop the (good/total) detail. */
   .pacc-row { grid-template-columns: 1fr 28px 34px 42px 46px 38px; font-size: 10px; gap: 4px; }
   .pacc-detail { display: none; }
+  .pacc-diag-row { grid-template-columns: 1fr 52px 48px; font-size: 10px; }
 
   /* Search dropdown gets more room when keyboard is up */
   .search-results { max-height: 50vh; }

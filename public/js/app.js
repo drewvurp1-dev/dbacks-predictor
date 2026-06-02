@@ -56,6 +56,7 @@ import {
   renderRecord, setRecordSort,
   renderCalibration,
   renderGradePanel,
+  togglePlayerAcc,
 } from './ui/record.js';
 import {
   pushRecord, pullRecord, _initSyncBtnLabel,
@@ -1973,6 +1974,7 @@ const ACTIONS = {
   'set-roof':           (el) => setRoof(el.dataset.value === 'true'),
   'toggle-factor-card': (el) => toggleFactorCard(el.dataset.value),
   'set-record-sort':    (el) => setRecordSort(el.dataset.value),
+  'toggle-player-acc':  (el) => togglePlayerAcc(el.dataset.name),
   'set-top-bets-sort':  (el) => setTopBetsSort(el.dataset.value),
 
   // ── Bet finder (Add bet form) ────────────────────────────────────────────
