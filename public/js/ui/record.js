@@ -636,6 +636,15 @@ function _factorSign(f){
 // fired on the BAD games — those are the candidates over-rating this player.
 // A factor that fires positive ONLY on bad games (never on good ones) is a pure
 // inflator and gets flagged. Read it as an investigation lead, not proof.
+//
+// The ⚑ pure-inflator flag is gated to cut false alarms: it only fires when the
+// factor pushed positive on at least PACC_FLAG_MIN_BAD bad games AND the player
+// has at least PACC_FLAG_MIN_GOOD good games (so "never on a good one" is
+// actually meaningful — on a player with 0–2 good games it would be trivially
+// true for almost any factor).
+const PACC_FLAG_MIN_BAD = 3;
+const PACC_FLAG_MIN_GOOD = 3;
+
 function _playerAccDetail(games){
   const bad=[],good=[];
   games.forEach(g=>{
@@ -660,12 +669,16 @@ function _playerAccDetail(games){
   if(!tally.size)
     return`<div class="pacc-diag"><div class="pacc-diag-title">No positive factors recorded on the ${bad.length} bad game${bad.length===1?'':'s'} — the score wasn't inflated by tracked factors (or these are older entries without factor data).</div></div>`;
 
+  // ⚑ only when the sample is big enough for "never on a good game" to mean
+  // something — see the constants above.
+  const goodSampleOk=good.length>=PACC_FLAG_MIN_GOOD;
   const ranked=[...tally.entries()]
     .sort((a,b)=>b[1].badPos-a[1].badPos||b[1].badAdjSum-a[1].badAdjSum)
     .slice(0,5);
   const rows=ranked.map(([label,t])=>{
     const avg=t.hasAdj?t.badAdjSum/t.badPos:null;
-    const flag=t.goodPos===0?` <span style="color:#e74c3c;" title="Fires positive only on his bad games — a pure inflator">⚑</span>`:'';
+    const isPureInflator=t.goodPos===0&&t.badPos>=PACC_FLAG_MIN_BAD&&goodSampleOk;
+    const flag=isPureInflator?` <span style="color:#e74c3c;" title="Pure inflator — fired positive on ${t.badPos} bad games and never on a good one (across ${good.length} good games)">⚑</span>`:'';
     return`<div class="pacc-diag-row">`+
       `<span class="cal-cell-neutral pacc-name">${label}${flag}</span>`+
       `<span class="cal-cell-bad">${t.badPos}/${bad.length}</span>`+
@@ -676,7 +689,7 @@ function _playerAccDetail(games){
     `<div class="pacc-diag-title">Positive factors fired most on his ${bad.length} bad game${bad.length===1?'':'s'} — likely inflators:</div>`+
     `<div class="pacc-diag-row pacc-diag-head"><span>Factor</span><span>On bad</span><span>Push</span></div>`+
     rows+
-    `<div class="pacc-diag-foot">⚑ = fires positive only on bad games (pure inflator). Investigation lead, not proof — mind the sample size.</div>`+
+    `<div class="pacc-diag-foot">⚑ = pure inflator: fired positive on ≥${PACC_FLAG_MIN_BAD} bad games and never on a good one (needs ≥${PACC_FLAG_MIN_GOOD} good games to show). Investigation lead, not proof.</div>`+
   `</div>`;
 }
 
