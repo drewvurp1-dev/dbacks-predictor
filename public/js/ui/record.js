@@ -15,6 +15,7 @@ import { DEFAULT_BLEND_W, MIN_CAL_SAMPLE } from '../constants.js';
 import {
   gradePerformance,
   getPending, getGradeLog, getFactorPerf, getFactorWeights,
+  factorSign, getPlayerInflators, INFLATOR_MIN_BAD, INFLATOR_MIN_GOOD,
 } from '../bets.js';
 
 // ═══════════ CORBET BETS ════════════════════════════════════════════════════
@@ -623,29 +624,14 @@ function _accRateCls(rate){
   return rate>=0.6?'cal-cell-good':rate>=0.45?'cal-cell-neutral':'cal-cell-bad';
 }
 
-// Sign of a factor's contribution to the score. Prefer the stored adj (the
-// actual points it moved the score); fall back to the impact label for legacy
-// entries that predate adj being persisted. Returns +1 / 0 / -1.
-function _factorSign(f){
-  if(typeof f.adj==='number')return f.adj>0?1:f.adj<0?-1:0;
-  return f.impact==='positive'?1:f.impact==='negative'?-1:0;
-}
-
 // Per-player "what inflated the score" diagnostic. Splits the player's graded
 // games into good/bad (live-recomputed), then tallies which positive factors
 // fired on the BAD games — those are the candidates over-rating this player.
-// A factor that fires positive ONLY on bad games (never on good ones) is a pure
-// inflator and gets flagged. Read it as an investigation lead, not proof.
-//
-// The ⚑ pure-inflator flag is gated to cut false alarms: it only fires when the
-// factor pushed positive on at least PACC_FLAG_MIN_BAD bad games AND the player
-// has at least PACC_FLAG_MIN_GOOD good games (so "never on a good one" is
-// actually meaningful — on a player with 0–2 good games it would be trivially
-// true for almost any factor).
-const PACC_FLAG_MIN_BAD = 3;
-const PACC_FLAG_MIN_GOOD = 3;
-
-function _playerAccDetail(games){
+// The ⚑ pure-inflator flag (factor fired + only on bad games, gated by sample
+// size) is computed by getPlayerInflators in bets.js — the single source of
+// truth shared with the live prediction factor cards. Read it as an
+// investigation lead, not proof.
+function _playerAccDetail(games,name){
   const bad=[],good=[];
   games.forEach(g=>{
     (gradePerformance(g.actual,g.score).actuallyGood?good:bad).push(g);
@@ -653,32 +639,25 @@ function _playerAccDetail(games){
   if(!bad.length)
     return`<div class="pacc-diag"><div class="pacc-diag-title">No bad games graded — the model hasn't over-rated this player into a dud yet. Nothing to diagnose.</div></div>`;
 
-  const tally=new Map(); // label → { badPos, badAdjSum, hasAdj, goodPos }
+  const tally=new Map(); // label → { badPos, badAdjSum, hasAdj }
   bad.forEach(g=>(g.factors||[]).forEach(f=>{
-    if(_factorSign(f)<=0)return;
-    if(!tally.has(f.label))tally.set(f.label,{badPos:0,badAdjSum:0,hasAdj:false,goodPos:0});
+    if(factorSign(f)<=0)return;
+    if(!tally.has(f.label))tally.set(f.label,{badPos:0,badAdjSum:0,hasAdj:false});
     const t=tally.get(f.label);
     t.badPos++;
     if(typeof f.adj==='number'){t.badAdjSum+=f.adj;t.hasAdj=true;}
   }));
-  good.forEach(g=>(g.factors||[]).forEach(f=>{
-    if(_factorSign(f)<=0)return;
-    const t=tally.get(f.label);
-    if(t)t.goodPos++;
-  }));
   if(!tally.size)
     return`<div class="pacc-diag"><div class="pacc-diag-title">No positive factors recorded on the ${bad.length} bad game${bad.length===1?'':'s'} — the score wasn't inflated by tracked factors (or these are older entries without factor data).</div></div>`;
 
-  // ⚑ only when the sample is big enough for "never on a good game" to mean
-  // something — see the constants above.
-  const goodSampleOk=good.length>=PACC_FLAG_MIN_GOOD;
+  // Pure-inflator set from the shared, gated diagnostic in bets.js.
+  const inflators=getPlayerInflators(name);
   const ranked=[...tally.entries()]
     .sort((a,b)=>b[1].badPos-a[1].badPos||b[1].badAdjSum-a[1].badAdjSum)
     .slice(0,5);
   const rows=ranked.map(([label,t])=>{
     const avg=t.hasAdj?t.badAdjSum/t.badPos:null;
-    const isPureInflator=t.goodPos===0&&t.badPos>=PACC_FLAG_MIN_BAD&&goodSampleOk;
-    const flag=isPureInflator?` <span style="color:#e74c3c;" title="Pure inflator — fired positive on ${t.badPos} bad games and never on a good one (across ${good.length} good games)">⚑</span>`:'';
+    const flag=inflators.has(label)?` <span style="color:#e74c3c;" title="Pure inflator — fired positive on ${t.badPos} bad games and never on a good one (across ${good.length} good games)">⚑</span>`:'';
     return`<div class="pacc-diag-row">`+
       `<span class="cal-cell-neutral pacc-name">${label}${flag}</span>`+
       `<span class="cal-cell-bad">${t.badPos}/${bad.length}</span>`+
@@ -689,7 +668,7 @@ function _playerAccDetail(games){
     `<div class="pacc-diag-title">Positive factors fired most on his ${bad.length} bad game${bad.length===1?'':'s'} — likely inflators:</div>`+
     `<div class="pacc-diag-row pacc-diag-head"><span>Factor</span><span>On bad</span><span>Push</span></div>`+
     rows+
-    `<div class="pacc-diag-foot">⚑ = pure inflator: fired positive on ≥${PACC_FLAG_MIN_BAD} bad games and never on a good one (needs ≥${PACC_FLAG_MIN_GOOD} good games to show). Investigation lead, not proof.</div>`+
+    `<div class="pacc-diag-foot">⚑ = pure inflator: fired positive on ≥${INFLATOR_MIN_BAD} bad games and never on a good one (needs ≥${INFLATOR_MIN_GOOD} good games to show). Also flagged on the live prediction's factor cards. Investigation lead, not proof.</div>`+
   `</div>`;
 }
 
@@ -781,7 +760,7 @@ function _renderPlayerAccuracy(log){
       bullishCell+
       `<span class="${_accRateCls(r.accRate)}">${accPct}%</span>`+
     `</div>`;
-    return row+(expanded?_playerAccDetail(r.games):'');
+    return row+(expanded?_playerAccDetail(r.games,r.name):'');
   }).join('');
   listEl.innerHTML=header+body;
 }

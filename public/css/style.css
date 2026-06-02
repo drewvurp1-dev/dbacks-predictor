@@ -645,6 +645,9 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .cal-cell-neutral { color: #ccc; }
 .cal-cell-muted { color: #777; }
 
+/* Pure-inflator ⚑ flag on live prediction factor cards */
+.factor-inflator { color: #e74c3c; cursor: help; }
+
 /* ── Per-player accuracy table ── */
 .pacc-row { grid-template-columns: 1fr 46px 46px 52px 88px 48px; font-family: 'Chakra Petch', monospace; font-size: 12px; }
 .pacc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

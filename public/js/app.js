@@ -120,7 +120,7 @@ function openPlayerDetails(playerId) {
   const hand = S.pitcher?.hand || 'R';
   const era = S.pitcher?.st?.era;
   document.getElementById('pred-header').textContent = `${snap.name} · ${pn} (${hand}HP)${era ? ` · ERA ${parseFloat(era).toFixed(2)}` : ''}`;
-  renderFactorCards(snap.factors, snap.catTotals);
+  renderFactorCards(snap.factors, snap.catTotals, snap.name);
   buildPredictionSummary(snap.factors);
   // Auto-populate the Pitch Mix matchup grid so users see batter vs pitcher arsenal
   // without having to click Run Prediction. enterPlayerContext already set
