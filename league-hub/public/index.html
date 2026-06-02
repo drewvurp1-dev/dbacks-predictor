@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=1">
+<link rel="stylesheet" href="/css/style.css?v=2">
 </head>
 <body>
 
@@ -70,6 +70,23 @@
     </div>
   </section>
 
+  <!-- League Leaders -->
+  <section class="panel" id="panel-leaders">
+    <div class="panel-head">
+      <h2>League Leaders</h2>
+      <div class="toggle" id="leader-toggle">
+        <button class="toggle-btn active" data-lgroup="hitting">Hitting</button>
+        <button class="toggle-btn" data-lgroup="pitching">Pitching</button>
+      </div>
+      <span class="panel-tag">Season totals</span>
+    </div>
+    <div class="leader-cats" id="leader-cats"></div>
+    <div class="panel-body row-2 nogap" id="leaders-body">
+      <div class="subcol" id="leaders-col-a"><div class="loading">Loading leaders…</div></div>
+      <div class="subcol" id="leaders-col-b"></div>
+    </div>
+  </section>
+
   <!-- Biggest Movers -->
   <section class="panel">
     <div class="panel-head">
@@ -106,6 +123,6 @@
   </div>
 </div>
 
-<script src="/js/app.js?v=1"></script>
+<script src="/js/app.js?v=2"></script>
 </body>
 </html>

@@ -46,6 +46,10 @@ const standingsById = {};        // id -> standings record
 let windowHitById = {};          // id -> window hitting split
 let seasonHitById = {};          // id -> season hitting split
 let playerData = { hitters: { hot: [], cold: [] }, pitchers: { hot: [], cold: [] } };
+let seasonHit = [];              // season hitting splits (array, for leaders)
+let seasonPit = [];              // season pitching splits (array, for leaders)
+let leaderGroup = 'hitting';     // active leaders tab
+let leaderCat = 'homeRuns';      // active leaders stat category
 
 /* ============================================================
  * Boot
@@ -69,6 +73,25 @@ let playerData = { hitters: { hot: [], cold: [] }, pitchers: { hot: [], cold: []
     document.querySelectorAll('#player-toggle .toggle-btn')
       .forEach((b) => b.classList.toggle('active', b === btn));
     renderPlayers(btn.dataset.view);
+  });
+
+  $('leader-toggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('.toggle-btn');
+    if (!btn) return;
+    document.querySelectorAll('#leader-toggle .toggle-btn')
+      .forEach((b) => b.classList.toggle('active', b === btn));
+    leaderGroup = btn.dataset.lgroup;
+    renderLeaderCats();
+    renderLeaders();
+  });
+
+  $('leader-cats').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-btn');
+    if (!btn) return;
+    leaderCat = btn.dataset.cat;
+    document.querySelectorAll('#leader-cats .cat-btn')
+      .forEach((b) => b.classList.toggle('active', b === btn));
+    renderLeaders();
   });
 
   // Event delegation for all clickable rows / cards.
@@ -236,11 +259,13 @@ async function loadPlayers() {
     `/api/v1/stats?stats=season&group=${group}&gameType=R` +
     `&season=${SEASON}&sportId=1&limit=1000`;
 
-  const [wHit, wPit, sHit] = await Promise.all([
-    api(range('hitting')), api(range('pitching')), api(season('hitting')),
+  const [wHit, wPit, sHit, sPit] = await Promise.all([
+    api(range('hitting')), api(range('pitching')),
+    api(season('hitting')), api(season('pitching')),
   ]);
 
-  const wHitS = splits(wHit), wPitS = splits(wPit), sHitS = splits(sHit);
+  const wHitS = splits(wHit), wPitS = splits(wPit);
+  const sHitS = splits(sHit), sPitS = splits(sPit);
 
   // Hitters: rank qualified players by OPS over the window.
   const hitters = wHitS.filter((p) => num(p.stat.plateAppearances) >= MIN_HIT_PA)
@@ -256,8 +281,12 @@ async function loadPlayers() {
 
   windowHitById = byId(wHitS);
   seasonHitById = byId(sHitS);
+  seasonHit = sHitS;
+  seasonPit = sPitS;
   renderPlayers('hitters');
   renderMovers();
+  renderLeaderCats();
+  renderLeaders();
 }
 
 function splits(resp) { return (resp.stats?.[0]?.splits) || []; }
@@ -331,6 +360,100 @@ function renderMovers() {
     || '<div class="empty">Not enough data.</div>';
   $('fallers').innerHTML = movers.slice(-8).reverse().map((m, i) => row(m, i + 1)).join('')
     || '<div class="empty">Not enough data.</div>';
+}
+
+/* ============================================================
+ * League leaders — season totals, sortable by stat category
+ * ============================================================ */
+// Per-group category definitions. `rate` stats are qualified by PA/IP and
+// formatted; `asc` ranks low-is-best (ERA, WHIP). Counting stats show as-is.
+const LEADER_CATS = {
+  hitting: [
+    { key: 'homeRuns',    label: 'HR' },
+    { key: 'rbi',         label: 'RBI' },
+    { key: 'runs',        label: 'R' },
+    { key: 'stolenBases', label: 'SB' },
+    { key: 'doubles',     label: '2B' },
+    { key: 'triples',     label: '3B' },
+    { key: 'hits',        label: 'H' },
+    { key: 'baseOnBalls', label: 'BB' },
+    { key: 'totalBases',  label: 'TB' },
+    { key: 'ops', label: 'OPS', rate: true, fmt: fmt3 },
+    { key: 'avg', label: 'AVG', rate: true, fmt: fmt3 },
+    { key: 'slg', label: 'SLG', rate: true, fmt: fmt3 },
+  ],
+  pitching: [
+    { key: 'wins',                label: 'W' },
+    { key: 'strikeOuts',          label: 'K' },
+    { key: 'saves',               label: 'SV' },
+    { key: 'era',  label: 'ERA',  rate: true, asc: true, fmt: fmt2 },
+    { key: 'whip', label: 'WHIP', rate: true, asc: true, fmt: fmt2 },
+    { key: 'strikeoutWalkRatio', label: 'K/BB', rate: true, fmt: fmt2 },
+  ],
+};
+
+// Estimate team games played (≈ max games by any hitter) to scale the
+// rate-stat qualification thresholds with the season's progress.
+function teamGamesEstimate() {
+  let mx = 0;
+  seasonHit.forEach((p) => { mx = Math.max(mx, num(p.stat.gamesPlayed)); });
+  return mx;
+}
+
+function renderLeaderCats() {
+  const cats = LEADER_CATS[leaderGroup];
+  if (!cats.some((c) => c.key === leaderCat)) leaderCat = cats[0].key;
+  $('leader-cats').innerHTML = cats.map((c) =>
+    `<button class="cat-btn ${c.key === leaderCat ? 'active' : ''}" data-cat="${c.key}">${c.label}</button>`
+  ).join('');
+}
+
+function renderLeaders() {
+  const cats = LEADER_CATS[leaderGroup];
+  const cat = cats.find((c) => c.key === leaderCat) || cats[0];
+  const isHit = leaderGroup === 'hitting';
+  const games = teamGamesEstimate();
+
+  let pool = (isHit ? seasonHit : seasonPit).slice();
+  if (cat.rate) {
+    if (isHit) {
+      const q = Math.max(20, Math.round(3.1 * games));   // MLB hitter qual: 3.1 PA/team game
+      pool = pool.filter((p) => num(p.stat.plateAppearances) >= q);
+    } else {
+      const q = Math.max(10, games);                     // MLB pitcher qual: 1 IP/team game
+      pool = pool.filter((p) => ipToInnings(p.stat.inningsPitched) >= q);
+    }
+  }
+  pool.sort((a, b) => cat.asc
+    ? num(a.stat[cat.key]) - num(b.stat[cat.key])
+    : num(b.stat[cat.key]) - num(a.stat[cat.key]));
+  const top = pool.slice(0, 10);
+
+  const sub = (p) => {
+    const s = p.stat;
+    return isHit
+      ? `${s.gamesPlayed} G &middot; ${s.avg} AVG &middot; ${s.ops} OPS`
+      : `${s.inningsPitched} IP &middot; ${s.era} ERA &middot; ${s.whip} WHIP`;
+  };
+  const val = (p) => cat.fmt ? cat.fmt(num(p.stat[cat.key])) : p.stat[cat.key];
+  const row = (p, rank) => `
+    <div class="row-item" data-player="${p.player.id}" data-group="${leaderGroup}">
+      <span class="rk">${rank}</span>
+      <span class="badge">${abbr(p.team?.id)}</span>
+      <div class="ri-main">
+        <div class="ri-name">${p.player.fullName}</div>
+        <div class="ri-sub">${sub(p)}</div>
+      </div>
+      <span class="ri-stat lead">${val(p)}</span>
+    </div>`;
+
+  if (!top.length) {
+    $('leaders-col-a').innerHTML = '<div class="empty">No qualified players.</div>';
+    $('leaders-col-b').innerHTML = '';
+    return;
+  }
+  $('leaders-col-a').innerHTML = top.slice(0, 5).map((p, i) => row(p, i + 1)).join('');
+  $('leaders-col-b').innerHTML = top.slice(5, 10).map((p, i) => row(p, i + 6)).join('');
 }
 
 /* ============================================================
