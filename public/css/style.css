@@ -20,7 +20,7 @@ body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width:
   position: fixed;
   background: #16142e;
   color: #d8d8e8;
-  border: 1px solid #f39c12;
+  border: 1px solid #009A8B;
   border-radius: 6px;
   padding: 8px 10px;
   font-family: 'Chakra Petch', monospace;
@@ -220,10 +220,9 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   white-space: normal;
   text-align: left;
 }
-.hdr-info[data-tip]:hover::after {
-  opacity: 1;
-  visibility: visible;
-}
+/* Header tooltips now render via the fixed-position JS tooltip (#soft-market-tip)
+   so they escape the card's overflow:hidden clip and clamp to the viewport. The
+   CSS ::after above is kept (harmlessly hidden) but never revealed on hover. */
 
 .stat-box .stat-info {
   color: #555;

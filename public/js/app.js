@@ -1883,7 +1883,7 @@ async function loadStatcast(playerId) {
 
 // ── Soft-market tooltip (fixed-position, avoids stacking-context issues on mobile) ──
 (function(){
-  const TIP_SEL='.dpb-soft-market[data-tip],.corbet-info[data-tip],.factor-inflator[data-tip],.inflator-badge[data-tip]';
+  const TIP_SEL='.hdr-info[data-tip],.dpb-soft-market[data-tip],.corbet-info[data-tip],.factor-inflator[data-tip],.inflator-badge[data-tip]';
   let tip=null, activeEl=null;
   function getOrCreate(){
     if(!tip){tip=document.createElement('div');tip.id='soft-market-tip';document.body.appendChild(tip);}
@@ -1892,6 +1892,9 @@ async function loadStatcast(playerId) {
   function show(el){
     const t=getOrCreate();
     t.textContent=el.dataset.tip;
+    // Teal (info) by default to match the standard header tooltips; orange only
+    // for the soft-market warning so it stays visually distinct as a caution.
+    t.style.borderColor=el.classList.contains('dpb-soft-market')?'#f39c12':'#009A8B';
     // Position above the badge, clamped to viewport edges
     const r=el.getBoundingClientRect();
     const w=Math.min(260,window.innerWidth-24);
