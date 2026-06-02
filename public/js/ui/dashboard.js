@@ -540,7 +540,7 @@ export function renderDashboard(){
     // warns at the top-level glance that this player's bullishness may be hollow.
     const activeInf=getActiveInflators(player.name,snap.factors);
     const inflatorBadge=activeInf.length
-      ?`<span class="inflator-badge" title="⚑ Score may be inflated — ${activeInf.map(i=>i.label).join(', ')} ${activeInf.length>1?'have':'has'} historically fired positive on ${player.name}'s bad games and never on a good one. Treat the model's bullishness here with skepticism.">⚑</span>`
+      ?`<span class="inflator-badge" data-tip="Score may be inflated — ${activeInf.map(i=>i.label).join(', ')} ${activeInf.length>1?'have':'has'} historically fired positive on ${player.name}'s bad games and never on a good one. Treat the model's bullishness here with skepticism.">⚑</span>`
       :'';
     const lowDataBadge=snap.lowData?`<span class="low-data-badge" title="Fewer than 50 PA this season — small sample">⚠ Low PA</span>`:'';
     const lowDataWarning=snap.lowData?`<div class="low-data-warning">⚠ Fewer than 50 PA this season — rate stats (BB%, K%, AVG) may not be reliable with a small sample</div>`:'';

@@ -427,7 +427,7 @@ export function renderFactorCards(factors, catTotals, playerName = S.playerName)
     if (!(f.adj > 0)) return '';
     const inf = inflators.get(f.label);
     if (!inf) return '';
-    return ` <span class="factor-inflator" title="⚑ Historically a false signal for ${playerName}: this factor fired positive on ${inf.badPos} of his bad games and never on a good one (over ${inf.goodGames} good games). Treat its boost with skepticism.">⚑</span>`;
+    return ` <span class="factor-inflator" data-tip="Historically a false signal for ${playerName}: this factor fired positive on ${inf.badPos} of his bad games and never on a good one (over ${inf.goodGames} good games). Treat its boost with skepticism.">⚑</span>`;
   };
   const fmtRows = fs => fs.length
     ? fs.map(f => `<div class="factor-row"><span class="factor-icon" style="color:${colors[f.impact]}">${icons[f.impact]}</span><span class="factor-label">${f.label}${flagFor(f)}</span><span class="factor-value">${f.value}</span><span class="factor-note">${f.note}</span></div>`).join('')
