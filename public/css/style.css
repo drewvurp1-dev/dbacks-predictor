@@ -647,6 +647,8 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 
 /* Pure-inflator ⚑ flag on live prediction factor cards */
 .factor-inflator { color: #e74c3c; cursor: help; }
+/* Pure-inflator ⚑ badge on dashboard player rows + CorBET player headers */
+.inflator-badge { color: #e74c3c; cursor: help; font-size: 12px; margin-left: 4px; }
 
 /* ── Per-player accuracy table ── */
 .pacc-row { grid-template-columns: 1fr 46px 46px 52px 88px 48px; font-family: 'Chakra Petch', monospace; font-size: 12px; }

@@ -6,7 +6,7 @@
 import { S, activeRoster } from '../state.js';
 import * as api from '../api.js';
 import { _renderPitcherCard, _renderBestMatchup } from './render.js';
-import { _getTopBets } from '../bets.js';
+import { _getTopBets, getActiveInflators } from '../bets.js';
 import { bookAbbrev } from '../betting.js';
 import { MC_CONFIDENCE_MIN } from '../constants.js';
 import { _COMPASS_DEGS } from '../weather.js';
@@ -536,13 +536,19 @@ export function renderDashboard(){
     const avgStr=snap.seasonStat?.avg?parseFloat(snap.seasonStat.avg).toFixed(3):'—';
     const opsStr=snap.seasonStat?.ops?parseFloat(snap.seasonStat.ops).toFixed(3):'—';
 
+    // ⚑ if a known pure-inflator factor is actively lifting tonight's score —
+    // warns at the top-level glance that this player's bullishness may be hollow.
+    const activeInf=getActiveInflators(player.name,snap.factors);
+    const inflatorBadge=activeInf.length
+      ?`<span class="inflator-badge" title="⚑ Score may be inflated — ${activeInf.map(i=>i.label).join(', ')} ${activeInf.length>1?'have':'has'} historically fired positive on ${player.name}'s bad games and never on a good one. Treat the model's bullishness here with skepticism.">⚑</span>`
+      :'';
     const lowDataBadge=snap.lowData?`<span class="low-data-badge" title="Fewer than 50 PA this season — small sample">⚠ Low PA</span>`:'';
     const lowDataWarning=snap.lowData?`<div class="low-data-warning">⚠ Fewer than 50 PA this season — rate stats (BB%, K%, AVG) may not be reliable with a small sample</div>`:'';
     return`<div class="dash-prow" id="dpr-${pid}">
       <div class="dash-prow-header" data-action="toggle-player-card" data-player-id="${pid}">
         <span class="dash-prow-order">${orderLabel}</span>
         ${snap.pos?`<span class="dash-prow-pos">${snap.pos}</span>`:''}
-        <span class="dash-prow-name">${player.name}</span>${lowDataBadge}
+        <span class="dash-prow-name">${player.name}</span>${inflatorBadge}${lowDataBadge}
         <span class="dash-prow-statline">AVG ${avgStr} &nbsp; OPS ${opsStr}</span>
         <button class="dash-prow-more" data-action="open-player-stats" data-player-id="${pid}">More Stats ›</button>
         <span class="dash-prow-arrow" id="dpa-${pid}">▼</span>
