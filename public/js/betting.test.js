@@ -112,7 +112,7 @@ test('devig — output sums to 100', () => {
 test('bookAbbrev — known book returns abbreviation', () => {
   assert.equal(bookAbbrev('DraftKings'), 'DK');
   assert.equal(bookAbbrev('BetMGM'), 'MGM');
-  assert.equal(bookAbbrev('Caesars'), 'CZR');
+  assert.equal(bookAbbrev('BetRivers'), 'BR');
 });
 
 test('bookAbbrev — unknown book returns the input unchanged', () => {
