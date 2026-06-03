@@ -58,5 +58,43 @@ export function devig(overPrices, underPrices) {
   return { overProb: Math.pow(o, k) * 100, underProb: Math.pow(u, k) * 100 };
 }
 
+// ── Kalshi (prediction-market) pricing ──────────────────────────────────────
+// Kalshi quotes contracts in cents (1–99) where price ≈ implied probability of
+// YES. There is no traditional vig — instead there's a bid/ask spread, so the
+// fair no-vig probability is the bid/ask midpoint. Pass an object with any of
+// { yesBid, yesAsk, noBid, noAsk, lastPrice } (cents). Returns the YES
+// probability as a percentage (0–100), or null if nothing usable is present.
+//
+// Preference order: yes bid/ask midpoint → derive yes-side from no bid/ask
+// (yes = 100 − no) → last traded price. Combining yes and no quotes when both
+// exist tightens the estimate (yesAsk and 100−noBid are the two sell offers).
+export function kalshiImpliedProb(q) {
+  if (!q) return null;
+  const c = v => (v == null || isNaN(v) ? null : Number(v));
+  const yb = c(q.yesBid), ya = c(q.yesAsk);
+  const nb = c(q.noBid),  na = c(q.noAsk);
+  // Best YES bid/ask, folding in the no-side quotes (a no-bid of X is a yes-ask
+  // of 100−X, and a no-ask of Y is a yes-bid of 100−Y).
+  const bids = [yb, na != null ? 100 - na : null].filter(v => v != null);
+  const asks = [ya, nb != null ? 100 - nb : null].filter(v => v != null);
+  const bestBid = bids.length ? Math.max(...bids) : null;
+  const bestAsk = asks.length ? Math.min(...asks) : null;
+  let cents;
+  if (bestBid != null && bestAsk != null) cents = (bestBid + bestAsk) / 2;
+  else if (bestBid != null) cents = bestBid;
+  else if (bestAsk != null) cents = bestAsk;
+  else cents = c(q.lastPrice);
+  if (cents == null) return null;
+  return Math.max(0, Math.min(100, cents));
+}
+
+// Kalshi cents (0–100 implied prob) → American odds, so prediction-market
+// prices can flow through the same display/EV path as sportsbook lines.
+export function kalshiToAmerican(cents) {
+  const p = Number(cents) / 100;
+  if (!p || p <= 0 || p >= 1) return null;
+  return p > 0.5 ? Math.round(-100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+}
+
 // ── Sportsbook display ──────────────────────────────────────────────────────
 export function bookAbbrev(name) { return BOOK_ABBREVS[name] || name; }
