@@ -833,7 +833,11 @@ async function runPrediction(){
   document.getElementById('pred-header').textContent=`${S.playerName} · ${pn} (${hand}HP)${era?` · ERA ${parseFloat(era).toFixed(2)}`:''}`;
   renderFactorCards(factors,catTotals);
   document.getElementById('pitch-display').innerHTML=_renderPitchMatchup();
-  S.lastScore=score;S.lastPrediction={score,tier,factors,catTotals,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:S.gameOfficialDate||document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0]};
+  // runPrediction is the MANUAL Setup path — the #game-date the user typed is
+  // authoritative (it's how you backfill a past game), so it wins over the
+  // auto-loaded game's date. S.gameOfficialDate is only a fallback for when the
+  // input is somehow blank. Arizona-local fallback avoids a UTC day-ahead roll.
+  S.lastScore=score;S.lastPrediction={score,tier,factors,catTotals,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:document.getElementById('game-date').value||S.gameOfficialDate||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0]};
   savePredictionForGrading(S.lastPrediction);
   // Refresh game log every time prediction runs so Last 10 Games is always current
   await loadGameLog();
