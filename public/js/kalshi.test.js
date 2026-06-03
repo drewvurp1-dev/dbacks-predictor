@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { _mapProp, _extractThreshold, _cents, _volume } from './kalshi.js';
+import { KALSHI_ALLOWED_LINES, KALSHI_SERIES_EXCLUDE, KALSHI_STAT_MAP } from './constants.js';
 
 test('_mapProp — Corbin Carroll hits market is Hits, not RBI', () => {
   // "Corbin" contains the substring "rbi"; a naive includes() check tagged this
@@ -79,4 +80,34 @@ test('_volume — reads volume_fp string float, rounded', () => {
 test('_volume — prefers legacy volume field, null when absent', () => {
   assert.strictEqual(_volume({ volume: 7 }), 7);
   assert.strictEqual(_volume({}), null);
+});
+
+test('KALSHI_ALLOWED_LINES — counting props are 0.5 only, TB/HRR are 1.5/2.5', () => {
+  for (const k of ['batter_hits', 'batter_runs_scored', 'batter_rbis',
+                   'batter_strikeouts', 'batter_walks', 'batter_home_runs']) {
+    assert.deepStrictEqual(KALSHI_ALLOWED_LINES[k], [0.5], k);
+  }
+  assert.deepStrictEqual(KALSHI_ALLOWED_LINES.batter_total_bases, [1.5, 2.5]);
+  assert.deepStrictEqual(KALSHI_ALLOWED_LINES.batter_hits_runs_rbis, [1.5, 2.5]);
+});
+
+test('KALSHI_ALLOWED_LINES — every mapped prop has an allow-list (no leaks)', () => {
+  for (const { propKey } of KALSHI_STAT_MAP) {
+    assert.ok(KALSHI_ALLOWED_LINES[propKey], `missing allow-list for ${propKey}`);
+  }
+});
+
+test('KALSHI_ALLOWED_LINES — the bogus 2025.5 year-leak line is excluded', () => {
+  assert.ok(!KALSHI_ALLOWED_LINES.batter_hits.includes(2025.5));
+  assert.ok(!KALSHI_ALLOWED_LINES.batter_runs_scored.includes(2025.5));
+});
+
+test('KALSHI_SERIES_EXCLUDE — rejects season/leader/college/intl, keeps per-game', () => {
+  for (const t of ['KXLEADERMLBHITS', 'KXLEADERMLBRUNS', 'KXMLBSEASONHR',
+                   'KXNCAABBTOTAL', 'KXWBCKS', 'KXMLBRFI', 'KXWBCRFI']) {
+    assert.ok(KALSHI_SERIES_EXCLUDE.test(t), `should exclude ${t}`);
+  }
+  for (const t of ['KXMLBHIT', 'KXMLBHR', 'KXMLBTB', 'KXMLBHRR', 'KXMLBKS', 'KXMLBRBI']) {
+    assert.ok(!KALSHI_SERIES_EXCLUDE.test(t), `should keep ${t}`);
+  }
 });

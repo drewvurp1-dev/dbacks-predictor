@@ -24,7 +24,7 @@
 // it sees, so console output remains the first stop if the shape shifts again.
 
 import { S, activeRoster, log } from './state.js';
-import { KALSHI_SERIES_CANDIDATES, KALSHI_STAT_MAP, PROP_NAMES } from './constants.js';
+import { KALSHI_SERIES_CANDIDATES, KALSHI_STAT_MAP, KALSHI_ALLOWED_LINES, KALSHI_SERIES_EXCLUDE, PROP_NAMES } from './constants.js';
 import { kalshiImpliedProb, kalshiToAmerican, americanToDecimal } from './betting.js';
 import { modelProbability } from './predict.js';
 import * as api from './api.js';
@@ -43,6 +43,7 @@ async function _discoverSeries() {
       const title = (s.title || s.name || '').toLowerCase();
       const ticker = s.ticker || s.series_ticker;
       if (!ticker) continue;
+      if (KALSHI_SERIES_EXCLUDE.test(ticker)) continue; // season/leader/college/intl — not per-game
       const isMLB = /mlb|baseball/.test(title) || /^kxmlb/i.test(ticker);
       if (isMLB && _mapProp(title)) tickers.add(ticker);
     }
@@ -174,6 +175,11 @@ async function _scan() {
         if (!player) continue;
         const line = _extractThreshold(mk, texts);
         if (line == null) continue;
+        // Keep only the per-game thresholds we bet (0.5 for counting props,
+        // 1.5/2.5 for TB and H+R+RBI); this also drops any stray season/leader
+        // market whose line is out of range (e.g. a year leaking in as 2025.5).
+        const allowed = KALSHI_ALLOWED_LINES[propKey];
+        if (allowed && !allowed.includes(line)) continue;
 
         const kalshiYes = kalshiImpliedProb({
           yesBid: _cents(mk, 'yes_bid'), yesAsk: _cents(mk, 'yes_ask'),
