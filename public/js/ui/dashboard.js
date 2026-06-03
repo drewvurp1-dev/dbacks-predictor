@@ -440,12 +440,11 @@ export function renderDashboard(){
         const _tbBookBadge=_tbBest?.book?`<span class="dpb-book">${bookAbbrev(_tbBest.book)}</span>`:'';
         const _tbPid=_tbIdByName[b.playerName];
         const _tbAttrs=_tbPid?` class="dash-best-bet-row dash-best-bet-row--link" data-action="open-player-corbet" data-player-id="${_tbPid}" title="View CorBET bets for ${b.playerName}"`:' class="dash-best-bet-row"';
-        // Market% → Model% sticker for the picked side (Under flips both to the under side)
-        const _tbUnder=b.direction.toLowerCase()==='under';
-        const _tbMktP=_tbUnder?b.marketUnderProb:b.marketOverProb;
-        const _tbModP=_tbUnder?(b.modelProb!=null?100-b.modelProb:null):b.modelProb;
+        // Market% → Model% sticker — always shown for the Over side regardless of the picked direction
+        const _tbMktP=b.marketOverProb;
+        const _tbModP=b.modelProb;
         const _tbProbBadge=(_tbMktP!=null&&_tbModP!=null)
-          ?`<span class="dash-badge dash-badge--prob" title="Market-implied probability → model probability for this side">(${Math.round(_tbMktP)}% → ${Math.round(_tbModP)}%)</span>`
+          ?`<span class="dash-badge dash-badge--prob" title="Market-implied probability → model probability for the Over">(${Math.round(_tbMktP)}% → ${Math.round(_tbModP)}%)</span>`
           :'';
         return`<div${_tbAttrs}>
         <div class="dash-best-bet-left">
