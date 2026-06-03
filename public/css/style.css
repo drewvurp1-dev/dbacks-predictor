@@ -1,9 +1,10 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; width: 100%; }
-/* Global 1.25x zoom — app was rendering too small to read comfortably.
-   `zoom` reflows the responsive layout at scale (vs. transform:scale, which
-   would overflow), so mobile breakpoints still behave correctly. */
-body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding-bottom: 60px; width: 100%; overflow-x: hidden; zoom: 1.25; }
+/* Global zoom for readability. Applied only on wider (desktop/tablet) screens —
+   `zoom` shrinks the effective viewport width, so zooming on mobile forces text
+   to wrap and squishes the layout. Phones keep native 1.0 rendering. */
+body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding-bottom: 60px; width: 100%; overflow-x: hidden; }
+@media (min-width: 768px) { body { zoom: 1.2; } }
 
 /* ── Header ── */
 .header { background: #000000; padding: 14px 20px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #009A8B; }
