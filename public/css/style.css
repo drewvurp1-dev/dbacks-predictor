@@ -1376,3 +1376,24 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
   .bm-score-num { font-size: 12px; }
   .bm-line { font-size: 9px; }
 }
+
+/* ── Share-mode edit lock ──────────────────────────────────────────────────
+   When the Record + Grade tabs are locked (body.savant-locked, see lock.js),
+   hide the mutating controls so a shared viewer sees a clean read-only record.
+   Enforcement is centralized in app.js's _dispatchAction; this is purely the
+   visual half so the buttons don't tease an action the PIN gate will block. */
+body.savant-locked [data-action="clear-record"],
+body.savant-locked [data-action="clear-grades"],
+body.savant-locked [data-action="autograde"],
+body.savant-locked [data-action="toggle-add-bet"],
+body.savant-locked #add-bet-form,
+body.savant-locked [data-action="save-bet"],
+body.savant-locked [data-action="set-result"],
+body.savant-locked [data-action="delete-bet"],
+body.savant-locked [data-action="auto-grade"],
+body.savant-locked [data-action="edit-grade"],
+body.savant-locked [data-action="delete-grade"],
+body.savant-locked [data-action="remove-pending"] {
+  display: none !important;
+}
+#lock-btn { white-space: nowrap; }
