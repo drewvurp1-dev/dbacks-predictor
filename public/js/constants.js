@@ -57,28 +57,38 @@ export const PROP_NAMES = {
   'batter_hits':'Hits','batter_total_bases':'Total Bases',
   'batter_rbis':'RBI','batter_walks':'Walks','batter_strikeouts':'Strikeouts',
   'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
+  'batter_home_runs':'Home Runs',
 };
 
 // ── Kalshi prediction-market config ─────────────────────────────────────────
 // Kalshi's MLB player-prop series tickers are not officially documented and can
 // shift season to season, so the scan DISCOVERS them at runtime: it pulls the
 // Sports series list and keeps any series whose title matches a batter-prop
-// keyword below. These prefixes are tried first as a fast path / fallback when
+// keyword below. These tickers are tried first as a fast path / fallback when
 // the deployment can reach Kalshi but the series list is unavailable.
-// VERIFY against live data on first run — see public/js/kalshi.js.
+// Verified against the live API (2026-06): the per-game player-prop series are
+// KXMLBHIT (Hits), KXMLBHR (Home Runs), KXMLBTB (Total Bases),
+// KXMLBHRR (Hits+Runs+RBIs), KXMLBKS (pitcher Strikeouts), KXMLBRBI (RBIs).
+// Each event is one game ("LAD vs AZ: Hits") with per-player floor-strike
+// markets nested inside. KXMLBKS lists pitchers, so it only surfaces if a
+// rostered name matches — harmless for the batter roster.
 export const KALSHI_SERIES_CANDIDATES = [
-  'KXMLBPLAYER', 'KXMLBHITS', 'KXMLBHR', 'KXMLBTB', 'KXMLBRBI',
-  'KXMLBSTRIKEOUTS', 'KXMLBRUNS', 'KXMLBWALKS',
+  'KXMLBHIT', 'KXMLBHR', 'KXMLBTB', 'KXMLBHRR', 'KXMLBKS', 'KXMLBRBI',
 ];
 
 // Maps a Kalshi market/series title to a Snake Savant prop key. Each entry is a
-// list of lowercase keywords; the FIRST entry whose keywords all appear in the
-// title wins. Order matters — more specific props (total bases, H+R+RBI) are
-// listed before the single-word props they contain ("hit", "run").
+// list of lowercase keywords; the FIRST entry whose keywords all match wins.
+// Keywords are matched on a word boundary (see _mapProp) so substrings inside
+// player names don't false-positive — e.g. "Corbin" must not match "rbi".
+// Order matters — more specific props (H+R+RBI, home runs, total bases) come
+// before the single-word props whose keywords they contain ("hit", "run").
+// Verified against live titles (2026-06): "Corbin Carroll: 1+ hits?",
+// "… 2+ total bases?", "… 1+ home runs?", "… 1+ hits + runs + RBIs?",
+// "Zac Gallen: 2+ strikeouts?".
 export const KALSHI_STAT_MAP = [
   { propKey: 'batter_hits_runs_rbis', keywords: ['hits', 'runs', 'rbis'] },
+  { propKey: 'batter_home_runs',      keywords: ['home run'] },
   { propKey: 'batter_total_bases',    keywords: ['total bases'] },
-  { propKey: 'batter_total_bases',    keywords: ['bases'] },
   { propKey: 'batter_rbis',           keywords: ['rbi'] },
   { propKey: 'batter_strikeouts',     keywords: ['strikeout'] },
   { propKey: 'batter_strikeouts',     keywords: ['strike out'] },
