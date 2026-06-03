@@ -1,6 +1,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; width: 100%; }
-body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding-bottom: 60px; width: 100%; overflow-x: hidden; }
+/* Global 1.5x zoom — app was rendering too small to read comfortably.
+   `zoom` reflows the responsive layout at scale (vs. transform:scale, which
+   would overflow), so mobile breakpoints still behave correctly. */
+body { background: #07060f; color: #fff; font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding-bottom: 60px; width: 100%; overflow-x: hidden; zoom: 1.5; }
 
 /* ── Header ── */
 .header { background: #000000; padding: 14px 20px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #009A8B; }
