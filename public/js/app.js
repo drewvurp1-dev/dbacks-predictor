@@ -402,6 +402,13 @@ async function autoLoadNextGame(){
       S.opposingTeamAbbr=oppSide?.team?.abbreviation||'';
       S.gameStatus=game.status?.abstractGameState||'Preview';
       S.gameDate=game.gameDate||null;
+      // Authoritative Arizona-local date of the loaded game. officialDate is the
+      // local calendar date (unlike gameDate, which is a UTC timestamp that rolls
+      // a day forward for night games — e.g. a 6:40pm MST first pitch is
+      // 01:40Z the next day). Grade/bet records anchor to THIS so a drifting
+      // #game-date input can't stamp a prediction with a date the pitcher never
+      // pitched on, which previously made Fetch & Grade report "game not found".
+      S.gameOfficialDate=game.officialDate||null;
       S.gamePk=game.gamePk||null;
       const pp=oppSide?.probablePitcher;
       if(pp?.id&&pp?.fullName&&!S.pitcher){
@@ -826,7 +833,7 @@ async function runPrediction(){
   document.getElementById('pred-header').textContent=`${S.playerName} · ${pn} (${hand}HP)${era?` · ERA ${parseFloat(era).toFixed(2)}`:''}`;
   renderFactorCards(factors,catTotals);
   document.getElementById('pitch-display').innerHTML=_renderPitchMatchup();
-  S.lastScore=score;S.lastPrediction={score,tier,factors,catTotals,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:document.getElementById('game-date').value||new Date().toISOString().split('T')[0]};
+  S.lastScore=score;S.lastPrediction={score,tier,factors,catTotals,tempF,windMph,windDir,humidity,playerName:S.playerName,pitcherName:pn,hand,era,date:S.gameOfficialDate||document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0]};
   savePredictionForGrading(S.lastPrediction);
   // Refresh game log every time prediction runs so Last 10 Games is always current
   await loadGameLog();
@@ -1944,7 +1951,7 @@ async function loadStatcast(playerId) {
 })();
 
 // ═══════════ INIT ══════════════════════════════════════════════════════════════
-document.getElementById('game-date').value=new Date().toISOString().split('T')[0]; // fallback until API responds
+document.getElementById('game-date').value=new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0]; // Arizona-local fallback until API responds (UTC would roll a day ahead for evening sessions)
 
 // ═══════════ EVENT DELEGATION ════════════════════════════════════════════════
 // Replaces inline `onclick="..."` handlers (audit finding #9). Each interactive

@@ -113,10 +113,11 @@ export function saveBet(key, btn){
     if(btn){btn.textContent='⚠ Not found';btn.style.color='#e74c3c';setTimeout(()=>{btn.textContent='+ Save';btn.style.color='';},1800);}
     return;
   }
-  // Use the loaded game's date (same source as the rest of the dashboard) so
-  // the opponent captured from S.opposingTeamAbbr lines up with the date stored.
-  // Arizona-local fallback avoids a UTC midnight rollover.
-  const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
+  // Use the loaded game's official (Arizona-local) date so the opponent captured
+  // from S.opposingTeamAbbr lines up with the date stored. Anchoring to
+  // S.gameOfficialDate (set when the game loads) beats the #game-date input,
+  // which can drift a day ahead (UTC bootstrap fallback, manual date change).
+  const date=S.gameOfficialDate||document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   const prop=`${b.direction} ${b.line} ${b.prop}`;
   if(S.betLog.some(x=>x.date===date&&x.prop===prop&&(x.player===(b._playerName||S.playerName)))){
     if(btn){btn.textContent='Already saved';setTimeout(()=>{btn.textContent='+ Save';},1800);}
@@ -198,7 +199,8 @@ export function autoSaveAtFirstPitch(){
   if(saved.includes(S.gamePk))return;
   const top=_getTopBets(8);
   if(!top.length)return;
-  const date=document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
+  // Anchor to the loaded game's official (Arizona-local) date — see saveBet.
+  const date=S.gameOfficialDate||document.getElementById('game-date').value||new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   let added=0;
   top.forEach((b,i)=>{
     const prop=`${b.direction} ${b.line} ${b.prop}`;
@@ -228,7 +230,13 @@ export function autoRegisterGradePredictions() {
   // (Vargas, Gurriel splits, etc.). loadLineupContext() sets S.lineupRoster
   // only when the MLB API confirms a starting lineup for the day.
   if (!S.lineupRoster || S.lineupRoster.length === 0) return;
-  const date = document.getElementById('game-date').value
+  // Anchor the grade date to the loaded game's official (Arizona-local) date so
+  // a drifting #game-date input (UTC bootstrap fallback, manual date change, or a
+  // night game whose UTC timestamp rolls past midnight) can't stamp predictions
+  // with a date the pitcher never pitched on — which made Fetch & Grade later
+  // report "game not found" for every player in that game.
+  const date = S.gameOfficialDate
+    || document.getElementById('game-date').value
     || new Date(Date.now()-7*60*60*1000).toISOString().split('T')[0];
   const pitcherName = S.pitcher?.name || '';
   const idBase = Date.now();
@@ -682,8 +690,9 @@ function autoAdjustWeights(perf, gameCount) {
   saveFactorWeights(weights);
 }
 
-// Confirm grade for a pending prediction
-async function confirmGrade(pendingId, actualStats) {
+// Confirm grade for a pending prediction. gradeDate overrides the recorded date
+// when autoGrade had to reconcile a mis-stamped card to the pitcher's real game.
+async function confirmGrade(pendingId, actualStats, gradeDate) {
   const pending = getPending();
   const pred = pending.find(p => p.id === pendingId);
   if (!pred) return;
@@ -695,7 +704,7 @@ async function confirmGrade(pendingId, actualStats) {
   const entries = getGradeLog();
   entries.unshift({
     id: pendingId,
-    date: pred.date,
+    date: gradeDate || pred.date,
     score: pred.score,
     tier: pred.tier,
     playerName: pred.playerName,
@@ -725,12 +734,52 @@ export function clearGrades() {
   _gradesChanged();
 }
 
+// Recover a pending card whose date was mis-stamped (legacy UTC-rollover bug: a
+// night game's official date is one day behind its UTC timestamp, so predictions
+// saved before the fix carry tomorrow's date and the exact-date stats fetch comes
+// back empty). Anchor on the predicted pitcher: scan the D-backs schedule around
+// the recorded date for the *completed* game that pitcher actually started and
+// return its official (Arizona-local) date. Returns null when there's no single
+// unambiguous match, so we never silently grade against the wrong game.
+async function _reconcileGradeDate(pitcherName, date) {
+  if (!pitcherName || !date) return null;
+  const base = new Date(`${date}T00:00:00Z`).getTime();
+  if (isNaN(base)) return null;
+  const iso = ms => new Date(ms).toISOString().split('T')[0];
+  let sched;
+  try { sched = await api.mlbScheduleRange(iso(base - 3*86400000), iso(base + 86400000), 'probablePitcher'); }
+  catch (e) { log('[grade] reconcile schedule fetch failed:', e.message); return null; }
+  const want = pitcherName.trim().toLowerCase();
+  const matches = (sched?.dates || [])
+    .flatMap(d => d.games || [])
+    .filter(g => {
+      if (g.status?.abstractGameState !== 'Final') return false;
+      const opp = g.teams?.home?.team?.id === 109 ? g.teams?.away : g.teams?.home;
+      return (opp?.probablePitcher?.fullName || '').trim().toLowerCase() === want;
+    })
+    .map(g => g.officialDate);
+  if (matches.length !== 1 || matches[0] === date) return null;
+  log(`[grade] reconciled mis-dated card: ${date} → ${matches[0]} (${pitcherName})`);
+  return matches[0];
+}
+
 export async function autoGrade(predId, playerId, date) {
   const btn = document.querySelector(`#grade-actions-${predId} button`);
   if (btn) { btn.textContent = '⟳ Fetching...'; btn.disabled = true; }
 
   try {
-    const actual = await fetchActualStats(playerId, date);
+    let actual = await fetchActualStats(playerId, date);
+    let gradeDate = date;
+    // No game on the recorded date — it may be mis-stamped. Try to find the game
+    // the predicted pitcher actually started and grade against that instead.
+    if (!actual) {
+      const pred = getPending().find(p => String(p.id) === String(predId));
+      const fixed = await _reconcileGradeDate(pred?.pitcherName, date);
+      if (fixed) {
+        const healed = await fetchActualStats(playerId, fixed);
+        if (healed) { actual = healed; gradeDate = fixed; }
+      }
+    }
     if (!actual) {
       // Game not found — might not have finished yet
       if (btn) { btn.textContent = '⟳ Fetch & Grade'; btn.disabled = false; }
@@ -776,7 +825,7 @@ export async function autoGrade(predId, playerId, date) {
       det.innerHTML = `<summary style="cursor:pointer;color:#444;letter-spacing:1px;">RAW MLB API</summary><pre style="color:#555;white-space:pre-wrap;font-size:9px;margin:4px 0 0;">${JSON.stringify(actual._raw||actual,null,2)}</pre>`;
       statsEl.appendChild(det);
     }
-    if (btn) { btn.textContent = '✓ Confirm Grade'; btn.disabled = false; btn.onclick = () => confirmGrade(predId, actual); }
+    if (btn) { btn.textContent = '✓ Confirm Grade'; btn.disabled = false; btn.onclick = () => confirmGrade(predId, actual, gradeDate); }
   } catch(e) {
     if (btn) { btn.textContent = '⟳ Fetch & Grade'; btn.disabled = false; }
     alert('Could not fetch stats: ' + e.message);
