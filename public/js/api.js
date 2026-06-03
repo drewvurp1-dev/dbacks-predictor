@@ -106,8 +106,12 @@ const _KALSHI = '/kalshi';
 
 // List sports series (used to discover MLB player-prop series tickers, whose
 // exact names can shift season to season).
+// NB: no trailing slash before the query string — Kalshi 301-redirects
+// `/series/?…` to `/series?…`, and the proxy passes that redirect through
+// (the browser then follows it to a non-existent local route). `/series?…`
+// returns 200 directly.
 export const kalshiSeriesList = (category = 'Sports') =>
-  _json(`${_KALSHI}/series/?category=${encodeURIComponent(category)}`);
+  _json(`${_KALSHI}/series?category=${encodeURIComponent(category)}`);
 
 // Open events for a series, with each event's markets nested in the response so
 // player/line/price all arrive in one call.

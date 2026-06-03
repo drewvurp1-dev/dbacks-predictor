@@ -12,12 +12,16 @@
 // network policy blocks api.elections.kalshi.com), the panel shows an empty
 // state and everything else is unaffected.
 //
-// ⚠ VERIFY-ON-LIVE-DATA: this sandbox cannot reach Kalshi, so the exact market
-// JSON shape (series ticker names, where the player name and threshold live)
-// could not be confirmed against the live API. The scanner is built defensively
-// and logs every market it sees — open the console on the first real run and
-// adjust _extractPlayerName / _extractThreshold / KALSHI_* in constants.js if
-// the field names differ.
+// Verified against the live API (2026-06). Confirmed shape, per game-event:
+//   event.title     "Los Angeles D vs Arizona: Hits"   (series = one stat)
+//   market.title    "Corbin Carroll: 1+ hits?"         (player + threshold)
+//   market.floor_strike  0.5 / 1.5 / 2.5 …  (already the half-line; strike_type
+//                        "greater" ⇒ Over floor_strike)
+//   market.{yes,no}_{bid,ask}_dollars  "0.6100"  (DOLLARS 0–1, ×100 for cents)
+//   market.last_price_dollars, volume_fp / volume_24h_fp
+// Per-game player-prop series: KXMLBHIT, KXMLBHR, KXMLBTB, KXMLBHRR, KXMLBKS,
+// KXMLBRBI (see KALSHI_SERIES_CANDIDATES). The scanner still logs every market
+// it sees, so console output remains the first stop if the shape shifts again.
 
 import { S, activeRoster, log } from './state.js';
 import { KALSHI_SERIES_CANDIDATES, KALSHI_STAT_MAP, PROP_NAMES } from './constants.js';
@@ -52,11 +56,15 @@ async function _discoverSeries() {
 
 // ── Field extraction (defensive — see VERIFY-ON-LIVE-DATA note above) ─────────
 
-// Map a market/event title to a prop key via the keyword table.
-function _mapProp(title) {
+// Map a market/event title to a prop key via the keyword table. Keywords match
+// on a leading word boundary so a substring buried in a player name can't
+// false-positive — e.g. "Corbin" contains "rbi", which would otherwise tag a
+// hits market as RBI (confirmed against live titles).
+function _escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+export function _mapProp(title) {
   const t = (title || '').toLowerCase();
   for (const { propKey, keywords } of KALSHI_STAT_MAP) {
-    if (keywords.every(k => t.includes(k))) return propKey;
+    if (keywords.every(k => new RegExp('\\b' + _escapeRe(k)).test(t))) return propKey;
   }
   return null;
 }
@@ -81,7 +89,7 @@ function _extractPlayerName(texts) {
 // Pull the over/under threshold (a Snake Savant line is strike − 0.5: Kalshi
 // "2+ hits" YES == Over 1.5). Prefer the structured strike field; fall back to
 // the first number in the text.
-function _extractThreshold(market, texts) {
+export function _extractThreshold(market, texts) {
   const strike = market.floor_strike ?? market.cap_strike ?? market.strike;
   let n = strike != null ? Number(strike) : NaN;
   if (isNaN(n)) {
@@ -117,6 +125,28 @@ function _modelYesProb(playerId, propKey, line) {
   }
 }
 
+// Kalshi's live market objects quote prices in DOLLARS (0–1) under `_dollars`
+// fields (e.g. yes_bid_dollars: "0.6100"), not the integer-cent fields the
+// scanner originally assumed. Read the dollar field and scale to cents (the
+// unit kalshiImpliedProb expects), falling back to any legacy bare-cent field.
+export function _cents(mk, key) {
+  const d = mk[key + '_dollars'];
+  if (d != null && d !== '') { const n = Number(d); if (!isNaN(n)) return n * 100; }
+  const c = mk[key];
+  if (c != null && c !== '') { const n = Number(c); if (!isNaN(n)) return n; }
+  return null;
+}
+
+// Traded volume — live markets expose `volume_fp` / `volume_24h_fp` (string
+// floats); older shapes used `volume` / `volume_24h`. First usable one wins.
+export function _volume(mk) {
+  for (const k of ['volume', 'volume_24h', 'volume_fp', 'volume_24h_fp']) {
+    const v = mk[k];
+    if (v != null && v !== '') { const n = Number(v); if (!isNaN(n)) return Math.round(n); }
+  }
+  return null;
+}
+
 // ── Scan ─────────────────────────────────────────────────────────────────────
 // Returns an array of edge rows for D-backs roster players found on Kalshi.
 async function _scan() {
@@ -136,8 +166,8 @@ async function _scan() {
       const evTexts = [ev.title, ev.sub_title, ev.subtitle];
       const markets = ev.markets || ev.nested_markets || [];
       for (const mk of markets) {
-        const texts = [mk.title, mk.subtitle, mk.yes_sub_title, mk.yes_subtitle, ...evTexts];
-        log('[kalshi] market:', JSON.stringify({ t: mk.ticker, title: mk.title, sub: mk.yes_sub_title, strike: mk.floor_strike }));
+        const texts = [mk.title, mk.subtitle, mk.no_sub_title, mk.yes_sub_title, mk.yes_subtitle, ...evTexts];
+        log('[kalshi] market:', JSON.stringify({ t: mk.ticker, title: mk.title, sub: mk.yes_sub_title, strike: mk.floor_strike, yb: mk.yes_bid_dollars }));
         const propKey = _mapProp(texts.join(' '));
         if (!propKey || !PROP_NAMES[propKey]) continue;
         const player = _extractPlayerName(texts);
@@ -146,8 +176,9 @@ async function _scan() {
         if (line == null) continue;
 
         const kalshiYes = kalshiImpliedProb({
-          yesBid: mk.yes_bid, yesAsk: mk.yes_ask,
-          noBid: mk.no_bid, noAsk: mk.no_ask, lastPrice: mk.last_price,
+          yesBid: _cents(mk, 'yes_bid'), yesAsk: _cents(mk, 'yes_ask'),
+          noBid: _cents(mk, 'no_bid'), noAsk: _cents(mk, 'no_ask'),
+          lastPrice: _cents(mk, 'last_price'),
         });
         if (kalshiYes == null) continue;
 
@@ -170,7 +201,7 @@ async function _scan() {
         rows.push({
           player: player.name, prop: PROP_NAMES[propKey], propKey, line,
           kalshiYes, modelYes, edge, direction, ev,
-          price, volume: mk.volume ?? mk.volume_24h ?? null, ticker: mk.ticker,
+          price, volume: _volume(mk), ticker: mk.ticker,
         });
       }
     }
