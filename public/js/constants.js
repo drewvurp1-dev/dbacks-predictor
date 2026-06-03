@@ -311,6 +311,7 @@ export const FACTOR_WEIGHTS_KEY  = 'factorWeights_v1';
 export const PENDING_KEY         = 'pendingPredictions_v1';
 export const SYNC_KEY_STORAGE    = 'corbetSyncKey';
 export const SYNC_LAST_TS_KEY    = 'corbetLastSync';
+export const LOCK_PIN_KEY        = 'savantLockPin_v1';   // SHA-256 hash of the share-mode edit PIN
 
 // ── Model self-calibration (learns from graded bets in S.betLog) ─────────────
 // calibrate.js fits a per-prop Platt correction on the model's Over probability

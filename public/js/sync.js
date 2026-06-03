@@ -12,6 +12,7 @@ import {
   getGradeLog, getFactorPerf, getFactorWeights, getPending,
   saveGradeLog, saveFactorPerf, saveFactorWeights, savePending,
 } from './bets.js';
+import { getPinHash, setPinHash, _initLockBtn } from './lock.js';
 
 export function _getSyncKey(){ return localStorage.getItem(SYNC_KEY_STORAGE)||''; }
 export function _setSyncKey(k){ localStorage.setItem(SYNC_KEY_STORAGE,k); }
@@ -41,7 +42,7 @@ export async function pushRecord(){
   if(!key)return;
   _setSyncBtnState('sync-btn-push','⟳ Pushing…',true);
   try{
-    const payload={betLog:S.betLog,gradeLog:getGradeLog(),factorPerf:getFactorPerf(),factorWeights:getFactorWeights(),pending:getPending()};
+    const payload={betLog:S.betLog,gradeLog:getGradeLog(),factorPerf:getFactorPerf(),factorWeights:getFactorWeights(),pending:getPending(),lockPin:getPinHash()};
     const res=await api.syncPost(key, payload);
     if(!res.ok){
       if(res.status===401){_setSyncKey('');_setSyncBtnState('sync-btn-push','↑ Push',false);alert('Wrong passphrase — cleared.');return;}
@@ -76,6 +77,10 @@ export async function pullRecord(){
     saveFactorPerf(remote.factorPerf||{});
     saveFactorWeights(remote.factorWeights||{});
     savePending(remote.pending||[]);
+    // Carry the owner's share-mode PIN so a pulled record comes up locked on
+    // this device. Only set when present — never wipe a local PIN from old
+    // records that predate this field.
+    if(remote.lockPin){setPinHash(remote.lockPin);_initLockBtn();}
     localStorage.setItem(SYNC_LAST_TS_KEY,new Date().toISOString());
     document.dispatchEvent(new CustomEvent('bets:changed'));
     document.dispatchEvent(new CustomEvent('grades:changed'));

@@ -61,6 +61,7 @@ import {
 import {
   pushRecord, pullRecord, _initSyncBtnLabel,
 } from './sync.js';
+import { guardAction, toggleLock, _initLockBtn } from './lock.js';
 import { loadCalibration, recalibrate } from './calibrate.js';
 import {
   _pushSubscribe, _pushTest, _initPushBtn, registerSW,
@@ -1988,6 +1989,7 @@ const ACTIONS = {
   'update-weather-time':   () => updateWeatherForTime(),
   'stadium-change':        () => onStadiumChange(),
   'reload':                () => location.reload(),
+  'toggle-lock':           () => toggleLock(),
 
   // ── Sync + push ──────────────────────────────────────────────────────────
   'push-record':    () => pushRecord(),
@@ -2059,10 +2061,23 @@ const ACTIONS = {
   },
 };
 
+// Actions that mutate the Record / Grade & Learn data. While the share-mode
+// lock is engaged, these are blocked at the dispatcher (single chokepoint) and
+// the user is prompted for the PIN. Viewing, syncing (push/pull), and every
+// other action stay open. See lock.js.
+const PROTECTED_ACTIONS = new Set([
+  'clear-record', 'clear-grades', 'add-manual-bet', 'autograde',
+  'toggle-add-bet', 'abf-set-dir', 'abf-set-result',
+  'save-bet', 'set-result', 'delete-bet',
+  'auto-grade', 'edit-grade', 'delete-grade', 'remove-pending',
+]);
+
 function _dispatchAction(e) {
   const el = e.target.closest('[data-action]');
   if (!el) return;
-  const handler = ACTIONS[el.dataset.action];
+  const action = el.dataset.action;
+  if (PROTECTED_ACTIONS.has(action) && !guardAction()) return;
+  const handler = ACTIONS[action];
   if (handler) handler(el, e);
 }
 document.addEventListener('click',  _dispatchAction);
@@ -2081,6 +2096,7 @@ dedupePending(); // remove legacy duplicate Pending Grade cards
 renderRecord();
 renderGradePanel();
 _initSyncBtnLabel(); // "↑ Push" on desktop, "↓ Pull" on mobile
+_initLockBtn(); // reflect share-mode lock state onto <body> + header button
 _initPushBtn();
 registerSW(); // register service worker on every load so it picks up updates
 _loadPitchArsenal(); // warm cache for pitch-mix matchup factor
