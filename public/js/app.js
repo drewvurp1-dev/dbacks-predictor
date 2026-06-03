@@ -72,6 +72,7 @@ import {
   loadTeamMomentum, loadTwoWeekSchedule,
   _renderGameBanner, renderDashboard, togglePlayerCard, setTopBetsSort,
 } from './ui/dashboard.js';
+import { loadKalshiEdges } from './kalshi.js';
 
 function rebuildPlayerSelect(roster){
   const sel=document.getElementById('player-select');
@@ -1694,6 +1695,9 @@ async function loadCorbet(){
     show('corbet-bets');
     renderDashboard();
     autoSaveAtFirstPitch();
+    // Scan Kalshi for mispriced player props vs the model. Self-contained and
+    // non-blocking — failure leaves the CorBET flow untouched.
+    loadKalshiEdges();
   }catch(e){
     hide('corbet-loading');
     setText('corbet-error','⚠ '+e.message);
@@ -2022,6 +2026,7 @@ const ACTIONS = {
   'open-grade':        () => { openModal('panel-grade',       'Grade & Learn');     renderGradePanel(); },
   'open-record':       () => { openModal('panel-record',      'Bet Record');        renderRecord(); },
   'view-corbet':       () => { closeModal(); openModal('panel-corbet', 'CorBET Carroll'); loadCorbet(); },
+  'refresh-kalshi':    () => loadKalshiEdges(),
   'adjust-conditions': () => { closeModal(); openModal('panel-setup', 'Setup & Overrides'); },
   'open-calibration':  () => { openModal('panel-calibration', 'Model Calibration'); renderCalibration(); },
   // open-player-stats stops propagation so the row's outer click handler

@@ -99,6 +99,26 @@ export const oddsEvents = () =>
 export const oddsProps = (eventId, markets) =>
   fetch(`${_ODDS}/events/${eventId}/odds?markets=${markets}&oddsFormat=american&regions=us,us2`);
 
+// ═══════════ KALSHI (PREDICTION MARKET) ══════════════════════════════════════
+// Public market-data surface only (no auth). Returns parsed JSON. Kalshi prices
+// are cents (≈ implied probability of YES) — see betting.js:kalshiImpliedProb.
+const _KALSHI = '/kalshi';
+
+// List sports series (used to discover MLB player-prop series tickers, whose
+// exact names can shift season to season).
+export const kalshiSeriesList = (category = 'Sports') =>
+  _json(`${_KALSHI}/series/?category=${encodeURIComponent(category)}`);
+
+// Open events for a series, with each event's markets nested in the response so
+// player/line/price all arrive in one call.
+export const kalshiEvents = (seriesTicker, status = 'open') =>
+  _json(`${_KALSHI}/events?series_ticker=${encodeURIComponent(seriesTicker)}&status=${status}&with_nested_markets=true`);
+
+// Markets filtered by series (fallback discovery path when events nesting is
+// unavailable for a series).
+export const kalshiMarkets = (seriesTicker, status = 'open') =>
+  _json(`${_KALSHI}/markets?series_ticker=${encodeURIComponent(seriesTicker)}&status=${status}&limit=1000`);
+
 // ═══════════ WEATHER ════════════════════════════════════════════════════════
 
 export const weatherAt = (lat, lon) =>

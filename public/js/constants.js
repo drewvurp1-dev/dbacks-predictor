@@ -59,6 +59,34 @@ export const PROP_NAMES = {
   'batter_runs_scored':'Runs','batter_hits_runs_rbis':'H+R+RBI',
 };
 
+// ── Kalshi prediction-market config ─────────────────────────────────────────
+// Kalshi's MLB player-prop series tickers are not officially documented and can
+// shift season to season, so the scan DISCOVERS them at runtime: it pulls the
+// Sports series list and keeps any series whose title matches a batter-prop
+// keyword below. These prefixes are tried first as a fast path / fallback when
+// the deployment can reach Kalshi but the series list is unavailable.
+// VERIFY against live data on first run — see public/js/kalshi.js.
+export const KALSHI_SERIES_CANDIDATES = [
+  'KXMLBPLAYER', 'KXMLBHITS', 'KXMLBHR', 'KXMLBTB', 'KXMLBRBI',
+  'KXMLBSTRIKEOUTS', 'KXMLBRUNS', 'KXMLBWALKS',
+];
+
+// Maps a Kalshi market/series title to a Snake Savant prop key. Each entry is a
+// list of lowercase keywords; the FIRST entry whose keywords all appear in the
+// title wins. Order matters — more specific props (total bases, H+R+RBI) are
+// listed before the single-word props they contain ("hit", "run").
+export const KALSHI_STAT_MAP = [
+  { propKey: 'batter_hits_runs_rbis', keywords: ['hits', 'runs', 'rbis'] },
+  { propKey: 'batter_total_bases',    keywords: ['total bases'] },
+  { propKey: 'batter_total_bases',    keywords: ['bases'] },
+  { propKey: 'batter_rbis',           keywords: ['rbi'] },
+  { propKey: 'batter_strikeouts',     keywords: ['strikeout'] },
+  { propKey: 'batter_strikeouts',     keywords: ['strike out'] },
+  { propKey: 'batter_walks',          keywords: ['walk'] },
+  { propKey: 'batter_runs_scored',    keywords: ['run'] },
+  { propKey: 'batter_hits',           keywords: ['hit'] },
+];
+
 // ── Umpire database (zone tendency + run-impact estimate) ───────────────────
 export const UMP_DB = {
   'Doug Eddings':    {tendency:'pitcher',adj:-2,note:'Pitcher-friendly zone — calls extra strikes'},

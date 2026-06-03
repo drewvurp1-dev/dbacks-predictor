@@ -298,6 +298,21 @@
     <div id="corbet-books-status" class="hidden" style="margin:0 0 12px;padding:8px 12px;border:1px solid #1e2d3a;border-radius:6px;background:#0c1018;font-family:'Chakra Petch',monospace;font-size:10px;letter-spacing:0.5px;color:#888;"></div>
     <div id="corbet-bets" class="hidden"></div>
     <div id="corbet-no-props" class="corbet-empty hidden">No player props available for this game yet. Props typically appear 1-2 days before game time.</div>
+
+    <!-- ── Kalshi prediction-market edges (no-vig YES prob vs model) ── -->
+    <div id="kalshi-section" style="margin-top:18px;border-top:1px solid #1e2d3a;padding-top:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:16px;">📊</span>
+        <div style="flex:1;">
+          <div style="font-family:'Chakra Petch',monospace;font-weight:700;letter-spacing:1px;color:#dfe7ef;">KALSHI EDGES</div>
+          <div style="font-size:10px;color:#7d8a98;font-family:'Chakra Petch',monospace;">No-vig prediction-market YES prob vs model · Kalshi exchange</div>
+        </div>
+        <button data-action="refresh-kalshi" style="background:none;border:1px solid #1e2d3a;color:#5bc0de;font-family:'Chakra Petch',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;">⟳ Scan</button>
+      </div>
+      <div id="kalshi-loading" class="corbet-loading hidden">⟳ Scanning Kalshi markets…</div>
+      <div id="kalshi-bets" class="hidden"></div>
+      <div id="kalshi-empty" class="corbet-empty hidden">Run CorBET first — Kalshi edges compare against the same model probabilities.</div>
+    </div>
   </div>
 
   <!-- ═══════════════════ RECORD ═══════════════════ -->

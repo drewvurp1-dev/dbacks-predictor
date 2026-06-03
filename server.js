@@ -12,6 +12,7 @@ app.use('/odds',       require('./routes/odds'));
 app.use('/weather',    require('./routes/weather'));
 app.use('/savant',     require('./routes/savant'));
 app.use('/fangraphs',  require('./routes/fangraphs'));
+app.use('/kalshi',     require('./routes/kalshi'));
 app.use('/pitch-arsenal', require('./routes/arsenal'));
 app.use('/flights',    require('./routes/flights'));
 app.use('/api/sync',   require('./routes/sync'));

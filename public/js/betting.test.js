@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   impliedProb, americanToDecimal,
   _medianImpliedProb, devig, bookAbbrev,
+  kalshiImpliedProb, kalshiToAmerican,
 } from './betting.js';
 
 // ── impliedProb ─────────────────────────────────────────────────────────────
@@ -116,4 +117,50 @@ test('bookAbbrev — known book returns abbreviation', () => {
 
 test('bookAbbrev — unknown book returns the input unchanged', () => {
   assert.equal(bookAbbrev('SomeNewBook'), 'SomeNewBook');
+});
+
+// ── kalshiImpliedProb ─────────────────────────────────────────────────────────
+test('kalshiImpliedProb — null / empty returns null', () => {
+  assert.equal(kalshiImpliedProb(null), null);
+  assert.equal(kalshiImpliedProb({}), null);
+});
+
+test('kalshiImpliedProb — yes bid/ask midpoint', () => {
+  assert.equal(kalshiImpliedProb({ yesBid: 40, yesAsk: 44 }), 42);
+});
+
+test('kalshiImpliedProb — derives yes side from no quotes', () => {
+  // no_bid 55 → yes_ask 45 ; no_ask 60 → yes_bid 40 ; mid = 42.5
+  assert.equal(kalshiImpliedProb({ noBid: 55, noAsk: 60 }), 42.5);
+});
+
+test('kalshiImpliedProb — combines yes and no quotes into tightest spread', () => {
+  // bestBid = max(40, 100-65=35) = 40 ; bestAsk = min(46, 100-58=42) = 42 ; mid 41
+  assert.equal(kalshiImpliedProb({ yesBid: 40, yesAsk: 46, noBid: 58, noAsk: 65 }), 41);
+});
+
+test('kalshiImpliedProb — falls back to last price', () => {
+  assert.equal(kalshiImpliedProb({ lastPrice: 37 }), 37);
+});
+
+test('kalshiImpliedProb — clamps to 0–100', () => {
+  assert.equal(kalshiImpliedProb({ yesBid: 99, yesAsk: 110 }), 100);
+});
+
+// ── kalshiToAmerican ──────────────────────────────────────────────────────────
+test('kalshiToAmerican — 50¢ ≈ +100', () => {
+  assert.equal(kalshiToAmerican(50), 100);
+});
+
+test('kalshiToAmerican — favorite (75¢) → −300', () => {
+  assert.equal(kalshiToAmerican(75), -300);
+});
+
+test('kalshiToAmerican — underdog (25¢) → +300', () => {
+  assert.equal(kalshiToAmerican(25), 300);
+});
+
+test('kalshiToAmerican — degenerate (0 / 100) returns null', () => {
+  assert.equal(kalshiToAmerican(0), null);
+  assert.equal(kalshiToAmerican(100), null);
 });
