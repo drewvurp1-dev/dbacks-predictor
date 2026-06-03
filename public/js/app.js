@@ -1517,7 +1517,6 @@ async function loadCorbet(){
     }
 
     // Build per-player market maps in one pass through bookmaker data.
-    // The fetch only requests DK/MGM/CZR/365/FAN, so every returned book is implicitly trusted.
     // Bad-price defense is the lopsided-line gate in the line picker (generateCorbetBets).
     // Filter to the user's allowed book set before any processing.
     const _allowedBookmakers=(propData.bookmakers||[]).filter(b=>ALLOWED_BOOKS.has(b.title));
