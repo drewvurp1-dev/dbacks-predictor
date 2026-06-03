@@ -97,6 +97,31 @@ export const KALSHI_STAT_MAP = [
   { propKey: 'batter_hits',           keywords: ['hit'] },
 ];
 
+// Only these per-game thresholds are surfaced for each prop. Kalshi lists ladders
+// (1+/2+/3+/4+ hits etc.); we keep the lines worth betting and drop the rest as
+// noise. This also hard-stops any season-long / league-leader market that slips
+// past discovery — those carry nonsensical lines (a "200+ season hits" market,
+// or the game year leaking in as 2025.5), none of which are in these sets.
+export const KALSHI_ALLOWED_LINES = {
+  batter_hits:           [0.5],
+  batter_runs_scored:    [0.5],
+  batter_rbis:           [0.5],
+  batter_strikeouts:     [0.5],
+  batter_walks:          [0.5],
+  batter_home_runs:      [0.5],
+  batter_total_bases:    [1.5, 2.5],
+  batter_hits_runs_rbis: [1.5, 2.5],
+};
+
+// Series tickers to skip during runtime discovery. The Sports series list
+// contains many baseball series whose titles keyword-match a prop but are NOT
+// per-game player props: league-leader (KXLEADERMLB*), season totals
+// (KXMLBSEASON*), college (KXNCAA*), international (KXWBC*), and run-in-first-
+// inning (…RFI) markets. Their markets price season-long or team outcomes, which
+// the per-game model mis-scores into huge phantom edges. The authoritative
+// per-game series live in KALSHI_SERIES_CANDIDATES above.
+export const KALSHI_SERIES_EXCLUDE = /LEADER|SEASON|NCAA|WBC|RFI/i;
+
 // ── Umpire database (zone tendency + run-impact estimate) ───────────────────
 export const UMP_DB = {
   'Doug Eddings':    {tendency:'pitcher',adj:-2,note:'Pitcher-friendly zone — calls extra strikes'},
