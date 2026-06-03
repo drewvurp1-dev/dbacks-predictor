@@ -72,7 +72,7 @@ import {
   loadTeamMomentum, loadTwoWeekSchedule,
   _renderGameBanner, renderDashboard, togglePlayerCard, setTopBetsSort,
 } from './ui/dashboard.js';
-import { loadKalshiEdges } from './kalshi.js';
+import { loadKalshiEdges, renderKalshiEdges } from './kalshi.js';
 
 function rebuildPlayerSelect(roster){
   const sel=document.getElementById('player-select');
@@ -2035,7 +2035,7 @@ const ACTIONS = {
 
   // ── Dynamic actions (inside app.js innerHTML strings) ────────────────────
   'select-pitcher':      (el) => selectPitcher(el.dataset.pitcherId, el.dataset.pitcherName),
-  'render-corbet-bets':  () => renderCorbetBets(),
+  'render-corbet-bets':  () => { renderCorbetBets(); renderKalshiEdges(); },
   'toggle-phantom':      (el) => togglePhantom(el.dataset.bk, parseFloat(el.dataset.line), el.checked),
   'save-bet':            (el) => saveBet(el.dataset.bk, el),
   'open-player-corbet':  (el) => openPlayerCorbet(el.dataset.playerId),
