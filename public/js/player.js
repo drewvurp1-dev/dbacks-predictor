@@ -247,10 +247,14 @@ export function _pitcherRunEnvMult() {
 // blind to rather than double-counting the one it already has.
 //
 // Returns a multiplier on the batter's offensive event rates: <1 vs a good arm,
-// >1 vs a weak one. League-average DIPS ~4.00 → 1.0. Slope 0.085/run, clamped to
-// [0.82, 1.18] so one extreme number can't run away with the prop. Gated behind
-// ip>=10 (the advanced metrics are null below that). Bullpen games blend 40%
-// toward neutral since the listed arm isn't representative of who hitters face.
+// >1 vs a weak one. League-average DIPS ~4.00 → 1.0. Slope 0.15/run (was 0.10
+// — too flat to register elite seasons; an Ohtani 3.33 SIERA produced only a 7%
+// discount under the old slope when his actual line was suppressing offense by
+// 25–30%). Floor 0.60 (was 0.76 — same throttling problem as _pitcherRunEnvMult:
+// genuinely otherworldly arms couldn't express their suppression). Sub-1.30
+// SIERAs hit the floor; above that the slope governs. Gated behind ip>=8
+// (advanced metrics are null below that). Bullpen games blend 40% toward
+// neutral since the listed arm isn't representative of who hitters face.
 export function _pitcherStuffMult() {
   const adv = S.pitcher?.advanced;
   const st  = S.pitcher?.st;
@@ -259,9 +263,9 @@ export function _pitcherStuffMult() {
   if (ip < 8) return 1.0;
   const dips = adv.siera ?? adv.xfip ?? adv.fip;
   if (dips == null || !isFinite(dips)) return 1.0;
-  let mult = 1 + (dips - 4.00) * 0.10;
+  let mult = 1 + (dips - 4.00) * 0.15;
   if (S.pitcher?.bullpenGame) mult = mult * 0.4 + 1.0 * 0.6;
-  return Math.max(0.76, Math.min(1.16, mult));
+  return Math.max(0.60, Math.min(1.16, mult));
 }
 
 // ── Distribution helpers (binomial + total-bases convolution) ───────────────

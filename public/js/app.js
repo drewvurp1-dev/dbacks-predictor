@@ -1317,6 +1317,26 @@ function generateCorbetBets(score,factors,rawMarketMap){
       }
     }
 
+    // Elite-pitcher OVER guard. The model's structural pitcher hooks (log-5,
+    // _pitcherStuffMult, _pitcherRunEnvMult) all shrink toward league and
+    // clamp the discount they can apply, so a Cy Young–caliber arm (SIERA
+    // ≤3.50 ≈ top-15 starter tier) still leaks 5–10pp of OVER edge on every
+    // counting-stat prop even when the market correctly prices the matchup.
+    // Codify "don't take overs against aces unless the edge survives a
+    // downgrade" — strong→moderate→small→none. Mirrors the channelConflict
+    // pattern. Uses SIERA preferred, then xFIP, then FIP — same precedence
+    // _pitcherStuffMult uses. Bullpen games are exempt since the listed arm
+    // isn't representative of who the hitters face.
+    let eliteOverGuard=false;
+    if(direction==='Over'&&edgeStrength!=='none'&&!S.pitcher?.bullpenGame){
+      const adv=S.pitcher?.advanced;
+      const dips=adv?.siera??adv?.xfip??adv?.fip;
+      if(dips!=null&&isFinite(dips)&&dips<=3.50){
+        edgeStrength=edgeStrength==='strong'?'moderate':edgeStrength==='moderate'?'small':'none';
+        eliteOverGuard=true;
+      }
+    }
+
     // Market-confidence flag based on raw imbalance at the selected line. Heavily
     // asymmetric markets (sideShare far from 50/50) are harder to devig accurately —
     // we can't tell if the imbalance is "real" matchup signal or a book-shaded line.
@@ -1328,7 +1348,7 @@ function generateCorbetBets(score,factors,rawMarketMap){
 
     results.push({
       prop:PROP_NAMES[propKey],propKey,line,direction,
-      delta,absDelta,ev,edgeStrength,marketConfidence,channelConflict,
+      delta,absDelta,ev,edgeStrength,marketConfidence,channelConflict,eliteOverGuard,
       marketOverProb:dv.overProb,marketUnderProb:dv.underProb,
       modelProb,
       // Calibration breadcrumbs — modelProbRaw is the pre-Platt probability,
