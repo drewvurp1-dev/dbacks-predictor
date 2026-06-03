@@ -223,16 +223,17 @@ function _evClass(ev) {
 }
 const _COLORS = { strong: '#2ecc71', moderate: '#5bc0de', small: '#f39c12', none: '#666' };
 
-function _rowHtml(r) {
+function _rowHtml(r, showPlayer = true) {
   const cls = _evClass(r.ev);
   const edgeTxt = r.edge != null ? (r.edge >= 0 ? '+' : '') + r.edge.toFixed(1) + ' pp' : '—';
   const evTxt = r.ev != null ? (r.ev >= 0 ? '+' : '') + (r.ev * 100).toFixed(1) + '%' : '—';
   const modelTxt = r.modelYes != null ? r.modelYes.toFixed(0) + '%' : 'n/a';
   const priceTxt = r.price != null ? (r.price > 0 ? '+' : '') + r.price : '—';
   const pick = r.direction ? `${r.direction} ${r.line}` : `O/U ${r.line}`;
+  const heading = showPlayer ? `${r.player} · ${r.prop}` : r.prop;
   return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #1e2d3a;border-left:3px solid ${_COLORS[cls]};border-radius:6px;background:#0c1018;margin-bottom:6px;font-family:'Chakra Petch',monospace;font-size:12px;">
     <div style="flex:1;min-width:0;">
-      <div style="color:#dfe7ef;font-weight:600;">${r.player} · ${r.prop}</div>
+      <div style="color:#dfe7ef;font-weight:600;">${heading}</div>
       <div style="color:#7d8a98;font-size:10px;">${pick} @ Kalshi ${priceTxt}${r.volume != null ? ' · vol ' + r.volume : ''}</div>
     </div>
     <div style="text-align:right;"><div style="color:#9fb0c0;font-size:9px;">KALSHI</div><div style="color:#dfe7ef;">${r.kalshiYes.toFixed(0)}%</div></div>
@@ -242,9 +243,56 @@ function _rowHtml(r) {
   </div>`;
 }
 
+// Which players the user has toggled on in the CorBET filter. Kalshi mirrors
+// that filter so each player's card shows only their own markets — a player not
+// in the filter at all (edge case) is shown rather than hidden.
+function _visiblePlayer() {
+  const filterEl = document.getElementById('corbet-player-filter');
+  const labels = filterEl ? Array.from(filterEl.querySelectorAll('label')) : [];
+  const known = new Set(labels.map(l => l.dataset.name));
+  const checked = new Set(labels.filter(l => l.querySelector('input')?.checked).map(l => l.dataset.name));
+  return name => !known.has(name) || checked.has(name);
+}
+
+// Render the cached scan (S.kalshiRows) grouped per player, honoring the CorBET
+// player filter. Players are ordered by their strongest edge (rows arrive
+// EV-sorted, so first-seen order is best-first). Pure DOM — no network — so the
+// filter checkboxes can re-render instantly without re-scanning.
+export function renderKalshiEdges() {
+  const bets = document.getElementById('kalshi-bets');
+  const empty = document.getElementById('kalshi-empty');
+  if (!bets) return;
+  const rows = S.kalshiRows || [];
+  if (!rows.length) {
+    bets.innerHTML = ''; hide('kalshi-bets');
+    if (empty) { empty.textContent = 'No Kalshi MLB player-prop markets matched D-backs players (coverage is sparse, or the market isn’t up yet).'; show('kalshi-empty'); }
+    return;
+  }
+  const isVisible = _visiblePlayer();
+  const groups = new Map(); // player name → rows, insertion order = best EV first
+  for (const r of rows) {
+    if (!isVisible(r.player)) continue;
+    if (!groups.has(r.player)) groups.set(r.player, []);
+    groups.get(r.player).push(r);
+  }
+  if (!groups.size) {
+    bets.innerHTML = ''; hide('kalshi-bets');
+    if (empty) { empty.textContent = 'No Kalshi markets for the selected players — toggle more players above.'; show('kalshi-empty'); }
+    return;
+  }
+  hide('kalshi-empty');
+  bets.innerHTML = [...groups].map(([player, prs]) =>
+    `<div style="margin-bottom:18px;">
+      <div class="dash-player-header">${player}</div>
+      ${prs.map(r => _rowHtml(r, false)).join('')}
+    </div>`).join('');
+  show('kalshi-bets');
+}
+
 // ── Public entry ─────────────────────────────────────────────────────────────
-// Scans Kalshi and renders the edge panel. Safe to call repeatedly; a no-op-on-
-// failure (logs + empty state) so it never blocks the CorBET flow.
+// Scans Kalshi, caches the rows on S, and renders the per-player panel. Safe to
+// call repeatedly; a no-op-on-failure (logs + empty state) so it never blocks
+// the CorBET flow.
 export async function loadKalshiEdges() {
   const bets = document.getElementById('kalshi-bets');
   const empty = document.getElementById('kalshi-empty');
@@ -253,17 +301,13 @@ export async function loadKalshiEdges() {
   try {
     const rows = await _scan();
     hide('kalshi-loading');
-    if (!rows.length) {
-      bets.innerHTML = '';
-      if (empty) { empty.textContent = 'No Kalshi MLB player-prop markets matched D-backs players (coverage is sparse, or the market isn’t up yet).'; show('kalshi-empty'); }
-      return;
-    }
+    S.kalshiRows = rows;
     const withEdge = rows.filter(r => r.ev != null);
-    bets.innerHTML = rows.map(_rowHtml).join('');
-    show('kalshi-bets');
+    renderKalshiEdges();
     log('[kalshi] rendered', rows.length, 'markets,', withEdge.length, 'with model edge');
   } catch (e) {
     hide('kalshi-loading');
+    S.kalshiRows = [];
     if (empty) { empty.textContent = '⚠ Kalshi scan failed: ' + e.message; show('kalshi-empty'); }
     log('[kalshi] scan error:', e.message);
   }
