@@ -345,10 +345,10 @@ test('_pitcherRunEnvMult — elite arm suppresses (<1), BP arm inflates (>1)', (
   assert.ok(me < mb, 'elite must be below BP arm');
 });
 
-test('_pitcherRunEnvMult — clamped to [0.80, 1.25]', () => {
+test('_pitcherRunEnvMult — clamped to [0.65, 1.25]', () => {
   // Absurdly stingy line — every batter retired, no baserunners.
   S.pitcher = { st: { battersFaced: 300, hits: 10, baseOnBalls: 2, atBats: 290, homeRuns: 0, doubles: 1, triples: 0 } };
-  assert.ok(_pitcherRunEnvMult() >= 0.80 - 1e-9);
+  assert.ok(_pitcherRunEnvMult() >= 0.65 - 1e-9);
   // Absurdly hittable line.
   S.pitcher = { st: { battersFaced: 300, hits: 150, baseOnBalls: 60, atBats: 240, homeRuns: 40, doubles: 40, triples: 5 } };
   assert.ok(_pitcherRunEnvMult() <= 1.25 + 1e-9);

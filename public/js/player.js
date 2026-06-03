@@ -222,7 +222,14 @@ export function _pitcherRunEnvMult() {
   const slgA = _shrunkRate(singles + 2 * dbl + 3 * trp + 4 * hr, ab || 1, 0.400, 120);
   let mult = (obA / 0.315) * 0.6 + (slgA / 0.400) * 0.4;
   if (S.pitcher?.bullpenGame) mult = mult * 0.4 + 1.0 * 0.6;
-  return Math.max(0.80, Math.min(1.25, mult));
+  // Floor lowered from 0.80 → 0.65 so genuinely elite arms (sub-0.220 OBA,
+  // sub-0.300 SLG-against) can express the full ~35% suppression their line
+  // implies. The 0.80 cap was throttling RBI / Runs / H+R+RBI discounts to
+  // 20% even for Cy Young–caliber pitchers, producing OVER picks the market
+  // (correctly) wasn't paying. _shrunkRate(prior_n=120) already protects
+  // against small-sample volatility, so the floor doesn't need to be this
+  // conservative.
+  return Math.max(0.65, Math.min(1.25, mult));
 }
 
 // ── Opposing-pitcher "stuff" multiplier (skill-based, results-independent) ──
