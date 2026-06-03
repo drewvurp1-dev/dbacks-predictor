@@ -36,7 +36,6 @@ export const CORBET_ROSTER = [
 export const BOOK_ABBREVS = {
   'DraftKings':'DK',
   'BetMGM':'MGM',
-  'BetRivers':'BR',
   'Hard Rock Bet':'HR',
   'Hard Rock Bet (OH)':'HR',
   'theScore Bet':'ESPN',
