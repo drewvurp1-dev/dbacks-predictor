@@ -404,9 +404,9 @@ test('_pitcherStuffMult — prefers SIERA over xFIP over FIP', () => {
     `all three should resolve to the same 2.8 DIPS value: ${bySiera}/${byXfip}/${byFip}`);
 });
 
-test('_pitcherStuffMult — clamped to [0.76, 1.16]', () => {
+test('_pitcherStuffMult — clamped to [0.60, 1.16]', () => {
   S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: 1.0, xfip: 1.0, fip: 1.0 } };
-  assert.ok(_pitcherStuffMult() >= 0.76 - 1e-9);
+  assert.ok(_pitcherStuffMult() >= 0.60 - 1e-9);
   S.pitcher = { st: { inningsPitched: '70.0' }, advanced: { siera: 9.0, xfip: 9.0, fip: 9.0 } };
   assert.ok(_pitcherStuffMult() <= 1.16 + 1e-9);
 });
