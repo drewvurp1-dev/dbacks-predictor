@@ -267,22 +267,24 @@ test('_ttopBonus — unknown order returns 0', () => {
   assert.equal(_ttopBonus(), 0);
 });
 
-test('_ttopBonus — top of order (1-3) gets +2', () => {
+// Centered on the lineup average ({+1, 0, −1}) so it carries no standing OVER
+// offset — see _ttopBonus. Top > middle > bottom ordering is preserved.
+test('_ttopBonus — top of order (1-3) gets +1', () => {
   S.pitcher = { bullpenGame: false };
-  S.currentOrder = 1; assert.equal(_ttopBonus(), 2);
-  S.currentOrder = 3; assert.equal(_ttopBonus(), 2);
+  S.currentOrder = 1; assert.equal(_ttopBonus(), 1);
+  S.currentOrder = 3; assert.equal(_ttopBonus(), 1);
 });
 
-test('_ttopBonus — middle order (4-6) gets +1', () => {
+test('_ttopBonus — middle order (4-6) is neutral (0)', () => {
   S.pitcher = { bullpenGame: false };
-  S.currentOrder = 4; assert.equal(_ttopBonus(), 1);
-  S.currentOrder = 6; assert.equal(_ttopBonus(), 1);
+  S.currentOrder = 4; assert.equal(_ttopBonus(), 0);
+  S.currentOrder = 6; assert.equal(_ttopBonus(), 0);
 });
 
-test('_ttopBonus — bottom of order (7+) gets 0', () => {
+test('_ttopBonus — bottom of order (7+) gets −1', () => {
   S.pitcher = { bullpenGame: false };
-  S.currentOrder = 7; assert.equal(_ttopBonus(), 0);
-  S.currentOrder = 9; assert.equal(_ttopBonus(), 0);
+  S.currentOrder = 7; assert.equal(_ttopBonus(), -1);
+  S.currentOrder = 9; assert.equal(_ttopBonus(), -1);
 });
 
 // ── _handSplit ──────────────────────────────────────────────────────────────
