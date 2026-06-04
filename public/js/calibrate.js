@@ -9,7 +9,12 @@
 //      a/b are fit by regularized logistic regression, the L2 prior pulling
 //      (a,b) toward identity (1,0) so low-sample props barely move. This is
 //      the #2/#4 work — measure calibration error and feed it back into the
-//      live probability.
+//      live probability. Because the training set is the user's own placed
+//      bets — a thin, self-selected sample that can encode a lucky Over streak
+//      as real signal — three guardrails keep it honest: a high min sample
+//      before any fit (MIN_CAL_SAMPLE / MIN_GLOBAL_CAL_SAMPLE), a strong L2
+//      prior (CAL_PRIOR_LAMBDA), and a hard cap on the per-call correction
+//      magnitude (MAX_CAL_SHIFT_PP) applied in applyCalibration.
 //
 //   2. Blend weight (per prop) re-tunes the score↔rate mix inside
 //      modelProbability (#1). modelProbability records the score-only and
@@ -27,7 +32,7 @@
 import {
   CALIBRATION_KEY, BLEND_WEIGHTS_KEY, DEFAULT_BLEND_W,
   MIN_CAL_SAMPLE, MIN_GLOBAL_CAL_SAMPLE, MIN_BLEND_SAMPLE,
-  CAL_PRIOR_LAMBDA, BLEND_PRIOR_N,
+  CAL_PRIOR_LAMBDA, BLEND_PRIOR_N, MAX_CAL_SHIFT_PP,
 } from './constants.js';
 
 // ── In-memory caches (the only thing the hot path reads) ─────────────────────
@@ -48,7 +53,13 @@ export function applyCalibration(propKey, pPct) {
   const params = _calCache[propKey] || _calCache._global;
   if (!params) return pPct;
   const z = params.a * _logit(_clamp01(pPct / 100)) + params.b;
-  return _sigmoid(z) * 100;
+  const cal = _sigmoid(z) * 100;
+  // Cap the correction magnitude. A Platt fit from a thin, self-selected bet
+  // sample can otherwise swing a probability far past what the data warrants
+  // (e.g. inflating a true ~24% walk Over to ~40% off a handful of lucky Over
+  // wins). Limiting |cal − raw| to MAX_CAL_SHIFT_PP keeps calibration in its lane
+  // as a refinement on top of the model rather than an override of it.
+  return Math.max(pPct - MAX_CAL_SHIFT_PP, Math.min(pPct + MAX_CAL_SHIFT_PP, cal));
 }
 
 // Score-component weight for the score↔rate blend in modelProbability.

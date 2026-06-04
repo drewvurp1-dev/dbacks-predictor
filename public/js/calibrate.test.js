@@ -4,7 +4,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_BLEND_W } from './constants.js';
+import { DEFAULT_BLEND_W, MAX_CAL_SHIFT_PP } from './constants.js';
 import {
   applyCalibration, getBlendWeight, fitPlatt, fitBlend,
   recalibrate, getCalibrationParams,
@@ -96,20 +96,43 @@ test('fitBlend — legacy bets with no adjOffset are treated as zero offset', ()
 
 // ── End-to-end: recalibrate then apply ───────────────────────────────────────
 test('recalibrate — corrects an over-stated Over probability and stays active', () => {
-  // 30 Over bets on Hits, model said 60% Over but Over only hit ~40% of the time.
+  // 50 Over bets on Hits (≥ MIN_CAL_SAMPLE), model said 60% Over but Over only
+  // hit ~40% of the time. The correction is pulled down toward observed but the
+  // ±MAX_CAL_SHIFT_PP cap stops it short of the raw observed frequency.
   const betLog = [];
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 50; i++) {
     betLog.push({
       propKey: 'batter_hits', direction: 'Over',
       modelProbRaw: 60, modelProb: 60,
-      result: i < 12 ? 'win' : 'loss', // 12/30 ≈ 40% Over-hit rate
+      result: i < 20 ? 'win' : 'loss', // 20/50 = 40% Over-hit rate
     });
   }
   recalibrate(betLog);
-  assert.ok(getCalibrationParams('batter_hits'), 'prop calibration should be active at n=30');
+  assert.ok(getCalibrationParams('batter_hits'), 'prop calibration should be active at n=50');
   const corrected = applyCalibration('batter_hits', 60);
   assert.ok(corrected < 60, `corrected=${corrected} should drop below the over-stated 60`);
-  assert.ok(corrected > 30, `corrected=${corrected} should not overshoot past observed ~40%`);
+  assert.ok(corrected >= 60 - MAX_CAL_SHIFT_PP - 1e-6,
+    `corrected=${corrected} should not move more than the ±${MAX_CAL_SHIFT_PP}pp cap below raw`);
+});
+
+test('applyCalibration — caps a runaway upward correction at ±MAX_CAL_SHIFT_PP', () => {
+  // The failure mode behind 40% walk Overs: a self-selected sample where Over
+  // cashed far more than the model said. 60 walk Over bets at raw 24% that hit
+  // 60% would, uncapped, push the live prob toward ~45%. The cap holds it ≤ 32%.
+  const betLog = [];
+  for (let i = 0; i < 60; i++) {
+    betLog.push({
+      propKey: 'batter_walks', direction: 'Over',
+      modelProbRaw: 24, modelProb: 24,
+      result: i < 36 ? 'win' : 'loss', // 36/60 = 60% Over-hit rate
+    });
+  }
+  recalibrate(betLog);
+  assert.ok(getCalibrationParams('batter_walks'), 'prop calibration should be active at n=60');
+  const corrected = applyCalibration('batter_walks', 24);
+  assert.ok(corrected > 24, `corrected=${corrected} should move up toward the observed Over rate`);
+  assert.ok(corrected <= 24 + MAX_CAL_SHIFT_PP + 1e-6,
+    `corrected=${corrected} must not exceed raw + ${MAX_CAL_SHIFT_PP}pp cap`);
 });
 
 test('recalibrate — below MIN_CAL_SAMPLE leaves the prop uncorrected', () => {

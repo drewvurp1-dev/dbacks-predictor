@@ -317,11 +317,19 @@ export const LOCK_PIN_KEY        = 'savantLockPin_v1';   // SHA-256 hash of the 
 // and re-tunes the score↔rate blend weight, both from graded bet outcomes. The
 // fitted params persist here and auto-apply to live predictions once enough
 // graded samples accumulate (shrunk toward identity / default below threshold).
-export const CALIBRATION_KEY      = 'calibration_v1';   // { propKey:{a,b,n}, _global:{a,b,n} }
+// v2: key bumped to discard pre-log-5 Platt params. The old fits were trained on
+// the previous walk-blend's (higher) raw probabilities AND on a thin, self-selected
+// set of placed bets, so a few lucky Over wins could teach the model a blanket
+// "Overs hit more than I say" shift — inflating e.g. a true ~24% walk Over to ~40%.
+// Bumping forces a clean refit under the hardened thresholds + correction cap below.
+export const CALIBRATION_KEY      = 'calibration_v2';   // { propKey:{a,b,n}, _global:{a,b,n} }
 export const BLEND_WEIGHTS_KEY    = 'blendWeights_v1';  // { propKey: w }
 export const DEFAULT_BLEND_W       = 0.25;  // score-component weight; rate model gets (1 − W)
-export const MIN_CAL_SAMPLE        = 25;    // settled bets for a prop before its own Platt fit
-export const MIN_GLOBAL_CAL_SAMPLE = 40;    // pooled settled bets before the global Platt fallback
+export const MIN_CAL_SAMPLE        = 50;    // settled bets for a prop before its own Platt fit (was 25)
+export const MIN_GLOBAL_CAL_SAMPLE = 75;    // pooled settled bets before the global Platt fallback (was 40)
 export const MIN_BLEND_SAMPLE      = 40;    // instrumented+settled bets before re-tuning the blend
-export const CAL_PRIOR_LAMBDA      = 8;     // L2 pull of Platt (a,b) toward identity (1,0)
+export const CAL_PRIOR_LAMBDA      = 20;    // L2 pull of Platt (a,b) toward identity (1,0) — was 8; stronger
+                                            // shrinkage so a small/biased sample barely moves the probability
 export const BLEND_PRIOR_N         = 60;    // pseudo-count pulling a fitted blend toward DEFAULT_BLEND_W
+export const MAX_CAL_SHIFT_PP      = 8;     // hard cap on |calibrated − raw| (pp): calibration refines, never
+                                            // overrides the model — backstops any runaway thin-sample fit
