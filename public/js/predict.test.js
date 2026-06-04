@@ -8,6 +8,7 @@ import {
   gaussianRandom, _slumpPenalty, _mcVariance, _rateUncertaintyPp,
   _pitchMatchupReason, _pitchMatchupFactor, modelProbability, monteCarloConfidence,
 } from './predict.js';
+import { _gamePAs } from './player.js';
 
 // ── gaussianRandom ──────────────────────────────────────────────────────────
 test('gaussianRandom — sample mean approaches target over 5000 draws', () => {
@@ -328,6 +329,25 @@ test('modelProbability — output in [0, 100] for every prop/line/score combo', 
       }
     }
   }
+});
+
+test('modelProbability — Walks uses log-5 (both-below-average matchup is sub-additive)', () => {
+  setupAverageBatter();
+  // Low-walk hitter: 4% BB/PA over a large, stable sample (24 BB / 600 PA).
+  S.seasonStat = { ...S.seasonStat, plateAppearances: 600, baseOnBalls: 24 };
+  // Low-walk pitcher: 5% BB/BF over a large sample (30 BB / 600 BF).
+  S.pitcher = { ...S.pitcher, st: { ...S.pitcher.st, battersFaced: 600, baseOnBalls: 30 } };
+  S.splits = null; // no hand split → uses the overall season rate
+
+  const comp = {};
+  modelProbability('batter_walks', 0.5, 50, comp);
+  // comp.rateBase is P(≥1 walk) × 100 over gamePAs trials — back out the per-PA rate.
+  const perPA = 1 - Math.pow(1 - comp.rateBase / 100, 1 / _gamePAs());
+  // log-5 of two below-league rates must land BELOW the lower raw input (4%). An
+  // arithmetic 60/40 mean would sit between 4% and 5% (~4.7%) and fail this — the
+  // exact regression that produced phantom walk Overs on low-discipline hitters.
+  assert.ok(perPA < 0.04,
+    `combined walk rate ${(perPA * 100).toFixed(2)}%/PA should be < 4% (sub-additive log-5)`);
 });
 
 test('modelProbability — Hits 0.5 monotonically increases in score (avg batter)', () => {
