@@ -17,7 +17,7 @@ import {
   modelProbability, monteCarloConfidence,
 } from './predict.js';
 import {
-  impliedProb, americanToDecimal,
+  impliedProb,
   _medianImpliedProb, devig,
 } from './betting.js';
 import {
@@ -1282,9 +1282,18 @@ function generateCorbetBets(score,factors,rawMarketMap){
     const direction=delta>0?'Over':'Under';
     const bestOdds=delta>0?overBest:underBest;
 
-    // EV = winProb × (decimal - 1) - (1 - winProb); normalizes for position on probability spectrum
+    // EV = winProb × (decimal - 1) - (1 - winProb), priced at the TYPICAL (median
+    // across books) price for the chosen side — NOT the single best outlier.
+    // Plus-money props (RBI / Runs Over) have wide cross-book dispersion, so
+    // best-price EV systematically rewards an optimistic outlier and floats those
+    // bets to the top of the EV ranking even when the typical price is a losing
+    // number — the main reason RBI Overs crowd the top-5. Ranking on the median
+    // price requires the model to beat what you'll actually get at a normal book.
+    // bestOdds is still surfaced (display/save) so the user knows where to shop.
     let ev=null;
-    const _dec=bestOdds?.price!=null?americanToDecimal(bestOdds.price):null;
+    const _chosenPrices=direction==='Under'?calcUnder:calcOver;
+    const _medImplied=_medianImpliedProb(_chosenPrices);   // % including vig
+    const _dec=(_medImplied!=null&&_medImplied>0)?100/_medImplied:null;
     if(_dec){
       const winProb=direction==='Under'?(100-modelProb)/100:modelProb/100;
       ev=winProb*(_dec-1)-(1-winProb);

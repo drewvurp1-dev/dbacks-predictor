@@ -8,7 +8,7 @@ import { _parkFactors } from './utils.js';
 import {
   _gamePAs, _ttopBonus, _hrrOverPct, _pitcherRunEnvMult, _pitcherStuffMult,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
-  _handSplit, _negBinomTailGT,
+  _handSplit, _negBinomTailGT, _seasonPAperG,
 } from './player.js';
 
 // Negative-binomial dispersion (r) for the clumpy per-game run/RBI counts.
@@ -535,11 +535,13 @@ export function modelProbability(propKey,line,score,_components){
   }
   else if(propKey==='batter_rbis'){
     // Poisson on shrunken RBI/G is the principled signal. Scale the per-game
-    // rate by today's expected PAs vs league average — high-PA games produce
-    // proportionally more RBI opportunities — AND by the opposing pitcher's run
-    // environment (_pitcherRunEnvMult), without which this branch was nearly
-    // pitcher-blind: facing an ace barely moved the projection. League avg RBI/G ~0.43.
-    const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/4.2)*_pitcherRunEnvMult();
+    // rate by today's expected PAs vs the player's OWN season PA/G (so batting
+    // his usual spot is neutral and only a real promotion/demotion moves it —
+    // the old /4.2 double-counted PA volume since RBI/G is already PA-loaded) AND
+    // by the opposing pitcher's run environment (_pitcherRunEnvMult), without
+    // which this branch was nearly pitcher-blind: facing an ace barely moved the
+    // projection. League avg RBI/G ~0.43.
+    const rbiPG=_shrunkRate(parseInt(ss?.rbi)||0,parseInt(ss?.gamesPlayed)||0,0.43,60)*(gamePAs/_seasonPAperG(ss))*_pitcherRunEnvMult();
     // Negative binomial (not Poisson) on the per-game RBI rate — RBIs are clumpy
     // and zero-inflated, so a Poisson at the season mean overstates P(≥1) by
     // ~5pp (λ=0.43 → Poisson 34.9% vs empirical ~30%). NB with the same mean
@@ -568,7 +570,7 @@ export function modelProbability(propKey,line,score,_components){
     // scaled by the opposing pitcher's run environment (_pitcherRunEnvMult) — a
     // pitcher who allows few baserunners and little extra-base contact suppresses
     // the batter's chance to come around to score, not just his RBI chances.
-    const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/4.2)*_pitcherRunEnvMult();
+    const runPG=_shrunkRate(parseInt(ss?.runs)||0,parseInt(ss?.gamesPlayed)||0,0.55,60)*(gamePAs/_seasonPAperG(ss))*_pitcherRunEnvMult();
     // Negative binomial like RBI, but only mildly overdispersed (r=4.0) — runs
     // are closer to memoryless than RBIs, and at the run league mean (~0.55)
     // Poisson's ~42% P(≥1) already matches the leadoff Over market, so a heavy

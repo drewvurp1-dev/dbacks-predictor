@@ -72,7 +72,7 @@ export function renderCorbetBets(){
       const _evPct=b.ev!=null?b.ev*100:null;
       const _evColor=_evPct!=null?(_evPct>=0?'#2ecc71':'#e74c3c'):'#ccc';
       const _evStr=_evPct!=null?(_evPct>=0?'+':'')+_evPct.toFixed(1)+'%':'—';
-      const _evInfo=` <span class="corbet-info" data-tip="Expected Value — the model's average profit per $1 staked at the best available price, if this bet were repeated many times. A positive EV% means the price beats the model's fair odds; negative means it doesn't.">ⓘ</span>`;
+      const _evInfo=` <span class="corbet-info" data-tip="Expected Value — the model's average profit per $1 staked at the TYPICAL (median across books) price, if this bet were repeated many times. Median rather than the single best price so wide plus-money markets (RBI/Runs) aren't ranked off an optimistic outlier. A positive EV% means the price beats the model's fair odds; negative means it doesn't. The best Over/Under odds above show where to actually shop.">ⓘ</span>`;
       return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span>${_softBadge}</span>
