@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { S } from './state.js';
 import {
   _factorial, _poissonCDF, _negBinomTailGT,
-  _gamePAs, _paMultiplier, _ttopBonus, _hrrOverPct,
+  _gamePAs, _paMultiplier, _seasonPAperG, _ttopBonus, _hrrOverPct,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
   _extractSplitStat, _handSplit, _pitcherRunEnvMult, _pitcherStuffMult, _seasonWoba,
 } from './player.js';
@@ -254,6 +254,25 @@ test('_paMultiplier — relative to 4.2 league avg', () => {
   assert.ok(Math.abs(mult - (4.6 / 4.2)) < 0.001);
 });
 
+// ── _seasonPAperG ────────────────────────────────────────────────────────────
+// Player's own PA/G — the reference for scaling run-scoring rates to today's
+// PAs. Avoids the /4.2 double-count (season RBI/G is already PA-loaded).
+test('_seasonPAperG — returns the player PA/G when sample is adequate', () => {
+  assert.ok(Math.abs(_seasonPAperG({ plateAppearances: 460, gamesPlayed: 100 }) - 4.6) < 1e-9);
+  assert.ok(Math.abs(_seasonPAperG({ plateAppearances: 400, gamesPlayed: 100 }) - 4.0) < 1e-9);
+});
+
+test('_seasonPAperG — thin sample (<10 GP) or missing PA falls back to 4.2', () => {
+  assert.equal(_seasonPAperG({ plateAppearances: 30, gamesPlayed: 7 }), 4.2);
+  assert.equal(_seasonPAperG({ gamesPlayed: 100 }), 4.2);
+  assert.equal(_seasonPAperG(null), 4.2);
+});
+
+test('_seasonPAperG — clamps to [3.4, 4.9]', () => {
+  assert.equal(_seasonPAperG({ plateAppearances: 200, gamesPlayed: 100 }), 3.4); // 2.0 → floor
+  assert.equal(_seasonPAperG({ plateAppearances: 600, gamesPlayed: 100 }), 4.9); // 6.0 → ceil
+});
+
 // ── _ttopBonus ──────────────────────────────────────────────────────────────
 test('_ttopBonus — bullpen game returns 0', () => {
   S.currentOrder = 1;
@@ -365,6 +384,18 @@ test('_pitcherRunEnvMult — bullpen game blends 40% toward league', () => {
   assert.ok(blended > raw, `bullpen blend should pull toward 1.0: blended=${blended} raw=${raw}`);
 });
 
+// Product (runs-created) form regression: a clearly-good-but-not-elite arm must
+// suppress meaningfully, not the ~10% the old flat 60/40 sum produced. ~.278 BAA,
+// sub-1.10 WHIP line → product lands near 0.80 (sum gave ~0.90). Guards against
+// reverting to the arithmetic-mean blend that kept the model high on RBI Overs.
+test('_pitcherRunEnvMult — good arm suppresses ~20% (product form, not the flat ~10%)', () => {
+  S.pitcher = { st: { battersFaced: 360, atBats: 330, hits: 74, baseOnBalls: 26,
+    homeRuns: 7, doubles: 12, triples: 1 } };
+  const m = _pitcherRunEnvMult();
+  assert.ok(m < 0.85, `good arm should suppress >15% under product form, got ${m}`);
+  assert.ok(m > 0.65, `but not floor-clamped for a non-elite arm, got ${m}`);
+});
+
 // ── _pitcherStuffMult ───────────────────────────────────────────────────────
 // DIPS-skill (SIERA/xFIP/FIP) multiplier on the batter's offensive event rates.
 // Reads S.pitcher.advanced + S.pitcher.st. <1 vs a good arm, >1 vs a weak one.
@@ -426,6 +457,21 @@ test('_hrrOverPct — runEnvMult scales the projection (suppress < neutral < inf
 test('_hrrOverPct — runEnvMult defaults to 1.0 (backward compatible)', () => {
   const ss = { hits: 50, runs: 28, rbi: 30, gamesPlayed: 50 };
   assert.equal(_hrrOverPct(1.5, ss, null, 4.2), _hrrOverPct(1.5, ss, null, 4.2, 1.0));
+});
+
+// PA scaling uses the player's OWN season PA/G, not league 4.2. Two hitters with
+// the SAME per-game H+R+RBI rate but different season PA/G, evaluated at the same
+// gamePAs (4.6 — batting at the top today): the lower-PA/G hitter is effectively
+// "promoted" relative to his norm, so his projection scales UP more. The old
+// /4.2 scaling was blind to this and double-counted PA volume for everyone.
+test('_hrrOverPct — scales by the player\'s own season PA/G, not league 4.2', () => {
+  const base = { hits: 100, runs: 55, rbi: 55, gamesPlayed: 100 };
+  const highPApg = { ...base, plateAppearances: 460 }; // 4.6 PA/G — usual top-order volume
+  const lowPApg  = { ...base, plateAppearances: 400 }; // 4.0 PA/G — usually bats lower
+  const atTop = 4.6;
+  const pHigh = _hrrOverPct(1.5, highPApg, null, atTop); // paMult = 4.6/4.6 = 1.00
+  const pLow  = _hrrOverPct(1.5, lowPApg,  null, atTop); // paMult = 4.6/4.0 = 1.15
+  assert.ok(pLow > pHigh, `lower-PA/G hitter promoted to the top scales up more: low=${pLow} high=${pHigh}`);
 });
 
 // ── _seasonWoba ─────────────────────────────────────────────────────────────

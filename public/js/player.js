@@ -105,6 +105,23 @@ export function _paMultiplier() {
   return _gamePAs() / 4.2;
 }
 
+// ── Player's own season PA-per-game ─────────────────────────────────────────
+// The reference PA volume for scaling a player's per-game RBI/Runs/H+R+RBI rate
+// to TODAY's expected PAs. Those season rates are already PA-loaded — a leadoff
+// hitter's RBI/G was earned over games where he averaged ~4.6 PA — so scaling
+// them by gamePAs/4.2 (league average) double-counts PA volume and inflates the
+// run-scoring props by up to ~10% for the top of the order. Dividing by the
+// player's OWN PA/G instead makes the factor ~1.0 when he bats his usual spot
+// and only moves it for a genuine promotion/demotion (or a part-timer who is
+// starting today). Clamped to a sane range; falls back to the league 4.2 for
+// thin samples where PA/G isn't yet stable.
+export function _seasonPAperG(ss) {
+  const pa = parseInt(ss?.plateAppearances) || 0;
+  const gp = parseInt(ss?.gamesPlayed) || 0;
+  if (gp < 10 || pa <= 0) return 4.2;
+  return Math.max(3.4, Math.min(4.9, pa / gp));
+}
+
 // ── Times-Through-the-Order adjustment ──────────────────────────────────────
 // Hitters perform noticeably better the more times they see a starter (~+30 pts
 // wOBA on 3rd TTO). Top-of-order batters get more TTO3 exposure when starters
@@ -157,7 +174,10 @@ export function _hrrOverPct(line, ss, recentLog, gamePAs, runEnvMult = 1) {
   // _pitcherRunEnvMult) — the R and RBI components of H+R+RBI are otherwise
   // pitcher-blind. It scales the Poisson mean, and since the empirical CDF is
   // shrunk toward that mean, it propagates partially through the empirical path too.
-  const paMult = gamePAs ? gamePAs / 4.2 : 1.0;
+  // Scale by today's expected PAs vs the player's OWN season PA/G (not league
+  // 4.2) — the summed H+R+RBI rate is already PA-loaded, so /4.2 double-counts
+  // volume for the top of the order. See _seasonPAperG.
+  const paMult = gamePAs ? gamePAs / _seasonPAperG(ss) : 1.0;
   const totalHRR = (parseInt(ss?.hits) || 0) + (parseInt(ss?.runs) || 0) + (parseInt(ss?.rbi) || 0);
   const hrrPG = _shrunkRate(totalHRR, parseInt(ss?.gamesPlayed) || 0, 1.6, 60) * paMult * runEnvMult;
   // Negative binomial (not Poisson) on the per-game H+R+RBI rate. H, R, and RBI
@@ -214,11 +234,17 @@ export function _shrunkRate(numerator, denominator, leagueAvg, priorN) {
 //   • slugging-against TB/AB      — extra-base / drive-in environment, league ~.400
 // Both Bayesian-shrunk to league (priorN=120; rate-against stabilizes slowly,
 // but a 200 prior flattened genuine aces to league-average and was a primary
-// cause of the model's phantom Over edges), then blended 60/40 toward on-base
-// since baserunners gate RBI opportunity more
-// than raw power does. Clamped to [0.80, 1.25] so a small-sample line can't
-// dominate, and gated behind a 50-BF minimum. Bullpen games blend 40% toward
-// league since the listed arm isn't representative of who the hitters face.
+// cause of the model's phantom Over edges), then combined as a PRODUCT of the
+// two league-relative ratios — run scoring follows the runs-created form
+// (Runs ∝ OBP × SLG), not a weighted average. The old 60/40 arithmetic mean was
+// far too flat: a genuinely good arm (~.278 BAA, sub-1.10 WHIP) suppressed RBIs
+// only ~10%, so the model stayed high on run-scoring props against good pitching
+// while the market correctly discounted them — exactly the chronic RBI-Over
+// over-recommendation. The product lands the same arm near −20%, matching how a
+// good starter actually deflates team run scoring, and symmetrically inflates
+// weak arms. Clamped to [0.65, 1.25] so a small-sample line can't dominate, and
+// gated behind a 50-BF minimum. Bullpen games blend 40% toward league since the
+// listed arm isn't representative of who the hitters face.
 //
 // Note: the "score" composite (calcPrediction) already reflects pitcher quality,
 // but at only 40% blend weight and via general ERA/SIERA/whiff factors — the same
@@ -242,7 +268,8 @@ export function _pitcherRunEnvMult() {
   const singles = Math.max(0, h - hr - dbl - trp);
   const obA  = _shrunkRate(h + bb, bf, 0.315, 120);
   const slgA = _shrunkRate(singles + 2 * dbl + 3 * trp + 4 * hr, ab || 1, 0.400, 120);
-  let mult = (obA / 0.315) * 0.6 + (slgA / 0.400) * 0.4;
+  // Product (runs-created) form: Runs ∝ OBP × SLG. See header comment.
+  let mult = (obA / 0.315) * (slgA / 0.400);
   if (S.pitcher?.bullpenGame) mult = mult * 0.4 + 1.0 * 0.6;
   // Floor lowered from 0.80 → 0.65 so genuinely elite arms (sub-0.220 OBA,
   // sub-0.300 SLG-against) can express the full ~35% suppression their line
