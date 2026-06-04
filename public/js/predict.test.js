@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { S } from './state.js';
 import {
   gaussianRandom, _slumpPenalty, _mcVariance, _rateUncertaintyPp,
-  _pitchMatchupReason, modelProbability, monteCarloConfidence,
+  _pitchMatchupReason, _pitchMatchupFactor, modelProbability, monteCarloConfidence,
 } from './predict.js';
 
 // ── gaussianRandom ──────────────────────────────────────────────────────────
@@ -213,6 +213,71 @@ test('_pitchMatchupReason — K prop direction logic inverts correctly', () => {
   };
   assert.ok(_pitchMatchupReason('over', 'batter_strikeouts') !== null);
   assert.equal(_pitchMatchupReason('under', 'batter_strikeouts'), null);
+});
+
+// ── _pitchMatchupFactor zero-centering (regression — Finding 1) ──────────────
+// The matchup deltas (baDelta/slgDelta/wobaDelta/kDelta) must be measured on a
+// SINGLE scale: baseline and expected both averaged over the same ≥10-PA pitch
+// subset. A prior version computed the baseline over a different pitch-set /
+// scale than the expected (season AVG/SLG, or all-pitch arsenal averages),
+// which left every delta biased POSITIVE even against a league-average arm — a
+// standing ~+0.9pp OVER push on Hits/TB. These tests lock in that a pitcher
+// whose usage mix matches the batter's own exposure produces delta = 0, and
+// that a pitcher who overweights the batter's weak pitch produces the correctly
+// signed (negative-on-contact) delta.
+
+// Batter who crushes fastballs and struggles vs sliders. PA-weighted so the
+// "neutral" reference is FF:SL:CH = 100:60:40 → 50%:30%:20% usage.
+function _matchupBatter() {
+  return {
+    name: 'Test Bat',
+    pitches: {
+      FF: { pa: 100, ba: 0.300, slg: 0.500, woba: 0.380, k_pct: 15, whiff: 20 },
+      SL: { pa: 60,  ba: 0.200, slg: 0.320, woba: 0.290, k_pct: 30, whiff: 35 },
+      CH: { pa: 40,  ba: 0.250, slg: 0.400, woba: 0.330, k_pct: 22, whiff: 25 },
+    },
+  };
+}
+
+test('_pitchMatchupFactor — neutral mix (usage ∝ batter PA) zero-centers every delta', () => {
+  S.pitcher = { id: 101, bullpenGame: false };
+  S.playerId = 'BAT1';
+  S.pitchMatchupCached = null;
+  S.pitchArsenal = {
+    batters: { BAT1: _matchupBatter() },
+    // Usage proportional to the batter's PA on each pitch → expected == baseline.
+    pitchers: { 101: { pitches: {
+      FF: { usage: 50 }, SL: { usage: 30 }, CH: { usage: 20 },
+    } } },
+  };
+  const m = _pitchMatchupFactor();
+  assert.ok(m !== null, 'factor should compute with adequate samples');
+  // Exact zero up to floating-point noise — the two weighted averages are equal.
+  assert.ok(Math.abs(m.baDelta)   < 1e-9, `baDelta ${m.baDelta} not ~0`);
+  assert.ok(Math.abs(m.slgDelta)  < 1e-9, `slgDelta ${m.slgDelta} not ~0`);
+  assert.ok(Math.abs(m.wobaDelta) < 1e-9, `wobaDelta ${m.wobaDelta} not ~0`);
+  assert.ok(Math.abs(m.kDeltaPp)  < 1e-9, `kDeltaPp ${m.kDeltaPp} not ~0`);
+  assert.ok(Math.abs(m.whiffDelta) < 1e-9, `whiffDelta ${m.whiffDelta} not ~0`);
+});
+
+test('_pitchMatchupFactor — pitcher overweighting the weak pitch yields correctly signed deltas', () => {
+  S.pitcher = { id: 102, bullpenGame: false };
+  S.playerId = 'BAT1';
+  S.pitchMatchupCached = null;
+  S.pitchArsenal = {
+    batters: { BAT1: _matchupBatter() },
+    // Slider-heavy (the batter's worst pitch): more sliders than his exposure.
+    pitchers: { 102: { pitches: {
+      FF: { usage: 20 }, SL: { usage: 70 }, CH: { usage: 10 },
+    } } },
+  };
+  const m = _pitchMatchupFactor();
+  assert.ok(m !== null);
+  // Worse contact / wOBA, more strikeouts than the batter's baseline.
+  assert.ok(m.baDelta   < 0, `baDelta ${m.baDelta} should be negative`);
+  assert.ok(m.slgDelta  < 0, `slgDelta ${m.slgDelta} should be negative`);
+  assert.ok(m.wobaDelta < 0, `wobaDelta ${m.wobaDelta} should be negative`);
+  assert.ok(m.kDeltaPp  > 0, `kDeltaPp ${m.kDeltaPp} should be positive`);
 });
 
 // ── modelProbability sanity bounds ──────────────────────────────────────────
