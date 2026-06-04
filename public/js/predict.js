@@ -8,7 +8,7 @@ import { _parkFactors } from './utils.js';
 import {
   _gamePAs, _ttopBonus, _hrrOverPct, _pitcherRunEnvMult, _pitcherStuffMult,
   _shrunkRate, _binomGE, _convolveTBge, _log5,
-  _handSplit, _poissonCDF, _negBinomTailGT,
+  _handSplit, _negBinomTailGT,
 } from './player.js';
 
 // Negative-binomial dispersion (r) for the clumpy per-game run/RBI counts.
@@ -124,36 +124,27 @@ export function _pitchMatchupFactor() {
   const bat = arsenal.batters?.[String(bid)];
   if (!pit || !bat) return cacheMiss(null);
 
-  // Batter baseline — weighted by PA per pitch type, all pitches the batter has faced.
-  let bWhiffSum = 0, bWobaSum = 0, bKSum = 0, bBaSum = 0, bSlgSum = 0, bPaTotal = 0;
-  for (const pt in bat.pitches) {
-    const r = bat.pitches[pt];
-    const w = r.pa || 0;
-    if (!w) continue;
-    bWhiffSum += (r.whiff || 0) * w;
-    bWobaSum  += (r.woba  || 0) * w;
-    bKSum     += (r.k_pct || 0) * w;
-    bBaSum    += (r.ba    || 0) * w;
-    bSlgSum   += (r.slg   || 0) * w;
-    bPaTotal  += w;
-  }
-  if (bPaTotal < 50) return cacheMiss(null); // need a meaningful baseline
+  // Sanity gate — the batter needs a meaningful overall sample before any
+  // per-pitch matchup is trustworthy.
+  let bPaTotal = 0;
+  for (const pt in bat.pitches) bPaTotal += bat.pitches[pt].pa || 0;
+  if (bPaTotal < 50) return cacheMiss(null);
 
-  const baseWhiff = bWhiffSum / bPaTotal;
-  const baseWoba  = bWobaSum  / bPaTotal;
-  const baseK     = bKSum     / bPaTotal;
-  // BA/SLG baseline: prefer true season AVG/SLG (the arsenal-weighted average is
-  // skewed high because Savant only includes pitch types the batter has seen enough
-  // of). Fall back to the arsenal-weighted figure when season stats aren't loaded.
-  const ssMatch = S.seasonStat;
-  const seasonBa  = ssMatch?.avg != null ? parseFloat(ssMatch.avg) : NaN;
-  const seasonSlg = ssMatch?.slg != null ? parseFloat(ssMatch.slg) : NaN;
-  const baseBa  = Number.isFinite(seasonBa)  ? seasonBa  : bBaSum  / bPaTotal;
-  const baseSlg = Number.isFinite(seasonSlg) ? seasonSlg : bSlgSum / bPaTotal;
-
-  // Expected matchup — re-weight batter's per-pitch rates by the pitcher's usage%.
-  // Only count pitches the batter has faced ≥10 times (skip noise from rare pitches).
+  // Baseline AND expected are computed over the SAME pitch subset (pitches the
+  // batter has faced ≥10 times that this pitcher actually throws) so the deltas
+  // isolate the pitcher's USAGE MIX vs the batter's natural exposure — nothing
+  // else. The previous code computed the baseline over a *different* set than the
+  // expected: baseline whiff/K/wOBA averaged ALL the batter's pitches (incl. rare
+  // breaking balls he seldom sees and is often worse against) and baseline BA/SLG
+  // used the true season number, while expected used only the ≥10-PA subset on the
+  // arsenal scale. Subtracting two different scales left every delta biased — across
+  // the full batter pool the expected ran ~+0.007 BA / +0.014 SLG / +0.012 wOBA
+  // high and K ran ~0.8pp low against even a league-average arm, manufacturing a
+  // standing ~+0.9pp OVER push on Hits/TB. Weighting the baseline by the batter's
+  // own PA over the identical subset zero-centers each delta: a pitcher whose mix
+  // matches the batter's exposure yields delta=0 by construction.
   let expWhiff = 0, expWoba = 0, expK = 0, expBa = 0, expSlg = 0, usageCovered = 0;
+  let bWhiff = 0, bWoba = 0, bK = 0, bBa = 0, bSlg = 0, basePa = 0;
   const detail = [];
   for (const pt in pit.pitches) {
     const pu = pit.pitches[pt].usage || 0;
@@ -165,15 +156,27 @@ export function _pitchMatchupFactor() {
     expBa    += pu * (br.ba    || 0);
     expSlg   += pu * (br.slg   || 0);
     usageCovered += pu;
+    const w = br.pa || 0;
+    bWhiff += w * (br.whiff || 0);
+    bWoba  += w * (br.woba  || 0);
+    bK     += w * (br.k_pct || 0);
+    bBa    += w * (br.ba    || 0);
+    bSlg   += w * (br.slg   || 0);
+    basePa += w;
     detail.push({ pt, usage: pu, whiff: br.whiff || 0, k: br.k_pct || 0, woba: br.woba || 0, ba: br.ba || 0, slg: br.slg || 0 });
   }
   // Require ≥50% of pitcher's mix to be covered by batter's known per-pitch rates.
-  if (usageCovered < 50) return cacheMiss(null);
+  if (usageCovered < 50 || basePa <= 0) return cacheMiss(null);
   expWhiff /= usageCovered;
   expWoba  /= usageCovered;
   expK     /= usageCovered;
   expBa    /= usageCovered;
   expSlg   /= usageCovered;
+  const baseWhiff = bWhiff / basePa;
+  const baseWoba  = bWoba  / basePa;
+  const baseK     = bK     / basePa;
+  const baseBa    = bBa    / basePa;
+  const baseSlg   = bSlg   / basePa;
 
   const whiffDelta = expWhiff - baseWhiff;
   const kDelta     = expK     - baseK;
@@ -620,7 +623,15 @@ export function modelProbability(propKey,line,score,_components){
       // score channel — not the full park effect twice.
       p+=Math.max(-5,Math.min(5,Math.round((hrF-1.0)*60)));
     else if(['batter_hits','batter_total_bases','batter_hits_runs_rbis'].includes(propKey))
-      p+=Math.max(-5,Math.min(5,Math.round((hitF-1.0)*40)));
+      // Direct hit-park bump halved (×40→×20, cap ±5→±3). For Hits/TB/HRR the park
+      // already enters TWICE more: as expected-AB volume inside _gamePAs (parkRunF
+      // = hitF inflates the AB count fed to the binomial/convolution) and via the
+      // score channel's park factor → lerp3 scoreBase. Applying the full ±5 rate
+      // bump on top triple-counted the park and inflated OVERs in hitter-friendly
+      // venues (e.g. Chase roof-open). This now adds only the residual prop-specific
+      // rate delta on top of the volume + score channels — mirroring the HR bump's
+      // rationale above.
+      p+=Math.max(-3,Math.min(3,Math.round((hitF-1.0)*20)));
     else if(propKey==='batter_strikeouts')
       p+=Math.max(-3,Math.min(3,Math.round(-(hitF-1.0)*25)));
     else if(propKey==='batter_runs_scored'||propKey==='batter_rbis'){
@@ -629,7 +640,11 @@ export function modelProbability(propKey,line,score,_components){
     }
   }}
 
-  // Trend adjustments — accumulated then capped at ±6pts total.
+  // Trend adjustments — accumulated then capped at ±6pts total. Hot bonuses and
+  // cold penalties are kept SYMMETRIC per prop (e.g. ±4 on TB, ±3 on K/BB/Runs):
+  // the previous caps were asymmetric (hot > cold, e.g. +5/−4, +4/−3), which made
+  // the expected trend contribution across the population positive — a small but
+  // standing OVER lean on top of the other one-way pushes.
   // Recency-weighted with exponential decay (most recent game gets highest weight).
   // decay=0.7 → most recent game ≈3.4× the influence of a game 4 days ago.
   // For 4-game window, normalized weights are roughly [0.40, 0.28, 0.19, 0.14].
@@ -671,22 +686,22 @@ export function modelProbability(propKey,line,score,_components){
       if(cold>=0.5)trendAdj-=5; else if(cold>=0.25)trendAdj-=2;
     } else if(propKey==='batter_total_bases'){
       const avgTB=wAvg(g=>parseInt(g.stat.totalBases)||0);
-      if(avgTB>=2.5)trendAdj+=5; else if(avgTB<=0.5)trendAdj-=4;
+      if(avgTB>=2.5)trendAdj+=4; else if(avgTB<=0.5)trendAdj-=4;
     } else if(propKey==='batter_home_runs'){
       const recentHR=wSum(g=>parseInt(g.stat.homeRuns)||0);
-      if(recentHR>=1.5)trendAdj+=4;
+      if(recentHR>=1.5)trendAdj+=3;
     } else if(propKey==='batter_strikeouts'){
       const avgK=wAvg(g=>parseInt(g.stat.strikeOuts)||0);
-      if(avgK>1.5)trendAdj+=4; else if(avgK<0.5)trendAdj-=3;
+      if(avgK>1.5)trendAdj+=3; else if(avgK<0.5)trendAdj-=3;
     } else if(propKey==='batter_walks'){
       const wkGames=wFrac(g=>(parseInt(g.stat.baseOnBalls)||0)>=1);
-      if(wkGames>=0.65)trendAdj+=4; else if(wkGames<=0.05)trendAdj-=3;
+      if(wkGames>=0.65)trendAdj+=3; else if(wkGames<=0.05)trendAdj-=3;
     } else if(propKey==='batter_runs_scored'){
       const scoringGames=wFrac(g=>(parseInt(g.stat.runs)||0)>=1);
-      if(scoringGames>=0.65)trendAdj+=4; else if(scoringGames<=0.05)trendAdj-=3;
+      if(scoringGames>=0.65)trendAdj+=3; else if(scoringGames<=0.05)trendAdj-=3;
     } else if(propKey==='batter_hits_runs_rbis'){
       const avgHRR=wAvg(g=>(parseInt(g.stat.hits)||0)+(parseInt(g.stat.runs)||0)+(parseInt(g.stat.rbi)||0));
-      if(avgHRR>=3)trendAdj+=5; else if(avgHRR<=0.5)trendAdj-=4;
+      if(avgHRR>=3)trendAdj+=4; else if(avgHRR<=0.5)trendAdj-=4;
     }
   }
 
@@ -709,13 +724,13 @@ export function modelProbability(propKey,line,score,_components){
     };
     if(propKey==='batter_hits'){
       const avgH=pWAvg(g=>parseInt(g.stat.hits)||0);
-      if(avgH>=8)trendAdj+=4; else if(avgH<=4)trendAdj-=3;
+      if(avgH>=8)trendAdj+=3; else if(avgH<=4)trendAdj-=3;
     } else if(propKey==='batter_strikeouts'){
       const avgK=pWAvg(g=>parseInt(g.stat.strikeOuts)||0);
-      if(avgK>=9)trendAdj+=4; else if(avgK<=4)trendAdj-=3;
+      if(avgK>=9)trendAdj+=3; else if(avgK<=4)trendAdj-=3;
     } else if(propKey==='batter_total_bases'){
       const avgER=pWAvg(g=>parseInt(g.stat.earnedRuns)||0);
-      if(avgER>=4)trendAdj+=3; else if(avgER<=1)trendAdj-=2;
+      if(avgER>=4)trendAdj+=2; else if(avgER<=1)trendAdj-=2;
     }
   }
 

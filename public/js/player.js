@@ -105,18 +105,26 @@ export function _paMultiplier() {
   return _gamePAs() / 4.2;
 }
 
-// ── Times-Through-the-Order bonus ───────────────────────────────────────────
+// ── Times-Through-the-Order adjustment ──────────────────────────────────────
 // Hitters perform noticeably better the more times they see a starter (~+30 pts
 // wOBA on 3rd TTO). Top-of-order batters get more TTO3 exposure when starters
-// go 5+ innings. Bullpen games dilute the effect since hitters face fresh arms
-// each turn through. Returns pp adjustment to add to model over-prob.
+// go 5+ innings; bottom-of-order batters get the fewest 3rd looks and face fresh
+// relievers sooner. Bullpen games dilute the effect since hitters face fresh
+// arms each turn through.
+//
+// CENTERED on the lineup average so it carries NO standing offset: the old
+// version returned {+2, +1, 0} (never negative), which added an uncountered
+// OVER push to ~2/3 of the lineup on Hits/TB/HR/HRR every game even though the
+// market already prices TTO. Re-centering to {+1, 0, −1} preserves the SAME
+// relative familiarity ordering (top > middle > bottom) while summing to ~0
+// across the nine spots, so it stops manufacturing a population-wide Over lean.
 export function _ttopBonus() {
   if (S.pitcher?.bullpenGame) return 0;
   const o = S.currentOrder;
   if (!o) return 0;
-  if (o <= 3) return 2;   // ~40% of PAs are TTO3 — biggest familiarity edge
-  if (o <= 6) return 1;   // some TTO3 exposure when starter goes 6+
-  return 0;               // bottom of order: mostly TTO1/TTO2
+  if (o <= 3) return 1;   // most TTO3 exposure — relative familiarity edge
+  if (o <= 6) return 0;   // average TTO exposure — neutral
+  return -1;              // bottom of order: fewest 3rd looks, sees relievers sooner
 }
 
 // ── H+R+RBI projection ──────────────────────────────────────────────────────
@@ -135,6 +143,10 @@ export function _ttopBonus() {
 // recent appearance rate at full PA can have his Over 0.5 probability deflated
 // from ~60% to ~20% by this alone, which is exactly the failure mode we hit on
 // Del Castillo 2026-05-25.
+// Negative-binomial dispersion for the clumpy per-game H+R+RBI count (see the
+// in-body comment for the rationale). Smaller r = more overdispersion / more
+// correction away from Poisson.
+const HRR_NB_DISPERSION = 5;
 export function _hrrOverPct(line, ss, recentLog, gamePAs, runEnvMult = 1) {
   const k = Math.floor(line);
   // Always compute the Poisson estimate — it's both the no-data fallback AND
@@ -148,7 +160,17 @@ export function _hrrOverPct(line, ss, recentLog, gamePAs, runEnvMult = 1) {
   const paMult = gamePAs ? gamePAs / 4.2 : 1.0;
   const totalHRR = (parseInt(ss?.hits) || 0) + (parseInt(ss?.runs) || 0) + (parseInt(ss?.rbi) || 0);
   const hrrPG = _shrunkRate(totalHRR, parseInt(ss?.gamesPlayed) || 0, 1.6, 60) * paMult * runEnvMult;
-  const poissonOver = (1 - _poissonCDF(hrrPG, k)) * 100;
+  // Negative binomial (not Poisson) on the per-game H+R+RBI rate. H, R, and RBI
+  // are positively correlated WITHIN a game (a hit often produces a run or an
+  // RBI; a HR produces all three), so the summed-rate count is overdispersed —
+  // a Poisson at the summed mean understates the zero/low mass and overstates
+  // P(≥k), biasing the prop OVER. This was the dominant bias whenever there were
+  // <5 recent games with PA (pure-prior path) and also lifted the shrink target
+  // on the empirical path. r=5 is between Runs (r=4, mildly clumpy) and RBI
+  // (r=1.3, very clumpy), reflecting that the sum is moderately overdispersed.
+  // _negBinomTailGT returns P(X > k) = the same threshold semantics as the old
+  // 1−poissonCDF(k), so only the distribution shape changes.
+  const poissonOver = _negBinomTailGT(hrrPG, HRR_NB_DISPERSION, k) * 100;
   if (recentLog?.length) {
     const playedGames = recentLog.filter(g => (parseInt(g.stat?.plateAppearances) || parseInt(g.stat?.atBats) || 0) > 0);
     if (playedGames.length >= 5) {
