@@ -474,23 +474,35 @@ export function modelProbability(propKey,line,score,_components){
     // NOTE: PA volume already in the binomial via gamePAs — no separate paDelta.
   }
   else if(propKey==='batter_walks'){
-    // League avg BB rate ~9%. Stabilization point ~120 PA → priorN=60 (light shrinkage for vets).
-    const overallBBF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,60):0.09;
+    // League avg BB rate ~8.5%/PA. priorN tightened (batter 60→45, pitcher 80→60) so a
+    // genuinely low-walk hitter — or a low-walk arm — isn't over-regressed toward the mean:
+    // BB% stabilizes early (~120 PA), yet the old priors lifted a true 4% walker to ~5% and a
+    // 6% arm to ~6.5%, both nudging the projection up before they were even combined.
+    const overallBBF=ss?.baseOnBalls?_shrunkRate(parseInt(ss.baseOnBalls)||0,pa,0.09,45):0.09;
     // Handedness-specific BB rate (BB stabilizes a bit slower than K — require ≥100 PA).
     const hs=_handSplit();
     const bbF=(hs?.pa>=100&&hs?.bb!=null)?_shrunkRate(hs.bb,hs.pa,overallBBF,60):overallBBF;
     const pitcherPA=pst?.battersFaced||1;
-    let pBBF=pst?.baseOnBalls?_shrunkRate(parseInt(pst.baseOnBalls)||0,pitcherPA,0.08,80):0.08;
+    let pBBF=pst?.baseOnBalls?_shrunkRate(parseInt(pst.baseOnBalls)||0,pitcherPA,0.08,60):0.08;
     // Bullpen games: hitters face multiple relievers. Blend listed pitcher's BB rate
     // toward league-average reliever BB/PA (~8.5% — BB/9 ≈ 3.2 over ~4.3 PA/IP).
     // 40% listed / 60% reliever pool.
     if(S.pitcher?.bullpenGame) pBBF=pBBF*0.4+0.085*0.6;
-    const blended=bbF*0.6+pBBF*0.4;
+    // log-5 combine against the league BB baseline — NOT an arithmetic 60/40 mean. A plain
+    // weighted average of two below-average walk rates sits *between* them, so it can never
+    // fall below the lower input; but when a low-walk hitter faces a low-walk arm the matchup
+    // is in fact a stronger UNDER than either side alone. log-5 anchors the combine to the
+    // league rate (the way the HR/hits props already do via _log5), so a both-below-average
+    // matchup correctly lands below both — e.g. a 4% hitter vs a 6% arm combines to ~2.8%/PA,
+    // not the ~4.8% the old arithmetic mean returned. This was the main driver of phantom
+    // walk Overs on low-discipline hitters facing pitchers who don't issue many walks.
+    const LG_BB=0.085;
+    const blended=_log5(bbF,pBBF,LG_BB);
     // P(walks ≥ k) over gamePAs Bernoulli trials. k = smallest integer > line,
     // so line=0.5→k=1, line=1.5→k=2, line=2.5→k=3, etc.
     const rateBase=_binomGE(gamePAs,blended,Math.ceil(line+1e-9))*100;
     // scoreBase weight dropped 60% → DEFAULT_BLEND_W (25%) and anchor at 80 trimmed from 48 to
-    // 42. The binomial on shrunken BB rate is the principled signal here;
+    // 42. The binomial on the log-5 BB rate is the principled signal here;
     // score retains weight for ump/recent-form/days-rest factors the binomial
     // doesn't see. Old weighting could push elite-OBP rookies to 48% on Walks
     // 0.5 even when the matchup binomial sat at ~32%.
