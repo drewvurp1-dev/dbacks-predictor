@@ -64,10 +64,18 @@ function pickLatestArrival(flights, homeAirport) {
   const scored = flights
     .map(f => {
       const arrIata = f?.arrival?.airport?.iata || f?.arrival?.airport?.icao;
-      const arrScheduledUtc = f?.arrival?.scheduledTime?.utc   || null;
-      const arrEstimatedUtc = f?.arrival?.predictedTime?.utc   || null;
-      const arrActualUtc    = f?.arrival?.actualTime?.utc      || null;
-      // Sort key: prefer actual > predicted > scheduled.
+      // AeroDataBox's schema has shifted: the actual on/off-runway time arrives as
+      // `runwayTime` (current) or `actualTime` (older), and the updated ETA as
+      // `predictedTime` (ML) or `revisedTime` (ATC). Read both spellings so a
+      // landed flight actually registers an arrival time instead of looking
+      // permanently "en route" because we only checked the legacy field name.
+      const depActual    = f?.departure?.actualTime || f?.departure?.runwayTime   || null;
+      const arrActual    = f?.arrival?.actualTime   || f?.arrival?.runwayTime     || null;
+      const arrEstimated = f?.arrival?.predictedTime || f?.arrival?.revisedTime   || null;
+      const arrScheduledUtc = f?.arrival?.scheduledTime?.utc || null;
+      const arrEstimatedUtc = arrEstimated?.utc || null;
+      const arrActualUtc    = arrActual?.utc    || null;
+      // Sort key: prefer actual > estimated > scheduled.
       const arrUtc = arrActualUtc || arrEstimatedUtc || arrScheduledUtc;
       if (!arrUtc) return null;
       return {
@@ -77,21 +85,21 @@ function pickLatestArrival(flights, homeAirport) {
         from:  f?.departure?.airport?.iata || f?.departure?.airport?.icao,
         to:    arrIata,
         // Convenience fields (best-available, what the existing UI uses):
-        depUtc:   f?.departure?.actualTime?.utc   || f?.departure?.scheduledTime?.utc,
-        depLocal: f?.departure?.actualTime?.local || f?.departure?.scheduledTime?.local,
+        depUtc:   depActual?.utc   || f?.departure?.scheduledTime?.utc,
+        depLocal: depActual?.local || f?.departure?.scheduledTime?.local,
         arrUtc,
-        arrLocal: f?.arrival?.actualTime?.local || f?.arrival?.predictedTime?.local || f?.arrival?.scheduledTime?.local,
+        arrLocal: arrActual?.local || arrEstimated?.local || f?.arrival?.scheduledTime?.local,
         // Discrete fields so the client can tell "departed yet?" / "landed yet?":
         depScheduledUtc:   f?.departure?.scheduledTime?.utc   || null,
         depScheduledLocal: f?.departure?.scheduledTime?.local || null,
-        depActualUtc:      f?.departure?.actualTime?.utc      || null,
-        depActualLocal:    f?.departure?.actualTime?.local    || null,
+        depActualUtc:      depActual?.utc   || null,
+        depActualLocal:    depActual?.local || null,
         arrScheduledUtc,
         arrScheduledLocal: f?.arrival?.scheduledTime?.local   || null,
         arrEstimatedUtc,
-        arrEstimatedLocal: f?.arrival?.predictedTime?.local   || null,
+        arrEstimatedLocal: arrEstimated?.local || null,
         arrActualUtc,
-        arrActualLocal:    f?.arrival?.actualTime?.local      || null,
+        arrActualLocal:    arrActual?.local || null,
         intoHome: homeAirport && arrIata === homeAirport,
         status: f?.status,
       };
