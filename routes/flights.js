@@ -147,8 +147,17 @@ async function lookupTeam(abbr, destAirport) {
     return { status: 200, cache: 'HIT', data: _cache[cacheKey].data };
   }
 
-  const today     = ymd(new Date());
-  const yesterday = ymd(new Date(Date.now() - 86400000));
+  // The query window is computed in UTC, but every MLB destination city sits at
+  // UTC-4 to UTC-10 (PHX is UTC-7 year-round, no DST). A flight's local date can
+  // therefore lag the UTC date by a day: once it's evening in Phoenix, UTC has
+  // already rolled over, so "yesterday (UTC)" is really "today" locally and a
+  // genuine previous-day arrival drops out of a two-date window. Because every
+  // North-American airport is behind UTC, going three UTC dates back guarantees
+  // we cover local-yesterday + local-today regardless of when in the day we run.
+  const today              = ymd(new Date());
+  const yesterday          = ymd(new Date(Date.now() - 86400000));
+  const dayBeforeYesterday = ymd(new Date(Date.now() - 2 * 86400000));
+  const lookupDates = [dayBeforeYesterday, yesterday, today];
   const allFlights = [];
   let anySuccess = false;
   let lastError = null;
@@ -174,7 +183,7 @@ async function lookupTeam(abbr, destAirport) {
   }
 
   for (const tail of tails) {
-    for (const date of [yesterday, today]) {
+    for (const date of lookupDates) {
       await runLookup(
         `/flights/reg/${encodeURIComponent(tail)}/${date}?withAircraftImage=false&withLocation=false`,
         `tail:${tail}`
@@ -182,7 +191,7 @@ async function lookupTeam(abbr, destAirport) {
     }
   }
   for (const callsign of callsigns) {
-    for (const date of [yesterday, today]) {
+    for (const date of lookupDates) {
       await runLookup(
         `/flights/number/${encodeURIComponent(callsign)}/${date}?withAircraftImage=false&withLocation=false`,
         `callsign:${callsign}`

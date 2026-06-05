@@ -183,7 +183,7 @@
         const idParts = [];
         if (d.tails && d.tails.length)         idParts.push('tails <code>' + d.tails.join(', ') + '</code>');
         if (d.callsigns && d.callsigns.length) idParts.push('callsigns <code>' + d.callsigns.join(', ') + '</code>');
-        out.innerHTML = `${context}<br>Tracked ${idParts.join(', ')}<br>No recent flights found in the last 48 h.`;
+        out.innerHTML = `${context}<br>Tracked ${idParts.join(', ')}<br>No recent flights found in the last 3 days.`;
         return;
       }
       const a = d.arrival;
@@ -328,7 +328,7 @@
         const flightCount = d.raw_flight_count || 0;
         const detail = flightCount > 0
           ? `${flightCount} flights found, none into ${dest}`
-          : `no ${ids} flights in last 48h`;
+          : `no ${ids} flights in last 3 days`;
         const html = `<span class="dch-plane">✈</span><span class="dch-route">${team} → ${dest}</span><span class="dch-spinner">${detail}</span><span style="color:#444;font-size:9px;">${ids}</span>`;
         _dashCacheMap.set(key, { html, cls: '', ts: Date.now() });
         return { html, tierClass: '' };
