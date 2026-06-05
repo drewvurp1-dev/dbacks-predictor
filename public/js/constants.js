@@ -258,10 +258,12 @@ export const DEFAULT_WEIGHTS = {
   // Career matchup vs current pitcher — adj capped ±6
   'vs Pitcher (career)': 50,
 
-  // Opposing pitcher headline metric — adj = (trueERA − 4.00) × weight.
-  // Unified label so learning isn't split across SIERA/xFIP/FIP/ERA depending on
-  // which advanced metric was available for that pitcher. The specific metric
-  // used appears in the factor's `value` field instead.
+  // Opposing pitcher headline metric — adj = (trueERA − 4.00) × 6 (slope is
+  // hardcoded in calcPrediction, not this weight, so live-tuning this field
+  // only scales the factor-learning multiplier). Unified label so learning isn't
+  // split across xERA/SIERA/xFIP/FIP/ERA depending on which advanced metric was
+  // available for that pitcher. The specific metric used appears in the factor's
+  // `value` field instead. Fallback order is xERA → SIERA → xFIP → FIP → ERA.
   'Pitcher Quality': 4,
 
   // Pitcher regression / quality flags (flat adj)

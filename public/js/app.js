@@ -587,14 +587,16 @@ function calcPrediction(){
     const pst=S.pitcher.stEff||S.pitcher.st;
     const era=parseFloat(pst.era);
     const adv=S.pitcher.advancedEff||S.pitcher.advanced||{};
-    // Use SIERA > xFIP > FIP > ERA in order of predictive value. The factor
-    // label is unified so factor-learning isn't split across four buckets that
-    // depend on which advanced metric was available; the specific metric used
-    // is surfaced in the value field instead.
-    const trueERA=adv.siera??adv.xfip??adv.fip??era;
-    const trueLabel=adv.siera!=null?'SIERA':adv.xfip!=null?'xFIP':adv.fip!=null?'FIP':'ERA';
+    // Use xERA > SIERA > xFIP > FIP > ERA in order of predictive value. xERA is
+    // Statcast-native (built off actual EV + LA), so it beats SIERA's batted-ball
+    // regression when available. The factor label is unified so factor-learning
+    // isn't split across five buckets that depend on which metric was available;
+    // the specific metric used is surfaced in the value field instead.
+    const xera=S.pitcherStatcast?.xera;
+    const trueERA=xera??adv.siera??adv.xfip??adv.fip??era;
+    const trueLabel=xera!=null?'xERA':adv.siera!=null?'SIERA':adv.xfip!=null?'xFIP':adv.fip!=null?'FIP':'ERA';
     if(!isNaN(trueERA)&&trueERA!=null){
-      // Slope widened ×4 → ×6: an ace (SIERA ~2.8) now pushes ~−7 instead of −5.
+      // Slope widened ×4 → ×6: an ace (trueERA ~2.8) now pushes ~−7 instead of −5.
       // The score channel was too timid against elite arms — paired with the
       // results-based rate model, the model's Over prob barely moved off a good
       // pitcher while the market dropped hard, producing phantom Over edges.
