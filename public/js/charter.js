@@ -346,10 +346,18 @@
       const statusLc = (a.status || '').toLowerCase();
       const arrivedByStatus = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
       const enRouteByStatus = /(en[-\s]?route|departed|airborne|approaching)/.test(statusLc);
-      const landed   = !!a.arrActualUtc || arrivedByStatus;
+      // AeroDataBox frequently never flips a charter to "Arrived" nor fills an
+      // actual arrival time, which left flights stuck on EN ROUTE forever. As a
+      // fallback, infer a landing once the best-known ETA is comfortably (45 min)
+      // in the past.
+      const arrRefUtc = a.arrActualUtc || a.arrEstimatedUtc || a.arrScheduledUtc;
+      const minPastEta = arrRefUtc ? (Date.now() - new Date(arrRefUtc).getTime()) / 60000 : -Infinity;
+      const landedByTime = minPastEta >= 45;
+      const landed   = !!a.arrActualUtc || arrivedByStatus || landedByTime;
       const departed = !landed && (!!a.depActualUtc || enRouteByStatus);
-      const displayArrUtc = a.arrActualUtc || a.arrScheduledUtc;
+      const displayArrUtc = a.arrActualUtc || a.arrEstimatedUtc || a.arrScheduledUtc;
       const displayDepUtc = a.depActualUtc || a.depScheduledUtc;
+      const arrIsActual = !!a.arrActualUtc;
 
       let html, tierClass = '';
 
@@ -366,7 +374,7 @@
         html = `
           <span class="dch-plane">✈</span>
           <span class="dch-route">${route}</span>
-          <span class="dch-time">landed ${fmtLocal(displayArrUtc)}</span>
+          <span class="dch-time">landed ${fmtLocal(displayArrUtc)}${arrIsActual ? '' : ' (est)'}</span>
           <span class="dch-body">(body ${fmtBodyHM(body)})</span>
           ${flagBadge}
           <span style="color:#444;font-size:9px;">${idTxt}</span>

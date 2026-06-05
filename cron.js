@@ -349,8 +349,13 @@ async function checkCharterPoll() {
       // before populating arrActualUtc, so checking both avoids missing landings.
       const statusLc = (arrival?.status || '').toLowerCase();
       const arrivedByStatus = /(arrived|landed|on block|canceled|cancelled|diverted)/.test(statusLc);
+      // AeroDataBox often never confirms arrival for charters, so also infer a
+      // landing once the best-known ETA is 45+ min in the past (mirrors charter.js).
+      const arrRefUtc = arrival?.arrActualUtc || arrival?.arrEstimatedUtc || arrival?.arrScheduledUtc;
+      const minPastEta = arrRefUtc ? (Date.now() - new Date(arrRefUtc).getTime()) / 60000 : -Infinity;
       const hasLanded = (arrival?.arrActualUtc && new Date(arrival.arrActualUtc).getTime() <= Date.now())
-                     || arrivedByStatus;
+                     || arrivedByStatus
+                     || minPastEta >= 45;
       if (hasLanded) {
         await markLanded(game.gamePk, team);
         console.log(`[cron] charter ${team} landed at ${arrival.to} — polling stopped (gamePk=${game.gamePk})`);
