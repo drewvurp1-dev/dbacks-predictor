@@ -187,22 +187,28 @@ export function _getTopBets(n=3,sortBy='default'){
 
 // Once-per-game snapshot: auto-save the top 8 bets into the Record, tracked by
 // gamePk in localStorage so reloading the dashboard mid-game or post-final
-// doesn't re-save. The snapshot fires as soon as the starting lineup is
-// confirmed (pre-game) OR at first pitch (current time ≥ scheduled gameDate) —
-// whichever comes first. Requiring only the live window made the save
-// presence-dependent: a pre-game-only view rendered bets but never captured
-// them, since first pitch passed while the app was closed. Gating on the
-// confirmed lineup (the same "game is locked in" signal autoRegisterGrade-
-// Predictions uses) lets a pre-game view snapshot the slate. If props aren't
-// posted yet, _getTopBets returns empty and we bail without marking the game
-// saved, so the snapshot retries on the next load.
+// doesn't re-save. The snapshot is HELD until 30 minutes before first pitch so it
+// captures near-closing odds. Lineups post hours early, but player props re-price
+// heavily right up to game time, so saving at lineup-announce (the old trigger)
+// logged stale lines that no longer matched the board by first pitch — they looked
+// wrong in the Record tab. Inside the T-30 window we still require a confirmed
+// lineup for valid context; once first pitch has passed we save regardless
+// (fallback for an app opened mid/post-game, since first pitch may have passed
+// while it was closed). The cron T-30 push ("First pitch in 30 min") nudges the
+// user to open the app inside this window, so the snapshot fires on that load with
+// fresh odds. If props aren't posted yet, _getTopBets returns empty and we bail
+// without marking the game saved, so the snapshot retries on the next load.
 export function autoSaveAtFirstPitch(){
   if(!S.allPlayerBets||!S.gameDate||!S.gamePk)return;
   const now=Date.now();
   const firstPitchMs=new Date(S.gameDate).getTime();
   if(isNaN(firstPitchMs))return;
+  // Don't snapshot earlier than 30 min before first pitch — that's the whole point:
+  // wait for near-closing lines instead of the stale ones from lineup-announce.
+  const SAVE_LEAD_MS=30*60*1000;
   const lineupSet=Array.isArray(S.lineupRoster)&&S.lineupRoster.length>0;
-  if(now<firstPitchMs&&!lineupSet)return;
+  if(now<firstPitchMs-SAVE_LEAD_MS)return;   // too early — hold for the T-30 window
+  if(now<firstPitchMs&&!lineupSet)return;    // in the window but lineup not confirmed yet
   let saved;
   try{saved=JSON.parse(localStorage.getItem('autoSavedGamePks')||'[]');}
   catch(e){saved=[];}
