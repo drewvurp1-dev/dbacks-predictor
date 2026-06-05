@@ -490,9 +490,10 @@ export function renderPitcherTab(st, last3, daysRest, lastOuting, hand, name, fi
   }
 }
 
-// Renders the season stat boxes (ERA, FIP, xFIP, SIERA, WHIP, K-BB%, HR/9, …).
+// Renders the season stat boxes (ERA, xERA, FIP, WHIP, K-BB%, HR/9, …).
 // Called from renderPitcherTab on initial load and again from loadPitcherStatcast
-// once xFIP/SIERA become computable. Pulls everything off S.pitcher.{st,advanced}.
+// once xERA becomes available. Pulls everything off S.pitcher.{st,advanced} plus
+// S.pitcherStatcast.xera (Statcast-native).
 export function _renderPitcherSeasonBoxes() {
   const p = S.pitcher;
   if (!p?.st || !document.getElementById('pt-season')) return;
@@ -511,21 +512,17 @@ export function _renderPitcherSeasonBoxes() {
   const whipC = whip <= 1.10 ? 'good' : whip >= 1.40 ? 'bad' : '';
   const fipNum = parseFloat(fip);
   const fipC = !isNaN(fipNum) ? (fipNum < 3.50 ? 'good' : fipNum > 4.50 ? 'bad' : '') : '';
-  const xfipNum = p.advanced?.xfip;
-  const xfipC = xfipNum != null ? (xfipNum < 3.50 ? 'good' : xfipNum > 4.50 ? 'bad' : '') : '';
-  const xfipDisplay = xfipNum != null ? xfipNum.toFixed(2) : '—';
-  const sieraNum = p.advanced?.siera;
-  const sieraC = sieraNum != null ? (sieraNum < 3.50 ? 'good' : sieraNum > 4.50 ? 'bad' : '') : '';
-  const sieraDisplay = sieraNum != null ? sieraNum.toFixed(2) : '—';
+  const xeraNum = S.pitcherStatcast?.xera;
+  const xeraC = xeraNum != null ? (xeraNum <= 3.50 ? 'good' : xeraNum >= 5.00 ? 'bad' : '') : '';
+  const xeraDisplay = xeraNum != null ? xeraNum.toFixed(2) : '—';
   const kbbNum = parseFloat(kbb);
   const kbbC = !isNaN(kbbNum) ? (kbbNum >= 15 ? 'good' : kbbNum <= 8 ? 'bad' : '') : '';
   const hr9Num = parseFloat(hr9);
   const hr9C = !isNaN(hr9Num) ? (hr9Num <= 0.9 ? 'good' : hr9Num >= 1.5 ? 'bad' : '') : '';
   document.getElementById('pt-season').innerHTML = [
     ['ERA', era ? parseFloat(era).toFixed(2) : '—', eraC, 'Earned run average', STAT_INFO.ERA],
+    ['xERA', xeraDisplay, xeraC, 'Expected ERA from EV/LA — headline pitcher-quality metric', STAT_INFO.XERA],
     ['FIP', fip, fipC, 'Fielding independent (strips luck)', STAT_INFO.FIP],
-    ['xFIP', xfipDisplay, xfipC, 'FIP w/ normalized HR/FB', STAT_INFO.XFIP],
-    ['SIERA', sieraDisplay, sieraC, 'Skill-based ERA: K, BB, batted-ball mix', STAT_INFO.SIERA],
     ['WHIP', whip ? parseFloat(whip).toFixed(2) : '—', whipC, 'Walks + hits per IP', STAT_INFO.WHIP],
     ['K-BB%', kbb, kbbC, 'Skill gap — best K predictor', STAT_INFO.KBBPCT],
     ['HR/9', hr9, hr9C, 'Home runs allowed per 9 IP', STAT_INFO.HR9],
@@ -550,16 +547,15 @@ export function _renderPitcherForm(starts) {
   ).join('')}</div>`;
 }
 
-// ── Pitcher splits row (Home/Away · vs L/R · SIERA/xFIP chip) ───────────────
-// Reads S.pitcher.advanced for the SIERA/xFIP chip. `isHomeGame` highlights
+// ── Pitcher splits row (Home/Away · vs L/R · xERA chip) ─────────────────────
+// Reads S.pitcherStatcast.xera for the headline chip. `isHomeGame` highlights
 // the active side. Data shape: { h, a, vl, vr } from pitcher.js:loadPitcherSplits.
 export function _renderPitcherSplits(splits, isHomeGame) {
   if (!splits) return '';
-  const sieraVal = S.pitcher?.advanced?.siera;
-  const xfipVal = S.pitcher?.advanced?.xfip;
-  const advChip = sieraVal != null
-    ? `<span class="ps-adv">SIERA <b>${sieraVal.toFixed(2)}</b></span>`
-    : (xfipVal != null ? `<span class="ps-adv">xFIP <b>${xfipVal.toFixed(2)}</b></span>` : '');
+  const xeraVal = S.pitcherStatcast?.xera;
+  const advChip = xeraVal != null
+    ? `<span class="ps-adv">xERA <b>${xeraVal.toFixed(2)}</b></span>`
+    : '';
   const homeEra = splits.h?.era;
   const awayEra = splits.a?.era;
   const homeCls = isHomeGame ? 'ps-active' : '';
