@@ -33,7 +33,7 @@ const _MANUAL_PROP_LABELS = {
 // was available at prediction time. Used by updateFactorPerf / _rebuildFactorPerf
 // so historical gradeLog entries written before the consolidation still credit
 // the right factor.
-const _LEGACY_PITCHER_QUALITY = new Set(['Pitcher SIERA','Pitcher xFIP','Pitcher FIP','Pitcher ERA']);
+const _LEGACY_PITCHER_QUALITY = new Set(['Pitcher xERA','Pitcher SIERA','Pitcher xFIP','Pitcher FIP','Pitcher ERA']);
 function _canonicalFactorLabel(label){
   return _LEGACY_PITCHER_QUALITY.has(label) ? 'Pitcher Quality' : label;
 }
