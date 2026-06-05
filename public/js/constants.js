@@ -37,9 +37,12 @@ export const BOOK_ABBREVS = {
   'DraftKings':'DK',
   'BetMGM':'MGM',
   'Hard Rock Bet':'HR',
-  'Hard Rock Bet (OH)':'HR',
   'theScore Bet':'ESPN',
 };
+// NOTE: The Odds API also returns a separate "Hard Rock Bet (OH)" (Ohio) feed.
+// It is intentionally excluded — its prices differ from the main Hard Rock Bet
+// book, and collapsing both to the "HR" tag surfaced Ohio-only prices the user
+// can't actually bet (e.g. an Under shown at -125 HR when the live book was -160).
 // Only these books contribute to devig calc, best-price tracking, and the
 // status banner. Books outside the set are filtered out before processing.
 export const ALLOWED_BOOKS = new Set(Object.keys(BOOK_ABBREVS));
