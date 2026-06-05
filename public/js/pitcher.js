@@ -426,7 +426,6 @@ export async function loadPitcherStatcast(pitcherId) {
     const hhAgainst    = fmtPct(hhRaw);
     const avgEVAgainst = evRaw ? fmtVal(evRaw, 1) + ' mph' : '—';
     const xwobaPct     = fmtVal(xwobaRaw, 3);
-    const xERAVal      = fmtVal(xeraRaw, 2);
 
     // Color thresholds must match STAT_INFO entries below (otherwise the box
     // color contradicts what the tooltip says is good/avg/bad).
@@ -436,7 +435,6 @@ export async function loadPitcherStatcast(pitcherId) {
     const gbC      = gbPct      !== '—' ? (parseFloat(gbPct)      >= 50   ? 'good' : parseFloat(gbPct)      <= 38   ? 'bad' : '') : '';
     const brlC     = brlAgainst !== '—' ? (parseFloat(brlAgainst) <= 4    ? 'good' : parseFloat(brlAgainst) >= 10   ? 'bad' : '') : '';
     const hhC      = hhAgainst  !== '—' ? (parseFloat(hhAgainst)  <= 35   ? 'good' : parseFloat(hhAgainst)  >= 45   ? 'bad' : '') : '';
-    const xeraC    = xERAVal    !== '—' ? (parseFloat(xERAVal)    <= 3.50 ? 'good' : parseFloat(xERAVal)    >= 5.00 ? 'bad' : '') : '';
 
     S.pitcherStatcast = {
       whiff:      parseFloat(whiffRaw) || null,
@@ -457,6 +455,13 @@ export async function loadPitcherStatcast(pitcherId) {
       _renderPitcherSeasonBoxes();
     }
 
+    // SIERA was recomputed above via _computePitcherMetrics once FB%/GB% landed,
+    // so S.pitcher.advanced.siera is populated by the time we build these boxes.
+    // Headline xERA already lives in the season-stats grid; SIERA fills this
+    // slot as the secondary regression-based estimator.
+    const sieraNum = S.pitcher?.advanced?.siera;
+    const sieraVal = sieraNum != null ? sieraNum.toFixed(2) : '—';
+    const sieraC = sieraNum != null ? (sieraNum <= 3.50 ? 'good' : sieraNum >= 4.50 ? 'bad' : '') : '';
     const boxes = [
       statBox('Whiff%',     whiffPct,     'Whiff rate per pitch',  whiffC,   STAT_INFO.WHIFF_P),
       statBox('K%',         kPct,         'Strikeout rate',        kC,       STAT_INFO.KPCT_P),
@@ -467,7 +472,7 @@ export async function loadPitcherStatcast(pitcherId) {
       statBox('HH% vs',     hhAgainst,    'Hard contact allowed',  hhC,      STAT_INFO.HH_VS),
       statBox('Avg EV vs',  avgEVAgainst, 'Avg exit velo against', '',       STAT_INFO.EV_VS),
       statBox('xwOBA vs',   xwobaPct,     'Expected wOBA against', '',       STAT_INFO.XWOBA_VS),
-      statBox('xERA',       xERAVal,      'Expected ERA',          xeraC,    STAT_INFO.XERA),
+      statBox('SIERA',      sieraVal,     'Skill-based ERA: K, BB, batted-ball mix', sieraC, STAT_INFO.SIERA),
     ].join('');
 
     if (!scRow && !expRow && arsenalRows.length === 0) {
