@@ -464,7 +464,7 @@ export async function loadPitcherStatcast(pitcherId) {
     const sieraC = sieraNum != null ? (sieraNum <= 3.50 ? 'good' : sieraNum >= 4.50 ? 'bad' : '') : '';
     const boxes = [
       statBox('Whiff%',     whiffPct,     'Whiff rate per pitch',  whiffC,   STAT_INFO.WHIFF_P),
-      statBox('K%',         kPct,         'Strikeout rate',        kC,       STAT_INFO.KPCT_P),
+      statBox('Arsenal K%', kPct,         'Usage-weighted K% by pitch', kC,   STAT_INFO.KPCT_P),
       statBox('Put Away%',  putAway,      '2-strike put-away rate', putAwayC, STAT_INFO.PUTAWAY),
       statBox('GB%',        gbPct,        'Ground ball rate',      gbC,      STAT_INFO.GB_P),
       statBox('FB%',        fbPct,        'Fly ball rate',         '',       STAT_INFO.FB_P),
