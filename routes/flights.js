@@ -11,6 +11,10 @@ const router  = express.Router();
 const _cache = {};
 const TTL_HISTORICAL = 6 * 60 * 60 * 1000;
 const TTL_TODAY      = 15 * 60 * 1000;
+// The /cached read path accepts entries up to 35 min old — just past the cron
+// poller's 30-min cadence — so dashboard loads between polls ride the cron's
+// cache instead of triggering their own live AeroDataBox call.
+const TTL_CACHED_READ = 35 * 60 * 1000;
 
 let _charters = null;
 function loadCharters() {
@@ -165,7 +169,12 @@ async function lookupTeam(abbr, destAirport) {
   const today              = ymd(new Date());
   const yesterday          = ymd(new Date(Date.now() - 86400000));
   const dayBeforeYesterday = ymd(new Date(Date.now() - 2 * 86400000));
-  const lookupDates = [dayBeforeYesterday, yesterday, today];
+  // Tomorrow (UTC) is included so PRE-departure scheduled flights are visible:
+  // a charter filed for tomorrow's local date (or a late-night Eastern departure
+  // that lands on tomorrow's UTC date) would otherwise be invisible to the cron
+  // ETD scout until the day of, and the dashboard could never show its ETD.
+  const tomorrow           = ymd(new Date(Date.now() + 86400000));
+  const lookupDates = [dayBeforeYesterday, yesterday, today, tomorrow];
   const allFlights = [];
   let anySuccess = false;
   let lastError = null;
@@ -241,7 +250,7 @@ function readCached(abbr, destAirport) {
   const ageMs = Date.now() - entry.ts;
   // Treat stale entries as a miss so the client's live fallback fires and
   // fetches fresh AeroDataBox data rather than looping on an old EN ROUTE state.
-  if (ageMs >= TTL_TODAY) return null;
+  if (ageMs >= TTL_CACHED_READ) return null;
   return { data: entry.data, ageMs };
 }
 

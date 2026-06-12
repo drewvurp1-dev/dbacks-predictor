@@ -16,6 +16,17 @@ const flightsRouter = require('./routes/flights');
 
 const DBACKS_TEAM_ID = 109;
 
+// MLB team ID -> charter-registry abbreviation. The schedule endpoint's default
+// response carries only team {id, name, link} — NO abbreviation field — so any
+// opponent resolution must go through stable team IDs (same map as charter.js).
+const TEAM_ID_TO_ABBR = {
+  108: 'LAA', 109: 'ARI', 110: 'BAL', 111: 'BOS', 112: 'CHC', 113: 'CIN',
+  114: 'CLE', 115: 'COL', 116: 'DET', 117: 'HOU', 118: 'KC',  119: 'LAD',
+  120: 'WSH', 121: 'NYM', 133: 'ATH', 134: 'PIT', 135: 'SD',  136: 'SEA',
+  137: 'SF',  138: 'STL', 139: 'TB',  140: 'TEX', 141: 'TOR', 142: 'MIN',
+  143: 'PHI', 144: 'ATL', 145: 'CWS', 146: 'MIA', 147: 'NYY', 158: 'MIL',
+};
+
 let _pool = null;
 function pool() {
   if (!_pool && process.env.DATABASE_URL) {
@@ -163,11 +174,12 @@ async function checkFirstPitch() {
 //      /cached endpoint so the dashboard shows "scheduled 5:00 PM" well
 //      before wheels-up.
 //
-//   2. ACTIVE POLL (ETD → ETD+6h): once ETD is known (or falls back to
-//      T+3h if AeroDataBox has no schedule yet), polls every 30 min until
-//      the charter lands or the window closes.
+//   2. ACTIVE POLL (ETD → ETD+8h): once ETD is known (or falls back to
+//      T-6h before opener first pitch if AeroDataBox has no schedule yet),
+//      polls every 30 min until the charter lands or the window closes.
+//      The 8h cap bounds quota burn when AeroDataBox loses the flight.
 //
-// ~5–8 upstream calls total per series opener (1–2 scouts + active polls).
+// ~5–10 upstream calls total per series opener (1–2 scouts + active polls).
 
 let _charters = null;
 function loadCharters() {
@@ -246,9 +258,11 @@ async function checkCharterPoll() {
     if (/Postponed|Cancelled|Suspended/i.test(detail)) return;
 
     const isHome = game.teams?.home?.team?.id === DBACKS_TEAM_ID;
-    const todayOpp = isHome
-      ? game.teams.away?.team?.abbreviation
-      : game.teams.home?.team?.abbreviation;
+    const oppSide = isHome ? game.teams.away : game.teams.home;
+    const oppId = oppSide?.team?.id;
+    // Resolve by team ID — the schedule API omits team.abbreviation by default,
+    // so reading .abbreviation alone made this whole poller a silent no-op.
+    const todayOpp = TEAM_ID_TO_ABBR[oppId] || oppSide?.team?.abbreviation || null;
     if (!todayOpp) return;
 
     const todayYmd = azDate();
@@ -256,10 +270,10 @@ async function checkCharterPoll() {
     let dbacksPrevAway = false;
     if (prevDbacksGame) {
       const prevHome = prevDbacksGame.teams?.home?.team?.id === DBACKS_TEAM_ID;
-      const prevOpp = prevHome
-        ? prevDbacksGame.teams.away?.team?.abbreviation
-        : prevDbacksGame.teams.home?.team?.abbreviation;
-      if (prevOpp === todayOpp) return; // mid-series, no travel
+      const prevOppId = prevHome
+        ? prevDbacksGame.teams.away?.team?.id
+        : prevDbacksGame.teams.home?.team?.id;
+      if (prevOppId === oppId) return; // mid-series, no travel
       dbacksPrevAway = !prevHome;
     }
 
@@ -291,7 +305,9 @@ async function checkCharterPoll() {
     for (const { team, dest } of toTrack) {
       if (await isLanded(game.gamePk, team)) continue;
 
-      const etdKey = `${todayYmd}|${team}`;
+      // Keyed by gamePk (not date) so a scouted ETD survives the midnight
+      // rollover between the travel day and the opener day.
+      const etdKey = `${game.gamePk}|${team}`;
 
       // ── Phase 1: ETD scout ───────────────────────────────────────────────
       // Call lookupTeam (with its own 15-min cache) to fetch the scheduled
@@ -322,11 +338,13 @@ async function checkCharterPoll() {
       // ── Phase 2: polling window ──────────────────────────────────────────
       const etdMs = _etdCache[etdKey];
       // Open at ETD; fall back to 6h before opener first pitch if no schedule found.
-      // The no-ETD windowEnd uses 8h post-first-pitch (vs the old 2h) to cover
-      // late-landing charters on night games where AeroDataBox had no pre-departure
-      // schedule entry for the cron's ETD scout to catch.
+      // Hard cap at ETD+8h: no MLB charter leg flies that long, so a flight still
+      // "unlanded" by then means AeroDataBox lost track of it — stop burning quota.
+      // The no-ETD windowEnd uses 8h post-first-pitch to cover late-landing
+      // charters on night games where AeroDataBox had no pre-departure schedule
+      // entry for the cron's ETD scout to catch.
       const windowStart = etdMs ?? (openerFirstPitch - 6 * 3600000);
-      const windowEnd   = etdMs ? etdMs + 6 * 3600000 : openerFirstPitch + 8 * 3600000;
+      const windowEnd   = etdMs ? etdMs + 8 * 3600000 : openerFirstPitch + 8 * 3600000;
 
       if (Date.now() < windowStart) {
         if (etdMs) {
@@ -387,8 +405,8 @@ function start() {
   }
 
   if (process.env.AERODATABOX_API_KEY) {
-    cron.schedule('*/10 * * * *', checkCharterPoll);
-    console.log('[cron] scheduled charter poller every 10min (ETD-triggered after getaway game)');
+    cron.schedule('*/30 * * * *', checkCharterPoll);
+    console.log('[cron] scheduled charter poller every 30min (ETD-triggered after getaway game)');
   } else {
     console.log('[cron] charter poller disabled (AERODATABOX_API_KEY not set)');
   }
