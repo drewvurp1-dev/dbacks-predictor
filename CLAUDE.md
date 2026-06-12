@@ -170,7 +170,7 @@ Runs on startup via `require('./cron').start()`. No-ops if the required env vars
 |---|---|---|
 | `checkLineup` | Every 5 min | D-backs lineup posted for today's game |
 | `checkFirstPitch` | Every 5 min | First pitch is 25–35 min away |
-| `checkCharterPoll` | Every 30 min | Scouts for charter ETD from T+1h; active polls from scheduled departure (ETD) to ETD+6h |
+| `checkCharterPoll` | Every 30 min | Scouts for charter ETD from T-60h before opener first pitch; active polls from scheduled departure (ETD) until landing or ETD+8h |
 
 Notification dedup uses `notification_log (game_pk, type)` PRIMARY KEY — INSERT … ON CONFLICT DO NOTHING. Falls back to in-memory Set when `DATABASE_URL` isn't configured.
 
@@ -188,7 +188,7 @@ Frontend loads it once via `/pitch-arsenal` and caches on `S.pitchArsenal` (`pit
 
 `data/team_charters.json` — registry of MLB charter aircraft by team (tail numbers + flight callsigns). Sources: airliners.net, FlyerTalk, spotter sightings. **Verify callsigns each season** — Delta's DL88xx block and United's UA37xx block shift annually.
 
-Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. The cron poller (`checkCharterPoll`) pre-warms the in-memory cache in two phases: (1) a scout phase from T-48h before the series opener's first pitch, which fetches the scheduled departure time (ETD) from AeroDataBox and populates the dashboard with "SCHEDULED" state before wheels-up; (2) an active polling phase every 30 min starting at the ETD (falls back to T-6h from opener first pitch if AeroDataBox has no schedule yet), running until the charter lands or ETD+6h. Uses `fetchNextSeriesGame` (2-day lookahead) instead of `fetchTodayGame` so it works on off days and when today's game is already Final.
+Flight lookups go through `/flights/team/:abbr` → AeroDataBox via RapidAPI. The cron poller (`checkCharterPoll`) pre-warms the in-memory cache in two phases: (1) a scout phase from T-60h before the series opener's first pitch, which fetches the scheduled departure time (ETD) from AeroDataBox and populates the dashboard with "SCHEDULED" state before wheels-up; (2) an active polling phase every 30 min starting at the ETD (falls back to T-6h from opener first pitch if AeroDataBox has no schedule yet), running until the charter lands or ETD+8h (hard cap to bound API quota when AeroDataBox loses the flight). Flight-date lookups span UTC today−2 through tomorrow so pre-departure schedules filed for the next local day are visible to the ETD scout. Opponent resolution in cron.js goes through `TEAM_ID_TO_ABBR` — the schedule API's default response has no `team.abbreviation`. Uses `fetchNextSeriesGame` (2-day lookahead) instead of `fetchTodayGame` so it works on off days and when today's game is already Final.
 
 ## app.js Consolidation — Remaining Work
 
