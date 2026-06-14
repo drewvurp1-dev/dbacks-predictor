@@ -532,6 +532,28 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .modal-close { background: none; border: none; color: #E8DFC8; font-size: 24px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }
 #modal-slot .panel { display: block !important; }
 
+/* ── PIN keypad modal (lock.js) ── */
+.pin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.pin-overlay.hidden { display: none; }
+.pin-modal { width: 100%; max-width: 320px; background: #0e0c22; border: 1px solid #009A8B; border-radius: 14px; padding: 22px 20px 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+.pin-title { font-family: 'Orbitron', monospace; font-size: 15px; font-weight: 700; color: #009A8B; letter-spacing: 1px; }
+.pin-sub { font-family: 'Chakra Petch', monospace; font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 6px; line-height: 1.4; }
+.pin-dots { display: flex; gap: 14px; justify-content: center; margin: 18px 0 8px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(0,154,139,0.5); background: transparent; transition: background 0.12s, border-color 0.12s; }
+.pin-dot.filled { background: #009A8B; border-color: #009A8B; }
+.pin-error { font-family: 'Chakra Petch', monospace; font-size: 11px; color: #e74c3c; min-height: 16px; margin-bottom: 6px; }
+.pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
+.pin-key { font-family: 'Chakra Petch', monospace; font-size: 22px; font-weight: 600; color: #E8DFC8; background: #16142e; border: 1px solid #1e1b3a; border-radius: 10px; padding: 14px 0; cursor: pointer; transition: background 0.1s, transform 0.05s; user-select: none; }
+.pin-key:active { background: rgba(0,154,139,0.25); transform: scale(0.96); }
+.pin-key-soft { font-size: 13px; color: rgba(255,255,255,0.6); background: transparent; border-color: transparent; }
+.pin-menu { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.pin-menu-btn { font-family: 'Chakra Petch', monospace; font-size: 14px; font-weight: 600; color: #E8DFC8; background: #16142e; border: 1px solid #1e1b3a; border-radius: 10px; padding: 13px 0; cursor: pointer; transition: background 0.1s; }
+.pin-menu-btn:active { background: rgba(0,154,139,0.25); }
+.pin-menu-btn.danger { color: #e74c3c; border-color: rgba(231,76,60,0.4); }
+.pin-menu-btn.soft { color: rgba(255,255,255,0.6); background: transparent; border-color: transparent; }
+.pin-shake { animation: pin-shake 0.32s; }
+@keyframes pin-shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-7px); } 40%,80% { transform: translateX(7px); } }
+
 /* ── Dashboard main ── */
 .dash-game-banner { background: #000; border: 1px solid #009A8B; border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
 .dash-banner-empty { color: #444; font-family: 'Chakra Petch', monospace; font-size: 11px; }
