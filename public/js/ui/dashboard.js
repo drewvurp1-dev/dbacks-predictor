@@ -10,6 +10,7 @@ import { _getTopBets, getActiveInflators } from '../bets.js';
 import { bookAbbrev } from '../betting.js';
 import { MC_CONFIDENCE_MIN } from '../constants.js';
 import { _COMPASS_DEGS } from '../weather.js';
+import { computeHotCold } from '../hotcold.js';
 
 // ── Team momentum bar (dashboard top strip) ─────────────────────────────────
 // Pulls D-backs standings: streak, last 10, run differential, NL West rank.
@@ -652,4 +653,87 @@ function _recentFormHtml(snap){
     <div class="dpb-mini-row">${avg} AVG</div>
     <div class="dpb-mini-row">${h} H · ${hr} HR · ${k} K · ${bb} BB</div>
   </div>`;
+}
+
+// ── Who's Hot? / Who's Not? — recent-form streak card ───────────────────────
+// Pulls each active D-backs hitter's season game log (parallel), then ranks the
+// roster by rolling-window OPS swing vs. season baseline (hotcold.js). Cached on
+// S.hotCold for the session so re-renders don't refetch. Fired once at boot
+// (app.js) alongside the schedule strip and momentum bar.
+export async function loadHotCold(){
+  const el=document.getElementById('dash-hotcold');
+  if(!el)return;
+  if(S.hotCold){el.innerHTML=_hotColdHtml(S.hotCold);return;}
+  const roster=activeRoster();
+  if(!roster||!roster.length){el.innerHTML='<div class="dash-empty">No roster loaded.</div>';return;}
+  el.innerHTML='<div class="dash-empty">Loading recent form…</div>';
+  try{
+    const results=await Promise.all(roster.map(async p=>{
+      try{
+        const d=await api.mlbBatterGameLog(p.id);
+        return {id:p.id,name:p.name,games:d?.stats?.[0]?.splits||[]};
+      }catch{ return {id:p.id,name:p.name,games:[]}; }
+    }));
+    S.hotCold=computeHotCold(results);
+    el.innerHTML=_hotColdHtml(S.hotCold);
+  }catch{
+    el.innerHTML='<div class="dash-empty">Recent form unavailable.</div>';
+  }
+}
+
+function _hotColdHtml(data){
+  if(!data||(!data.hot.length&&!data.cold.length))
+    return'<div class="dash-empty">Not enough recent games to call streaks yet.</div>';
+  return`<div class="hotcold-section">
+      <div class="hotcold-head hotcold-head--hot">Who's Hot?</div>
+      ${data.hot.length?data.hot.map(r=>_hotColdRow(r,'hot')).join(''):'<div class="hotcold-none">No standout hot streaks right now.</div>'}
+    </div>
+    <div class="hotcold-section">
+      <div class="hotcold-head hotcold-head--cold">Who's Not?</div>
+      ${data.cold.length?data.cold.map(r=>_hotColdRow(r,'cold')).join(''):'<div class="hotcold-none">Nobody in a notable slump.</div>'}
+    </div>`;
+}
+
+// ".XYZ" / "1.XYZ" — strip a single leading zero the way batting lines are shown.
+function _fmt3(v){ return v.toFixed(3).replace(/^0\./,'.'); }
+function _fmtSwing(d){ return (d>=0?'+':'-')+Math.abs(d).toFixed(3).replace(/^0\./,'.'); }
+
+function _hotColdRow(r,kind){
+  const a=r.w;
+  const chips=[];
+  if(kind==='hot'){
+    chips.push(`${a.hitG}/${a.g} G w/ hit`);
+    if(a.hr) chips.push(`${a.hr} HR`);
+    else if(a.xbh) chips.push(`${a.xbh} XBH`);
+    if(a.sb) chips.push(`${a.sb} SB`);
+  }else{
+    if(a.k) chips.push(`${a.k} K · ${(r.wr.kRate*100).toFixed(0)}%`);
+    chips.push(`hit in ${a.hitG}/${a.g} G`);
+  }
+  const chipHtml=chips.map(c=>`<span class="hotcold-chip">${c}</span>`).join('');
+  return`<div class="hotcold-row hotcold-row--${kind}" data-action="open-player-corbet" data-player-id="${r.id}" title="View CorBET bets for ${r.name}">
+    <div class="hotcold-row-top">
+      <span class="hotcold-name">${r.name}</span>
+      <span class="hotcold-swing hotcold-swing--${kind}">${_fmtSwing(r.opsDelta)} OPS</span>
+    </div>
+    <div class="hotcold-stat">L${r.window}: ${a.h}-for-${a.ab} · ${_fmt3(r.wr.avg)} ${chipHtml}</div>
+    <div class="hotcold-sub">Season OPS ${_fmt3(r.sr.ops)} → L${r.window} ${_fmt3(r.wr.ops)}</div>
+    ${_hotColdSpark(r.hitsSeries,kind)}
+  </div>`;
+}
+
+// Per-game hits bar sparkline across the window (oldest→newest).
+function _hotColdSpark(series,kind){
+  if(!series||!series.length)return'';
+  const max=Math.max(1,...series);
+  const w=120,h=20,gap=2,n=series.length;
+  const bw=(w-(n-1)*gap)/n;
+  const color=kind==='hot'?'#2ecc71':'#e8a13a';
+  const bars=series.map((v,i)=>{
+    const bh=Math.max(1.5,(v/max)*(h-2));
+    const x=(i*(bw+gap)).toFixed(1);
+    const y=(h-bh).toFixed(1);
+    return`<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1" fill="${v>0?color:'#39334f'}"/>`;
+  }).join('');
+  return`<svg class="hotcold-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${bars}</svg>`;
 }

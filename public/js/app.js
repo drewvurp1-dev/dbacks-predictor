@@ -70,7 +70,7 @@ import {
   _windDir, fetchWeather,
 } from './weather.js';
 import {
-  loadTeamMomentum, loadTwoWeekSchedule,
+  loadTeamMomentum, loadTwoWeekSchedule, loadHotCold,
   _renderGameBanner, renderDashboard, togglePlayerCard, setTopBetsSort,
 } from './ui/dashboard.js';
 import { loadKalshiEdges, renderKalshiEdges } from './kalshi.js';
@@ -2133,3 +2133,4 @@ _loadPitchArsenal(); // warm cache for pitch-mix matchup factor
 autoLoadNextGame(); // overwrites date/time and pulls umpire, weather, lineup
 loadTwoWeekSchedule(); // dashboard 14-day calendar strip
 loadTeamMomentum(); // dashboard team standings/streak strip
+loadHotCold(); // dashboard "Who's Hot? / Who's Not?" recent-form card

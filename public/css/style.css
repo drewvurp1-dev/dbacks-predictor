@@ -595,6 +595,28 @@ input[type=range] { accent-color: #009A8B; padding: 0; }
 .dash-badge { background: #0c0a1e; border: 1px solid #1a1730; border-radius: 4px; padding: 2px 6px; font-family: 'Chakra Petch', monospace; font-size: 9px; color: #009A8B; white-space: nowrap; }
 .dash-badge--prob { background: transparent; border: none; padding: 2px 2px; color: #8a86a8; font-style: italic; }
 .dash-empty { font-family: 'Chakra Petch', monospace; font-size: 11px; color: #555; padding: 8px 0; }
+
+/* ── Who's Hot? / Who's Not? card ── */
+.hotcold-section { margin-bottom: 6px; }
+.hotcold-section + .hotcold-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid #1a1730; }
+.hotcold-head { font-family: 'Orbitron', monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+.hotcold-head--hot { color: #2ecc71; }
+.hotcold-head--cold { color: #e8a13a; }
+.hotcold-none { font-family: 'Chakra Petch', monospace; font-size: 11px; color: #555; padding: 4px 0 6px; }
+.hotcold-row { display: block; padding: 9px 8px; margin: 0 -8px; border-radius: 6px; cursor: pointer; border-left: 3px solid transparent; transition: background 0.12s; }
+.hotcold-row:hover { background: #14112a; }
+.hotcold-row--hot { border-left-color: rgba(46,204,113,0.55); }
+.hotcold-row--cold { border-left-color: rgba(232,161,58,0.55); }
+.hotcold-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.hotcold-name { font-family: 'Chakra Petch', monospace; font-size: 13px; font-weight: 700; color: #E8DFC8; }
+.hotcold-swing { font-family: 'Chakra Petch', monospace; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.hotcold-swing--hot { color: #2ecc71; }
+.hotcold-swing--cold { color: #e8a13a; }
+.hotcold-stat { font-family: 'Chakra Petch', monospace; font-size: 11px; color: #cfc8e0; margin-top: 3px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.hotcold-chip { background: rgba(0,154,139,0.12); border: 1px solid rgba(0,154,139,0.3); border-radius: 4px; padding: 1px 6px; font-size: 10px; color: #E8DFC8; }
+.hotcold-sub { font-family: 'Chakra Petch', monospace; font-size: 10px; color: #777; margin-top: 3px; }
+.hotcold-spark { width: 120px; height: 20px; display: block; margin-top: 6px; }
+
 /* ── Collapsible player lineup rows ── */
 #dash-player-cards { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; margin-bottom: 20px; }
 
