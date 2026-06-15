@@ -59,6 +59,18 @@ function captureQuota(h) {
 
 function ymd(d) { return d.toISOString().slice(0, 10); }
 
+// AeroDataBox sometimes indexes a charter only under its ICAO callsign
+// (e.g. DAL8876) and returns nothing for the IATA flight number we store in
+// the registry (DL8876). Map the common MLB-charter airline prefixes so we can
+// retry with the ICAO form when the IATA lookup comes back empty.
+const IATA_TO_ICAO = { DL: 'DAL', UA: 'UAL', AA: 'AAL', AC: 'ACA', WN: 'SWA' };
+function toIcaoCallsign(cs) {
+  const m = /^([A-Z]{2})(\d.*)$/.exec(String(cs).toUpperCase());
+  if (!m) return null;
+  const icao = IATA_TO_ICAO[m[1]];
+  return icao ? icao + m[2] : null;
+}
+
 // Pick the flight whose arrival looks most relevant for "the team is on the
 // way to / has arrived at the host city": filter to flights with any kind of
 // arrival timestamp (actual, estimated, or scheduled), prefer arrivals INTO
@@ -213,6 +225,22 @@ async function lookupTeam(abbr, destAirport) {
         `/flights/number/${encodeURIComponent(callsign)}/${date}?withAircraftImage=false&withLocation=false`,
         `callsign:${callsign}`
       );
+    }
+  }
+
+  // ICAO fallback — only fires when the IATA callsign lookups found nothing, so
+  // it costs no extra quota on the common path. Keeps the original (IATA) tag so
+  // the UI still displays the registered callsign rather than the ICAO form.
+  if (!allFlights.length && callsigns.length) {
+    for (const callsign of callsigns) {
+      const icao = toIcaoCallsign(callsign);
+      if (!icao) continue;
+      for (const date of lookupDates) {
+        await runLookup(
+          `/flights/number/${encodeURIComponent(icao)}/${date}?withAircraftImage=false&withLocation=false`,
+          `callsign:${callsign}`
+        );
+      }
     }
   }
 
