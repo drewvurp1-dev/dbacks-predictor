@@ -145,7 +145,7 @@ export function saveBet(key, btn){
 //   'default' → edge-strength tier first (used by auto-save / star icons so
 //               the once-per-game snapshot stays stable regardless of the UI
 //               toggle). All three share the same qualification filter.
-export function _getTopBets(n=3,sortBy='default'){
+export function _getTopBets(n=3,sortBy='default',minStab=MC_CONFIDENCE_MIN){
   if(!S.allPlayerBets)return[];
   const edgeOrder={strong:3,moderate:2,small:1,none:0};
   const qualified=[];
@@ -153,7 +153,7 @@ export function _getTopBets(n=3,sortBy='default'){
     if(pg.lowData)return;
     pg.bets.forEach(b=>{
       if(b.propKey==='batter_home_runs')return;
-      if(b.mcConfidence!=null&&b.mcConfidence>=MC_CONFIDENCE_MIN&&b.edgeStrength!=='none'&&!b.insufficient)
+      if(b.mcConfidence!=null&&b.mcConfidence>=minStab&&b.edgeStrength!=='none'&&!b.insufficient)
         qualified.push({...b,playerName:pg.playerName});
     });
   });

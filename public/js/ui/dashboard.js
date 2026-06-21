@@ -429,7 +429,7 @@ export function renderDashboard(){
 
   // Top 5 bets — only when props are available
   if(S.allPlayerBets&&S.allPlayerBets.length){
-    const topBets=_getTopBets(5,tbSort);
+    const topBets=_getTopBets(5,tbSort,95);
     const _tbIdByName={};
     activeRoster().forEach(p=>{_tbIdByName[p.name]=p.id;});
     document.getElementById('dash-best-bets').innerHTML=topBets.length
@@ -469,7 +469,7 @@ export function renderDashboard(){
 
   // Pre-compute top-5 set so star icons can be applied per bet row.
   // Shared helper ensures lowData filter matches the Top 5 panel.
-  const topBetsKeys=new Set(_getTopBets(5,tbSort).map(b=>`${b.playerName}_${b.propKey}_${b.direction}`));
+  const topBetsKeys=new Set(_getTopBets(5,tbSort,95).map(b=>`${b.playerName}_${b.propKey}_${b.direction}`));
 
   const orderedRoster=[...activeRoster()].sort((a,b)=>{
     const oa=S.players?.[a.id]?.order??99;
