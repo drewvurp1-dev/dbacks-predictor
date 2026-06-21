@@ -563,10 +563,11 @@ export function renderCalibration(){
     if(m<80)return'70–80%';
     if(m<90)return'81–90%';
     if(m<95)return'91–95%';
-    return'95%+';
+    // ≥95% is tracked per integer (95,96,…,100) so each tier's hit rate is visible.
+    return Math.min(100,Math.floor(m))+'%';
   };
   const mcBuckets=_calBucketize(settled.filter(b=>b.mcConfidence!=null),mcBucket);
-  const mcOrder=['<70%','70–80%','81–90%','91–95%','95%+'];
+  const mcOrder=['<70%','70–80%','81–90%','91–95%','95%','96%','97%','98%','99%','100%'];
   const mcHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span>Stab Range</span><span>Count</span><span>Wins</span><span>Hit Rate</span><span>ROI</span></div>`;
   let mcRows='';
   mcOrder.forEach(k=>{
