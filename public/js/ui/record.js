@@ -560,11 +560,13 @@ export function renderCalibration(){
     const m=b.mcConfidence;
     if(m==null)return null;
     if(m<70)return'<70%';
-    if(m<85)return'70–84%';
-    return'85%+ (Top)';
+    if(m<80)return'70–80%';
+    if(m<90)return'81–90%';
+    if(m<95)return'91–95%';
+    return'95%+';
   };
   const mcBuckets=_calBucketize(settled.filter(b=>b.mcConfidence!=null),mcBucket);
-  const mcOrder=['<70%','70–84%','85%+ (Top)'];
+  const mcOrder=['<70%','70–80%','81–90%','91–95%','95%+'];
   const mcHeader=`<div class="cal-row cal-header" style="grid-template-columns:1fr 56px 56px 80px 80px;"><span>Stab Range</span><span>Count</span><span>Wins</span><span>Hit Rate</span><span>ROI</span></div>`;
   let mcRows='';
   mcOrder.forEach(k=>{
