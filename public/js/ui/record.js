@@ -73,6 +73,8 @@ export function renderCorbetBets(){
       const _evColor=_evPct!=null?(_evPct>=0?'#2ecc71':'#e74c3c'):'#ccc';
       const _evStr=_evPct!=null?(_evPct>=0?'+':'')+_evPct.toFixed(1)+'%':'—';
       const _evInfo=` <span class="corbet-info" data-tip="Expected Value — the model's average profit per $1 staked at the TYPICAL (median across books) price, if this bet were repeated many times. Median rather than the single best price so wide plus-money markets (RBI/Runs) aren't ranked off an optimistic outlier. A positive EV% means the price beats the model's fair odds; negative means it doesn't. The best Over/Under odds above show where to actually shop.">ⓘ</span>`;
+      const _stabStr=b.mcConfidence!=null?b.mcConfidence.toFixed(0)+'%':'—';
+      const _stabInfo=` <span class="corbet-info" data-tip="Edge Stability % — fraction of model runs where this bet's edge direction holds under score noise. NOT a win probability. Higher means the model's edge on this prop is robust to small score variation.">ⓘ</span>`;
       return`<div class="bet-card" style="${cardBg};border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid;">
         <div class="bet-card-header">
           <span style="font-size:13px;font-weight:900;font-family:\'Chakra Petch\',monospace;color:#ccc;">${b.prop} <span style="color:#666;font-size:10px;">· ${b.line}</span>${_softBadge}</span>
@@ -127,6 +129,10 @@ export function renderCorbetBets(){
           <div class="bet-stat-col">
             <div class="bet-stat-label">EV %${_evInfo}</div>
             <div class="bet-stat-val" style="color:${_evColor};font-weight:700;">${_evStr}</div>
+          </div>
+          <div class="bet-stat-col">
+            <div class="bet-stat-label">Stability${_stabInfo}</div>
+            <div class="bet-stat-val" style="color:#7fd1c4;font-weight:700;">${_stabStr}</div>
           </div>
         </div>
         ${(b.altLines&&b.altLines.length)?`
