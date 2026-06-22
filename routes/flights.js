@@ -67,6 +67,113 @@ function captureQuota(h) {
 
 function ymd(d) { return d.toISOString().slice(0, 10); }
 
+// Some MLB cities are served by more than one airport a team charter realistically
+// uses. A landing at any of these counts as "arrived <city>". Keyed by the
+// primary airport stored in the registry. St. Louis charters in particular often
+// use CPS (St. Louis Downtown / Cahokia, IL) rather than STL (Lambert).
+const DEST_ALIASES = {
+  STL: ['CPS', 'BLV', 'SUS'],   // Downtown / MidAmerica / Spirit of St. Louis
+};
+function destMatches(arrIata, destAirport) {
+  if (!destAirport) return false;
+  if (arrIata === destAirport) return true;
+  const alts = DEST_ALIASES[destAirport];
+  return !!alts && alts.includes(arrIata);
+}
+
+// IATA → ICAO airport code. OpenSky reports arrival/departure airports in ICAO
+// form. Every MLB destination is US (K-prefix) except Toronto (CYYZ).
+const IATA_TO_ICAO_AIRPORT = { YYZ: 'CYYZ' };
+function iataToIcaoAirport(iata) {
+  return IATA_TO_ICAO_AIRPORT[iata] || ('K' + iata);
+}
+function icaoToIataAirport(icao) {
+  if (!icao) return null;
+  const hit = Object.keys(IATA_TO_ICAO_AIRPORT).find(k => IATA_TO_ICAO_AIRPORT[k] === icao);
+  if (hit) return hit;
+  return /^K[A-Z]{3}$/.test(icao) ? icao.slice(1) : icao;
+}
+
+// US N-number → ICAO 24-bit address (hex). US registrations are mathematically
+// derived (unlike most countries), so we don't need a lookup table. Algorithm
+// ported from the public icao-nnumber_converter and validated against known
+// pairs (N652DL→A8947E, N664DN→A8C36D). OpenSky keys aircraft by this hex.
+const _B9 = '123456789';
+const _B10 = '0123456789';
+const _B34 = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';  // no I/O
+function _encSuffix(suf) {
+  if (!suf || !suf.length) return 0;
+  const r0 = _B34.indexOf(suf[0]);
+  const r1 = suf.length > 1 ? _B34.indexOf(suf[1]) + 1 : 0;
+  if (r0 < 0) return 0;
+  return r0 < 24 ? r0 * 25 + r1 + 1 : r0 * 35 + r1 - 239;
+}
+function nToIcao24(tail) {
+  const t = String(tail || '').toUpperCase();
+  if (!/^N[1-9]/.test(t)) return null;
+  let icao = 0xA00001;
+  icao += _B9.indexOf(t[1]) * 101711;
+  if (t.length > 2) {
+    const d2 = _B10.indexOf(t[2]);
+    if (d2 === -1) {
+      icao += _encSuffix(t.slice(2, 4));
+    } else {
+      icao += d2 * 10111 + 601;
+      if (t.length > 3) {
+        const d3 = _B10.indexOf(t[3]);
+        if (d3 > -1) { icao += d3 * 951 + 601; icao += _encSuffix(t.slice(4, 6)); }
+        else { icao += _encSuffix(t.slice(3, 5)); }
+      }
+    }
+  }
+  return icao.toString(16).toLowerCase();
+}
+
+// OpenSky historical flights-by-aircraft lookup. Free, ADS-B-sourced, and keyed
+// by registration (via hex) regardless of whether the flight was a scheduled
+// airline service — so it catches charters into GA airports (e.g. CPS) that
+// AeroDataBox's schedule-centric feed never indexes. Optional OPENSKY_USER /
+// OPENSKY_PASS env raise the anonymous rate limit. Returns the most-recent flight
+// whose estimated arrival airport is in acceptIcaoSet, mapped to our arrival
+// shape, or null. Never throws — ADS-B is strictly a fallback.
+async function openSkyArrival(tail, acceptIcaoSet, beginUnix, endUnix) {
+  try {
+    const hex = nToIcao24(tail);
+    if (!hex) return null;
+    const headers = {};
+    if (process.env.OPENSKY_USER && process.env.OPENSKY_PASS) {
+      const tok = Buffer.from(`${process.env.OPENSKY_USER}:${process.env.OPENSKY_PASS}`).toString('base64');
+      headers.Authorization = `Basic ${tok}`;
+    }
+    const path = `/api/flights/aircraft?icao24=${hex}&begin=${beginUnix}&end=${endUnix}`;
+    const r = await fetchJSON('opensky-network.org', path, headers);
+    if (r.status !== 200 || !Array.isArray(r.body)) return null;
+    const matches = r.body
+      .filter(f => f && f.estArrivalAirport && acceptIcaoSet.has(f.estArrivalAirport))
+      .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+    const f = matches[0];
+    if (!f) return null;
+    const arrUtc = f.lastSeen ? new Date(f.lastSeen * 1000).toISOString() : null;
+    const depUtc = f.firstSeen ? new Date(f.firstSeen * 1000).toISOString() : null;
+    return {
+      tail,
+      callsign: (f.callsign || '').trim() || null,
+      source: `adsb:${tail}`,
+      from: icaoToIataAirport(f.estDepartureAirport),
+      to:   icaoToIataAirport(f.estArrivalAirport),
+      depUtc, depLocal: null,
+      arrUtc, arrLocal: null,
+      depScheduledUtc: null, depScheduledLocal: null,
+      depActualUtc: depUtc, depActualLocal: null,
+      arrScheduledUtc: null, arrScheduledLocal: null,
+      arrEstimatedUtc: null, arrEstimatedLocal: null,
+      arrActualUtc: arrUtc, arrActualLocal: null,
+      intoHome: false,
+      status: 'Arrived (ADS-B)',
+    };
+  } catch { return null; }
+}
+
 // AeroDataBox sometimes indexes a charter only under its ICAO callsign
 // (e.g. DAL8876) and returns nothing for the IATA flight number we store in
 // the registry (DL8876). Map the common MLB-charter airline prefixes so we can
@@ -228,7 +335,7 @@ async function lookupTeam(abbr, destAirport) {
     if (!destAirport) return false;
     return allFlights.some(f => {
       const arr = f?.arrival?.airport?.iata || f?.arrival?.airport?.icao;
-      return arr === destAirport;
+      return destMatches(arr, destAirport);
     });
   }
 
@@ -283,14 +390,36 @@ async function lookupTeam(abbr, destAirport) {
   const targeted = destAirport
     ? allFlights.filter(f => {
         const arr = f?.arrival?.airport?.iata || f?.arrival?.airport?.icao;
-        return arr === destAirport;
+        return destMatches(arr, destAirport);
       })
     : allFlights;
 
-  const arrival = pickLatestArrival(targeted.length ? targeted : allFlights, team.home_airport);
+  let arrival = pickLatestArrival(targeted.length ? targeted : allFlights, team.home_airport);
+
+  // ADS-B fallback: when AeroDataBox produced no flight into the destination
+  // (its schedule-centric feed misses charters into GA airports), query OpenSky
+  // by tail. Only fires on a dest miss, queries the resolved/likely airframe
+  // first, and early-exits — so it costs nothing on the common AeroDataBox path.
+  const haveDestArrivalNow = arrival && destAirport && destMatches(arrival.to, destAirport);
+  if (!haveDestArrivalNow && destAirport && tails.length && process.env.DISABLE_ADSB_FALLBACK !== '1') {
+    const acceptIcao = new Set(
+      [destAirport, ...(DEST_ALIASES[destAirport] || [])].map(iataToIcaoAirport)
+    );
+    const beginUnix = Math.floor((now - 2 * 86400000) / 1000);
+    const endUnix   = Math.ceil(now / 1000);
+    for (const tail of orderedTails) {
+      const adsb = await openSkyArrival(tail, acceptIcao, beginUnix, endUnix);
+      if (adsb) { arrival = adsb; break; }
+    }
+  }
+
+  // Server-computed "arrived at the destination city" flag (honors aliases) so
+  // the client and cron don't each re-derive airport matching.
+  if (arrival) arrival.intoDest = destMatches(arrival.to, destAirport);
+
   // Remember which airframe flew this route so the next poll can short-circuit
   // the pool sweep (see _resolvedTail above).
-  if (arrival && arrival.tail && destAirport && arrival.to === destAirport) {
+  if (arrival && arrival.tail && arrival.intoDest) {
     _resolvedTail[cacheKey] = { reg: arrival.tail, ts: now };
   }
   const out = {
@@ -345,3 +474,8 @@ router.get('/team/:abbr/cached', (req, res) => {
 module.exports = router;
 module.exports.lookupTeam = lookupTeam;
 module.exports.readCached = readCached;
+// Exported for unit tests:
+module.exports._nToIcao24 = nToIcao24;
+module.exports._destMatches = destMatches;
+module.exports._iataToIcaoAirport = iataToIcaoAirport;
+module.exports._icaoToIataAirport = icaoToIataAirport;
