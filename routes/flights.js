@@ -15,6 +15,14 @@ const TTL_TODAY      = 15 * 60 * 1000;
 // poller's 30-min cadence — so dashboard loads between polls ride the cron's
 // cache instead of triggering their own live AeroDataBox call.
 const TTL_CACHED_READ = 35 * 60 * 1000;
+// Once we've identified which airframe in a pooled charter fleet (e.g. the
+// D-backs' rotating Delta VIP 757 pool) is flying a given route, remember it so
+// the next poll queries that one tail first — and early-exits — instead of
+// re-sweeping the whole pool every tick. Keyed by the same "ABBR|DEST" cacheKey
+// as _cache. 12h TTL keeps a resolved airframe within a single travel day but
+// lets it lapse between series so a stale tail never carries over.
+const _resolvedTail = {};
+const RESOLVED_TAIL_TTL = 12 * 60 * 60 * 1000;
 
 let _charters = null;
 function loadCharters() {
@@ -211,20 +219,44 @@ async function lookupTeam(abbr, destAirport) {
     }
   }
 
-  for (const tail of tails) {
+  // True once we've pulled a flight arriving into the requested destination.
+  // A rotating charter pool flies the trip on exactly ONE airframe, so the
+  // moment we see an into-dest flight we can stop querying the remaining
+  // tails/callsigns instead of burning quota across the whole pool. No-op when
+  // destAirport is unset (manual lookups always pass one).
+  function haveDestArrival() {
+    if (!destAirport) return false;
+    return allFlights.some(f => {
+      const arr = f?.arrival?.airport?.iata || f?.arrival?.airport?.icao;
+      return arr === destAirport;
+    });
+  }
+
+  // Query the previously-resolved airframe first so steady-state polling of a
+  // pooled fleet costs one tail's worth of calls, not the whole pool's.
+  const resolved = _resolvedTail[cacheKey];
+  const orderedTails = (resolved && now - resolved.ts < RESOLVED_TAIL_TTL && tails.includes(resolved.reg))
+    ? [resolved.reg, ...tails.filter(t => t !== resolved.reg)]
+    : tails;
+
+  for (const tail of orderedTails) {
     for (const date of lookupDates) {
       await runLookup(
         `/flights/reg/${encodeURIComponent(tail)}/${date}?withAircraftImage=false&withLocation=false`,
         `tail:${tail}`
       );
     }
+    if (haveDestArrival()) break;  // charter airframe identified — stop sweeping the pool
   }
-  for (const callsign of callsigns) {
-    for (const date of lookupDates) {
-      await runLookup(
-        `/flights/number/${encodeURIComponent(callsign)}/${date}?withAircraftImage=false&withLocation=false`,
-        `callsign:${callsign}`
-      );
+  if (!haveDestArrival()) {
+    for (const callsign of callsigns) {
+      for (const date of lookupDates) {
+        await runLookup(
+          `/flights/number/${encodeURIComponent(callsign)}/${date}?withAircraftImage=false&withLocation=false`,
+          `callsign:${callsign}`
+        );
+      }
+      if (haveDestArrival()) break;
     }
   }
 
@@ -256,6 +288,11 @@ async function lookupTeam(abbr, destAirport) {
     : allFlights;
 
   const arrival = pickLatestArrival(targeted.length ? targeted : allFlights, team.home_airport);
+  // Remember which airframe flew this route so the next poll can short-circuit
+  // the pool sweep (see _resolvedTail above).
+  if (arrival && arrival.tail && destAirport && arrival.to === destAirport) {
+    _resolvedTail[cacheKey] = { reg: arrival.tail, ts: now };
+  }
   const out = {
     team: abbr,
     home_airport: team.home_airport,
