@@ -323,8 +323,9 @@ async function checkCharterPoll() {
           const scout = await flightsRouter.lookupTeam(team, dest);
           if (scout.status === 200) {
             const arr = scout.data?.arrival;
-            // Only trust ETD when the flight is confirmed into the right airport.
-            if (arr && arr.to === dest && arr.depScheduledUtc) {
+            // Only trust ETD when the flight is confirmed into the right airport
+            // (intoDest honors multi-airport cities like St. Louis = STL/CPS).
+            if (arr && (arr.intoDest ?? arr.to === dest) && arr.depScheduledUtc) {
               const etdMs = new Date(arr.depScheduledUtc).getTime();
               if (!isNaN(etdMs)) {
                 _etdCache[etdKey] = etdMs;

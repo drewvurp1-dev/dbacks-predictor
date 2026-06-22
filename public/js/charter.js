@@ -183,11 +183,14 @@
         const idParts = [];
         if (d.tails && d.tails.length)         idParts.push('tails <code>' + d.tails.join(', ') + '</code>');
         if (d.callsigns && d.callsigns.length) idParts.push('callsigns <code>' + d.callsigns.join(', ') + '</code>');
-        out.innerHTML = `${context}<br>Tracked ${idParts.join(', ')}<br>No recent flights found in the last 3 days.`;
+        const detail = (d.raw_flight_count > 0)
+          ? `Found ${d.raw_flight_count} flight(s), but none into ${destAirport}.`
+          : 'No recent flights found in the last 3 days.';
+        out.innerHTML = `${context}<br>Tracked ${idParts.join(', ')}<br>${detail}`;
         return;
       }
       const a = d.arrival;
-      const intoTarget = a.to === destAirport;
+      const intoTarget = a.intoDest ?? (a.to === destAirport);
       const suggestion = suggestTravel(a);
       const idLine = a.callsign && (a.source || '').startsWith('callsign:')
         ? `Flight <code>${a.callsign}</code>${a.tail ? ` &middot; tail <code>${a.tail}</code>` : ''}`

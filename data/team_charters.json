@@ -25,7 +25,7 @@
   "SD":  { "name": "San Diego Padres",          "home_airport": "SAN", "tails": [],          "callsigns": ["DL8887"] },
   "SF":  { "name": "San Francisco Giants",      "home_airport": "SFO", "tails": [],          "callsigns": ["DL8888"] },
   "SEA": { "name": "Seattle Mariners",          "home_airport": "SEA", "tails": [],          "callsigns": ["DL8889"] },
-  "STL": { "name": "St. Louis Cardinals",       "home_airport": "STL", "tails": [],          "callsigns": ["DL8886"] },
+  "STL": { "name": "St. Louis Cardinals",       "home_airport": "STL", "tails": [],          "callsigns": ["DL8886"], "notes": "St. Louis charters frequently use CPS (St. Louis Downtown/Cahokia) or BLV/SUS rather than STL (Lambert). routes/flights.js DEST_ALIASES treats a landing at any of these as 'arrived St. Louis'." },
   "TB":  { "name": "Tampa Bay Rays",            "home_airport": "TPA", "tails": [],          "callsigns": ["DL8890"] },
   "TEX": { "name": "Texas Rangers",             "home_airport": "DFW", "tails": [],          "callsigns": ["AA9734"], "notes": "New Pacific Airlines (RVF) ceased ops Nov 2025; for 2026 the Rangers fly American Airlines (their official airline, HQ'd at DFW). Callsign AA9734 per airliners.net 2026 charter thread — lower confidence, reverify once season is underway." },
   "TOR": { "name": "Toronto Blue Jays",         "home_airport": "YYZ", "tails": [],          "callsigns": ["AC7031"], "notes": "Air Canada (Jetz) operates despite WestJet being marketing sponsor; A320-200 ~70 all-business-class seats. 2026 airliners.net thread lists IATA form AC7031 (was ACA7031/ICAO); if AeroDataBox fails to resolve, revert to ACA7031." },
