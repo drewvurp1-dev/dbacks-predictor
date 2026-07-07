@@ -279,19 +279,21 @@ async function checkCharterPoll() {
 
     const charters = loadCharters();
 
-    // Build list of teams to track for this series opener.
-    // Home game: opponent flying into PHX is always tracked; D-backs are also
-    //   tracked when they're returning from a road trip (prevGame was away).
+    // Build list of teams to track for this series opener. We only track the
+    // D-backs' own charter — the opponent's travel isn't tracked.
+    // Home game: D-backs flying home to PHX, only when returning from a road
+    //   trip (prevGame was away). A home opener after a home series has no
+    //   D-backs travel to track.
     // Away game: D-backs flying to the opponent's home airport.
     const toTrack = [];
     if (isHome) {
-      toTrack.push({ team: todayOpp, dest: 'PHX' });
       if (dbacksPrevAway) toTrack.push({ team: 'ARI', dest: 'PHX' });
     } else {
       const dest = charters[todayOpp]?.home_airport || null;
       if (!dest) return;
       toTrack.push({ team: 'ARI', dest });
     }
+    if (!toTrack.length) return;
 
     // Timing bounds: scout/poll from 60h before the series opener's first pitch
     // through 12h after. 60h (vs 48h) ensures the window opens well before a

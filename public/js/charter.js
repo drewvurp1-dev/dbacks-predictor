@@ -4,8 +4,9 @@
 //   2. Dashboard "#dash-charter-strip" — auto-fires on series-opener days,
 //      flags late/red-eye arrivals by body-clock (origin time zone).
 //
-// Honors the page's Home/Away toggle: Home games track the opponent into PHX,
-// Away games track the D-backs into the opponent's home airport.
+// Only the D-backs' own charter is tracked. Honors the page's Home/Away
+// toggle: Away games track ARI into the opponent's home airport; home games
+// track ARI back into PHX when they're returning from a road trip.
 
 (function () {
   // Opponent → home airport map (mirrors data/team_charters.json server-side).
@@ -192,10 +193,10 @@
     if (!opp) { out.textContent = 'Pick the opponent first.'; return; }
 
     const homeGame = isHomeGame();
-    const trackedTeam  = homeGame ? opp   : 'ARI';
+    const trackedTeam  = 'ARI';
     const destAirport  = homeGame ? 'PHX' : (OPP_AIRPORTS[opp] || 'PHX');
     const context = homeGame
-      ? `Tracking ${opp} into PHX`
+      ? `Tracking ARI into PHX`
       : `Tracking ARI into ${destAirport} (${opp})`;
 
     btn.disabled = true;
@@ -482,12 +483,14 @@
       return;
     }
 
-    // Build the list of flights to track for this series opener.
-    // Dual-track when D-backs host AND they're returning from a road trip
-    // (prevWasAway = their last game was also away from PHX).
+    // Build the list of flights to track for this series opener. We only ever
+    // track the D-backs' own charter — the opponent's travel isn't shown.
+    //   Away opener: ARI flying into the opponent's home airport.
+    //   Home opener: ARI flying home to PHX, but only when they're returning
+    //     from a road trip (prevWasAway). A home opener that follows a home
+    //     series means no D-backs travel to track.
     const flights = [];
     if (homeGame) {
-      flights.push({ team: opp, dest: 'PHX' });
       if (ctx.prevWasAway) flights.push({ team: 'ARI', dest: 'PHX' });
     } else {
       const dest = OPP_AIRPORTS[opp] || null;
@@ -499,35 +502,30 @@
       flights.push({ team: 'ARI', dest });
     }
 
+    if (!flights.length) {
+      el.className = 'dash-charter';
+      el.innerHTML = `<span class="dch-plane">✈</span><span class="dch-route">Charter tracker</span><span class="dch-spinner">no D-backs travel today</span>`;
+      return;
+    }
+
     el.className = 'dash-charter';
     el.innerHTML = flights.map(f =>
       `<span class="dch-plane">✈</span><span class="dch-spinner">${f.team} → ${f.dest}…</span>`
     ).join('');
 
-    // Fetch all tracked flights in parallel — caching inside fetchOneFlight
-    // bounds AeroDataBox quota to one call per flight per 15-min window.
-    const results = await Promise.all(flights.map(f => fetchOneFlight(f.team, f.dest, gameDate, forceRefresh)));
-    const visible = results.filter(r => !r.hidden);
+    // Fetch the D-backs' charter — caching inside fetchOneFlight bounds
+    // AeroDataBox quota to one call per 15-min window.
+    const f = flights[0];
+    const result = await fetchOneFlight(f.team, f.dest, gameDate, forceRefresh);
 
-    if (!visible.length) {
+    if (result.hidden) {
       el.classList.add('hidden');
       return;
     }
 
     const refreshBtn = '<button class="dch-refresh" data-action="refresh-charter" title="Refresh charter status">↻</button>';
-
-    if (visible.length === 1) {
-      el.className = `dash-charter ${visible[0].tierClass}`.trim();
-      el.innerHTML = visible[0].html + refreshBtn;
-    } else {
-      // Dual-track: stack two rows; apply the worst tier to the container
-      // so the border colour reflects the most-concerning flight.
-      const tierRank = { 'dch-critical': 3, 'dch-red': 2, 'dch-yellow': 1, '': 0 };
-      const worstTier = visible.reduce((best, r) =>
-        (tierRank[r.tierClass] || 0) > (tierRank[best] || 0) ? r.tierClass : best, '');
-      el.className = `dash-charter dch-dual ${worstTier}`.trim();
-      el.innerHTML = visible.map(r => `<div class="dch-row">${r.html}</div>`).join('') + refreshBtn;
-    }
+    el.className = `dash-charter ${result.tierClass}`.trim();
+    el.innerHTML = result.html + refreshBtn;
   };
 
   // Bust both the client page cache and the server's in-process cache, then
@@ -562,7 +560,7 @@
     }
     const destAirport = homeGame ? 'PHX' : (OPP_AIRPORTS[opp] || '?');
     const summary = homeGame
-      ? `Auto-detected: ${opp} → PHX`
+      ? `Auto-detected: ARI → PHX`
       : `Auto-detected: ARI → ${destAirport} (${opp})`;
     out.innerHTML = `<span style="color:#5d8;">${summary}</span><br>Click <strong>Track</strong> to look up the charter.`;
   }
