@@ -18,6 +18,41 @@
   };
   const OPPONENTS = Object.keys(OPP_AIRPORTS);
 
+  // Traveling team → home IANA timezone. The "body clock" is anchored to the
+  // team's HOME zone (their circadian system doesn't reset mid-trip), not to
+  // whatever airport they departed. Using an IANA zone keeps this DST-correct
+  // (and handles Arizona's no-DST) and — critically — works even when the
+  // upstream feed carries no local-offset string (e.g. the ADS-B fallback,
+  // which has no local times at all). Keys mirror OPP_AIRPORTS + ARI.
+  const TEAM_TZ = {
+    ARI:'America/Phoenix',  ATL:'America/New_York', BAL:'America/New_York',
+    BOS:'America/New_York', CHC:'America/Chicago',  CWS:'America/Chicago',
+    CIN:'America/New_York', CLE:'America/New_York',  COL:'America/Denver',
+    DET:'America/New_York', HOU:'America/Chicago',   KC:'America/Chicago',
+    LAA:'America/Los_Angeles', LAD:'America/Los_Angeles', MIA:'America/New_York',
+    MIL:'America/Chicago',  MIN:'America/Chicago',   NYM:'America/New_York',
+    NYY:'America/New_York', ATH:'America/Los_Angeles', PHI:'America/New_York',
+    PIT:'America/New_York', SD:'America/Los_Angeles', SF:'America/Los_Angeles',
+    SEA:'America/Los_Angeles', STL:'America/Chicago', TB:'America/New_York',
+    TEX:'America/Chicago',  TOR:'America/Toronto',   WSH:'America/New_York',
+  };
+
+  // UTC offset (minutes) of an IANA timezone at a specific instant, DST-correct.
+  function tzOffsetMinutes(date, timeZone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone, hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      }).formatToParts(date).reduce((a, p) => { a[p.type] = p.value; return a; }, {});
+      let hh = parseInt(parts.hour, 10);
+      if (hh === 24) hh = 0; // some engines emit "24" for midnight
+      const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day,
+        hh, +parts.minute, +parts.second);
+      return Math.round((asUTC - date.getTime()) / 60000);
+    } catch { return null; }
+  }
+
   // MLB team ID -> our internal abbreviation. The /mlb/* schedule endpoint
   // doesn't include team.abbreviation in its default response (just id + name),
   // and special hydration is unreliable — so we lookup by stable team ID.
@@ -77,14 +112,18 @@
     return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10));
   }
 
-  // Body-clock arrival = arrival UTC adjusted into the ORIGIN time zone, because
-  // that's the time zone the team's circadian system is still anchored to.
+  // Body-clock arrival = arrival UTC adjusted into the traveling team's HOME
+  // time zone, because that's the zone their circadian system is still anchored
+  // to. Prefer the team's IANA home zone (DST-correct, and works even when the
+  // feed has no local-offset string — e.g. the ADS-B fallback); fall back to the
+  // departure-origin offset, then to raw UTC if we know neither.
   // Returns a Date whose UTC fields read as the body-clock wall-clock time.
-  function bodyClockArrival(arrUtcStr, depLocalStr) {
+  function bodyClockArrival(arrUtcStr, homeTz, depLocalStr) {
     if (!arrUtcStr) return null;
     const arrUtc = new Date(arrUtcStr);
-    const offMin = extractOffsetMinutes(depLocalStr);
-    if (offMin == null) return arrUtc; // fall back to UTC if we can't determine origin TZ
+    let offMin = homeTz ? tzOffsetMinutes(arrUtc, homeTz) : null;
+    if (offMin == null) offMin = extractOffsetMinutes(depLocalStr);
+    if (offMin == null) return arrUtc; // fall back to UTC if we can't determine the zone
     return new Date(arrUtc.getTime() + offMin * 60 * 1000);
   }
 
@@ -134,9 +173,9 @@
     return document.getElementById('loc-home')?.classList.contains('active') ?? true;
   }
 
-  function suggestTravel(arrival) {
+  function suggestTravel(arrival, homeTz) {
     if (!arrival || !arrival.arrUtc) return null;
-    const body = bodyClockArrival(arrival.arrUtc, arrival.depLocal);
+    const body = bodyClockArrival(arrival.arrUtc, homeTz, arrival.depLocal);
     const h = body ? body.getUTCHours() : new Date(arrival.arrUtc).getHours();
     if (h >= 0 && h < 6) return 'redeye';
     const sameDay = new Date(arrival.arrUtc).toDateString() === new Date().toDateString();
@@ -191,7 +230,7 @@
       }
       const a = d.arrival;
       const intoTarget = a.intoDest ?? (a.to === destAirport);
-      const suggestion = suggestTravel(a);
+      const suggestion = suggestTravel(a, TEAM_TZ[trackedTeam]);
       const idLine = a.callsign && (a.source || '').startsWith('callsign:')
         ? `Flight <code>${a.callsign}</code>${a.tail ? ` &middot; tail <code>${a.tail}</code>` : ''}`
         : `Tail <code>${a.tail || a.callsign || '—'}</code>`;
@@ -365,7 +404,7 @@
       let html, tierClass = '';
 
       if (landed) {
-        const body = bodyClockArrival(displayArrUtc, a.depLocal);
+        const body = bodyClockArrival(displayArrUtc, TEAM_TZ[team], a.depLocal);
         const cls_ = classifyArrival(body, gameDate);
         tierClass = cls_.tier === 'yellow'   ? 'dch-yellow'
                   : cls_.tier === 'red'      ? 'dch-red'
