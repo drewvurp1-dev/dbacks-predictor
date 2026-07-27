@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Georgia Winter Trip — Dec 27 – Jan 5</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wine:    #8B2635;
+    --wine-lt: #B03048;
+    --dark:    #1C2330;
+    --gold:    #C4973A;
+    --cream:   #F7F3EE;
+    --cream-dk:#EDE7DC;
+    --sage:    #4E6B51;
+    --muted:   #6B7280;
+    --white:   #FFFFFF;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--dark);
+    color: var(--white);
+    padding: 40px 24px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: var(--wine);
+    opacity: 0.18;
+  }
+  .hero-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .hero-sub {
+    font-size: 14px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 24px;
+  }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gold);
+    display: block;
+  }
+  .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.55);
+    margin-top: 2px;
+  }
+
+  /* ── TABS ── */
+  .tab-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--dark);
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 13px 16px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    color: var(--white);
+    border-bottom-color: var(--wine);
+  }
+
+  /* ── SECTIONS ── */
+  .section { display: none; padding: 24px 20px 48px; }
+  .section.active { display: block; }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 4px;
+  }
+  .section-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--cream-dk);
+  }
+
+  /* ── ROUTING ── */
+  .route-card {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--wine);
+  }
+  .route-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--wine);
+    margin-bottom: 4px;
+  }
+  .route-path {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .route-detail { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+  .alert {
+    background: #FEF3CD;
+    border: 1px solid #F3D96B;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .alert strong { color: #92600A; }
+  .alert-sage {
+    background: #EEF4EE;
+    border-color: #A8C4AA;
+  }
+  .alert-sage strong { color: var(--sage); }
+
+  /* ── ITINERARY ── */
+  .day {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 0;
+    position: relative;
+  }
+  .day-spine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .day-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--wine);
+    color: var(--white);
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .day-num.gold { background: var(--gold); }
+  .day-num.sage { background: var(--sage); }
+  .day-line {
+    width: 1px;
+    flex: 1;
+    background: var(--cream-dk);
+    margin: 4px 0;
+    min-height: 20px;
+  }
+  .day-content {
+    flex: 1;
+    padding-bottom: 24px;
+  }
+  .day-date {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .day-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .day-desc { font-size: 13.5px; color: #374151; line-height: 1.6; margin-bottom: 8px; }
+  .day-stops {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .stop {
+    background: var(--cream);
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #374151;
+  }
+  .stop-name {
+    font-weight: 600;
+    color: var(--dark);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-bottom: 8px;
+  }
+  .tag-ski { background: #DBEAFE; color: #1E40AF; }
+  .tag-culture { background: #FCE7F3; color: #9D174D; }
+  .tag-food { background: #D1FAE5; color: #065F46; }
+  .tag-event { background: #FDE8D0; color: #92330A; }
+  .tag-night { background: #1C2330; color: #C4973A; }
+
+  /* ── TRANSPORT GRID ── */
+  .transport-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .t-card {
+    background: var(--white);
+    border-radius: 9px;
+    padding: 14px 12px;
+    border-top: 3px solid var(--wine);
+  }
+  .t-card.sage { border-top-color: var(--sage); }
+  .t-card.gold { border-top-color: var(--gold); }
+  .t-card.dark { border-top-color: var(--dark); }
+  .t-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--dark);
+  }
+  .t-card-body { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  /* ── FARE TABLE ── */
+  .fare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    background: var(--white);
+    border-radius: 9px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .fare-table th {
+    background: var(--dark);
+    color: var(--white);
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .fare-table td { padding: 9px 12px; border-bottom: 1px solid var(--cream); }
+  .fare-table tr:last-child td { border-bottom: none; }
+  .fare-table tr:nth-child(odd) td { background: var(--cream); }
+
+  /* ── SKIING ── */
+  .resort-card {
+    background: var(--white);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .resort-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--cream-dk);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .resort-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .resort-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 4px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+  .badge-rec { background: var(--wine); color: var(--white); }
+  .badge-adv { background: var(--dark); color: var(--white); }
+  .badge-fam { background: var(--sage); color: var(--white); }
+  .resort-body { padding: 14px 16px; font-size: 13px; color: #374151; line-height: 1.6; }
+  .resort-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--cream-dk);
+  }
+  .r-stat {
+    padding: 10px 12px;
+    text-align: center;
+    border-right: 1px solid var(--cream-dk);
+  }
+  .r-stat:last-child { border-right: none; }
+  .r-stat-val { font-weight: 700; font-size: 14px; color: var(--wine); display: block; }
+  .r-stat-key { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ── TIPS ── */
+  .tip-list { display: flex; flex-direction: column; gap: 10px; }
+  .tip {
+    background: var(--white);
+    border-radius: 9px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .tip-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .tip-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .tip-body { font-size: 12.5px; color: #374151; line-height: 1.55; }
+
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 20px 0 10px;
+    padding-top: 4px;
+    border-top: 1px solid var(--cream-dk);
+  }
+  h3:first-of-type { border-top: none; margin-top: 0; }
+
+  .footer {
+    text-align: center;
+    padding: 24px 20px;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--cream-dk);
+  }
+
+  a { color: var(--wine); text-decoration: none; border-bottom: 1px solid rgba(139,38,53,0.3); }
+  a:hover { border-bottom-color: var(--wine); }
+  .stop a, .tip-body a { color: var(--wine-lt); }
+
+  .budget-group { margin-bottom: 28px; }
+  .budget-group-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--wine);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .budget-group-total { font-size: 12px; color: var(--wine); font-family: 'Inter', sans-serif; font-weight: 600; }
+  .budget-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 4px; }
+  .budget-table td { padding: 7px 10px; border-bottom: 1px solid var(--cream-dk); }
+  .budget-table tr:last-child td { border-bottom: none; }
+  .budget-table .item { color: var(--dark); }
+  .budget-table .note { font-size: 11px; color: var(--muted); display: block; margin-top: 1px; }
+  .budget-table .cost { text-align: right; font-weight: 600; white-space: nowrap; color: var(--dark); }
+  .budget-table tr:nth-child(odd) td { background: var(--cream); }
+  .budget-summary {
+    background: var(--dark);
+    color: var(--white);
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+  .budget-summary-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .budget-summary-row:last-child { border-bottom: none; font-weight: 700; font-size: 15px; margin-top: 6px; padding-top: 8px; color: var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Trip Planning Doc · PHX → TBS</div>
+  <h1>Georgia<br>Winter Trip</h1>
+  <div class="hero-sub">Dec 27, 2026 – Jan 5, 2027 · 8 days in-country</div>
+  <div class="hero-stats">
+    <div class="stat"><span class="stat-val">TBS</span><span class="stat-label">Destination</span></div>
+    <div class="stat"><span class="stat-val">3</span><span class="stat-label">Regions</span></div>
+    <div class="stat"><span class="stat-val">~$130</span><span class="stat-label">Est./day USD</span></div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('itinerary', this)">Itinerary</button>
+  <button class="tab-btn" onclick="showTab('routing', this)">Getting There</button>
+  <button class="tab-btn" onclick="showTab('transport', this)">Getting Around</button>
+  <button class="tab-btn" onclick="showTab('skiing', this)">Skiing</button>
+  <button class="tab-btn" onclick="showTab('tips', this)">Tips & Practical</button>
+  <button class="tab-btn" onclick="showTab('budget', this)">Budget</button>
+</div>
+
+<!-- ══ ITINERARY ══ -->
+<div id="itinerary" class="section active">
+  <div class="section-title">Day-by-Day Itinerary</div>
+  <div class="section-desc">8 days across Tbilisi, Mtskheta, and Gudauri. NYE in the city, slopes after the rush clears.</div>
+
+  <div class="alert">
+    <strong>⚠️ Standby note:</strong> Dec 31–Jan 2 has high load factors on nearly every route. Fly into TBS by Dec 26–27 and depart no earlier than Jan 5–6. BA LHR–TBS is your last oneworld link — don't plan to standby home on Jan 1–2.
+  </div>
+
+  <!-- DAY 1 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">1</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Dec 27 · Saturday</div>
+      <div class="day-title">Arrival + First Taste of Tbilisi</div>
+      <span class="tag tag-culture">Culture</span>
+      <div class="day-desc">Get off the jet lag, get into the sulfur baths, and let Old Town do its thing. Don't fight the time difference — lean into the evening and let Tbilisi's atmospheric streets do the work.</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name"><a href="https://www.google.com/maps/place/?q=place_id:ChIJp1AABfcMREAR-U0SBWHxp0E" target="_blank">Abanotubani Sulfur Baths (Chreli Abano)</a></span>Book a private room (60–80 GEL). Ask for the "Kisa" scrub treatment. Some rooms have rooftop pools with Narikala views at night.</div>
+        <div class="stop"><span class="stop-name">Shardeni Street & Erekle II</span>Dinner in Old Town — Shardeni Street is the beating heart of Tbilisi's evening scene, packed with wine bars, cocktail bars, and Georgian restaurants with live music spilling onto the street. A perfect first-night warm-up. Slightly more tourist-facing than Vera/Sololaki but the atmosphere is electric, especially in festive season. Wine by the glass: 8–15 GEL.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 2 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">2</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Dec 28 · Sunday</div>
+      <div class="day-title">Tbilisi Deep Dive</div>
+      <span class="tag tag-culture">Culture</span> <span class="tag tag-night">Nightlife</span>
+      <div class="day-desc">Old Town, the fortress, and the Christmas Village by day — then live music in the evening. The city is beautifully decorated, festive mood runs Dec 12 through Jan 14.</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name"><a href="https://www.google.com/maps/place/?q=place_id:ChIJl-d-k_YMREARzXBLe7MsRAE" target="_blank">Narikala Fortress</a></span>Take the cable car from Rike Park (2.5 GEL). 4th-century fortress with panoramic views of the Mtkvari River and Old Town. Free to explore at the top.</div>
+        <div class="stop"><span class="stop-name">Sioni Cathedral + Anchiskhati Basilica</span>Two of Tbilisi's most important religious sites — oldest surviving church in the city. Go early morning for no crowds.</div>
+        <div class="stop"><span class="stop-name"><a href="https://www.google.com/maps/place/?q=place_id:ChIJd-I1SQANREARj9UzuM4LnAc" target="_blank">First Republic Square / Christmas Village</a></span>Christmas Village runs Dec 12–Jan 14. Mulled Saperavi wine, market stalls, live music — and where the main NYE Gala Concert will be on Dec 31.</div>
+        <div class="stop"><span class="stop-name">🎷 Evening: Jazz Cafe Singer</span>Live jazz and blues in a beautifully restored historic building in Old Town — cozy, soulful, and the most relaxed entry point into Tbilisi's music scene. No face control, no dress code, no agenda. Just Georgian wine and good music. Open from around 8 PM.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 3 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">3</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Dec 29 · Monday</div>
+      <div class="day-title">Wine, Food, Music & Sololaki</div>
+      <span class="tag tag-food">Food & Wine</span> <span class="tag tag-night">Nightlife</span>
+      <div class="day-desc">Slow morning at the baths, afternoon food market, evening wine bar crawl into live music on the river — then the late-night khinkali run that started this whole conversation.</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name"><a href="https://www.google.com/maps/place/?q=place_id:ChIJR_E3WvYMREARf4uMeawnvKw" target="_blank">Orbeliani Baths (Abanotubani)</a></span>The blue mosaic exterior is iconic for photos. Morning session before exploring. Entrance 60–80 GEL private room.</div>
+        <div class="stop"><span class="stop-name">Dezerter Bazaar</span>Tbilisi's chaotic, beautiful covered market. Spices, churchkhela (Georgian snickers: walnuts in grape juice), cheese, dried fruit. Bring cash.</div>
+        <div class="stop"><span class="stop-name">Sololaki Wine Bar Crawl — Vino Underground + neighbors</span>19th-century Art Nouveau neighborhood. Underground brick cellars serving regional qvevri pours. <strong>Vino Underground</strong> is the anchor — one of Georgia's best natural wine lists in a candlelit cellar. Side streets off Gorgasali Square hide additional gems. Budget 8–15 GEL/glass.</div>
+        <div class="stop"><span class="stop-name">🎸 Mtkvarze — Live Music on the Riverbank</span>Tbilisi's best live music venue for mixed genres — Georgian folk acts, jazz, and occasional rock, all on the banks of the Mtkvari. Informal and local without the tourist-bar pricing of Shardeni. The setting — Metekhi Church lit up on the cliff above, the river below — is remarkable. Open from ~8 PM.</div>
+        <div class="stop"><span class="stop-name">🥟 MUST: Late-Night Khinkali Run</span>The canonical post-bar food in Tbilisi. Fat, pleated Georgian dumplings filled with spiced meat broth — hold by the topknot, bite a small hole, drink the broth, eat the rest. Leave the doughy knot on the plate (it's a counter of how many you've had). Late-night khinkali specialists near Fabrika and in the Marjanishvili area exist almost entirely to feed people coming off a long night. Open until 2–3 AM or later.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 4 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num gold">4</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Dec 31 · Wednesday</div>
+      <div class="day-title">New Year's Eve in Tbilisi 🎆</div>
+      <span class="tag tag-event">Major Event</span>
+      <div class="day-desc">New Year's Eve is bigger than Christmas in Georgia. The whole city becomes a party — elaborate supras (feasts), citywide fireworks, and raucous celebrations that stretch for weeks. Book your restaurant well in advance — this sells out weeks ahead.</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name">Traditional Supra Feast</span>Pre-book a restaurant for an elaborate Georgian feast. Khachapuri, khinkali, grilled meats, wine, and toasts led by a Tamada (toastmaster). Book 3–4 weeks in advance — these sell out.</div>
+        <div class="stop"><span class="stop-name">First Republic Square Gala Concert + Midnight Fireworks</span>Main public celebration. Big Georgian pop stars, countdown, fireworks. Metro, buses, and Rike ropeway run FREE until 3 AM.</div>
+        <div class="stop"><span class="stop-name">🎧 After Midnight: Bassiani or Khidi (Optional)</span>New Year's Eve is one of Bassiani's biggest nights. If you're still standing after the fireworks and want to experience one of the world's great techno clubs — this is your shot. Bassiani opens at midnight and runs until 10–11 AM. <strong>Register online in advance at bassiani.com</strong> — don't just show up. Dress dark and unpretentious. No photos allowed (stickers taped over your camera lens at the door). Arrive after 2–3 AM for no queue. Entry 20–40 GEL.<br><br>If Bassiani feels like too much of a commitment, <strong>Café Gallery</strong> in Old Town is more accessible with a similar electronic vibe, or <strong>Modus</strong> has a younger local crowd and less intimidating door.</div>
+        <div class="stop"><span class="stop-name">🥟 Post-Club Khinkali (3–5 AM)</span>This is mandatory. Marjanishvili area near Fabrika. You'll know you're in the right place when half the tables are filled with people still in club clothes.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 5 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">5</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Jan 2 · Friday</div>
+      <div class="day-title">Bedoba — Day of Destiny</div>
+      <span class="tag tag-culture">Culture</span>
+      <div class="day-desc">January 2nd is Bedoba ("Day of Luck") — Georgians believe how you spend this day sets the tone for the entire year. Keep it calm. Spa morning, afternoon wine bar, pack for Gudauri.</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name">Morning Sulfur Bath</span>A slow soak at Abanotubani before heading to the mountains — the perfect Bedoba activity.</div>
+        <div class="stop"><span class="stop-name">Pack for Gudauri</span>GoTrip driver booked for Jan 3. Confirm transfer the evening before. Bring cash — smaller restaurants and rental shops in Gudauri are cash-only.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 6 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">6</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Jan 3 · Saturday</div>
+      <div class="day-title">Mtskheta Day Trip + Transfer to Gudauri</div>
+      <span class="tag tag-culture">UNESCO Sites</span>
+      <div class="day-desc">GoTrip driver stops at Mtskheta en route to Gudauri. Georgia's spiritual heart and ancient capital — home to two UNESCO World Heritage sites. A guide genuinely matters here; without one, they're "just pretty stones."</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name"><a href="https://www.google.com/maps/place/?q=place_id:ChIJb0_TLHBvREAR2ih93wnWTOw" target="_blank">Svetitskhoveli Cathedral, Mtskheta</a></span>UNESCO site. Georgia's holiest cathedral, reportedly containing Christ's robe. 11th century. Stunning interior frescoes. ~20 min from Tbilisi. Visit with a guide (~€30–40).</div>
+        <div class="stop"><span class="stop-name">Jvari Monastery</span>Perched atop a cliff overlooking the confluence of the Aragvi and Kura Rivers. 6th century, UNESCO site. 590–605 AD architecture. Breathtaking views.</div>
+        <div class="stop"><span class="stop-name"><a href="https://www.google.com/maps/place/?q=place_id:ChIJy4IxzJL6REARjpHtdHy_8N4" target="_blank">Ananuri Fortress</a> (en route)</span>Free admission. Fortified church complex on a reservoir. Two churches inside the walls — one with vivid 17th-century frescoes. ~1 hour stop on the way to Gudauri.</div>
+        <div class="stop"><span class="stop-name"><a href="https://www.google.com/maps/place/?q=place_id:ChIJ4xg3u_AoRUAR7NEa89VCxkw" target="_blank">Arrive Gudauri Ski Resort</a></span>Afternoon arrival. Check in, afternoon ski run, après-ski bar. The NYE rush has cleared — resort is yours.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 7 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num sage">7</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Jan 4 · Sunday</div>
+      <div class="day-title">Full Ski Day — Gudauri</div>
+      <span class="tag tag-ski">Skiing</span>
+      <div class="day-desc">80km of runs, modern lifts, snow depth averaging 1–2m. Ski lifts run 10am–5pm. Après-ski starts early at the resort bars. Budget ~170–250 GEL/person for lift pass, gear rental, food, and drinks.</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name">Gudauri Ski Resort</span>Lifts open 10am. Day pass 50–70 GEL. Gear hire 40–60 GEL. Northern slopes have the best powder and longest season. Consider the Kobi-Gudauri cable car for panoramic Kazbek views.</div>
+        <div class="stop"><span class="stop-name">Heli-Skiing (Optional)</span>Gudauri is one of the most affordable heli-ski operations in the world. Book through a local operator — or enquire at the resort the evening before.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 8 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num sage">8</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <div class="day-date">Jan 5 · Monday</div>
+      <div class="day-title">Final Ski + Return to Tbilisi</div>
+      <span class="tag tag-ski">Skiing</span>
+      <div class="day-desc">Half day skiing, then the 2-hour GoTrip transfer back to Tbilisi for departure. If Orthodox Christmas (Jan 7) timing works, consider extending to catch the Alilo Procession.</div>
+      <div class="day-stops">
+        <div class="stop"><span class="stop-name">Return Transfer to Tbilisi</span>GoTrip driver, ~$60/car, 2–2.5 hours. Confirm driver the night before and check road conditions on the Georgian Road Department Facebook page before departing.</div>
+        <div class="stop"><span class="stop-name">Bonus: Jan 7 — Orthodox Christmas Alilo Procession</span>If extending the trip, the Alilo Procession starts ~2pm from First Republic Square and ends at Sameba Cathedral. Thousands singing through Old Tbilisi. Not to be missed.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ROUTING ══ -->
+<div id="routing" class="section">
+  <div class="section-title">Getting There</div>
+  <div class="section-desc">PHX → TBS via oneworld partners. All AA metal to LHR, then BA to Tbilisi.</div>
+
+  <div class="alert">
+    <strong>Standby strategy:</strong> Position into TBS Dec 26–27 with buffer. Return Jan 5–6 or later. Avoid trying to standby home Jan 1–2 — load factors are brutal everywhere during that window.
+  </div>
+
+  <div class="route-card">
+    <div class="route-label">Recommended Routing (Oneworld)</div>
+    <div class="route-path">PHX → Gateway → LHR → TBS</div>
+    <div class="route-detail">PHX to JFK, ORD, or DFW on AA metal. Then AA transatlantic to LHR. Final leg TBS on British Airways (oneworld). All legs covered under oneworld benefits after PHX.</div>
+  </div>
+
+  <div class="route-card">
+    <div class="route-label">Alternate Routing (Oneworld)</div>
+    <div class="route-path">PHX → Gateway → DOH → TBS</div>
+    <div class="route-detail">Qatar Airways (oneworld) operates year-round DOH–TBS service. Use if positioning to a DOH-connected gateway makes more sense on a given date. More complex than the BA option.</div>
+  </div>
+
+  <div class="route-card">
+    <div class="route-label">Not Recommended</div>
+    <div class="route-path">Cape Verde (SID/SAL)</div>
+    <div class="route-detail">No oneworld carrier serves Cape Verde. Air France (SkyTeam) and Cabo Verde Airlines are the primary options — would require buying a revenue transatlantic ticket. Georgia wins on routing.</div>
+  </div>
+
+  <h3>Airport Info</h3>
+  <div class="alert alert-sage">
+    <strong>Tbilisi International Airport (TBS)</strong> — Shota Rustaveli Airport. Located ~17km east of the city center. Bolt from airport to Old Town: 25–35 GEL (~$9–13 USD). Metro (red line) also connects the airport to the city center cheaply. Avoid curbside taxi touts.
+  </div>
+</div>
+
+<!-- ══ TRANSPORT ══ -->
+<div id="transport" class="section">
+  <div class="section-title">Getting Around Georgia</div>
+  <div class="section-desc">No unified national network — you mix tools depending on the leg. Affordable once you know the system.</div>
+
+  <h3>Within Tbilisi</h3>
+  <div class="transport-cards">
+    <div class="t-card">
+      <div class="t-card-title">🚇 Metro</div>
+      <div class="t-card-body">Two lines, efficient, under 1 GEL/ride. Runs free until 3 AM on New Year's Eve. Best for cross-city trips.</div>
+    </div>
+    <div class="t-card sage">
+      <div class="t-card-title">📱 Bolt</div>
+      <div class="t-card-body">Go-to ride app. Like Uber. Upfront pricing, Apple Pay. No language barrier. Always use app over street taxis.</div>
+    </div>
+  </div>
+
+  <h3>Intercity</h3>
+  <div class="transport-cards">
+    <div class="t-card gold">
+      <div class="t-card-title">🚗 GoTrip.ge</div>
+      <div class="t-card-body">Best for day trips & transfers. Fixed price locked at booking. Can stop anywhere. English interface. Book in advance.</div>
+    </div>
+    <div class="t-card dark">
+      <div class="t-card-title">🚐 Marshrutka</div>
+      <div class="t-card-body">Minibus network. Cheapest option (5–25 GEL). Leave when full — no fixed schedule. Cash only to driver. Depart from Didube (north/west) or Ortachala (east).</div>
+    </div>
+  </div>
+
+  <div class="alert">
+    <strong>Key distinction:</strong> Didube and Ortachala bus stations are absolutely nowhere near each other — confirm which station serves your route before leaving your hotel.
+  </div>
+
+  <h3>This Trip's Fare Reference</h3>
+  <table class="fare-table">
+    <tr><th>Leg</th><th>Method</th><th>Cost</th></tr>
+    <tr><td>TBS Airport → City</td><td>Bolt</td><td>25–35 GEL</td></tr>
+    <tr><td>Tbilisi city rides</td><td>Bolt</td><td>4–15 GEL</td></tr>
+    <tr><td>Tbilisi → Mtskheta + Jvari</td><td>GoTrip</td><td>~100 GEL/car</td></tr>
+    <tr><td>Tbilisi → Ananuri → Gudauri</td><td>GoTrip</td><td>~$60/car</td></tr>
+    <tr><td>Gudauri → Tbilisi</td><td>GoTrip</td><td>~$60/car</td></tr>
+  </table>
+
+  <div class="alert alert-sage">
+    <strong>Apps to download before you leave PHX:</strong> Bolt (taxi), GoTrip (intercity driver). Standard Uber does not work in Georgia. There's a separate regional Uber app launched in 2024, but Bolt is the local standard.
+  </div>
+</div>
+
+<!-- ══ SKIING ══ -->
+<div id="skiing" class="section">
+  <div class="section-title">Skiing in Georgia</div>
+  <div class="section-desc">Four main resorts. One clear pick for a first visit. Lift passes are a fraction of what you'd pay in the Alps.</div>
+
+  <div class="resort-card">
+    <div class="resort-header">
+      <div>
+        <div class="resort-name">Gudauri</div>
+        <div style="font-size:12px;color:var(--muted)">Greater Caucasus · 2 hrs from Tbilisi</div>
+      </div>
+      <span class="resort-badge badge-rec">Recommended</span>
+    </div>
+    <div class="resort-body">Best infrastructure, easiest access, most terrain. 35km of groomed slopes plus extensive off-piste and freeride that gets the Caucasus mentioned in the same breath as Japan and British Columbia. Home to the highest-altitude adventure tourism school in Europe (IFMGA certified). Snow depth averages 1–2m during the season. Lifts open 10am–5pm. Cash still king for smaller restaurants and rental shops — bring GEL from Tbilisi ATMs.<br><br><strong>Season 2025–26 opens Dec 27, 2025.</strong> Jan–Feb are peak conditions. Late December early season can vary — late Jan and Feb offer the best powder.</div>
+    <div class="resort-stats">
+      <div class="r-stat"><span class="r-stat-val">3,276m</span><span class="r-stat-key">Max Elevation</span></div>
+      <div class="r-stat"><span class="r-stat-val">35km</span><span class="r-stat-key">Groomed</span></div>
+      <div class="r-stat"><span class="r-stat-val">50–70 GEL</span><span class="r-stat-key">Day Pass</span></div>
+    </div>
+  </div>
+
+  <div class="resort-card">
+    <div class="resort-header">
+      <div>
+        <div class="resort-name">Bakuriani</div>
+        <div style="font-size:12px;color:var(--muted)">Trialeti Range · 3.5–4 hrs from Tbilisi</div>
+      </div>
+      <span class="resort-badge badge-fam">Family</span>
+    </div>
+    <div class="resort-body">Georgia's family and beginner resort. Forested, gentler slopes, historic spa town character. Lowest snowfall of the four major resorts. Not worth the extra 1.5 hours of drive time for this trip — save it for a return visit with more time.</div>
+    <div class="resort-stats">
+      <div class="r-stat"><span class="r-stat-val">2,702m</span><span class="r-stat-key">Max Elevation</span></div>
+      <div class="r-stat"><span class="r-stat-val">29km</span><span class="r-stat-key">Pistes</span></div>
+      <div class="r-stat"><span class="r-stat-val">50–70 GEL</span><span class="r-stat-key">Day Pass</span></div>
+    </div>
+  </div>
+
+  <div class="resort-card">
+    <div class="resort-header">
+      <div>
+        <div class="resort-name">Mestia (Hatsvali + Tetnuldi)</div>
+        <div style="font-size:12px;color:var(--muted)">Svaneti · Remote · 8–10 hrs from Tbilisi</div>
+      </div>
+      <span class="resort-badge badge-adv">Adventure</span>
+    </div>
+    <div class="resort-body">World-class backcountry and heli-skiing in the stunning Svaneti region. Tetnuldi doesn't open until Jan 4 for the 2025–26 season. Remote access, long journey, not the right play when anchored in Tbilisi. Best as a dedicated trip. Tetnuldi is the best variety of slopes and scenery in Georgia.</div>
+    <div class="resort-stats">
+      <div class="r-stat"><span class="r-stat-val">2 Resorts</span><span class="r-stat-key">Hatsvali + Tetnuldi</span></div>
+      <div class="r-stat"><span class="r-stat-val">8–10 hrs</span><span class="r-stat-key">From Tbilisi</span></div>
+      <div class="r-stat"><span class="r-stat-val">50–70 GEL</span><span class="r-stat-key">Day Pass</span></div>
+    </div>
+  </div>
+
+  <h3>Road to Gudauri — Safety</h3>
+  <div class="alert alert-sage">
+    <strong>Safe with a driver, more nuanced if self-driving.</strong> The Military Highway (Tbilisi → Gudauri) is well-maintained and regularly cleared. Winter tires are mandatory. Road closures happen on the section <em>north</em> of Gudauri (Gudauri → Kazbegi), not between Tbilisi and Gudauri. GoTrip drivers are vetted and equipped. <strong>Check GeoRoad Facebook Page or call +995 322 313 076 for real-time road status.</strong>
+  </div>
+
+  <h3>Daily Budget Estimate (Gudauri)</h3>
+  <table class="fare-table">
+    <tr><th>Item</th><th>Cost (GEL)</th><th>USD (~)</th></tr>
+    <tr><td>Lift pass (adult)</td><td>50–70 GEL</td><td>$18–26</td></tr>
+    <tr><td>Gear rental (skis/board)</td><td>40–60 GEL</td><td>$15–22</td></tr>
+    <tr><td>Food & drinks on mountain</td><td>50–80 GEL</td><td>$18–30</td></tr>
+    <tr><td>Accommodation</td><td>120–200 GEL</td><td>$44–74</td></tr>
+    <tr><td><strong>Total/person/day</strong></td><td><strong>250–350 GEL</strong></td><td><strong>~$93–130</strong></td></tr>
+  </table>
+</div>
+
+<!-- ══ TIPS ══ -->
+<div id="tips" class="section">
+  <div class="section-title">Tips & Practical Info</div>
+  <div class="section-desc">Everything you need to know before you go.</div>
+
+  <h3>Holidays & Calendar</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🎄</div>
+      <div>
+        <div class="tip-title">Dec 25 — Western Christmas</div>
+        <div class="tip-body">Celebrated but subdued. Christmas Village at First Republic Square is already in full swing (runs Dec 12–Jan 14). Mulled wine, markets, live music nightly.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🎆</div>
+      <div>
+        <div class="tip-title">Dec 31 — New Year's Eve (Biggest night of the year)</div>
+        <div class="tip-body">NYE is bigger than Christmas in Georgia. Elaborate family supras (feasts), citywide fireworks at midnight, free public transport until 3 AM. Book restaurants 3–4 weeks ahead minimum. Christmas Village hosts the main Gala Concert.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🍀</div>
+      <div>
+        <div class="tip-title">Jan 2 — Bedoba (Day of Luck)</div>
+        <div class="tip-body">How you spend this day is said to define your whole year. Georgians keep it calm — brunch, spa, relaxed gatherings. Perfect excuse to do a morning bath session before heading to the mountains.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">⛪</div>
+      <div>
+        <div class="tip-title">Jan 7 — Orthodox Christmas + Alilo Procession</div>
+        <div class="tip-body">Georgia uses the Julian calendar — Christmas falls on Jan 7. The Alilo Procession starts at ~2pm from First Republic Square, ending at Sameba Cathedral. Thousands chanting through Old Tbilisi's cobblestone streets. One of Georgia's most remarkable public events. Consider extending the trip to catch it.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Money & Payments</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">💳</div>
+      <div>
+        <div class="tip-title">Currency: Georgian Lari (GEL)</div>
+        <div class="tip-body">1 USD ≈ 2.7 GEL. Cards widely accepted in Tbilisi hotels, restaurants, and Gudauri lift ticket offices. Smaller mountain restaurants and marshrutka drivers are cash only. Withdraw GEL from Tbilisi ATMs before heading to the mountains. Bring backup cash from PHX.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🚕</div>
+      <div>
+        <div class="tip-title">Never take a curbside taxi</div>
+        <div class="tip-body">Unmetered, tourist pricing is common. Always use Bolt in cities. Airport curbside taxi touts are especially aggressive — walk past them to Bolt pickup zones or metro.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Food & Drink Must-Tries</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🧀</div>
+      <div>
+        <div class="tip-title">Khachapuri</div>
+        <div class="tip-body">Georgia's iconic cheese bread. The Adjarian variety (Adjaruli) is a boat-shaped bread loaded with melted cheese, butter, and a raw egg cracked in at the table. Non-negotiable order.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🥟</div>
+      <div>
+        <div class="tip-title">Khinkali</div>
+        <div class="tip-body">Georgian soup dumplings. Hold by the knob, bite a small hole, suck the broth, then eat the rest. Do not eat the knob — it's a handle, not food. Pasanauri town on the drive to Gudauri is famous for its khinkali; stop for lunch.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🍷</div>
+      <div>
+        <div class="tip-title">Qvevri Wine</div>
+        <div class="tip-body">Georgia has 8,000 years of winemaking history. Qvevri wines are fermented underground in large clay vessels — especially the amber/orange wines made from white grapes with skin contact. Rkatsiteli and Mtsvane are the classic Georgian white varieties; Saperavi is the signature red. Always order a degustation in a Tbilisi wine cellar.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🌰</div>
+      <div>
+        <div class="tip-title">Churchkhela</div>
+        <div class="tip-body">Georgia's "Snickers" — walnuts or hazelnuts threaded on a string and dipped in thickened grape juice. Found at every market. Buy from Dezerter Bazaar, not tourist shops.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Packing for Winter</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🧥</div>
+      <div>
+        <div class="tip-title">Tbilisi: Chilly European winter</div>
+        <div class="tip-body">December averages 7°C (45°F) highs, dropping to -2°C (28°F) overnight. January is colder: ~4°C (39°F) highs. Pack a real winter coat, warm layers, and waterproof shoes for cobblestone streets. About 51% clear/sunny days in December — don't expect constant gray.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">⛷️</div>
+      <div>
+        <div class="tip-title">Gudauri: Full mountain kit</div>
+        <div class="tip-body">Ski gear rentable on-site (40–60 GEL/day). Bring your own helmet if you have one — rental helmets at mountain resorts worldwide are hit or miss. Sunglasses and SPF 30+ essential at altitude even in winter. Layers: resort base area is warmer than on-piste.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">👗</div>
+      <div>
+        <div class="tip-title">Modest dress for religious sites</div>
+        <div class="tip-body">Shoulders and knees covered for Mtskheta, Ananuri, and any churches. Women should have a scarf for head covering inside active churches. This applies to Jvari Monastery, Svetitskhoveli Cathedral, and Gergeti Trinity if you add Kazbegi.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Nightlife</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🍷</div>
+      <div>
+        <div class="tip-title">Wine Bars — Sololaki & Vera (Start Here)</div>
+        <div class="tip-body">The best casual nightlife in Tbilisi. Underground brick cellars serving natural qvevri wines by the glass (8–15 GEL). <strong>Vino Underground</strong> in Sololaki is the anchor — one of Georgia's best natural wine lists in a candlelit cellar. Side streets off Gorgasali Square have additional gems. The Vera district is more local and slightly less polished — both worth exploring. Bars open ~7 PM and run late.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🎷</div>
+      <div>
+        <div class="tip-title">Jazz Cafe Singer — Live Jazz in Old Town</div>
+        <div class="tip-body">Live jazz and blues in a beautifully restored historic building. Cozy, soulful, no agenda. The most relaxed music venue in the city — no face control, no dress code, just Georgian wine and good music. Best on weekends. Open from ~8 PM.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🎸</div>
+      <div>
+        <div class="tip-title">Mtkvarze — Live Folk, Jazz & Rock on the River</div>
+        <div class="tip-body">Tbilisi's best live music venue for mixed genres — Georgian folk acts, jazz, and rock on the banks of the Mtkvari. Informal and local without tourist-bar pricing. The setting is remarkable: Metekhi Church lit up on the cliff above, Old Town on both sides. Open ~8 PM.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🎧</div>
+      <div>
+        <div class="tip-title">Bassiani — The Techno Club (Optional, Commitment Required)</div>
+        <div class="tip-body">Ranked alongside Berghain as one of the world's great techno clubs. Housed in the former Olympic swimming pool under Dinamo Arena stadium — a massive concrete space with an immersive sound system. <strong>Fri &amp; Sat only, midnight to 10–11 AM.</strong><br><br><strong>Rules:</strong> Register at <a href="https://bassiani.com" target="_blank">bassiani.com</a> a few days before — don't just show up. Dress dark and unpretentious (black hoodie, casual). Camera taped over at the door — no photos, no exceptions. Act sober in line. Arrive after 3 AM to skip the queue. Entry 20–40 GEL.<br><br>It's not for everyone — it's pure techno, 10+ hours, very serious about the music. But if you want to see why Tbilisi has a global reputation, this is it.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🌉</div>
+      <div>
+        <div class="tip-title">Khidi — Under the Bridge</div>
+        <div class="tip-body">Occupies the underside of the Vakhushti Bagrationi Bridge over the Mtkvari, with outdoor decks and a harder industrial aesthetic. Similar electronic music programming to Bassiani with a slightly less intimidating door. Good backup if Bassiani is too packed on NYE.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🎨</div>
+      <div>
+        <div class="tip-title">Café Gallery — Most Accessible Club</div>
+        <div class="tip-body">Art space meets electronic music in Old Town. Similar vibes to Bassiani but more accessible door policy — a good first-timer entry point into Tbilisi's club scene. Good for NYE if Bassiani feels like too much of a commitment.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🥟</div>
+      <div>
+        <div class="tip-title">🌟 MUST: Late-Night Khinkali Run</div>
+        <div class="tip-body">The canonical post-bar, post-club food in Tbilisi. Late-night khinkali specialists near Fabrika and in the Marjanishvili area are open until 2–3 AM specifically to feed people coming off a long night. <strong>How to eat them:</strong> Hold by the topknot, bite a small hole, drink the broth first, then eat the dumpling. Leave the doughy knot on the plate — it's a counter of how many you've had. Do not use a fork. Georgians will notice.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">💰</div>
+      <div>
+        <div class="tip-title">Nightlife Budget</div>
+        <div class="tip-body">A full evening — dinner, wine bar, and club — runs 80–150 GEL/person ($29–55 USD). Wine by the glass: 8–15 GEL. Craft beer: 8–12 GEL. Cocktails: 15–25 GEL. Club entry (Bassiani/Khidi): 20–40 GEL. Late-night khinkali: ~5 GEL each. One of the best-value nightlife cities in Europe.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Accommodation</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🏨</div>
+      <div>
+        <div class="tip-title"><a href="https://www.hilton.com/en/hotels/tbsrvgi-hilton-garden-inn-tbilisi-riverview/" target="_blank">Hilton Garden Inn Tbilisi Riverview</a> ✅</div>
+        <div class="tip-body">Ranked #6 of 498 hotels in Tbilisi (4.7★). Located near Old Town, within walking distance of Narikala Fortress, Metekhi Church, and the sulfur baths. 10 minutes from the historical center, 15 minutes from TBS airport. Mom's friend &amp; family discount: ~30–50% off (~$50–80/night est.).<br><br><strong>⚠️ Book immediately</strong> — NYE availability disappears fast. Confirm how the discount is applied; you may need to call the hotel directly rather than booking online.<br><br><strong>Avoid:</strong> <a href="https://www.hilton.com/en/hotels/tbschgi-hilton-garden-inn-tbilisi-chavchavadze/" target="_blank">Hilton Garden Inn Tbilisi Chavchavadze</a> — it's in the Vake district, further from Old Town, and requires a Bolt for every activity.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">⛷️</div>
+      <div>
+        <div class="tip-title">Gudauri — Book Separately</div>
+        <div class="tip-body">The HGI deal covers Tbilisi nights only. For Gudauri (Jan 3–5), book directly at the resort. Budget 120–200 GEL/night (~$44–74). <a href="https://www.hilton.com/en/hotels/tbslogi-gudauri-lodge/" target="_blank">Gudauri Lodge</a> is the best option — 4.3★, 5-star hotel with spa, pool, and sauna. Also consider <a href="https://www.google.com/maps/place/?q=place_id:ChIJ3dF651koRUARVxuKVin466I" target="_blank">Gudauri Hut</a> (4.5★, cozy and family-friendly with free breakfast). Book early — January fills up after the NYE rush clears and ski season hits full stride.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Essential Apps</h3>
+  <div class="tip-list">
+    <div class="tip"><div class="tip-icon">📱</div><div><div class="tip-title"><a href="https://bolt.eu/en/" target="_blank">Bolt</a></div><div class="tip-body">Ride-hailing for Tbilisi and other cities. Download before arrival. Link your card. Supports Apple Pay. Use instead of street taxis everywhere.</div></div></div>
+    <div class="tip"><div class="tip-icon">🚗</div><div><div class="tip-title"><a href="https://gotrip.ge/en" target="_blank">GoTrip.ge</a></div><div class="tip-body">Private drivers for intercity trips and day tours. Fixed pricing, English interface. Best for Gudauri transfer and Mtskheta day trip. Book in advance.</div></div></div>
+    <div class="tip"><div class="tip-icon">🗺️</div><div><div class="tip-title">Google Translate (offline Georgian)</div><div class="tip-body">Download Georgian language pack offline. Younger Georgians often speak English, but older generations and rural areas do not. Camera translate is useful for menus.</div></div></div>
+    <div class="tip"><div class="tip-icon">🚦</div><div><div class="tip-title"><a href="https://www.facebook.com/georoad/" target="_blank">GeoRoad (Facebook)</a> / +995 322 313 076</div><div class="tip-body">Georgian Road Department. Check before departing for Gudauri in winter — real-time road closure updates for the Military Highway.</div></div></div>
+  </div>
+</div>
+
+<!-- ══ BUDGET ══ -->
+<div id="budget" class="section">
+  <div class="section-title">Line-Item Budget</div>
+  <div class="section-desc">Estimates for 2 people, 8 days in-country. All costs in USD. GEL converted at ~2.7 GEL/$1.</div>
+
+  <div class="alert">
+    <strong>Flights:</strong> On AA non-revenue standby + BA oneworld partner standby. Positioning legs (AA metal) are effectively free. BA LHR–TBS may carry a nominal ZED or partner standby fee — confirm with AA HR before booking. Not included in totals below.
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🏨 Accommodation<span class="budget-group-total">$680 – $1,100 total</span></div>
+    <table class="budget-table">
+      <tr><td class="item"><a href="https://www.hilton.com/en/hotels/tbsrvgi-hilton-garden-inn-tbilisi-riverview/" target="_blank">HGI Tbilisi Riverview</a><span class="note">5 nights · with 30–50% friend &amp; family discount · book direct</span></td><td class="cost">$250–400</td></tr>
+      <tr><td class="item"><a href="https://www.hilton.com/en/hotels/tbslogi-gudauri-lodge/" target="_blank">Gudauri Lodge</a> (or Gudauri Hut)<span class="note">2 nights · Jan 3–5 · book separately, fills up fast</span></td><td class="cost">$90–150</td></tr>
+    </table>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🚗 Transport<span class="budget-group-total">$160 – $185 total</span></div>
+    <table class="budget-table">
+      <tr><td class="item">TBS Airport → Riverview (<a href="https://bolt.eu/en/" target="_blank">Bolt</a>)<span class="note">×2 trips (arrival + return from Gudauri)</span></td><td class="cost">$20–30</td></tr>
+      <tr><td class="item">Tbilisi city Bolt rides<span class="note">Est. 5 days × a few short hops/day</span></td><td class="cost">$30–50</td></tr>
+      <tr><td class="item"><a href="https://gotrip.ge/en" target="_blank">GoTrip</a>: Tbilisi → Mtskheta → Ananuri → Gudauri<span class="note">Shared car, entire vehicle, ~$60 flat</span></td><td class="cost">$60</td></tr>
+      <tr><td class="item"><a href="https://gotrip.ge/en" target="_blank">GoTrip</a>: Gudauri → Tbilisi<span class="note">Return transfer, ~$60 flat</span></td><td class="cost">$60</td></tr>
+      <tr><td class="item">Metro (Tbilisi)<span class="note">~1 GEL/ride, mostly walkable from Riverview</span></td><td class="cost">~$5</td></tr>
+    </table>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">⛷️ Skiing — 2 days, 2 people<span class="budget-group-total">$210 – $315 total</span></div>
+    <table class="budget-table">
+      <tr><td class="item"><a href="https://www.google.com/maps/place/?q=place_id:ChIJ4xg3u_AoRUAR7NEa89VCxkw" target="_blank">Gudauri</a> lift passes<span class="note">50–70 GEL/person/day × 2 days × 2 people</span></td><td class="cost">$74–104</td></tr>
+      <tr><td class="item">Gear rental (skis + boots + poles + helmet)<span class="note">40–60 GEL/person/day × 2 days × 2 people · Aviator Ski Rental recommended</span></td><td class="cost">$59–89</td></tr>
+      <tr><td class="item">On-mountain food &amp; drinks<span class="note">50–80 GEL/person/day × 2 days × 2 people</span></td><td class="cost">$74–119</td></tr>
+    </table>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🍷 Food &amp; Drink — Tbilisi, 5 days, 2 people<span class="budget-group-total">$230 – $390 total</span></div>
+    <table class="budget-table">
+      <tr><td class="item">Restaurants &amp; wine bars<span class="note">Est. $15–25/person/day in Tbilisi (very affordable)</span></td><td class="cost">$150–250</td></tr>
+      <tr><td class="item">New Year's Eve supra dinner<span class="note">Pre-book a restaurant — this is the one splurge night</span></td><td class="cost">$50–100</td></tr>
+      <tr><td class="item">Dezerter Bazaar, market snacks, churchkhela<span class="note">Cash — bring GEL</span></td><td class="cost">$15–25</td></tr>
+      <tr><td class="item">Mulled wine at Christmas Village<span class="note">Free to enter; drinks are ~2–3 GEL each</span></td><td class="cost">$15</td></tr>
+    </table>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🎭 Activities &amp; Attractions<span class="budget-group-total">$155 – $210 total</span></div>
+    <table class="budget-table">
+      <tr><td class="item"><a href="https://www.google.com/maps/place/?q=place_id:ChIJp1AABfcMREAR-U0SBWHxp0E" target="_blank">Sulfur bath private rooms</a><span class="note">×2 sessions × 2 people · 60–80 GEL/room</span></td><td class="cost">$44–60</td></tr>
+      <tr><td class="item">Mtskheta guide<span class="note">Highly recommended · ~€30–40/person for half-day guided tour</span></td><td class="cost">$65–85</td></tr>
+      <tr><td class="item"><a href="https://www.google.com/maps/place/?q=place_id:ChIJl-d-k_YMREARzXBLe7MsRAE" target="_blank">Narikala cable car</a><span class="note">2.5 GEL/person each way</span></td><td class="cost">$2–4</td></tr>
+      <tr><td class="item"><a href="https://www.google.com/maps/place/?q=place_id:ChIJy4IxzJL6REARjpHtdHy_8N4" target="_blank">Ananuri Fortress</a><span class="note">Free admission</span></td><td class="cost">$0</td></tr>
+      <tr><td class="item">First Republic Square / Christmas Village<span class="note">Free admission — NYE concert is free outdoors</span></td><td class="cost">$0</td></tr>
+      <tr><td class="item">Heli-skiing (optional, Gudauri)<span class="note">One of the most affordable heli-ski ops in the world · price TBD</span></td><td class="cost">TBD</td></tr>
+    </table>
+  </div>
+
+  <div class="budget-summary">
+    <div class="budget-summary-row"><span>🏨 Accommodation</span><span>$340–550</span></div>
+    <div class="budget-summary-row"><span>🚗 Ground Transport</span><span>$160–185</span></div>
+    <div class="budget-summary-row"><span>⛷️ Skiing (2 days)</span><span>$210–315</span></div>
+    <div class="budget-summary-row"><span>🍷 Food &amp; Drink</span><span>$230–390</span></div>
+    <div class="budget-summary-row"><span>🎭 Activities</span><span>$155–210</span></div>
+    <div class="budget-summary-row"><span>✈️ Flights (standby)</span><span>Nominal–TBD</span></div>
+    <div class="budget-summary-row"><span>Total for 2 people</span><span>~$1,100–$1,650</span></div>
+  </div>
+
+  <div class="alert alert-sage" style="margin-top:16px">
+    <strong>Bottom line:</strong> Georgia is extremely affordable. Even at the high end, this is a strong value for an 8-day international ski + cultural trip — equivalent to 3 days at a mid-tier Colorado resort for two people.
+  </div>
+</div>
+
+<div class="footer">Georgia Winter Trip · Updated July 2026 · <a href="https://georgia.snakesavant.com" style="border-bottom:none">georgia.snakesavant.com</a></div>
+
+<script>
+  function showTab(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
