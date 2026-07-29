@@ -479,6 +479,40 @@
   .fare-table tr:last-child td { border-bottom: none; }
   .fare-table tr:nth-child(odd) td { background: var(--cream); }
 
+  /* ── FLIGHT TIMETABLES ── */
+  .table-scroll { overflow-x: auto; margin-bottom: 12px; }
+  .table-scroll .fare-table { margin-bottom: 0; min-width: 340px; }
+  .fare-table td.t-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .fare-table td.t-flight {
+    font-weight: 700;
+    color: var(--wine);
+    white-space: nowrap;
+  }
+  .fare-table tr.rec td,
+  .fare-table tr.rec:nth-child(odd) td {
+    background: #FFF6E0;
+  }
+  .fare-table tr.rec td:first-child {
+    box-shadow: inset 3px 0 0 var(--gold);
+  }
+  .plus-day {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--wine-lt);
+    vertical-align: super;
+  }
+  .tt-caption {
+    font-size: 11px;
+    color: var(--muted);
+    margin: -4px 0 16px;
+    line-height: 1.5;
+  }
+  .tt-caption strong { color: var(--dark); }
+
   /* ── SKIING ── */
   .resort-card {
     background: var(--white);
@@ -708,7 +742,7 @@
   <div class="section-desc">8 days / 7 nights — 5 nights Tbilisi, 2 nights Gudauri. NYE in the city, mountains after the rush clears. <strong>Tap any day to expand it</strong>; tap 📍 on a stop to open it in Maps.</div>
 
   <div class="alert">
-    <strong>⚠️ Standby note:</strong> Dec 31–Jan 2 has high load factors on nearly every route. Plan A is <strong>Turkish via Istanbul</strong> (PHX → ORD or DFW → IST → TBS), and those legs are daily in both directions. Leave PHX around <strong>Dec 26</strong> to land Tbilisi late on the 27th and get a full Day 1; leaving the 27th lands you the evening of Dec 28 and costs you most of it. See Getting There for gateway timings.
+    <strong>⚠️ Standby note:</strong> Dec 31–Jan 2 has high load factors on nearly every route. Plan A is <strong>Turkish via Istanbul</strong> (PHX → ORD or DFW → IST → TBS), and those legs are daily in both directions. Leaving PHX <strong>Dec 26</strong> lands you in Tbilisi <strong>on Dec 28</strong> — 01:35 or 10:05 depending on the Istanbul connection — so Day 1 below starts with a short night either way. Leave <strong>Dec 25</strong> if you want a full recovery day first. See Getting There for the timetables.
   </div>
 
   <div class="alert alert-sage">
@@ -1084,43 +1118,79 @@
 <!-- ══ ROUTING ══ -->
 <div id="routing" class="section">
   <div class="section-title">Getting There</div>
-  <div class="section-desc">PHX → TBS. Plan A is Turkish Airlines the whole way after a domestic positioning leg — no London, no once-a-week bottleneck.</div>
+  <div class="section-desc">PHX → TBS on Turkish via Istanbul. Timetables below; all times are <strong>local to the airport</strong>, <span class="plus-day">+1</span> marks a next-day arrival.</div>
 
   <div class="alert">
-    <strong>Standby strategy:</strong> The Turkish legs are <strong>daily in both directions</strong>, so the schedule risk that dogs the London routing mostly disappears. Aim to leave PHX around <strong>Dec 26</strong> — that lands you in Tbilisi late on Dec 27 and gives you a full Day 1 on the 28th. Leaving Dec 27 instead means landing the evening of Dec 28, which still meets the "by the 28th" target but eats most of Day 1. Avoid standing by home Jan 1–2; load factors are brutal everywhere in that window.
+    <strong>⚠️ Departure-date math:</strong> the connection out of Istanbul is what sets your Tbilisi arrival, and it's later than it looks. Leaving PHX on <strong>Dec 26</strong> puts you into Tbilisi <strong>on Dec 28</strong> — either 01:35 in the small hours or 10:05 mid-morning, depending which IST connection you take. To land on <strong>Dec 27</strong> and get a full recovery day before Day 1, you'd need to leave PHX on <strong>Dec 25</strong>.
   </div>
 
-  <div class="alert alert-sage">
-    <strong>Alliances don't govern non-rev — ZED agreements do.</strong> Turkish being Star Alliance rather than oneworld doesn't by itself put it out of reach: employee standby runs on bilateral ZED agreements between individual carriers, which cross alliance lines freely. Confirm the AA↔TK agreement and the applicable ZED fare level with AA HR before you build the trip around it.
+  <h3>Recommended Outbound — leaving PHX Dec 26</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Leg</th><th>Flight</th><th>Depart</th><th>Arrive</th></tr>
+      <tr><td>PHX → ORD</td><td class="t-flight">AA</td><td class="t-time">Dec 26, midday</td><td class="t-time">Dec 26, aft.</td></tr>
+      <tr class="rec"><td>ORD → IST</td><td class="t-flight">TK6</td><td class="t-time">Dec 26, 20:10</td><td class="t-time">Dec 27, 14:50</td></tr>
+      <tr class="rec"><td>IST → TBS</td><td class="t-flight">TK</td><td class="t-time">Dec 27, 22:15</td><td class="t-time">Dec 28, 01:35</td></tr>
+    </table>
   </div>
+  <div class="tt-caption"><strong>Total elapsed:</strong> ~29 hrs gate to gate, including a 7h25m Istanbul layover. That layover looks painful but is the single best feature of this routing on standby — it's enough slack to absorb rolling off the PHX–ORD leg and still make the Istanbul connection. <strong>Swap the last leg for TK378 at 06:50 on Dec 28</strong> (arriving 10:05) if you'd rather sleep at an airport hotel and land in daylight than arrive at 01:35.</div>
 
-  <div class="route-card">
-    <div class="route-label">✅ Plan A — Turkish Airlines via Istanbul</div>
-    <div class="route-path">PHX → ORD or DFW → IST → TBS</div>
-    <div class="route-detail">Position PHX to Chicago or Dallas on AA metal, then Turkish for the rest. <strong>Both US–IST legs run daily</strong>, and IST–TBS runs roughly four times a day, so no leg of this routing is a weekly-schedule gamble.<br><br><strong>ORD is the better gateway:</strong> <strong>TK6</strong> departs O'Hare <strong>20:10</strong> and lands IST <strong>14:50</strong> the next day (~10h40m), leaving a full evening of onward TBS departures to choose from.<br><br><strong>DFW works but connects tighter:</strong> <strong>TK192</strong> departs <strong>~21:55</strong> (~12h10m), putting you into IST around 19:00 — which realistically leaves the late-evening TBS flight as your same-day option.</div>
+  <h3>Choosing a US Gateway</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Route</th><th>Flight</th><th>Depart</th><th>Arrive IST</th><th>Layover to 22:15</th></tr>
+      <tr class="rec"><td>ORD → IST</td><td class="t-flight">TK6</td><td class="t-time">20:10</td><td class="t-time">14:50<span class="plus-day">+1</span></td><td class="t-time">7h 25m</td></tr>
+      <tr><td>DFW → IST</td><td class="t-flight">TK192</td><td class="t-time">21:55</td><td class="t-time">~19:05<span class="plus-day">+1</span></td><td class="t-time">~3h 10m</td></tr>
+    </table>
   </div>
+  <div class="tt-caption">Both are <strong>daily</strong>, and both feed the same 22:15 IST→TBS departure, so <strong>either gateway lands you in Tbilisi at 01:35</strong>. The difference is margin: ORD's long layover is recovery room if you don't clear a flight, while DFW's three hours leaves little. On revenue tickets DFW would be the better connection; on standby, ORD's slack is worth more than the shorter day.</div>
 
-  <div class="route-card">
-    <div class="route-label">Final Leg — IST → TBS</div>
-    <div class="route-path">~4 flights daily · 2h20m</div>
-    <div class="route-detail">Turkish runs roughly 28 IST–TBS flights a week, spread from <strong>00:55 through 22:15</strong>. This is the leg that makes the whole plan work: whatever time you actually clear standby into Istanbul, there's another departure within a few hours. It also means the return is flexible — you're not tied to a single fixed departure slot the way BA891 forces.</div>
+  <h3>IST → TBS · daily options</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Flight</th><th>Depart IST</th><th>Arrive TBS</th><th>Duration</th></tr>
+      <tr><td class="t-flight">—</td><td class="t-time">00:55</td><td class="t-time">04:15</td><td>~2h 20m</td></tr>
+      <tr><td class="t-flight">TK378</td><td class="t-time">06:50</td><td class="t-time">10:05</td><td>2h 15m</td></tr>
+      <tr><td class="t-flight">TK382</td><td class="t-time">13:15</td><td class="t-time">16:35</td><td>2h 20m</td></tr>
+      <tr class="rec"><td class="t-flight">—</td><td class="t-time">22:15</td><td class="t-time">01:35<span class="plus-day">+1</span></td><td>~2h 20m</td></tr>
+    </table>
   </div>
+  <div class="tt-caption">Roughly <strong>28 flights a week</strong> on this sector. This is the leg that makes the whole plan work — whatever time you actually clear into Istanbul, there's another departure within a few hours. Tbilisi is <strong>UTC+4</strong>, Istanbul <strong>UTC+3</strong>, so you lose an hour on the clock flying east.</div>
 
+  <h3>TBS → IST · return options, Mon Jan 4</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Flight</th><th>Depart TBS</th><th>Arrive IST</th><th>Trade-off</th></tr>
+      <tr><td class="t-flight">TK387</td><td class="t-time">02:50</td><td class="t-time">04:20</td><td>Brutal alarm, whole day to connect</td></tr>
+      <tr class="rec"><td class="t-flight">TK379</td><td class="t-time">11:05</td><td class="t-time">12:45</td><td>Relaxed last morning — the pick</td></tr>
+      <tr><td class="t-flight">TK383</td><td class="t-time">17:35</td><td class="t-time">~19:15</td><td>Full last day, late US connection</td></tr>
+    </table>
+  </div>
+  <div class="tt-caption"><strong>TK379 at 11:05 is the one to aim for</strong> — a normal breakfast, an unhurried Bolt to the airport, and you're still into Istanbul early enough for an onward US departure the same day. Confirm the IST→ORD/DFW leg times separately; those aren't listed here because they weren't verified.</div>
+
+  <h3>Fallback Routings</h3>
   <div class="route-card">
     <div class="route-label">Alternate — BA via London (oneworld)</div>
     <div class="route-path">PHX → Gateway → LHR → TBS</div>
-    <div class="route-detail">The oneworld routing, kept as a fallback. AA metal to LHR, then <strong>BA890</strong> on to Tbilisi — departs 21:25, lands 05:30. <strong>The catch: BA890 only flies Tue/Thu/Sat/Sun.</strong> Roll off it and the next departure can be two or three days out, which is the entire reason Istanbul is Plan A. Return is <strong>BA891</strong>, 07:30 most days.</div>
+    <div class="route-detail">AA metal to LHR, then <strong>BA890</strong> — departs <strong>21:25</strong>, lands Tbilisi <strong>05:30<span class="plus-day">+1</span></strong>. <strong>Only flies Tue/Thu/Sat/Sun</strong>, so rolling off it can cost two or three days. Return is <strong>BA891</strong> at <strong>07:30</strong> most mornings, which forces a ~05:30 airport arrival on departure day.</div>
   </div>
-
   <div class="route-card">
     <div class="route-label">Alternate — Qatar via Doha (oneworld)</div>
     <div class="route-path">PHX → Gateway → DOH → TBS</div>
-    <div class="route-detail">Qatar Airways is oneworld, so it's the cleanest option if the AA↔TK ZED agreement doesn't pan out. <strong>DOH–TBS runs Mon/Wed/Fri/Sat</strong> — better than BA's four days but still not daily, and it's a substantial detour south. Useful depth on the bench rather than a serious contender.</div>
+    <div class="route-detail">The cleanest option if the AA↔TK ZED agreement doesn't pan out, since Qatar is oneworld. <strong>DOH–TBS runs Mon/Wed/Fri/Sat</strong> — better than BA's four days, still not daily, and a substantial detour south. Bench depth rather than a real contender.</div>
+  </div>
+
+  <div class="alert alert-sage">
+    <strong>Alliances don't govern non-rev — ZED agreements do.</strong> Turkish being Star Alliance rather than oneworld doesn't by itself put it out of reach: employee standby runs on bilateral ZED agreements between individual carriers, which cross alliance lines freely. Confirm the AA↔TK agreement and the applicable ZED fare level with AA HR before building the trip around it.
   </div>
 
   <h3>Connecting at Istanbul</h3>
   <div class="alert alert-sage">
-    <strong>IST is enormous</strong> — one of the largest terminals in the world, and transfers between Turkish flights are all airside, so there's no immigration queue on a same-day connection. Allow more walking time than the signage suggests. If a connection strands you overnight, Turkish operates a transit hotel inside the terminal, and longer layovers may qualify for their complimentary <em>TourIstanbul</em> city tours — worth asking at the transfer desk rather than assuming.
+    <strong>IST is enormous</strong> — one of the largest terminals in the world, and transfers between Turkish flights are airside, so there's no immigration queue on a same-day connection. Allow more walking time than the signage suggests. On the 7h25m ORD layover you can clear landside into the city, but budget 3 hrs round trip and remember you'd be re-clearing security. Turkish operates a transit hotel inside the terminal, and longer layovers may qualify for their complimentary <em>TourIstanbul</em> tours — ask at the transfer desk rather than assuming.
+  </div>
+
+  <div class="alert">
+    <strong>Verify before booking.</strong> These are current published timetables and airlines reshuffle seasonally — re-check every time above closer to departure, especially the IST→TBS departures, which are the load-bearing part of this plan.
   </div>
 
   <h3>Airport Info</h3>
