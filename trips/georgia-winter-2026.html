@@ -1783,6 +1783,26 @@
   <div class="section-title">Line-Item Budget</div>
   <div class="section-desc">Estimates for a <strong>group of 8</strong>, 8 days / 7 nights (5 Tbilisi + 2 Gudauri). Group totals in USD, with per-person alongside. GEL converted at ~2.7 GEL/$1.</div>
 
+
+  <div class="converter-card">
+    <div class="converter-header">
+      <span class="converter-title">💱 Currency Converter</span>
+      <button class="converter-flip" onclick="flipConverter()" aria-label="Flip currencies">⇄</button>
+    </div>
+    <div class="converter-body">
+      <div class="converter-field">
+        <label id="converterFromLabel">USD</label>
+        <input type="number" id="converterFrom" inputmode="decimal" placeholder="0" oninput="convertFrom()">
+      </div>
+      <span class="converter-arrow">→</span>
+      <div class="converter-field">
+        <label id="converterToLabel">GEL</label>
+        <input type="number" id="converterTo" inputmode="decimal" placeholder="0" oninput="convertTo()">
+      </div>
+    </div>
+    <div class="converter-rate">1 USD ≈ 2.7 GEL — fixed estimate, check the live rate before you travel</div>
+  </div>
+
   <div class="alert alert-sage">
     <strong>💡 Group size works in your favour on the big-ticket items.</strong> The Gudauri Airbnb at <strong>$1,100 all-in</strong> sounds steep until you divide it — it's <strong>$138 per person</strong> for two nights on the New Year weekend, which is good value for peak season at a ski resort. Same with the vehicles.<br><br><strong>Per-head lines below assume all 8 take part.</strong> Several won't be everyone — skiing, paragliding, and any given night out — so scale those rows to the number actually going. The lift-pass and gear lines are the ones most likely to overstate.
   </div>
