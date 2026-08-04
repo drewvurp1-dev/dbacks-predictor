@@ -363,6 +363,44 @@
   .ig-label strong { color: var(--dark); font-weight: 600; }
   .stop .ig-link, .tip-body .ig-link, .alt-body .ig-link { color: #374151; }
 
+
+  /* ── PRE-TRIP BRIEF (collapsed) ── */
+  .prebrief {
+    background: var(--white);
+    border: 1px solid var(--cream-dk);
+    border-radius: 9px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .prebrief > summary {
+    list-style: none;
+    cursor: pointer;
+    position: relative;
+    padding: 12px 38px 12px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--dark);
+    transition: background 0.15s;
+  }
+  .prebrief > summary::-webkit-details-marker { display: none; }
+  .prebrief > summary::marker { content: ''; }
+  .prebrief > summary:hover { background: var(--cream); }
+  .prebrief > summary:focus-visible { outline: 2px solid var(--wine); outline-offset: -2px; }
+  .prebrief[open] > summary { background: var(--cream); border-bottom: 1px solid var(--cream-dk); }
+  .prebrief-note { font-weight: 400; color: var(--muted); }
+  .prebrief-chevron {
+    position: absolute;
+    top: 13px;
+    right: 14px;
+    font-size: 11px;
+    color: var(--wine);
+    transition: transform 0.2s;
+    pointer-events: none;
+  }
+  .prebrief[open] .prebrief-chevron { transform: rotate(180deg); }
+  .prebrief-body { padding: 14px 14px 2px; }
+  .prebrief-body .alert:last-child { margin-bottom: 12px; }
+
   /* ── DAY ACCORDION ── */
   .itin-controls {
     display: flex;
@@ -777,6 +815,9 @@
   <div class="section-title">Day-by-Day Itinerary</div>
   <div class="section-desc">8 days / 7 nights — 5 nights Tbilisi, 2 nights Gudauri. NYE in the city, one big ski day after the rush clears. <strong>Tap any day to expand it</strong>; tap 📍 on a stop to open it in Maps.</div>
 
+  <details class="prebrief">
+    <summary><span class="prebrief-chevron">▼</span>📋 Before you go — <span class="prebrief-note">flight timing, why the trip is shaped this way, and the four group-size items</span></summary>
+    <div class="prebrief-body">
   <div class="alert">
     <strong>⚠️ Standby note:</strong> Dec 31–Jan 2 has high load factors on nearly every route. Plan A is <strong>Turkish via Istanbul</strong> (PHX → ORD or DFW → IST → TBS), and those legs are daily in both directions — which matters more at your size, since <strong>nine non-revs rarely clear the same flight</strong> in holiday season. Plan on splitting across departures and regrouping in Tbilisi. Leaving PHX <strong>Dec 26</strong> lands you in Tbilisi <strong>on Dec 28</strong> — 01:35 or 10:05 depending on the Istanbul connection — so Day 1 below starts with a short night either way. Leave <strong>Dec 25</strong> if you want a full recovery day first. See Getting There for the timetables.
   </div>
@@ -788,6 +829,9 @@
   <div class="alert">
     <strong>👥 At 8–9 people, four things need handling.</strong> Money mostly gets <em>better</em> — the Gudauri Airbnb is ~$138 each and vehicles divide nicely. The four that don't look after themselves: <strong>beds for nine, a minibus rather than a car convoy for the two mountain runs, the NYE supra booked now for nine, and nine non-revs unlikely to clear the same flight.</strong> Everything else — clubbing, baths, side trips — will split naturally and just needs booking for whoever actually goes. See <em>Travelling as a Group</em> in Tips.
   </div>
+    </div>
+  </details>
+
 
   <div class="itin-controls">
     <button class="itin-toggle-all" id="toggleAllBtn" onclick="toggleAllDays(this)">Expand all</button>
