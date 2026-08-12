@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=2">
+<link rel="stylesheet" href="vote.css?v=5">
 </head>
 <body>
 
@@ -74,14 +74,14 @@
         <h2>Your ranking</h2>
         <span class="hint">1 = most want to go</span>
       </div>
+      <div class="card-head">
+        <p class="muted small">
+          Everywhere gets a spot — put them in the order you'd actually want,
+          least favourite at the bottom.
+        </p>
+      </div>
 
       <ol id="rankList" class="rank-list"></ol>
-
-      <div id="unrankedWrap" class="unranked hidden">
-        <p class="label">Left off your ballot</p>
-        <p class="muted small">These score nothing for you. Tap + to rank them.</p>
-        <ul id="unrankedList" class="unranked-list"></ul>
-      </div>
 
       <p id="newDestNote" class="note hidden"></p>
     </div>
@@ -126,6 +126,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="vote.js?v=2"></script>
+<script type="module" src="vote.js?v=5"></script>
 </body>
 </html>

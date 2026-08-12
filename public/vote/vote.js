@@ -1,8 +1,8 @@
 // Voter-facing ballot.
 //
-// State lives in three places: `poll` (server truth about the poll),
-// `ranked`/`unranked` (this voter's working order), and localStorage (the ballot
-// token, which is what actually proves the ballot is theirs).
+// State lives in three places: `poll` (server truth about the poll), `ranked`
+// (this voter's working order — every destination, always) and localStorage
+// (the ballot token, which is what actually proves the ballot is theirs).
 //
 // Every reorder autosaves as a draft. "Submit" only flips the submitted flag —
 // so a half-finished ballot is never counted, but nobody loses work either.
@@ -14,8 +14,7 @@ const $ = id => document.getElementById(id);
 
 let poll = null;
 let dests = new Map();        // id -> destination
-let ranked = [];              // ordered ids
-let unranked = [];            // ids deliberately left off
+let ranked = [];              // ordered ids — every destination, always
 let submitted = false;
 let saveTimer = null;
 let lastSavedJSON = null;
@@ -153,7 +152,7 @@ function renderVotedPill() {
 // ── ballot state ────────────────────────────────────────────────────────────
 
 // Reconciles a stored ballot against the current destination list: keeps the
-// voter's order, drops anything the organizer removed, and surfaces anything
+// voter's order, discards anything the organizer removed, and surfaces anything
 // added since they last looked.
 function seatBallot(savedRankings) {
   const all = poll.destinations.map(d => d.id);
@@ -161,17 +160,17 @@ function seatBallot(savedRankings) {
 
   if (!saved.length) {
     ranked = shuffled(all);
-    unranked = [];
     return [];
   }
 
   const known = new Set(saved);
   const fresh = all.filter(id => !known.has(id));
 
-  // New destinations go to the bottom of the ranking rather than silently
-  // off-ballot — the voter is told and can move them.
-  ranked = [...saved, ...fresh.filter(id => !unranked.includes(id))];
-  unranked = unranked.filter(id => dests.has(id));
+  // Every destination sits on every ballot, so anything added since this voter
+  // last looked joins at the bottom — keeping their existing order intact — and
+  // they're told about it. This also heals a ballot submitted before a
+  // destination existed, which is why partial rankings still arrive here.
+  ranked = [...saved, ...fresh];
   return fresh;
 }
 
@@ -210,8 +209,6 @@ function render() {
                 aria-label="Move ${escapeAttr(d.name)} up" ${i === 0 ? 'disabled' : ''}>▲</button>
         <button type="button" class="ctl" data-action="down" data-id="${id}"
                 aria-label="Move ${escapeAttr(d.name)} down" ${i === ranked.length - 1 ? 'disabled' : ''}>▼</button>
-        <button type="button" class="ctl" data-action="drop" data-id="${id}"
-                aria-label="Leave ${escapeAttr(d.name)} off my ballot" title="Leave off my ballot">✕</button>
       </div>`;
     // textContent, not innerHTML — destination names are user-supplied.
     li.querySelector('.rank-name').textContent = d.name;
@@ -219,22 +216,6 @@ function render() {
     const added = li.querySelector('.rank-added');
     if (added) added.textContent = `added by ${d.addedBy}`;
     list.appendChild(li);
-  });
-
-  const uw = $('unrankedWrap');
-  const ul = $('unrankedList');
-  ul.innerHTML = '';
-  uw.classList.toggle('hidden', unranked.length === 0);
-  unranked.forEach(id => {
-    const d = dests.get(id);
-    if (!d) return;
-    const li = document.createElement('li');
-    li.className = 'unranked-item';
-    li.innerHTML = `<span class="un-name"></span>
-      <button type="button" class="ctl" data-action="restore" data-id="${id}"
-              aria-label="Add ${escapeAttr(d.name)} back to my ranking">+</button>`;
-    li.querySelector('.un-name').textContent = d.name;
-    ul.appendChild(li);
   });
 
   const btn = $('submitBtn');
@@ -287,26 +268,10 @@ function move(id, delta) {
   queueSave();
 }
 
-function dropFromBallot(id) {
-  ranked = ranked.filter(x => x !== id);
-  if (!unranked.includes(id)) unranked.push(id);
-  render();
-  queueSave();
-}
-
-function restoreToBallot(id) {
-  unranked = unranked.filter(x => x !== id);
-  if (!ranked.includes(id)) ranked.push(id);
-  render();
-  queueSave();
-}
-
 const ACTIONS = {
-  up:      id => move(id, -1),
-  down:    id => move(id, +1),
-  drop:    id => dropFromBallot(id),
-  restore: id => restoreToBallot(id),
-  submit:  async () => {
+  up:     id => move(id, -1),
+  down:   id => move(id, +1),
+  submit: async () => {
     if (!ranked.length) return toast('Rank at least one destination first.', true);
     submitted = true;
     await queueSave(true);
