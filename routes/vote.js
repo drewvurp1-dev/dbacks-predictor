@@ -290,6 +290,15 @@ function addsUsedBy(destinations, voterName) {
   return destinations.filter(d => d.addedBy && nameKey(d.addedBy) === key).length;
 }
 
+// A voter can always see what *they* suggested, even while the rest of the
+// field is hidden — otherwise they can't tell what they spent their two on.
+function mineOf(destinations, voterName) {
+  const key = nameKey(voterName);
+  return destinations
+    .filter(d => d.addedBy && nameKey(d.addedBy) === key)
+    .map(d => ({ id: d.id, name: d.name, blurb: d.blurb }));
+}
+
 async function getDestinations() {
   const { rows } = await pool().query(
     `SELECT id, name, blurb, added_by, created_at FROM vote_destinations
@@ -363,7 +372,12 @@ router.get('/api/poll', requireDb, async (req, res) => {
       allowAdds: addsOpen(poll),
       addsCloseAt: poll.adds_close_at,
       maxAddsPerVoter: MAX_ADDS_PER_VOTER,
-      destinations,
+      // During nominations the field is withheld: voters suggest blind so
+      // nobody anchors on what's already there, and the organizer prunes
+      // duplicates before voting opens. Hiding it in the UI alone would be
+      // pointless — this response is public, so the names have to not be here.
+      destinations: phaseOf(poll) === 'nominate' ? [] : destinations,
+      destinationCount: destinations.length,
       voted: rows.filter(r => r.submitted).map(r => r.voter_name),
       startedCount: rows.length,
     });
@@ -400,6 +414,7 @@ router.post('/api/claim', requireDb, async (req, res) => {
         return res.json({
           voter: row.voter_name, rankings: row.rankings, submitted: row.submitted,
           hasPin: !!row.pin_hash, resumed: true,
+          myDestinations: mineOf(await getDestinations(), row.voter_name),
         });
       }
 
@@ -449,6 +464,7 @@ router.post('/api/claim', requireDb, async (req, res) => {
       return res.json({
         token: newToken, voter: row.voter_name, rankings: row.rankings,
         submitted: row.submitted, hasPin: true, recovered: true,
+        myDestinations: mineOf(await getDestinations(), row.voter_name),
       });
     }
 
@@ -462,7 +478,7 @@ router.post('/api/claim', requireDb, async (req, res) => {
        VALUES ($1, $2, $3, $4, '[]'::jsonb, $5)`,
       [POLL_ID, voter, key, hash(token), pin ? await hashPin(pin) : null]);
 
-    res.json({ token, voter, rankings: [], submitted: false, hasPin: !!pin, resumed: false });
+    res.json({ token, voter, rankings: [], submitted: false, hasPin: !!pin, resumed: false, myDestinations: [] });
   } catch (err) {
     console.error('[vote] claim error:', err.message);
     errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
@@ -477,6 +493,7 @@ router.get('/api/ballot', requireDb, async (req, res) => {
     res.json({
       voter: row.voter_name, rankings: row.rankings, submitted: row.submitted,
       hasPin: !!row.pin_hash, updatedAt: row.updated_at,
+      myDestinations: mineOf(await getDestinations(), row.voter_name),
     });
   } catch (err) {
     console.error('[vote] ballot GET error:', err.message);
@@ -584,11 +601,13 @@ router.post('/api/destinations', requireDb, async (req, res) => {
 
     const d = ins.rows[0];
     const after = addsUsedBy(await getDestinations(), row.voter_name);
+    const all = await getDestinations();
     res.json({
       ok: true,
       destination: { id: String(d.id), name: d.name, blurb: d.blurb, addedBy: d.added_by },
       used: after,
       remaining: Math.max(0, MAX_ADDS_PER_VOTER - after),
+      myDestinations: mineOf(all, row.voter_name),
     });
   } catch (err) {
     console.error('[vote] add destination error:', err.message);
@@ -825,6 +844,7 @@ module.exports.addsOpen = addsOpen;
 module.exports.votingOpen = votingOpen;
 module.exports.phaseOf = phaseOf;
 module.exports._addsUsedBy = addsUsedBy;
+module.exports._mineOf = mineOf;
 module.exports._sslFor = sslFor;
 module.exports._nameKey = nameKey;
 module.exports._cleanName = cleanName;

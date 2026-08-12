@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=8">
+<link rel="stylesheet" href="vote.css?v=9">
 </head>
 <body>
 
@@ -84,8 +84,9 @@
         <span class="hint" id="nomRemaining"></span>
       </div>
       <p class="muted small" id="nomIntro">
-        Nobody's ranking anything yet. First we build the list — add anywhere you'd
-        genuinely want to go, then voting opens on the finished list.
+        Nobody's ranking anything yet. Everyone suggests blind — you won't see
+        anyone else's until voting opens, so put forward what you actually want
+        rather than piling onto someone else's idea. Duplicates get cleaned up.
       </p>
 
       <form id="nomForm" class="stack" autocomplete="off">
@@ -104,12 +105,11 @@
       <p id="nomDone" class="note hidden"></p>
     </div>
 
-    <div class="card">
+    <div class="card" id="mineCard">
       <div class="card-head">
-        <h2>On the list so far</h2>
+        <h2>Your suggestions</h2>
         <span class="hint" id="nomCount"></span>
       </div>
-      <p class="muted small">Check here before adding — no point suggesting one twice.</p>
       <ul id="nomList" class="sugg-list"></ul>
     </div>
 
@@ -205,6 +205,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="vote.js?v=8"></script>
+<script type="module" src="vote.js?v=9"></script>
 </body>
 </html>

@@ -130,6 +130,25 @@ test('addsUsedBy counts only this voter, case and spacing insensitive', () => {
   assert.strictEqual(addsUsedBy(dests, 'Nobody'), 0);
 });
 
+test('mineOf returns only this voter\'s suggestions, without attribution', () => {
+  const { _mineOf: mineOf } = vote;
+  const dests = [
+    { id: '1', name: 'Istanbul', blurb: 'seeded', addedBy: null },
+    { id: '2', name: 'Lisbon', blurb: 'mine', addedBy: 'Drew V' },
+    { id: '3', name: 'Oslo', blurb: 'theirs', addedBy: 'Casey' },
+    { id: '4', name: 'Osaka', blurb: 'mine too', addedBy: 'drew  v' },
+  ];
+  const mine = mineOf(dests, 'Drew V');
+  assert.deepStrictEqual(mine.map(d => d.name), ['Lisbon', 'Osaka']);
+  assert.ok(!JSON.stringify(mine).includes('Oslo'), 'leaked another voter\'s suggestion');
+  assert.ok(!('addedBy' in mine[0]), 'attribution is redundant on your own list');
+});
+
+test('mineOf returns nothing for a voter who suggested nothing', () => {
+  const { _mineOf: mineOf } = vote;
+  assert.deepStrictEqual(mineOf([{ id: '1', name: 'Istanbul', addedBy: null }], 'Drew'), []);
+});
+
 test('addsUsedBy ignores seeded destinations with no author', () => {
   assert.strictEqual(addsUsedBy([{ name: 'Istanbul', addedBy: null }], 'Drew'), 0);
 });

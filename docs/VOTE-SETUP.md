@@ -169,11 +169,22 @@ name, so a duplicate would be obvious.
 ## 5. Things worth knowing
 
 **Nomination phase.** Before **Voting opens at**, `/vote/` shows a suggestion
-page instead of a ballot: a Location field, a short selling point, the running
-list of everything suggested so far with who suggested it, and a countdown to
-the opening. Each voter gets **2 suggestions** (`MAX_ADDS_PER_VOTER` in
-`routes/vote.js`); the form disappears once they're used. If a nomination is
-removed from the admin page, that slot is handed back.
+page instead of a ballot: a Location field, a short selling point, the voter's
+own suggestions so far, and a countdown to the opening. Each voter gets **2**
+(`MAX_ADDS_PER_VOTER` in `routes/vote.js`); the form disappears once they're
+used, and a nomination you remove hands that slot back.
+
+**Nominations are blind.** During this phase `GET /vote/api/poll` returns an
+empty `destinations` array and only an aggregate `destinationCount` — the names
+are withheld from the response itself, not merely hidden in the page, so nobody
+can read the field out of devtools. A voter sees only what they personally
+added, via the token-authenticated ballot response. Everything appears the
+moment voting opens.
+
+That means **you** are the deduplicator: check the admin Destinations list
+before voting opens and remove near-duplicates ("Tokyo" and "Tokyo, Japan") and
+anything that shouldn't be there. Each row shows who added it. A voter who
+happens to submit an exact duplicate is told so and does *not* lose a slot.
 
 Nine people × 2 plus the seeded 6 is up to 24 destinations, and a 24-row ranked
 ballot is miserable on a phone. In practice most people add nothing — but if the

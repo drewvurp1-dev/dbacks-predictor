@@ -372,6 +372,12 @@ missed cron tick can't leave voting open past the deadline.
   returns 403 `VOTING_NOT_OPEN` and the frontend shows a suggestion page with no
   ranking UI at all. Each voter may add `MAX_ADDS_PER_VOTER` (2) destinations;
   `addsUsedBy()` counts their live ones, so a removed nomination frees a slot.
+  **Nominations are blind**: `/api/poll` returns `destinations: []` plus an
+  aggregate `destinationCount` during this phase — withheld server-side, not
+  just hidden in the UI, since that response is public. A voter's own additions
+  come back as `myDestinations` on the token-authenticated claim/ballot
+  responses (`mineOf()`). The organizer dedupes from the admin page before
+  voting opens.
 - After it — **vote phase**. Normal ballot.
 
 `adds_close_at` shuts nominations independently (usually set to the same instant
