@@ -33,9 +33,10 @@ module.exports = [
     ],
   },
 
-  // Frontend ES modules (everything in public/js/ except charter.js)
+  // Frontend ES modules (everything in public/js/ except charter.js, plus the
+  // standalone ranked-choice vote app in public/vote/)
   {
-    files: ['public/js/**/*.js'],
+    files: ['public/js/**/*.js', 'public/vote/**/*.js'],
     ignores: ['public/js/charter.js'],
     languageOptions: {
       ecmaVersion: 2022,
@@ -67,9 +68,9 @@ module.exports = [
     },
   },
 
-  // Node server + routes + cron
+  // Node server + routes + shared libs + cron
   {
-    files: ['server.js', 'routes/**/*.js', 'cron.js'],
+    files: ['server.js', 'routes/**/*.js', 'lib/**/*.js', 'cron.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',

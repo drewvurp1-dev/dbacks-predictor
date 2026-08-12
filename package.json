@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "lint": "eslint .",
-    "test": "node --test public/js/*.test.js routes/*.test.js",
+    "test": "node --test public/js/*.test.js routes/*.test.js lib/*.test.js",
     "test:all": "npm run lint && npm test",
     "refresh-arsenal": "python3 scripts/refresh_pitch_arsenal.py"
   },
@@ -19,6 +19,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
+    "nodemailer": "^9.0.5",
     "pg": "^8.20.0",
     "web-push": "^3.6.7"
   },

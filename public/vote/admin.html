@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Vote results — organizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vote.css?v=1">
+<link rel="stylesheet" href="admin.css?v=1">
+</head>
+<body>
+
+<header class="hero">
+  <p class="hero-eyebrow">Organizer only</p>
+  <h1>Vote results</h1>
+  <p class="hero-sub">Live tally. Nobody but you can see this page — or the winner.</p>
+  <div class="hero-meta">
+    <span id="statusPill" class="pill">…</span>
+    <span id="ballotPill" class="pill"></span>
+  </div>
+</header>
+
+<main class="wrap wrap-wide">
+
+  <!-- ── Key gate ── -->
+  <section id="keyCard" class="card hidden">
+    <h2>Admin key</h2>
+    <p class="muted small">The value of <code>VOTE_ADMIN_KEY</code> on the server.</p>
+    <form id="keyForm" class="stack" autocomplete="off">
+      <label class="field">
+        <span>Key</span>
+        <input id="keyInput" type="password" required>
+      </label>
+      <button type="submit" class="btn btn-primary">Unlock</button>
+    </form>
+    <p id="keyError" class="error hidden"></p>
+  </section>
+
+  <section id="loadingCard" class="card">
+    <p class="muted">Loading results…</p>
+  </section>
+
+  <div id="dash" class="hidden">
+
+    <!-- ── Winner ── -->
+    <section class="card winner-card">
+      <p class="label">Winner — instant runoff</p>
+      <h2 id="winnerName" class="winner-name">—</h2>
+      <p id="winnerSub" class="muted small"></p>
+      <div id="winnerFlags"></div>
+    </section>
+
+    <!-- ── Rounds ── -->
+    <section class="card">
+      <div class="card-head"><h2>Round by round</h2><span class="hint">instant runoff</span></div>
+      <div id="rounds"></div>
+    </section>
+
+    <!-- ── Borda ── -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Consensus score</h2><span class="hint">Borda points</span>
+      </div>
+      <p class="muted small">Rewards broad acceptance. If this disagrees with the runoff, the group is split.</p>
+      <div class="table-scroll">
+        <table id="bordaTable" class="tbl">
+          <thead><tr>
+            <th>#</th><th>Destination</th><th class="num">Points</th>
+            <th class="num">1st</th><th class="num">Ranked by</th><th class="num">Avg rank</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Ballots ── -->
+    <section class="card">
+      <div class="card-head"><h2>Every ballot</h2><span class="hint" id="ballotHint"></span></div>
+      <div id="ballots"></div>
+    </section>
+
+    <!-- ── Controls ── -->
+    <section class="card">
+      <h2>Poll settings</h2>
+      <form id="settingsForm" class="stack" autocomplete="off">
+        <label class="field">
+          <span>Title</span>
+          <input id="setTitle" type="text" maxlength="120">
+        </label>
+        <label class="field">
+          <span>Closes at <em>(leave blank for no deadline — close it manually)</em></span>
+          <input id="setCloses" type="datetime-local">
+        </label>
+        <label class="check">
+          <input id="setAdds" type="checkbox">
+          <span>Let voters add new destinations</span>
+        </label>
+        <button type="submit" class="btn btn-secondary">Save settings</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Destinations</h2>
+      <div id="destList" class="dest-list"></div>
+      <form id="destForm" class="stack" autocomplete="off">
+        <label class="field">
+          <span>Add a destination</span>
+          <input id="destName" type="text" maxlength="80" placeholder="e.g. Lisbon, Portugal" required>
+        </label>
+        <label class="field">
+          <span>Blurb <em>(optional)</em></span>
+          <input id="destBlurb" type="text" maxlength="280">
+        </label>
+        <button type="submit" class="btn btn-secondary">Add</button>
+      </form>
+    </section>
+
+    <section class="card danger-card">
+      <h2>Close voting</h2>
+      <p class="muted small">
+        Closes the poll, tallies the ballots, and sends you the full report by
+        email and push. Voters see only "voting is closed".
+      </p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-action="close">Close &amp; send results</button>
+        <button type="button" class="btn btn-ghost" data-action="send">Send me the report now</button>
+        <button type="button" class="btn btn-ghost" data-action="reopen">Reopen voting</button>
+      </div>
+      <p id="deliveryNote" class="muted small"></p>
+    </section>
+
+    <section class="card">
+      <h2>Release a name</h2>
+      <p class="muted small">
+        If someone lost their phone or cleared their browser, releasing their name
+        deletes their ballot so they can start again.
+      </p>
+      <form id="resetForm" class="stack" autocomplete="off">
+        <label class="field">
+          <span>Voter name</span>
+          <input id="resetName" type="text" maxlength="40" required>
+        </label>
+        <button type="submit" class="btn btn-ghost">Release name</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Plain-text report</h2>
+      <p class="muted small">Exactly what gets emailed. Copy it anywhere.</p>
+      <pre id="reportText" class="report"></pre>
+    </section>
+
+  </div>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="admin.js?v=1"></script>
+</body>
+</html>

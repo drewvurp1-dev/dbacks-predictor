@@ -1,0 +1,129 @@
+/* Organizer dashboard — extends vote.css */
+
+.wrap-wide { max-width: 820px; }
+
+.winner-card { border-left: 4px solid var(--gold); }
+.winner-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32px;
+  line-height: 1.15;
+  margin: 4px 0 6px;
+}
+
+.flag {
+  margin-top: 12px;
+  font-size: 13px;
+  padding: 9px 12px;
+  border-radius: 0 6px 6px 0;
+}
+.flag-warn { background: #FDF6E7; border-left: 3px solid var(--gold); }
+.flag-split { background: #F1F5F2; border-left: 3px solid var(--sage); }
+
+/* ── Rounds ── */
+.round { margin-bottom: 22px; }
+.round:last-child { margin-bottom: 0; }
+.round-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+}
+.round-title { font-weight: 600; font-size: 14px; }
+.round-meta { font-size: 12px; color: var(--muted); }
+
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.bar-name { flex: 0 0 40%; font-size: 13.5px; }
+.bar-track { flex: 1; height: 20px; background: var(--cream-dk); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--dark); border-radius: 4px; transition: width .3s; }
+.bar-fill.win { background: var(--sage); }
+.bar-fill.out { background: var(--wine); opacity: .5; }
+.bar-val { flex: 0 0 74px; text-align: right; font-size: 12.5px; color: var(--muted); }
+
+.bar-row.eliminated .bar-name { text-decoration: line-through; color: var(--muted); }
+.bar-row.winner .bar-name { font-weight: 700; }
+
+/* ── Tables ── */
+.table-scroll { overflow-x: auto; margin-top: 12px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl th, .tbl td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); }
+.tbl th {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted); font-weight: 600; white-space: nowrap;
+}
+.tbl td.num, .tbl th.num { text-align: right; }
+.tbl tbody tr:first-child td { font-weight: 600; }
+
+/* ── Ballots ── */
+.ballot {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ballot:last-child { border-bottom: none; }
+.ballot-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ballot-name { font-weight: 600; }
+.tag {
+  font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px;
+}
+.tag-draft { background: #FDF6E7; color: #8A6A1F; }
+.tag-in    { background: #EAF1EB; color: var(--sage); }
+.ballot-order { margin-top: 5px; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+.chip {
+  display: inline-block;
+  background: var(--cream-dk);
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin: 0 4px 4px 0;
+  font-size: 12.5px;
+  color: var(--dark);
+}
+.chip-n { color: var(--gold); font-weight: 700; margin-right: 4px; }
+.ballot-unranked { margin-top: 4px; font-size: 12px; color: var(--muted); font-style: italic; }
+
+/* ── Destinations ── */
+.dest-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.dest-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; background: var(--cream); border-radius: 8px; font-size: 14px;
+}
+.dest-row .d-name { flex: 1; }
+.dest-row .d-by { font-size: 11.5px; color: var(--sage); }
+
+.check { display: flex; align-items: center; gap: 9px; font-size: 14px; cursor: pointer; }
+.check input { width: 17px; height: 17px; accent-color: var(--wine); }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.danger-card { border-left: 4px solid var(--wine); }
+
+.report {
+  margin-top: 12px;
+  background: var(--dark);
+  color: #E6E1D8;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--cream-dk);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+
+input[type="datetime-local"] {
+  font: inherit;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--dark);
+}
+
+@media (max-width: 520px) {
+  .bar-name { flex-basis: 34%; }
+  .winner-name { font-size: 26px; }
+}
