@@ -190,8 +190,13 @@ function render() {
 
   // Settings
   $('setTitle').value = poll.title || '';
+  $('setSubtitle').value = poll.subtitle || '';
   $('setAdds').checked = !!poll.allowAdds;
   $('setCloses').value = poll.closesAt ? toLocalInput(new Date(poll.closesAt)) : '';
+  $('setAddsClose').value = poll.addsCloseAt ? toLocalInput(new Date(poll.addsCloseAt)) : '';
+  txt($('addsStateNote'), poll.addsOpen
+    ? 'Voters can add destinations right now.'
+    : 'Nominations are closed — voters can still change their ranking.');
 
   // Destinations
   const dl = $('destList');
@@ -308,15 +313,17 @@ $('keyForm').addEventListener('submit', async e => {
 
 $('settingsForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const raw = $('setCloses').value;
+  // datetime-local has no timezone; new Date() reads it as local, which is what
+  // the organizer meant when they typed it.
+  const iso = v => (v ? new Date(v).toISOString() : null);
   try {
     await api('/settings', {
       method: 'POST',
       body: {
         title: $('setTitle').value,
-        // datetime-local has no timezone; new Date() reads it as local, which is
-        // what the organizer meant when they typed it.
-        closesAt: raw ? new Date(raw).toISOString() : null,
+        subtitle: $('setSubtitle').value,
+        closesAt: iso($('setCloses').value),
+        addsCloseAt: iso($('setAddsClose').value),
         allowAdds: $('setAdds').checked,
       },
     });

@@ -88,6 +88,10 @@ function ready() {
           closed_at    TIMESTAMPTZ,
           created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
         )`);
+      // Nominations usually close before voting does, so the field is settled
+      // while people are still ranking it. Added after the table shipped.
+      await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS adds_close_at TIMESTAMPTZ`);
+      await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS subtitle TEXT`);
       await p.query(`
         CREATE TABLE IF NOT EXISTS vote_destinations (
           id         SERIAL PRIMARY KEY,
@@ -116,7 +120,8 @@ function ready() {
                      ON vote_ballots (poll_id, name_key)`);
 
       await p.query(
-        `INSERT INTO vote_poll (poll_id) VALUES ($1) ON CONFLICT DO NOTHING`, [POLL_ID]);
+        `INSERT INTO vote_poll (poll_id, title) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [POLL_ID, 'Where are we going?']);
 
       const { rows } = await p.query(
         'SELECT count(*)::int AS n FROM vote_destinations WHERE poll_id = $1', [POLL_ID]);
@@ -226,6 +231,17 @@ function isOpen(poll) {
   return true;
 }
 
+// Nominations have their own, usually earlier, deadline: the field should be
+// settled while people are still ranking it, so nobody's submitted ballot is
+// missing a destination that appeared at the last minute. Closing the poll
+// closes nominations too, regardless of this date.
+function addsOpen(poll) {
+  if (!isOpen(poll)) return false;
+  if (!poll.allow_adds) return false;
+  if (poll.adds_close_at && new Date(poll.adds_close_at).getTime() <= Date.now()) return false;
+  return true;
+}
+
 // ── public / voter endpoints ────────────────────────────────────────────────
 
 router.use(express.json({ limit: '64kb' }));
@@ -243,10 +259,12 @@ router.get('/api/poll', requireDb, async (req, res) => {
     res.json({
       pollId: POLL_ID,
       title: poll.title,
+      subtitle: poll.subtitle,
       open: isOpen(poll),
       status: isOpen(poll) ? 'open' : 'closed',
       closesAt: poll.closes_at,
-      allowAdds: poll.allow_adds,
+      allowAdds: addsOpen(poll),
+      addsCloseAt: poll.adds_close_at,
       destinations,
       voted: rows.filter(r => r.submitted).map(r => r.voter_name),
       startedCount: rows.length,
@@ -343,8 +361,12 @@ router.post('/api/destinations', requireDb, async (req, res) => {
     if (!row) return errorResponse(res, 401, 'Claim a ballot first', { code: ErrorCodes.AUTH_FAILED });
 
     const poll = await getPoll();
-    if (!isOpen(poll))    return errorResponse(res, 403, 'Voting is closed', { code: 'POLL_CLOSED' });
-    if (!poll.allow_adds) return errorResponse(res, 403, 'The destination list is locked', { code: 'ADDS_LOCKED' });
+    if (!isOpen(poll)) return errorResponse(res, 403, 'Voting is closed', { code: 'POLL_CLOSED' });
+    if (!addsOpen(poll)) {
+      return errorResponse(res, 403,
+        'The deadline for adding destinations has passed — you can still change your ranking.',
+        { code: 'ADDS_LOCKED' });
+    }
 
     const name = cleanName(req.body?.name, MAX_NAME_LEN);
     if (name.length < 3) {
@@ -396,8 +418,10 @@ async function computeResults() {
 
   return {
     poll: {
-      title: poll.title, status: poll.status, open: isOpen(poll),
-      closesAt: poll.closes_at, allowAdds: poll.allow_adds,
+      title: poll.title, subtitle: poll.subtitle,
+      status: poll.status, open: isOpen(poll),
+      closesAt: poll.closes_at, addsCloseAt: poll.adds_close_at,
+      allowAdds: poll.allow_adds, addsOpen: addsOpen(poll),
       resultsSent: poll.results_sent, closedAt: poll.closed_at,
     },
     destinations,
@@ -483,7 +507,8 @@ router.post('/api/admin/reopen', requireDb, requireAdmin, async (req, res) => {
   try {
     await pool().query(
       `UPDATE vote_poll SET status = 'open', closed_at = NULL, results_sent = false,
-       closes_at = CASE WHEN closes_at <= now() THEN NULL ELSE closes_at END
+       closes_at     = CASE WHEN closes_at     <= now() THEN NULL ELSE closes_at END,
+       adds_close_at = CASE WHEN adds_close_at <= now() THEN NULL ELSE adds_close_at END
        WHERE poll_id = $1`, [POLL_ID]);
     res.json({ ok: true });
   } catch (err) {
@@ -494,17 +519,22 @@ router.post('/api/admin/reopen', requireDb, requireAdmin, async (req, res) => {
 
 router.post('/api/admin/settings', requireDb, requireAdmin, async (req, res) => {
   try {
-    const { title, closesAt, allowAdds } = req.body || {};
+    const { title, subtitle, closesAt, addsCloseAt, allowAdds } = req.body || {};
     if (title !== undefined) {
       await pool().query('UPDATE vote_poll SET title = $1 WHERE poll_id = $2',
         [cleanName(title, 120) || 'Trip destination vote', POLL_ID]);
     }
-    if (closesAt !== undefined) {
-      const at = closesAt ? new Date(closesAt) : null;
+    if (subtitle !== undefined) {
+      await pool().query('UPDATE vote_poll SET subtitle = $1 WHERE poll_id = $2',
+        [cleanName(subtitle, 160) || null, POLL_ID]);
+    }
+    for (const [field, col] of [[closesAt, 'closes_at'], [addsCloseAt, 'adds_close_at']]) {
+      if (field === undefined) continue;
+      const at = field ? new Date(field) : null;
       if (at && isNaN(at.getTime())) {
-        return errorResponse(res, 400, 'Invalid closesAt', { code: ErrorCodes.BAD_INPUT });
+        return errorResponse(res, 400, `Invalid ${col}`, { code: ErrorCodes.BAD_INPUT });
       }
-      await pool().query('UPDATE vote_poll SET closes_at = $1 WHERE poll_id = $2', [at, POLL_ID]);
+      await pool().query(`UPDATE vote_poll SET ${col} = $1 WHERE poll_id = $2`, [at, POLL_ID]);
     }
     if (allowAdds !== undefined) {
       await pool().query('UPDATE vote_poll SET allow_adds = $1 WHERE poll_id = $2', [!!allowAdds, POLL_ID]);
@@ -579,6 +609,7 @@ module.exports = router;
 module.exports.closeAndNotify = closeAndNotify;
 module.exports.computeResults = computeResults;
 module.exports.isOpen = isOpen;
+module.exports.addsOpen = addsOpen;
 module.exports._nameKey = nameKey;
 module.exports._cleanName = cleanName;
 module.exports._validateRankings = validateRankings;
