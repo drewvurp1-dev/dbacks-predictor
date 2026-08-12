@@ -61,7 +61,7 @@ function showError(id, msg) {
 function clearError(id) { $(id).classList.add('hidden'); }
 
 function show(...ids) {
-  for (const id of ['loadingCard', 'nameCard', 'closedCard', 'ballotCard']) {
+  for (const id of ['loadingCard', 'nameCard', 'closedCard', 'nominateCard', 'ballotCard']) {
     $(id).classList.toggle('hidden', !ids.includes(id));
   }
 }
@@ -85,14 +85,16 @@ async function loadPoll() {
 
   $('pollTitle').textContent = poll.title || 'Where are we going?';
   document.title = `${poll.title || 'Where are we going?'} — rank your destinations`;
-  if (poll.subtitle) $('pollSubtitle').textContent = poll.subtitle;
+  $('pollSubtitle').textContent = poll.subtitle || (poll.phase === 'nominate'
+    ? 'First we build the list. Add anywhere you\'d want to go — ranking comes later.'
+    : 'Drag the destinations into the order you want them. First place at the top.');
 
   renderDeadline();
   renderVotedPill();
 
-  // Nominations close before voting does, so this card can disappear while the
-  // ballot below it stays live.
-  $('addCard').classList.toggle('hidden', !poll.allowAdds || !poll.open);
+  // In the nomination phase the ballot's own add-a-destination card is
+  // redundant — the whole page is that form.
+  $('addCard').classList.toggle('hidden', !poll.allowAdds || !poll.open || poll.phase !== 'vote');
   if (poll.allowAdds && poll.addsCloseAt) {
     $('addDeadlineNote').textContent =
       `Add it and everyone — including people who already voted — will see it on their ballot. ` +
@@ -109,6 +111,19 @@ function fmtWhen(d) {
 
 function renderDeadline() {
   const pill = $('deadlinePill');
+
+  // Before voting opens the useful countdown is to the opening, not the close —
+  // that is the moment everyone has to come back for.
+  if (poll.phase === 'nominate' && poll.opensAt) {
+    const opens = new Date(poll.opensAt);
+    const h = Math.round((opens - Date.now()) / 3600000);
+    pill.textContent = `Voting opens ${fmtWhen(opens)}`;
+    pill.classList.toggle('urgent', h <= 12);
+    pill.classList.remove('hidden');
+    $('addsPill').classList.add('hidden');
+    return;
+  }
+
   if (!poll.closesAt) { pill.classList.add('hidden'); return; }
 
   const closes = new Date(poll.closesAt);
@@ -144,8 +159,14 @@ function renderDeadline() {
 }
 
 function renderVotedPill() {
+  const pill = $('votedPill');
+  if (poll.phase === 'nominate') {
+    const n = poll.destinations.length;
+    pill.textContent = `${n} ${n === 1 ? 'destination' : 'destinations'} suggested`;
+    return;
+  }
   const n = poll.voted.length;
-  $('votedPill').textContent = n === 0
+  pill.textContent = n === 0
     ? 'No ballots in yet'
     : `${n} ${n === 1 ? 'ballot' : 'ballots'} in · ${poll.voted.join(', ')}`;
 }
@@ -417,6 +438,36 @@ $('pinSetForm').addEventListener('submit', async e => {
   }
 });
 
+$('nomForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  clearError('nomError');
+  const name = $('nomName').value.trim();
+  const blurb = $('nomBlurb').value.trim();
+  if (name.length < 3) return showError('nomError', 'Give the city and country.');
+
+  const btn = $('nomSubmit');
+  btn.disabled = true;
+  try {
+    const res = await api('/destinations', { method: 'POST', body: { name, blurb } });
+    $('nomName').value = '';
+    $('nomBlurb').value = '';
+    await loadPoll();
+    renderNominate(localStorage.getItem(NAME_KEY) || '');
+    toast(res.remaining > 0
+      ? `${res.destination.name} added. ${res.remaining} suggestion${res.remaining === 1 ? '' : 's'} left.`
+      : `${res.destination.name} added — that's both of yours in.`);
+  } catch (err) {
+    showError('nomError', err.message);
+    // The phase can flip while the page sits open; re-route rather than
+    // leaving them typing into a form the server will keep refusing.
+    if (err.code === 'VOTING_NOT_OPEN' || err.code === 'ADDS_LOCKED' || err.code === 'POLL_CLOSED') {
+      setTimeout(() => location.reload(), 2000);
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 $('addForm').addEventListener('submit', async e => {
   e.preventDefault();
   clearError('addError');
@@ -445,6 +496,15 @@ $('addForm').addEventListener('submit', async e => {
 // ── boot ────────────────────────────────────────────────────────────────────
 
 async function startBallot(ballot) {
+  // Nomination phase: no ranking UI at all, just the suggestion form.
+  if (poll.phase === 'nominate') {
+    localStorage.setItem(NAME_KEY, ballot.voter);
+    hasPin = !!ballot.hasPin;
+    renderNominate(ballot.voter);
+    show('nominateCard');
+    return;
+  }
+
   $('voterName').textContent = ballot.voter;
   submitted = !!ballot.submitted;
   hasPin = !!ballot.hasPin;
@@ -463,6 +523,53 @@ async function startBallot(ballot) {
 async function refresh() {
   await loadPoll();
   if (!poll.open) { show('closedCard'); return; }
+}
+
+// ── nomination phase ────────────────────────────────────────────────────────
+
+function renderNominate(voter) {
+  $('nomVoterName').textContent = voter;
+
+  const mine = poll.destinations.filter(d => d.addedBy && sameName(d.addedBy, voter));
+  const max = poll.maxAddsPerVoter || 2;
+  const left = Math.max(0, max - mine.length);
+
+  $('nomRemaining').textContent = `${left} of ${max} left`;
+  $('nomForm').classList.toggle('hidden', left === 0);
+  $('nomDone').classList.toggle('hidden', left > 0);
+  if (left === 0) {
+    $('nomDone').textContent =
+      `You've added your ${max}: ${mine.map(d => d.name).join(' and ')}. ` +
+      `That's the limit — come back when voting opens to rank the full list.`;
+  }
+
+  $('nomCount').textContent = `${poll.destinations.length} so far`;
+  const list = $('nomList');
+  list.innerHTML = '';
+  for (const d of poll.destinations) {
+    const li = document.createElement('li');
+    li.className = 'sugg-item' + (d.addedBy && sameName(d.addedBy, voter) ? ' mine' : '');
+    li.innerHTML = `<div class="sugg-name"></div>
+      ${d.blurb ? '<div class="sugg-blurb"></div>' : ''}
+      ${d.addedBy ? '<div class="sugg-by"></div>' : ''}`;
+    li.querySelector('.sugg-name').textContent = d.name;
+    if (d.blurb) li.querySelector('.sugg-blurb').textContent = d.blurb;
+    if (d.addedBy) {
+      li.querySelector('.sugg-by').textContent =
+        d.addedBy === 'organizer' ? 'on the original list'
+          : sameName(d.addedBy, voter) ? 'added by you' : `added by ${d.addedBy}`;
+    }
+    list.appendChild(li);
+  }
+
+  $('nomFoot').textContent = poll.opensAt
+    ? `Voting opens ${fmtWhen(new Date(poll.opensAt))}. Everyone ranks the same finished list, so nothing gets added under you mid-vote.`
+    : 'Voting opens once the organizer closes suggestions.';
+}
+
+function sameName(a, b) {
+  return String(a).trim().toLowerCase().replace(/\s+/g, ' ')
+      === String(b).trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 async function boot() {
@@ -490,6 +597,12 @@ async function boot() {
   }
 
   if (!poll.open) { show('closedCard'); return; }
+
+  if (poll.phase === 'nominate') {
+    $('nameCardTitle').textContent = "Who's suggesting?";
+    $('nameCardIntro').textContent =
+      'Your name goes next to anything you add, so everyone can see who suggested what.';
+  }
 
   const remembered = localStorage.getItem(NAME_KEY);
   if (remembered) $('nameInput').value = remembered;

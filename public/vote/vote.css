@@ -224,6 +224,34 @@ input[type="text"]:focus {
 .ctl-drag { cursor: grab; touch-action: none; }
 .ctl-drag:active { cursor: grabbing; }
 
+/* ── Suggestion list (nomination phase) ── */
+.sugg-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.sugg-item {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 13px;
+}
+.sugg-item.mine { border-color: var(--gold); background: #FDF9F1; }
+.sugg-name { font-weight: 600; font-size: 15px; line-height: 1.35; }
+.sugg-blurb { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
+.sugg-by { font-size: 11px; color: var(--sage); margin-top: 4px; font-weight: 500; }
+
+textarea {
+  font: inherit;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--dark);
+  resize: vertical;
+}
+textarea:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: -1px;
+  background: var(--white);
+}
+
 /* ── details / add ── */
 details summary {
   cursor: pointer;

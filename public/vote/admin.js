@@ -52,7 +52,9 @@ function chip(n, name) {
 function render() {
   const { poll, result, ballots, destinations, report } = data;
 
-  $('statusPill').textContent = poll.open ? 'Voting open' : 'Voting closed';
+  $('statusPill').textContent = !poll.open ? 'Voting closed'
+    : poll.phase === 'nominate' ? 'Suggestions open — voting not started'
+      : 'Voting open';
   $('statusPill').classList.toggle('urgent', !poll.open);
   $('ballotPill').textContent =
     `${result.countedBallots} submitted · ${ballots.length - result.countedBallots} draft`;
@@ -193,6 +195,7 @@ function render() {
   $('setSubtitle').value = poll.subtitle || '';
   $('setAdds').checked = !!poll.allowAdds;
   $('setCloses').value = poll.closesAt ? toLocalInput(new Date(poll.closesAt)) : '';
+  $('setOpens').value = poll.opensAt ? toLocalInput(new Date(poll.opensAt)) : '';
   $('setAddsClose').value = poll.addsCloseAt ? toLocalInput(new Date(poll.addsCloseAt)) : '';
   txt($('addsStateNote'), poll.addsOpen
     ? 'Voters can add destinations right now.'
@@ -322,6 +325,7 @@ $('settingsForm').addEventListener('submit', async e => {
       body: {
         title: $('setTitle').value,
         subtitle: $('setSubtitle').value,
+        opensAt: iso($('setOpens').value),
         closesAt: iso($('setCloses').value),
         addsCloseAt: iso($('setAddsClose').value),
         allowAdds: $('setAdds').checked,

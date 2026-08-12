@@ -366,12 +366,22 @@ six starting destinations are seeded then.
 `isOpen()` treats a passed `closes_at` as closed regardless of `status`, so a
 missed cron tick can't leave voting open past the deadline.
 
-**Two deadlines.** `adds_close_at` shuts nominations while `closes_at` keeps
-ranking open, so the field settles before people finish voting. `addsOpen()`
-gates the nomination endpoint and requires all three: poll open, `allow_adds`
-true, and `adds_close_at` not yet passed. Both columns are added with
-`ALTER TABLE … ADD COLUMN IF NOT EXISTS` because they shipped after the table.
-Deadlines are stored UTC and rendered in each viewer's local timezone.
+**Three dates, two phases.** `opens_at` splits the poll in half:
+
+- Before it — **nominate phase** (`phaseOf() === 'nominate'`). `PUT /api/ballot`
+  returns 403 `VOTING_NOT_OPEN` and the frontend shows a suggestion page with no
+  ranking UI at all. Each voter may add `MAX_ADDS_PER_VOTER` (2) destinations;
+  `addsUsedBy()` counts their live ones, so a removed nomination frees a slot.
+- After it — **vote phase**. Normal ballot.
+
+`adds_close_at` shuts nominations independently (usually set to the same instant
+as `opens_at` so the phases meet with no gap), and `closes_at` ends the poll.
+`addsOpen()` needs poll open + `allow_adds` + `adds_close_at` unpassed;
+`votingOpen()` needs poll open + `opens_at` passed. Settings rejects an
+`opens_at` at or after `closes_at`, which would leave a poll nobody could rank
+in. All three columns use `ALTER TABLE … ADD COLUMN IF NOT EXISTS` because they
+shipped after the table. Dates are stored UTC and rendered in each viewer's
+local timezone.
 
 ## Git Workflow
 

@@ -30,6 +30,7 @@ const ADMIN_KEY = process.env.VOTE_ADMIN_KEY;
 const RESULT_TO = process.env.VOTE_RESULT_EMAIL;
 
 const MAX_DESTINATIONS = 24;
+const MAX_ADDS_PER_VOTER = 2;
 const MAX_NAME_LEN     = 80;
 const MAX_BLURB_LEN    = 280;
 const MAX_VOTER_LEN    = 40;
@@ -107,6 +108,9 @@ function ready() {
       // while people are still ranking it. Added after the table shipped.
       await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS adds_close_at TIMESTAMPTZ`);
       await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS subtitle TEXT`);
+      // Nominations run first and ranking only opens at opens_at, so everybody
+      // ranks the same finished field instead of a list that moves under them.
+      await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS opens_at TIMESTAMPTZ`);
       await p.query(`
         CREATE TABLE IF NOT EXISTS vote_destinations (
           id         SERIAL PRIMARY KEY,
@@ -279,6 +283,13 @@ async function getPoll() {
   return rows[0];
 }
 
+// How many of the live destinations this voter put forward. Removed ones don't
+// count, so a nomination the organizer prunes hands the slot back.
+function addsUsedBy(destinations, voterName) {
+  const key = nameKey(voterName);
+  return destinations.filter(d => d.addedBy && nameKey(d.addedBy) === key).length;
+}
+
 async function getDestinations() {
   const { rows } = await pool().query(
     `SELECT id, name, blurb, added_by, created_at FROM vote_destinations
@@ -308,6 +319,23 @@ function addsOpen(poll) {
   return true;
 }
 
+// Ranking is a separate, later window. Before opens_at the poll is live but
+// only accepts nominations — so no one ranks a field that is still changing,
+// and nobody has to revisit a ballot because two destinations showed up after
+// they voted. No opens_at means voting is open from the start.
+function votingOpen(poll) {
+  if (!isOpen(poll)) return false;
+  if (poll.opens_at && new Date(poll.opens_at).getTime() > Date.now()) return false;
+  return true;
+}
+
+// One word for the whole state, so the client doesn't re-derive it from three
+// timestamps and get a different answer.
+function phaseOf(poll) {
+  if (!isOpen(poll)) return 'closed';
+  return votingOpen(poll) ? 'vote' : 'nominate';
+}
+
 // ── public / voter endpoints ────────────────────────────────────────────────
 
 router.use(express.json({ limit: '64kb' }));
@@ -328,9 +356,13 @@ router.get('/api/poll', requireDb, async (req, res) => {
       subtitle: poll.subtitle,
       open: isOpen(poll),
       status: isOpen(poll) ? 'open' : 'closed',
+      phase: phaseOf(poll),
+      votingOpen: votingOpen(poll),
+      opensAt: poll.opens_at,
       closesAt: poll.closes_at,
       allowAdds: addsOpen(poll),
       addsCloseAt: poll.adds_close_at,
+      maxAddsPerVoter: MAX_ADDS_PER_VOTER,
       destinations,
       voted: rows.filter(r => r.submitted).map(r => r.voter_name),
       startedCount: rows.length,
@@ -459,6 +491,11 @@ router.put('/api/ballot', requireDb, async (req, res) => {
 
     const poll = await getPoll();
     if (!isOpen(poll)) return errorResponse(res, 403, 'Voting is closed', { code: 'POLL_CLOSED' });
+    if (!votingOpen(poll)) {
+      return errorResponse(res, 403,
+        'Voting hasn\'t opened yet — right now you can only suggest destinations.',
+        { code: 'VOTING_NOT_OPEN' });
+    }
 
     const destinations = await getDestinations();
     const validIds = new Set(destinations.map(d => d.id));
@@ -521,6 +558,15 @@ router.post('/api/destinations', requireDb, async (req, res) => {
     }
     const blurb = cleanName(req.body?.blurb, MAX_BLURB_LEN) || null;
 
+    // Everyone gets the same small number of nominations, so one person can't
+    // flood the ballot and dilute the field.
+    const mine = addsUsedBy(await getDestinations(), row.voter_name);
+    if (mine >= MAX_ADDS_PER_VOTER) {
+      return errorResponse(res, 403,
+        `You've already suggested ${MAX_ADDS_PER_VOTER} destinations, which is the limit.`,
+        { code: 'ADD_LIMIT' });
+    }
+
     const current = await getDestinations();
     if (current.length >= MAX_DESTINATIONS) {
       return errorResponse(res, 400, `That's the maximum of ${MAX_DESTINATIONS} destinations`, { code: ErrorCodes.BAD_INPUT });
@@ -537,7 +583,13 @@ router.post('/api/destinations', requireDb, async (req, res) => {
       [POLL_ID, name, blurb, row.voter_name]);
 
     const d = ins.rows[0];
-    res.json({ ok: true, destination: { id: String(d.id), name: d.name, blurb: d.blurb, addedBy: d.added_by } });
+    const after = addsUsedBy(await getDestinations(), row.voter_name);
+    res.json({
+      ok: true,
+      destination: { id: String(d.id), name: d.name, blurb: d.blurb, addedBy: d.added_by },
+      used: after,
+      remaining: Math.max(0, MAX_ADDS_PER_VOTER - after),
+    });
   } catch (err) {
     console.error('[vote] add destination error:', err.message);
     errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
@@ -568,6 +620,7 @@ async function computeResults() {
       title: poll.title, subtitle: poll.subtitle,
       status: poll.status, open: isOpen(poll),
       closesAt: poll.closes_at, addsCloseAt: poll.adds_close_at,
+      opensAt: poll.opens_at, phase: phaseOf(poll), votingOpen: votingOpen(poll),
       allowAdds: poll.allow_adds, addsOpen: addsOpen(poll),
       resultsSent: poll.results_sent, closedAt: poll.closed_at,
     },
@@ -662,7 +715,8 @@ router.post('/api/admin/reopen', requireDb, requireAdmin, async (req, res) => {
     await pool().query(
       `UPDATE vote_poll SET status = 'open', closed_at = NULL, results_sent = false,
        closes_at     = CASE WHEN closes_at     <= now() THEN NULL ELSE closes_at END,
-       adds_close_at = CASE WHEN adds_close_at <= now() THEN NULL ELSE adds_close_at END
+       adds_close_at = CASE WHEN adds_close_at <= now() THEN NULL ELSE adds_close_at END,
+       opens_at      = CASE WHEN opens_at      <= now() THEN NULL ELSE opens_at END
        WHERE poll_id = $1`, [POLL_ID]);
     res.json({ ok: true });
   } catch (err) {
@@ -673,7 +727,11 @@ router.post('/api/admin/reopen', requireDb, requireAdmin, async (req, res) => {
 
 router.post('/api/admin/settings', requireDb, requireAdmin, async (req, res) => {
   try {
-    const { title, subtitle, closesAt, addsCloseAt, allowAdds } = req.body || {};
+    const { title, subtitle, closesAt, addsCloseAt, opensAt, allowAdds } = req.body || {};
+    // Voting opening after it closes would leave a poll nobody can ever rank in.
+    if (opensAt && closesAt && new Date(opensAt) >= new Date(closesAt)) {
+      return errorResponse(res, 400, 'Voting would open after it closes', { code: ErrorCodes.BAD_INPUT });
+    }
     if (title !== undefined) {
       await pool().query('UPDATE vote_poll SET title = $1 WHERE poll_id = $2',
         [cleanName(title, 120) || 'Trip destination vote', POLL_ID]);
@@ -682,7 +740,7 @@ router.post('/api/admin/settings', requireDb, requireAdmin, async (req, res) => 
       await pool().query('UPDATE vote_poll SET subtitle = $1 WHERE poll_id = $2',
         [cleanName(subtitle, 160) || null, POLL_ID]);
     }
-    for (const [field, col] of [[closesAt, 'closes_at'], [addsCloseAt, 'adds_close_at']]) {
+    for (const [field, col] of [[closesAt, 'closes_at'], [addsCloseAt, 'adds_close_at'], [opensAt, 'opens_at']]) {
       if (field === undefined) continue;
       const at = field ? new Date(field) : null;
       if (at && isNaN(at.getTime())) {
@@ -764,6 +822,9 @@ module.exports.closeAndNotify = closeAndNotify;
 module.exports.computeResults = computeResults;
 module.exports.isOpen = isOpen;
 module.exports.addsOpen = addsOpen;
+module.exports.votingOpen = votingOpen;
+module.exports.phaseOf = phaseOf;
+module.exports._addsUsedBy = addsUsedBy;
 module.exports._sslFor = sslFor;
 module.exports._nameKey = nameKey;
 module.exports._cleanName = cleanName;
