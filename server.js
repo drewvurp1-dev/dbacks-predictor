@@ -17,6 +17,8 @@ app.use('/pitch-arsenal', require('./routes/arsenal'));
 app.use('/flights',    require('./routes/flights'));
 app.use('/api/sync',   require('./routes/sync'));
 app.use('/api/push',   require('./routes/push'));
+// Static above already serves public/vote/*.html; this handles /vote/api/*.
+app.use('/vote',       require('./routes/vote'));
 
 // Auto-refresh pitch arsenal on startup if data is missing or older than 24h.
 // The daily launchd cron is the primary refresh mechanism; this is a safety net

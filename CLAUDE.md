@@ -11,6 +11,9 @@ server.js              Express entry point + startup logic
 cron.js                Scheduled push notification jobs
 lib/
   errors.js            Shared error envelope + ErrorCodes
+  rcv.js               Ranked-choice tally engine (instant runoff + Borda) — pure, tested
+  vote-report.js       Formats a tally into the results email / push payload — pure, tested
+  mailer.js            Outbound email (Resend HTTP API or SMTP via nodemailer)
 routes/
   mlb.js               Proxy → statsapi.mlb.com
   odds.js              Proxy → api.the-odds-api.com (in-memory cache)
@@ -20,6 +23,7 @@ routes/
   flights.js           Proxy → AeroDataBox via RapidAPI (charter tracker)
   push.js              Web Push subscribe/unsubscribe/send + VAPID setup
   sync.js              Cross-device state sync via PostgreSQL
+  vote.js              Ranked-choice destination vote (ballots, admin, close+notify)
 data/
   pitch_arsenal.json   Pre-built pitcher/batter pitch-arsenal data (daily refresh)
   team_charters.json   MLB charter aircraft tail numbers + callsigns by team
@@ -51,7 +55,13 @@ public/
       modal.js         Modal lifecycle (open/close + player-context coordination)
       render.js        Shared render helpers: statBox, _renderStatcastGrid, _renderPitchMatchup
     *.test.js          Node test suite (node --test) — 94 tests covering math modules
+  vote/                Ranked-choice destination vote (standalone mini-app, own CSS/JS)
+    index.html         Voter ballot
+    vote.css / vote.js Ballot UI — drag + ▲▼ reorder, autosave, add-a-destination
+    admin.html         Organizer dashboard (results, poll controls)
+    admin.css / admin.js
 league-hub/            Standalone MLB-wide dashboard (separate Express app, port 3100)
+docs/VOTE-SETUP.md     Deploy + operating guide for the vote
 ```
 
 ## Stack
@@ -86,6 +96,13 @@ npm run refresh-arsenal   # rebuild data/pitch_arsenal.json (requires pybaseball
 | `OPENSKY_USER` / `OPENSKY_PASS` | Optional | OpenSky creds to raise the rate limit on the ADS-B charter fallback (works anonymously without them) |
 | `DISABLE_ADSB_FALLBACK` | Dev | Set to `1` to turn off the OpenSky ADS-B charter fallback |
 | `DISABLE_CRON` | Dev | Set to `1` to suppress all scheduled jobs |
+| `VOTE_ADMIN_KEY` | Vote only | Password for `/vote/admin.html` — the only thing protecting the results |
+| `VOTE_RESULT_EMAIL` | Vote only | Where the results report is emailed |
+| `RESEND_API_KEY` | Vote email | Resend HTTP API (no SMTP config needed) — takes precedence over SMTP |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Vote email | SMTP transport (e.g. Gmail app password) |
+| `MAIL_FROM` | Optional | From address (defaults to `SMTP_USER`) |
+| `VOTE_POLL_ID` | Optional | Namespaces the poll (default `trip`) — change it to run a second vote |
+| `DATABASE_SSL` | Dev | Set to `0` to disable Postgres SSL; auto-disabled for localhost |
 
 Generate VAPID keys once: `node -e "console.log(require('web-push').generateVAPIDKeys())"`
 
@@ -111,6 +128,11 @@ Generate VAPID keys once: `node -e "console.log(require('web-push').generateVAPI
 | `/flights/status` | Config/quota health check | No upstream call |
 | `/api/sync` | PostgreSQL sync_state table | GET/POST, requires X-Sync-Key header |
 | `/api/push/*` | Push subscription management | Requires X-Sync-Key header |
+| `/vote/api/poll` | PostgreSQL vote_* tables | Public. Destinations + who voted — **never** rankings or results |
+| `/vote/api/claim` | " | Claims a name, returns a ballot token. 409 NAME_TAKEN if held |
+| `/vote/api/ballot` | " | GET/PUT own ballot. Requires X-Ballot-Token |
+| `/vote/api/destinations` | " | POST — voters nominate a destination. Requires X-Ballot-Token |
+| `/vote/api/admin/*` | " | Results, settings, close/notify. Requires X-Admin-Key |
 
 ### Error envelope
 
@@ -173,6 +195,7 @@ Runs on startup via `require('./cron').start()`. No-ops if the required env vars
 | `checkLineup` | Every 5 min | D-backs lineup posted for today's game |
 | `checkFirstPitch` | Every 5 min | First pitch is 25–35 min away |
 | `checkCharterPoll` | Every 30 min | Scouts for charter ETD from T-60h before opener first pitch; active polls from scheduled departure (ETD) until landing or ETD+8h |
+| `checkVoteDeadline` | Every 5 min | Destination poll's `closes_at` has passed and results haven't been sent — closes it, tallies, emails + pushes the report. Idempotent via `vote_poll.results_sent` |
 
 Notification dedup uses `notification_log (game_pk, type)` PRIMARY KEY — INSERT … ON CONFLICT DO NOTHING. Falls back to in-memory Set when `DATABASE_URL` isn't configured.
 
@@ -266,6 +289,72 @@ After extraction #7: ~1,945 lines — orchestration + bootstrap + corbet/predict
 - `pitcher.js` tests (FIP/xFIP/SIERA/normalizePitchMix)
 - `api.js` URL construction tests (mocked fetch)
 - Audit #13: modal DOM-move race condition — needs browser scenario to reproduce
+
+## Destination Vote
+
+A private ranked-choice vote for picking the next group trip. Voter page at
+`/vote/`, organizer page at `/vote/admin.html`. Full operating guide in
+`docs/VOTE-SETUP.md`.
+
+**Self-contained.** `public/vote/` is a standalone mini-app with its own CSS and
+ES modules — it shares nothing with `public/js/` (no `S`, no `api.js`, no
+`ACTIONS` map from app.js) and imports nothing from it. It does follow the same
+`data-action` event-delegation convention internally. Cache-bust `?v=N` applies
+to `public/vote/*` the same as everywhere else.
+
+**Scoring** lives in `lib/rcv.js` and is pure — no DB, no Express — so the admin
+page, the email and the push notification all tally through the same tested
+code. Two scores from one set of ballots:
+
+- **Instant runoff** decides the winner. Eliminate the last-place destination
+  each round, move its ballots to each voter's next surviving choice, until one
+  holds a majority of *continuing* ballots (exhausted ballots leave the
+  denominator, which lowers the bar).
+- **Borda points** is reported alongside as a consensus check. `tally()` sets
+  `agreement: false` when the two methods disagree, and the report says so —
+  that disagreement is the signal the group is split, so it must not be hidden.
+
+**Batch elimination.** When the combined vote of the bottom N destinations is
+strictly less than the next one up, they are eliminated together. This is
+outcome-equivalent (none of them could overtake it) and exists purely so a
+six-destination poll with a handful of voters doesn't produce a report where
+half the rounds say "eliminated something nobody voted for."
+
+**Ties** are broken on Borda points, then alphabetically — never randomly, so
+the email and the admin page always agree. A whole-field tie is flagged with
+`tie: true` rather than quietly resolved.
+
+### Privacy model — do not weaken this
+
+The requirement is that voters can't see each other's ballots and the public
+can't see the winner.
+
+- A voter claims a name and the server returns a random **ballot token**, held
+  in localStorage. That token — *not* the name — authorizes reading or writing a
+  ballot, so typing someone else's name doesn't open their vote (409
+  `NAME_TAKEN`). Admin can release a name if someone genuinely changes device.
+- `GET /vote/api/poll` is the only public endpoint. It returns destinations and
+  *who* has voted, never rankings, counts or the winner — before or after the
+  close. **There is deliberately no public results endpoint.** Don't add one.
+- Everything that reveals a result is under `/vote/api/admin/*` behind
+  `VOTE_ADMIN_KEY` (constant-time compared).
+- Only `submitted` ballots are tallied; drafts are visible to the admin, flagged
+  as uncounted.
+
+Known and accepted limit: name-only entry means someone could vote twice under
+two names. That was the deliberate tradeoff for not distributing access codes —
+the admin ballot list makes duplicates obvious.
+
+### Tables
+
+`vote_poll` (one row per `VOTE_POLL_ID`), `vote_destinations` (soft-deleted via
+`removed` so ids already sitting in ballots stay resolvable), `vote_ballots`
+(unique on `poll_id, name_key`; `name_key` is lowercased/whitespace-collapsed so
+"Drew  V" and "drew v" are one person). Created lazily on first request, and the
+six starting destinations are seeded then.
+
+`isOpen()` treats a passed `closes_at` as closed regardless of `status`, so a
+missed cron tick can't leave voting open past the deadline.
 
 ## Git Workflow
 

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Where are we going? — Rank your destinations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vote.css?v=1">
+</head>
+<body>
+
+<header class="hero">
+  <p class="hero-eyebrow">Group trip · ranked choice</p>
+  <h1 id="pollTitle">Where are we going?</h1>
+  <p class="hero-sub">Drag the destinations into the order you want them. First place at the top.</p>
+  <div class="hero-meta">
+    <span id="deadlinePill" class="pill hidden"></span>
+    <span id="votedPill" class="pill"></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ── Loading ── -->
+  <section id="loadingCard" class="card">
+    <p class="muted">Loading the ballot…</p>
+  </section>
+
+  <!-- ── Name gate ── -->
+  <section id="nameCard" class="card hidden">
+    <h2>Who's voting?</h2>
+    <p class="muted small">
+      Your ballot is tied to this device, and nobody else in the group can see it —
+      not even by typing your name on their phone. Only the organizer sees the results.
+    </p>
+    <form id="nameForm" class="stack" autocomplete="off">
+      <label class="field">
+        <span>Your name</span>
+        <input id="nameInput" type="text" maxlength="40" placeholder="e.g. Drew V" required>
+      </label>
+      <button type="submit" class="btn btn-primary">Start my ballot</button>
+    </form>
+    <p id="nameError" class="error hidden"></p>
+  </section>
+
+  <!-- ── Closed ── -->
+  <section id="closedCard" class="card hidden">
+    <h2>Voting is closed</h2>
+    <p class="muted">
+      The ballots are in and the results have gone to the organizer.
+      They'll share the destination with the group.
+    </p>
+  </section>
+
+  <!-- ── Ballot ── -->
+  <section id="ballotCard" class="hidden">
+
+    <div class="card card-tight">
+      <div class="voter-row">
+        <div>
+          <p class="label">Voting as</p>
+          <p class="voter-name" id="voterName"></p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-action="switch">Not you?</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Your ranking</h2>
+        <span class="hint">1 = most want to go</span>
+      </div>
+
+      <ol id="rankList" class="rank-list"></ol>
+
+      <div id="unrankedWrap" class="unranked hidden">
+        <p class="label">Left off your ballot</p>
+        <p class="muted small">These score nothing for you. Tap + to rank them.</p>
+        <ul id="unrankedList" class="unranked-list"></ul>
+      </div>
+
+      <p id="newDestNote" class="note hidden"></p>
+    </div>
+
+    <div class="card">
+      <details id="addDetails">
+        <summary>Somewhere else in mind?</summary>
+        <p class="muted small">
+          Add it and everyone — including people who already voted — will see it on their ballot.
+        </p>
+        <form id="addForm" class="stack" autocomplete="off">
+          <label class="field">
+            <span>Destination</span>
+            <input id="addName" type="text" maxlength="80" placeholder="e.g. Lisbon, Portugal" required>
+          </label>
+          <label class="field">
+            <span>Why? <em>(optional)</em></span>
+            <input id="addBlurb" type="text" maxlength="280" placeholder="One line to sell it">
+          </label>
+          <button type="submit" class="btn btn-secondary">Add destination</button>
+        </form>
+        <p id="addError" class="error hidden"></p>
+      </details>
+    </div>
+
+    <div class="submit-bar">
+      <p id="saveState" class="save-state"></p>
+      <button type="button" id="submitBtn" class="btn btn-primary btn-lg" data-action="submit">
+        Submit my ballot
+      </button>
+      <p class="muted small center">You can change it any time until voting closes.</p>
+    </div>
+
+  </section>
+
+  <p class="foot">
+    Ranked-choice: your 2nd and 3rd picks still matter. If your first choice is
+    eliminated, your ballot moves to the next place you ranked.
+  </p>
+
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="vote.js?v=1"></script>
+</body>
+</html>

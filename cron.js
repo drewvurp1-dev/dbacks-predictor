@@ -392,6 +392,30 @@ async function checkCharterPoll() {
   }
 }
 
+// ── Ranked-choice vote deadline ─────────────────────────────────────────────
+// Closes the destination poll once its deadline passes and delivers the results
+// report by email + push. closeAndNotify() is idempotent on vote_poll.results_sent,
+// so a repeated tick after the close is a no-op rather than a second email.
+async function checkVoteDeadline() {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    const voteRouter = require('./routes/vote');
+    const { poll } = await voteRouter.computeResults();
+
+    if (poll.resultsSent) return;
+    // Only auto-close on a deadline. A poll with no deadline is closed by hand
+    // from the admin page, otherwise a fresh poll would close immediately.
+    if (!poll.closesAt) return;
+    if (new Date(poll.closesAt).getTime() > Date.now()) return;
+
+    console.log('[cron] vote deadline reached — closing and sending results');
+    const out = await voteRouter.closeAndNotify();
+    console.log('[cron] vote results:', JSON.stringify(out));
+  } catch (err) {
+    console.error('[cron] vote deadline check failed:', err.message);
+  }
+}
+
 function start() {
   if (process.env.DISABLE_CRON === '1') {
     console.log('[cron] disabled via DISABLE_CRON=1');
@@ -413,6 +437,13 @@ function start() {
   } else {
     console.log('[cron] charter poller disabled (AERODATABOX_API_KEY not set)');
   }
+
+  if (process.env.DATABASE_URL) {
+    cron.schedule('*/5 * * * *', checkVoteDeadline);
+    console.log('[cron] scheduled vote deadline check (every 5 minutes)');
+  } else {
+    console.log('[cron] vote deadline check disabled (DATABASE_URL not set)');
+  }
 }
 
-module.exports = { start, checkLineup, checkFirstPitch, checkCharterPoll };
+module.exports = { start, checkLineup, checkFirstPitch, checkCharterPoll, checkVoteDeadline };
