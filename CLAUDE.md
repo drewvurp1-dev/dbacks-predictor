@@ -96,6 +96,7 @@ npm run refresh-arsenal   # rebuild data/pitch_arsenal.json (requires pybaseball
 | `OPENSKY_USER` / `OPENSKY_PASS` | Optional | OpenSky creds to raise the rate limit on the ADS-B charter fallback (works anonymously without them) |
 | `DISABLE_ADSB_FALLBACK` | Dev | Set to `1` to turn off the OpenSky ADS-B charter fallback |
 | `DISABLE_CRON` | Dev | Set to `1` to suppress all scheduled jobs |
+| `ROOT_REDIRECT` | Optional | Path that `/` redirects to (302). Set to `/vote/` on a vote-only deployment; unset locally so `/` stays Snake Savant |
 | `VOTE_ADMIN_KEY` | Vote only | Password for `/vote/admin.html` — the only thing protecting the results |
 | `VOTE_RESULT_EMAIL` | Vote only | Where the results report is emailed |
 | `RESEND_API_KEY` | Vote email | Resend HTTP API (no SMTP config needed) — takes precedence over SMTP |
