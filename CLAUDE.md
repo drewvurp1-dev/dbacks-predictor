@@ -334,6 +334,15 @@ can't see the winner.
   in localStorage. That token — *not* the name — authorizes reading or writing a
   ballot, so typing someone else's name doesn't open their vote (409
   `NAME_TAKEN`). Admin can release a name if someone genuinely changes device.
+- An optional **4-digit recovery PIN** (`vote_ballots.pin_hash`) lets a voter
+  reopen their own ballot on a second device: name + PIN issues a fresh token
+  and retires the old one, so a ballot is only ever live on the most recent
+  device. Set at claim time or later via `PUT /vote/api/pin` (token required, so
+  it can't be used to overwrite someone else's PIN). Because 4 digits is only
+  10,000 combinations, the PIN is **scrypt**-hashed with a per-ballot salt and
+  guarded by a lockout (5 fails → 15 min, `pin_fails`/`pin_locked_until`). Both
+  defences are load-bearing — don't swap in a fast hash or drop the lockout.
+  A voter with no PIN still needs the admin to release their name.
 - `GET /vote/api/poll` is the only public endpoint. It returns destinations and
   *who* has voted, never rankings, counts or the winner — before or after the
   close. **There is deliberately no public results endpoint.** Don't add one.

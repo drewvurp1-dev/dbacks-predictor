@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=5">
+<link rel="stylesheet" href="vote.css?v=7">
 </head>
 <body>
 
@@ -34,15 +34,24 @@
   <section id="nameCard" class="card hidden">
     <h2>Who's voting?</h2>
     <p class="muted small">
-      Your ballot is tied to this device, and nobody else in the group can see it —
-      not even by typing your name on their phone. Only the organizer sees the results.
+      Nobody else in the group can see your ballot — not even by typing your name
+      on their own phone. Only the organizer sees the results.
     </p>
     <form id="nameForm" class="stack" autocomplete="off">
       <label class="field">
         <span>Your name</span>
         <input id="nameInput" type="text" maxlength="40" placeholder="e.g. Drew V" required>
       </label>
-      <button type="submit" class="btn btn-primary">Start my ballot</button>
+      <label class="field">
+        <span id="pinLabel">4-digit PIN <em>(optional)</em></span>
+        <input id="pinInput" type="text" inputmode="numeric" pattern="[0-9]*"
+               maxlength="4" placeholder="1234" autocomplete="off">
+        <span class="field-help" id="pinHelp">
+          Only needed if you might want to edit your vote from a different
+          phone or laptop. On this device you'll stay signed in either way.
+        </span>
+      </label>
+      <button type="submit" class="btn btn-primary" id="nameSubmit">Start my ballot</button>
     </form>
     <p id="nameError" class="error hidden"></p>
   </section>
@@ -67,6 +76,25 @@
         </div>
         <button type="button" class="btn btn-ghost btn-sm" data-action="switch">Not you?</button>
       </div>
+    </div>
+
+    <div class="card card-tight" id="pinCard">
+      <div class="voter-row">
+        <div>
+          <p class="label">Another device</p>
+          <p class="muted small" id="pinStatus"></p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-action="pin-toggle" id="pinToggleBtn">Add a PIN</button>
+      </div>
+      <form id="pinSetForm" class="stack hidden" autocomplete="off">
+        <label class="field">
+          <span>4-digit PIN</span>
+          <input id="pinSetInput" type="text" inputmode="numeric" pattern="[0-9]*"
+                 maxlength="4" placeholder="1234" autocomplete="off">
+        </label>
+        <button type="submit" class="btn btn-secondary">Save PIN</button>
+      </form>
+      <p id="pinSetError" class="error hidden"></p>
     </div>
 
     <div class="card">
@@ -126,6 +154,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="vote.js?v=5"></script>
+<script type="module" src="vote.js?v=7"></script>
 </body>
 </html>

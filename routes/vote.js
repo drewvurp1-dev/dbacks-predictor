@@ -19,6 +19,7 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
+const { promisify } = require('util');
 const { errorResponse, ErrorCodes } = require('../lib/errors');
 const { tally } = require('../lib/rcv');
 const { buildReport } = require('../lib/vote-report');
@@ -132,6 +133,12 @@ function ready() {
         )`);
       await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS vote_ballot_uniq
                      ON vote_ballots (poll_id, name_key)`);
+      // Optional recovery PIN — lets a voter reopen their ballot from a second
+      // device instead of needing the organizer to release their name. Added
+      // after the table shipped, hence the guarded ALTERs.
+      await p.query(`ALTER TABLE vote_ballots ADD COLUMN IF NOT EXISTS pin_hash TEXT`);
+      await p.query(`ALTER TABLE vote_ballots ADD COLUMN IF NOT EXISTS pin_fails INT NOT NULL DEFAULT 0`);
+      await p.query(`ALTER TABLE vote_ballots ADD COLUMN IF NOT EXISTS pin_locked_until TIMESTAMPTZ`);
 
       await p.query(
         `INSERT INTO vote_poll (poll_id, title) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
@@ -158,6 +165,51 @@ function ready() {
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 const hash = s => crypto.createHash('sha256').update(s).digest('hex');
+
+// ── recovery PIN ────────────────────────────────────────────────────────────
+//
+// A 4-digit PIN is only 10,000 combinations, so it needs two defences and both
+// matter here:
+//
+//   scrypt with a per-ballot salt — a fast hash (sha256) over a 4-digit space
+//   is exhaustible in milliseconds if the database ever leaks, which would hand
+//   over the ability to open any ballot.
+//
+//   a lockout after repeated failures — otherwise the whole keyspace can be
+//   walked online in a few minutes, and the PIN is the only thing standing
+//   between a curious friend and someone else's ballot.
+//
+// The PIN is optional: a voter who sets none simply can't self-recover, which
+// is the pre-existing behaviour (the organizer releases their name instead).
+
+const PIN_MAX_FAILS = 5;
+const PIN_LOCK_MS   = 15 * 60 * 1000;
+
+const scrypt = promisify(crypto.scrypt);
+
+function isValidPin(pin) {
+  return typeof pin === 'string' && /^\d{4}$/.test(pin);
+}
+
+async function hashPin(pin) {
+  const salt = crypto.randomBytes(16);
+  const key  = await scrypt(pin, salt, 32);
+  return `s1$${salt.toString('hex')}$${key.toString('hex')}`;
+}
+
+async function verifyPin(pin, stored) {
+  if (!stored || !isValidPin(pin)) return false;
+  const [scheme, saltHex, keyHex] = String(stored).split('$');
+  if (scheme !== 's1' || !saltHex || !keyHex) return false;
+  const key = await scrypt(pin, Buffer.from(saltHex, 'hex'), 32);
+  const expected = Buffer.from(keyHex, 'hex');
+  return key.length === expected.length && crypto.timingSafeEqual(key, expected);
+}
+
+function pinLockedFor(row) {
+  if (!row.pin_locked_until) return 0;
+  return Math.max(0, new Date(row.pin_locked_until).getTime() - Date.now());
+}
 
 // Collapses whitespace and case so "drew  V" and "Drew v" are the same person.
 function nameKey(s) {
@@ -302,15 +354,70 @@ router.post('/api/claim', requireDb, async (req, res) => {
     const existing = await pool().query(
       'SELECT * FROM vote_ballots WHERE poll_id = $1 AND name_key = $2', [POLL_ID, key]);
 
+    const pin = typeof req.body?.pin === 'string' ? req.body.pin.trim() : '';
+    if (pin && !isValidPin(pin)) {
+      return errorResponse(res, 400, 'PIN must be exactly 4 digits', { code: ErrorCodes.BAD_INPUT });
+    }
+
     if (existing.rows.length) {
       const row = existing.rows[0];
+
+      // 1. Same device — the token alone is enough, no PIN prompt ever.
       const token = String(req.headers['x-ballot-token'] || '');
       if (token && hash(token) === row.token_hash) {
-        return res.json({ voter: row.voter_name, rankings: row.rankings, submitted: row.submitted, resumed: true });
+        return res.json({
+          voter: row.voter_name, rankings: row.rankings, submitted: row.submitted,
+          hasPin: !!row.pin_hash, resumed: true,
+        });
       }
-      return errorResponse(res, 409,
-        `"${row.voter_name}" has already started a ballot on another device. Use that device, add a last initial, or ask the organizer to release the name.`,
-        { code: 'NAME_TAKEN' });
+
+      // 2. No PIN was ever set — nothing to check against, so the organizer
+      //    still has to release the name.
+      if (!row.pin_hash) {
+        return errorResponse(res, 409,
+          `"${row.voter_name}" already has a ballot on another device, and no PIN was set for it. Open it on that device, or ask the organizer to release the name so you can start again.`,
+          { code: 'NAME_TAKEN' });
+      }
+
+      const lockedMs = pinLockedFor(row);
+      if (lockedMs > 0) {
+        return errorResponse(res, 429,
+          `Too many wrong PINs. Try again in ${Math.ceil(lockedMs / 60000)} minutes, or ask the organizer to release your name.`,
+          { code: 'PIN_LOCKED' });
+      }
+
+      // 3. A PIN exists — ask for it, then verify.
+      if (!pin) {
+        return errorResponse(res, 401,
+          `"${row.voter_name}" already has a ballot. Enter its 4-digit PIN to open it here.`,
+          { code: 'PIN_REQUIRED' });
+      }
+
+      if (!(await verifyPin(pin, row.pin_hash))) {
+        const fails = row.pin_fails + 1;
+        const lock = fails >= PIN_MAX_FAILS;
+        await pool().query(
+          `UPDATE vote_ballots SET pin_fails = $1, pin_locked_until = $2 WHERE id = $3`,
+          [lock ? 0 : fails, lock ? new Date(Date.now() + PIN_LOCK_MS) : null, row.id]);
+        return errorResponse(res, 401,
+          lock
+            ? `Too many wrong PINs. Try again in ${PIN_LOCK_MS / 60000} minutes, or ask the organizer to release your name.`
+            : `That PIN doesn't match. ${PIN_MAX_FAILS - fails} ${PIN_MAX_FAILS - fails === 1 ? 'try' : 'tries'} left.`,
+          { code: lock ? 'PIN_LOCKED' : 'PIN_WRONG' });
+      }
+
+      // Correct PIN: issue a fresh token for this device. The old one stops
+      // working, so a ballot is only ever open on the most recent device — if
+      // they go back to the first one they just re-enter name and PIN.
+      const newToken = crypto.randomBytes(24).toString('base64url');
+      await pool().query(
+        `UPDATE vote_ballots SET token_hash = $1, pin_fails = 0, pin_locked_until = NULL WHERE id = $2`,
+        [hash(newToken), row.id]);
+
+      return res.json({
+        token: newToken, voter: row.voter_name, rankings: row.rankings,
+        submitted: row.submitted, hasPin: true, recovered: true,
+      });
     }
 
     if (!isOpen(poll)) {
@@ -319,11 +426,11 @@ router.post('/api/claim', requireDb, async (req, res) => {
 
     const token = crypto.randomBytes(24).toString('base64url');
     await pool().query(
-      `INSERT INTO vote_ballots (poll_id, voter_name, name_key, token_hash, rankings)
-       VALUES ($1, $2, $3, $4, '[]'::jsonb)`,
-      [POLL_ID, voter, key, hash(token)]);
+      `INSERT INTO vote_ballots (poll_id, voter_name, name_key, token_hash, rankings, pin_hash)
+       VALUES ($1, $2, $3, $4, '[]'::jsonb, $5)`,
+      [POLL_ID, voter, key, hash(token), pin ? await hashPin(pin) : null]);
 
-    res.json({ token, voter, rankings: [], submitted: false, resumed: false });
+    res.json({ token, voter, rankings: [], submitted: false, hasPin: !!pin, resumed: false });
   } catch (err) {
     console.error('[vote] claim error:', err.message);
     errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
@@ -335,7 +442,10 @@ router.get('/api/ballot', requireDb, async (req, res) => {
   try {
     const row = await ballotFromToken(req);
     if (!row) return errorResponse(res, 401, 'Ballot not found for this device', { code: ErrorCodes.AUTH_FAILED });
-    res.json({ voter: row.voter_name, rankings: row.rankings, submitted: row.submitted, updatedAt: row.updated_at });
+    res.json({
+      voter: row.voter_name, rankings: row.rankings, submitted: row.submitted,
+      hasPin: !!row.pin_hash, updatedAt: row.updated_at,
+    });
   } catch (err) {
     console.error('[vote] ballot GET error:', err.message);
     errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
@@ -364,6 +474,29 @@ router.put('/api/ballot', requireDb, async (req, res) => {
     res.json({ ok: true, rankings: v.rankings, submitted });
   } catch (err) {
     console.error('[vote] ballot PUT error:', err.message);
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
+  }
+});
+
+// Set or change the recovery PIN from inside your own ballot. Needs the token,
+// so it can't be used to overwrite someone else's PIN and hijack their ballot —
+// and it lets a voter who skipped the PIN at the start add one later, which is
+// usually when they realise they might want to edit from a laptop.
+router.put('/api/pin', requireDb, async (req, res) => {
+  try {
+    const row = await ballotFromToken(req);
+    if (!row) return errorResponse(res, 401, 'Ballot not found for this device', { code: ErrorCodes.AUTH_FAILED });
+
+    const pin = typeof req.body?.pin === 'string' ? req.body.pin.trim() : '';
+    if (pin && !isValidPin(pin)) {
+      return errorResponse(res, 400, 'PIN must be exactly 4 digits', { code: ErrorCodes.BAD_INPUT });
+    }
+    await pool().query(
+      `UPDATE vote_ballots SET pin_hash = $1, pin_fails = 0, pin_locked_until = NULL WHERE id = $2`,
+      [pin ? await hashPin(pin) : null, row.id]);
+    res.json({ ok: true, hasPin: !!pin });
+  } catch (err) {
+    console.error('[vote] set pin error:', err.message);
     errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
   }
 });
@@ -419,7 +552,7 @@ async function computeResults() {
   const poll = await getPoll();
   const destinations = await getDestinations();
   const { rows } = await pool().query(
-    `SELECT voter_name, rankings, submitted, updated_at FROM vote_ballots
+    `SELECT voter_name, rankings, submitted, updated_at, pin_hash FROM vote_ballots
      WHERE poll_id = $1 ORDER BY lower(voter_name)`, [POLL_ID]);
 
   // Only submitted ballots count. A half-filled draft someone abandoned should
@@ -446,6 +579,7 @@ async function computeResults() {
       rankings: (r.rankings || []).map(String),
       submitted: r.submitted,
       updatedAt: r.updated_at,
+      hasPin: !!r.pin_hash,
       unranked: destinations.filter(d => !(r.rankings || []).map(String).includes(d.id)).map(d => d.name),
     })),
   };
@@ -634,3 +768,6 @@ module.exports._sslFor = sslFor;
 module.exports._nameKey = nameKey;
 module.exports._cleanName = cleanName;
 module.exports._validateRankings = validateRankings;
+module.exports._isValidPin = isValidPin;
+module.exports._hashPin = hashPin;
+module.exports._verifyPin = verifyPin;
