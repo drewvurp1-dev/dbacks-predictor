@@ -272,7 +272,7 @@ const ACTIONS = {
   send: async () => {
     const out = await api('/send-report', { method: 'POST' });
     toast(out.mail?.sent
-      ? `Report sent via ${out.mailTransport}.`
+      ? `Preview sent via ${out.mailTransport} — the poll is untouched.`
       : `Email not sent (${out.mail?.error || out.mail?.skipped || 'not configured'}).`,
     !out.mail?.sent);
   },
