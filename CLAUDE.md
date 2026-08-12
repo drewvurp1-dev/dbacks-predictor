@@ -380,8 +380,12 @@ missed cron tick can't leave voting open past the deadline.
   voting opens.
 - After it — **vote phase**. Normal ballot.
 
-`adds_close_at` shuts nominations independently (usually set to the same instant
-as `opens_at` so the phases meet with no gap), and `closes_at` ends the poll.
+`adds_close_at` shuts nominations independently of `opens_at`, and `closes_at`
+ends the poll. A gap between `adds_close_at` and `opens_at` is a deliberate
+**grace window** for the organizer to prune duplicates against a frozen field:
+still `phase: 'nominate'`, but `allowAdds` false. The nomination page must check
+`allowAdds` and not just the remaining-slot count, or it offers a form the
+server is certain to reject.
 `addsOpen()` needs poll open + `allow_adds` + `adds_close_at` unpassed;
 `votingOpen()` needs poll open + `opens_at` passed. Settings rejects an
 `opens_at` at or after `closes_at`, which would leave a poll nobody could rank
