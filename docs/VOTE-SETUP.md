@@ -27,21 +27,47 @@ in this repo has to actually run somewhere.
 
 ## 1. Deploy
 
-Any Node host with a Postgres add-on works. Render's free tier is the shortest
-path:
-
-1. **New → Web Service**, point it at this repo.
-   - Build: `npm install`
-   - Start: `npm start`
-2. **New → Postgres** (free tier). Copy its **Internal Database URL**.
-3. Set the environment variables below on the web service.
+Any Node host with a Postgres add-on works. The app reads `PORT` from the
+environment, so nothing needs configuring for that.
 
 The vote tables are created automatically on the first request, and the six
 destinations are seeded then too. Nothing to run by hand.
 
-> Render's free web services sleep after inactivity. The first person to open
-> the link after a quiet spell waits ~30s for it to wake. If that matters, the
-> paid tier removes it — or just warn the group.
+### Railway
+
+1. **New Project → Deploy from GitHub repo**, pick this repo.
+2. In the project, **Create → Database → Add PostgreSQL**.
+3. On the *app* service → **Variables**, set `DATABASE_URL` to the reference
+   `${{Postgres.DATABASE_URL}}` (type it literally — Railway resolves it), plus
+   the rest of the variables below.
+4. App service → **Settings → Networking → Generate Domain** to get a public URL.
+
+Railway doesn't idle-sleep, so there's no cold start for voters.
+
+### Render
+
+1. **New → Postgres** (free tier) first. Copy its **Internal Database URL**.
+2. **New → Web Service** pointed at this repo, *same region as the database*.
+   - Build: `npm install`
+   - Start: `npm start`
+3. Set the environment variables below on the web service.
+
+> Render's free web services sleep after ~15 min idle. The first person to open
+> the link after a quiet spell waits ~50s. Wake it yourself before sharing the
+> link, or use the paid tier.
+
+### A note on database SSL
+
+`sslFor()` in `routes/vote.js` picks the SSL mode from the hostname, because
+getting it wrong doesn't degrade — it refuses to connect:
+
+- **Public hosts** (`*.render.com`, `*.neon.tech`, Railway's `*.rlwy.net` TCP
+  proxy) require SSL.
+- **Private networks** (`postgres.railway.internal`, Render's bare `dpg-xxxx-a`
+  internal hostname, any single-label host) serve no TLS at all.
+
+Both are handled automatically. `DATABASE_SSL=0` or `=1` forces it either way if
+a provider ever breaks the pattern.
 
 ## 2. Environment variables
 
