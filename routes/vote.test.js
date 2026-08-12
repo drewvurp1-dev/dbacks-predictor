@@ -6,7 +6,10 @@ const vote = require('./vote');
 const { buildReport } = require('../lib/vote-report');
 const { tally } = require('../lib/rcv');
 
-const { _nameKey: nameKey, _cleanName: cleanName, _validateRankings: validate, isOpen } = vote;
+const { _nameKey: nameKey, _cleanName: cleanName, _validateRankings: validate, isOpen, addsOpen } = vote;
+
+const PAST   = new Date(Date.now() - 60_000).toISOString();
+const FUTURE = new Date(Date.now() + 60_000).toISOString();
 
 test('nameKey collapses case and whitespace so one person is one ballot', () => {
   assert.strictEqual(nameKey('Drew  V'), nameKey('drew v'));
@@ -51,13 +54,36 @@ test('validateRankings allows an empty ballot', () => {
 });
 
 test('isOpen closes the poll once the deadline passes, even if still marked open', () => {
-  const past   = new Date(Date.now() - 60_000).toISOString();
-  const future = new Date(Date.now() + 60_000).toISOString();
-  assert.strictEqual(isOpen({ status: 'open',   closes_at: future }), true);
-  assert.strictEqual(isOpen({ status: 'open',   closes_at: past }),   false);
+  assert.strictEqual(isOpen({ status: 'open',   closes_at: FUTURE }), true);
+  assert.strictEqual(isOpen({ status: 'open',   closes_at: PAST }),   false);
   assert.strictEqual(isOpen({ status: 'open',   closes_at: null }),   true);
-  assert.strictEqual(isOpen({ status: 'closed', closes_at: future }), false);
+  assert.strictEqual(isOpen({ status: 'closed', closes_at: FUTURE }), false);
   assert.strictEqual(isOpen(null), false);
+});
+
+test('addsOpen: nominations can close while voting stays open', () => {
+  const poll = { status: 'open', closes_at: FUTURE, allow_adds: true, adds_close_at: PAST };
+  assert.strictEqual(isOpen(poll), true, 'voting still open');
+  assert.strictEqual(addsOpen(poll), false, 'but nominations are shut');
+});
+
+test('addsOpen: open while the nomination deadline is still ahead', () => {
+  assert.strictEqual(
+    addsOpen({ status: 'open', closes_at: FUTURE, allow_adds: true, adds_close_at: FUTURE }), true);
+  assert.strictEqual(
+    addsOpen({ status: 'open', closes_at: FUTURE, allow_adds: true, adds_close_at: null }), true);
+});
+
+test('addsOpen: closing the poll closes nominations regardless of their own date', () => {
+  assert.strictEqual(
+    addsOpen({ status: 'closed', closes_at: FUTURE, allow_adds: true, adds_close_at: FUTURE }), false);
+  assert.strictEqual(
+    addsOpen({ status: 'open', closes_at: PAST, allow_adds: true, adds_close_at: FUTURE }), false);
+});
+
+test('addsOpen: the manual toggle still overrides an open nomination window', () => {
+  assert.strictEqual(
+    addsOpen({ status: 'open', closes_at: FUTURE, allow_adds: false, adds_close_at: FUTURE }), false);
 });
 
 // ── report ────────────────────────────────────────────────────────────────

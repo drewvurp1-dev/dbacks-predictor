@@ -85,10 +85,26 @@ async function loadPoll() {
 
   $('pollTitle').textContent = poll.title || 'Where are we going?';
   document.title = `${poll.title || 'Where are we going?'} — rank your destinations`;
+  if (poll.subtitle) $('pollSubtitle').textContent = poll.subtitle;
 
   renderDeadline();
   renderVotedPill();
-  $('addDetails').classList.toggle('hidden', !poll.allowAdds || !poll.open);
+
+  // Nominations close before voting does, so this card can disappear while the
+  // ballot below it stays live.
+  $('addCard').classList.toggle('hidden', !poll.allowAdds || !poll.open);
+  if (poll.allowAdds && poll.addsCloseAt) {
+    $('addDeadlineNote').textContent =
+      `Add it and everyone — including people who already voted — will see it on their ballot. ` +
+      `New destinations close ${fmtWhen(new Date(poll.addsCloseAt))}.`;
+  }
+}
+
+function fmtWhen(d) {
+  return d.toLocaleString(undefined, {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  });
 }
 
 function renderDeadline() {
@@ -102,15 +118,29 @@ function renderDeadline() {
   if (msLeft <= 0) {
     pill.textContent = 'Voting closed';
     pill.classList.add('urgent');
-    return;
+  } else {
+    const hours = Math.round(msLeft / 3600000);
+    pill.textContent = hours <= 48
+      ? `Voting closes ${fmtWhen(closes)} · ${hours}h left`
+      : `Voting closes ${fmtWhen(closes)}`;
+    pill.classList.toggle('urgent', hours <= 24);
   }
-  const hours = Math.round(msLeft / 3600000);
-  const when = closes.toLocaleString(undefined, {
-    weekday: 'short', month: 'short', day: 'numeric',
-    hour: 'numeric', minute: '2-digit',
-  });
-  pill.textContent = hours <= 48 ? `Closes ${when} · ${hours}h left` : `Closes ${when}`;
-  pill.classList.toggle('urgent', hours <= 24);
+
+  // Second pill for the nomination deadline, but only while it is still ahead —
+  // once it passes it is noise, and the add card is gone anyway.
+  const ap = $('addsPill');
+  const addsLeft = poll.addsCloseAt ? new Date(poll.addsCloseAt) - Date.now() : -1;
+  if (addsLeft > 0) {
+    const h = Math.round(addsLeft / 3600000);
+    ap.textContent = `Add destinations until ${fmtWhen(new Date(poll.addsCloseAt))}`;
+    ap.classList.toggle('urgent', h <= 12);
+    ap.classList.remove('hidden');
+  } else {
+    ap.classList.add('hidden');
+    // On a page left open across the nomination deadline, retire the add form
+    // too — the server would reject the submission anyway.
+    if (poll.addsCloseAt) $('addCard').classList.add('hidden');
+  }
 }
 
 function renderVotedPill() {

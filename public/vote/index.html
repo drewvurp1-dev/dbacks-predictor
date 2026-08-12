@@ -8,16 +8,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=1">
+<link rel="stylesheet" href="vote.css?v=2">
 </head>
 <body>
 
 <header class="hero">
   <p class="hero-eyebrow">Group trip · ranked choice</p>
   <h1 id="pollTitle">Where are we going?</h1>
-  <p class="hero-sub">Drag the destinations into the order you want them. First place at the top.</p>
+  <p class="hero-sub" id="pollSubtitle">Drag the destinations into the order you want them. First place at the top.</p>
   <div class="hero-meta">
     <span id="deadlinePill" class="pill hidden"></span>
+    <span id="addsPill" class="pill hidden"></span>
     <span id="votedPill" class="pill"></span>
   </div>
 </header>
@@ -85,10 +86,10 @@
       <p id="newDestNote" class="note hidden"></p>
     </div>
 
-    <div class="card">
+    <div class="card" id="addCard">
       <details id="addDetails">
         <summary>Somewhere else in mind?</summary>
-        <p class="muted small">
+        <p class="muted small" id="addDeadlineNote">
           Add it and everyone — including people who already voted — will see it on their ballot.
         </p>
         <form id="addForm" class="stack" autocomplete="off">
@@ -125,6 +126,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="vote.js?v=1"></script>
+<script type="module" src="vote.js?v=2"></script>
 </body>
 </html>

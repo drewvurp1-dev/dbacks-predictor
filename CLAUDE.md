@@ -356,6 +356,13 @@ six starting destinations are seeded then.
 `isOpen()` treats a passed `closes_at` as closed regardless of `status`, so a
 missed cron tick can't leave voting open past the deadline.
 
+**Two deadlines.** `adds_close_at` shuts nominations while `closes_at` keeps
+ranking open, so the field settles before people finish voting. `addsOpen()`
+gates the nomination endpoint and requires all three: poll open, `allow_adds`
+true, and `adds_close_at` not yet passed. Both columns are added with
+`ALTER TABLE … ADD COLUMN IF NOT EXISTS` because they shipped after the table.
+Deadlines are stored UTC and rendered in each viewer's local timezone.
+
 ## Git Workflow
 
 - Develop on a feature branch (`claude/...`)

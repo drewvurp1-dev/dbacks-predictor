@@ -83,9 +83,15 @@ still on the admin page. The email is just skipped, with a warning in the logs.
 ## 3. Run the vote
 
 1. Open `/vote/admin.html`, enter your `VOTE_ADMIN_KEY`.
-2. Set a **title** and a **closes at** deadline. With a deadline set, the poll
-   closes itself and emails you the results within five minutes of it passing —
-   you don't have to be around. Leave it blank to close manually.
+2. Set a **title**, a **subtitle** (trip dates), and the two deadlines:
+   - **New destinations close at** — nominations shut, but ranking stays live.
+   - **Voting closes at** — the poll closes, the tally runs, and the report is
+     emailed and pushed to you within five minutes, whether or not you're around.
+
+   Having nominations close first is the point: the field settles while people
+   are still ranking it, so nobody's submitted ballot is missing a destination
+   that showed up at the last minute. Leave either blank to skip it — a blank
+   voting deadline means you close it by hand.
 3. Share `https://your-app-url/vote/` with the group. One link for everybody;
    no accounts, no codes.
 4. Watch ballots arrive on the admin page. The voter page shows *who* has voted
@@ -120,8 +126,15 @@ name, so a duplicate would be obvious.
 appears on everybody's ballot immediately. People who already voted get a note
 telling them what was added and where it landed (bottom of their list) so they
 can move it. Their submitted ballot stays valid either way — an unranked
-destination simply scores nothing for them. You can turn nominations off with
-the "Let voters add new destinations" checkbox.
+destination simply scores nothing for them. Nominations stop at the
+**new destinations close at** deadline, or immediately if you untick "Let voters
+add new destinations"; either way ranking continues until voting closes.
+
+**Timezones.** Both deadline fields are pickers in *your* browser's local time —
+type the wall-clock time you mean and it is stored as UTC. Voters see each
+deadline converted to their own timezone, so somebody voting from another state
+sees the correct local moment rather than yours. Arizona does not observe DST,
+so MST is UTC−7 year-round.
 
 **Drafts don't count.** A ballot only counts once the voter hits Submit. Drafts
 are visible to you on the admin page, flagged as not counted, so you can chase
