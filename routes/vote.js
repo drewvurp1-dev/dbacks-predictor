@@ -49,14 +49,28 @@ const SEED_DESTINATIONS = [
 let _pool = null;
 let _ready = null;
 
-// Hosted Postgres (Render, Railway, Neon, Heroku) requires SSL and presents a
-// cert we don't pin; a local dev Postgres refuses SSL outright. Decide from the
-// host rather than forcing one and breaking the other.
+// Public hosted Postgres (Render external, Neon, Heroku, Railway's TCP proxy)
+// requires SSL and presents a cert we don't pin. Two cases must NOT use SSL, and
+// both fail hard rather than degrading if we get it wrong:
+//
+//   - a local dev Postgres, which refuses SSL outright
+//   - a provider's private network — Railway's postgres.railway.internal and
+//     Render's bare dpg-xxxx-a hostnames terminate inside the VPC and serve no
+//     TLS at all
+//
+// Decide from the hostname instead of forcing one and breaking the other. A
+// single-label hostname (no dot) is the reliable tell for the second case:
+// public DNS names always have a dot, private service names generally don't.
+// DATABASE_SSL=0 / =1 overrides in either direction.
+const LOCAL_HOST   = /^(localhost|127\.0\.0\.1|::1|\[::1\])$/;
+const PRIVATE_HOST = /(\.railway\.internal|\.internal|\.local)$/i;
+
 function sslFor(url) {
   if (process.env.DATABASE_SSL === '0') return false;
+  if (process.env.DATABASE_SSL === '1') return { rejectUnauthorized: false };
   try {
     const host = new URL(url).hostname;
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return false;
+    if (LOCAL_HOST.test(host) || PRIVATE_HOST.test(host) || !host.includes('.')) return false;
   } catch { /* unparseable URL — fall through to SSL on */ }
   return { rejectUnauthorized: false };
 }
@@ -610,6 +624,7 @@ module.exports.closeAndNotify = closeAndNotify;
 module.exports.computeResults = computeResults;
 module.exports.isOpen = isOpen;
 module.exports.addsOpen = addsOpen;
+module.exports._sslFor = sslFor;
 module.exports._nameKey = nameKey;
 module.exports._cleanName = cleanName;
 module.exports._validateRankings = validateRankings;
