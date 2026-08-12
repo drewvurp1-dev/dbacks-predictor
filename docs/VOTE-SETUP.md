@@ -113,15 +113,18 @@ still on the admin page. The email is just skipped, with a warning in the logs.
 ## 3. Run the vote
 
 1. Open `/vote/admin.html`, enter your `VOTE_ADMIN_KEY`.
-2. Set a **title**, a **subtitle** (trip dates), and the two deadlines:
-   - **New destinations close at** — nominations shut, but ranking stays live.
+2. Set a **title**, a **subtitle** (trip dates), and the three dates:
+   - **Voting opens at** — until this moment the poll runs in *nomination
+     phase*: voters can only suggest destinations, and the ranking UI does not
+     exist for them. Leave blank to allow ranking straight away.
+   - **New destinations close at** — nominations shut. Usually the same instant
+     as the opening, so the two phases meet with no gap.
    - **Voting closes at** — the poll closes, the tally runs, and the report is
      emailed and pushed to you within five minutes, whether or not you're around.
 
-   Having nominations close first is the point: the field settles while people
-   are still ranking it, so nobody's submitted ballot is missing a destination
-   that showed up at the last minute. Leave either blank to skip it — a blank
-   voting deadline means you close it by hand.
+   Splitting nomination from ranking is the point: everyone ranks the same
+   finished list, so nobody votes on Thursday and misses two destinations added
+   on Friday.
 3. Share `https://your-app-url/vote/` with the group. One link for everybody;
    no accounts, no codes.
 4. Watch ballots arrive on the admin page. The voter page shows *who* has voted
@@ -165,7 +168,20 @@ name, so a duplicate would be obvious.
 
 ## 5. Things worth knowing
 
-**Adding destinations mid-vote.** Anyone with a ballot can nominate one, and it
+**Nomination phase.** Before **Voting opens at**, `/vote/` shows a suggestion
+page instead of a ballot: a Location field, a short selling point, the running
+list of everything suggested so far with who suggested it, and a countdown to
+the opening. Each voter gets **2 suggestions** (`MAX_ADDS_PER_VOTER` in
+`routes/vote.js`); the form disappears once they're used. If a nomination is
+removed from the admin page, that slot is handed back.
+
+Nine people × 2 plus the seeded 6 is up to 24 destinations, and a 24-row ranked
+ballot is miserable on a phone. In practice most people add nothing — but if the
+field does balloon, prune the obvious non-starters from the admin Destinations
+list before voting opens.
+
+**Adding destinations mid-vote.** If you leave **Voting opens at** blank, or
+after it passes, anyone with a ballot can nominate one and it
 appears on everybody's ballot immediately. People who already voted get a note
 telling them what was added and where it landed (bottom of their list) so they
 can move it. Their submitted ballot stays valid either way — an unranked

@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=3">
-<link rel="stylesheet" href="admin.css?v=3">
+<link rel="stylesheet" href="vote.css?v=8">
+<link rel="stylesheet" href="admin.css?v=4">
 </head>
 <body>
 
@@ -95,6 +95,10 @@
           <input id="setSubtitle" type="text" maxlength="160">
         </label>
         <label class="field">
+          <span>Voting opens at <em>(blank = open immediately; until then only suggestions)</em></span>
+          <input id="setOpens" type="datetime-local">
+        </label>
+        <label class="field">
           <span>Voting closes at <em>(blank = no deadline, close it manually)</em></span>
           <input id="setCloses" type="datetime-local">
         </label>
@@ -170,6 +174,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="admin.js?v=3"></script>
+<script type="module" src="admin.js?v=4"></script>
 </body>
 </html>

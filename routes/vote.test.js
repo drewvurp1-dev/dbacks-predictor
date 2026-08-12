@@ -86,6 +86,54 @@ test('addsOpen: the manual toggle still overrides an open nomination window', ()
     addsOpen({ status: 'open', closes_at: FUTURE, allow_adds: false, adds_close_at: FUTURE }), false);
 });
 
+// ── two-phase poll: nominate, then vote ───────────────────────────────────
+
+const { votingOpen, phaseOf, _addsUsedBy: addsUsedBy } = vote;
+
+test('votingOpen: ranking is shut until opens_at passes', () => {
+  assert.strictEqual(
+    votingOpen({ status: 'open', closes_at: FUTURE, opens_at: FUTURE }), false, 'before opening');
+  assert.strictEqual(
+    votingOpen({ status: 'open', closes_at: FUTURE, opens_at: PAST }), true, 'after opening');
+  assert.strictEqual(
+    votingOpen({ status: 'open', closes_at: FUTURE, opens_at: null }), true, 'no opening time set');
+});
+
+test('votingOpen: a closed poll is never open for voting', () => {
+  assert.strictEqual(votingOpen({ status: 'closed', closes_at: FUTURE, opens_at: PAST }), false);
+  assert.strictEqual(votingOpen({ status: 'open', closes_at: PAST, opens_at: PAST }), false);
+});
+
+test('phaseOf names the three states', () => {
+  assert.strictEqual(phaseOf({ status: 'open', closes_at: FUTURE, opens_at: FUTURE }), 'nominate');
+  assert.strictEqual(phaseOf({ status: 'open', closes_at: FUTURE, opens_at: PAST }), 'vote');
+  assert.strictEqual(phaseOf({ status: 'open', closes_at: PAST, opens_at: PAST }), 'closed');
+  assert.strictEqual(phaseOf({ status: 'closed', closes_at: FUTURE, opens_at: PAST }), 'closed');
+});
+
+test('nominations stay open during the nominate phase', () => {
+  // The whole point: adds allowed, ranking not.
+  const poll = { status: 'open', closes_at: FUTURE, opens_at: FUTURE, allow_adds: true, adds_close_at: null };
+  assert.strictEqual(addsOpen(poll), true);
+  assert.strictEqual(votingOpen(poll), false);
+});
+
+test('addsUsedBy counts only this voter, case and spacing insensitive', () => {
+  const dests = [
+    { name: 'Lisbon', addedBy: 'Drew V' },
+    { name: 'Osaka',  addedBy: 'drew  v' },
+    { name: 'Oslo',   addedBy: 'Casey' },
+    { name: 'Seed',   addedBy: null },
+  ];
+  assert.strictEqual(addsUsedBy(dests, 'Drew V'), 2, 'both spellings count as Drew');
+  assert.strictEqual(addsUsedBy(dests, 'Casey'), 1);
+  assert.strictEqual(addsUsedBy(dests, 'Nobody'), 0);
+});
+
+test('addsUsedBy ignores seeded destinations with no author', () => {
+  assert.strictEqual(addsUsedBy([{ name: 'Istanbul', addedBy: null }], 'Drew'), 0);
+});
+
 // ── recovery PIN ──────────────────────────────────────────────────────────
 
 test('isValidPin accepts exactly four digits and nothing else', () => {
