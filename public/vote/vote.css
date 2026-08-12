@@ -223,19 +223,6 @@ input[type="text"]:focus {
 .ctl-drag { cursor: grab; touch-action: none; }
 .ctl-drag:active { cursor: grabbing; }
 
-/* ── Unranked ── */
-.unranked { margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--line); }
-.unranked-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.unranked-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px;
-  background: var(--cream-dk);
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--muted);
-}
-.unranked-item .un-name { flex: 1; }
-
 /* ── details / add ── */
 details summary {
   cursor: pointer;
