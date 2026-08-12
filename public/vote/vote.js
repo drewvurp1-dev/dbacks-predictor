@@ -161,8 +161,8 @@ function renderDeadline() {
 function renderVotedPill() {
   const pill = $('votedPill');
   if (poll.phase === 'nominate') {
-    const n = poll.destinations.length;
-    pill.textContent = `${n} ${n === 1 ? 'destination' : 'destinations'} suggested`;
+    const n = poll.destinationCount ?? 0;
+    pill.textContent = `${n} ${n === 1 ? 'destination' : 'destinations'} in the running`;
     return;
   }
   const n = poll.voted.length;
@@ -452,7 +452,7 @@ $('nomForm').addEventListener('submit', async e => {
     $('nomName').value = '';
     $('nomBlurb').value = '';
     await loadPoll();
-    renderNominate(localStorage.getItem(NAME_KEY) || '');
+    renderNominate(localStorage.getItem(NAME_KEY) || '', res.myDestinations || []);
     toast(res.remaining > 0
       ? `${res.destination.name} added. ${res.remaining} suggestion${res.remaining === 1 ? '' : 's'} left.`
       : `${res.destination.name} added — that's both of yours in.`);
@@ -500,7 +500,7 @@ async function startBallot(ballot) {
   if (poll.phase === 'nominate') {
     localStorage.setItem(NAME_KEY, ballot.voter);
     hasPin = !!ballot.hasPin;
-    renderNominate(ballot.voter);
+    renderNominate(ballot.voter, ballot.myDestinations || []);
     show('nominateCard');
     return;
   }
@@ -527,10 +527,9 @@ async function refresh() {
 
 // ── nomination phase ────────────────────────────────────────────────────────
 
-function renderNominate(voter) {
+function renderNominate(voter, mine) {
   $('nomVoterName').textContent = voter;
 
-  const mine = poll.destinations.filter(d => d.addedBy && sameName(d.addedBy, voter));
   const max = poll.maxAddsPerVoter || 2;
   const left = Math.max(0, max - mine.length);
 
@@ -543,33 +542,24 @@ function renderNominate(voter) {
       `That's the limit — come back when voting opens to rank the full list.`;
   }
 
-  $('nomCount').textContent = `${poll.destinations.length} so far`;
+  // Only ever this voter's own — the rest of the field stays hidden until
+  // voting opens.
+  $('mineCard').classList.toggle('hidden', mine.length === 0);
+  $('nomCount').textContent = `${mine.length} of ${max}`;
   const list = $('nomList');
   list.innerHTML = '';
-  for (const d of poll.destinations) {
+  for (const d of mine) {
     const li = document.createElement('li');
-    li.className = 'sugg-item' + (d.addedBy && sameName(d.addedBy, voter) ? ' mine' : '');
-    li.innerHTML = `<div class="sugg-name"></div>
-      ${d.blurb ? '<div class="sugg-blurb"></div>' : ''}
-      ${d.addedBy ? '<div class="sugg-by"></div>' : ''}`;
+    li.className = 'sugg-item mine';
+    li.innerHTML = `<div class="sugg-name"></div>${d.blurb ? '<div class="sugg-blurb"></div>' : ''}`;
     li.querySelector('.sugg-name').textContent = d.name;
     if (d.blurb) li.querySelector('.sugg-blurb').textContent = d.blurb;
-    if (d.addedBy) {
-      li.querySelector('.sugg-by').textContent =
-        d.addedBy === 'organizer' ? 'on the original list'
-          : sameName(d.addedBy, voter) ? 'added by you' : `added by ${d.addedBy}`;
-    }
     list.appendChild(li);
   }
 
   $('nomFoot').textContent = poll.opensAt
-    ? `Voting opens ${fmtWhen(new Date(poll.opensAt))}. Everyone ranks the same finished list, so nothing gets added under you mid-vote.`
+    ? `Voting opens ${fmtWhen(new Date(poll.opensAt))}. That's when you'll see the full list and rank it.`
     : 'Voting opens once the organizer closes suggestions.';
-}
-
-function sameName(a, b) {
-  return String(a).trim().toLowerCase().replace(/\s+/g, ' ')
-      === String(b).trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 async function boot() {
