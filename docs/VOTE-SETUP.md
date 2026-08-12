@@ -117,8 +117,12 @@ still on the admin page. The email is just skipped, with a warning in the logs.
    - **Voting opens at** — until this moment the poll runs in *nomination
      phase*: voters can only suggest destinations, and the ranking UI does not
      exist for them. Leave blank to allow ranking straight away.
-   - **New destinations close at** — nominations shut. Usually the same instant
-     as the opening, so the two phases meet with no gap.
+   - **New destinations close at** — nominations shut. Leave a gap before the
+     opening and that gap is your **grace window**: suggestions are frozen,
+     voting hasn't started, and you can prune duplicates from the Destinations
+     list knowing the field can no longer move. Voters see "suggestions are in,
+     voting opens at …" with no form and no ranking UI. Set it to the same
+     instant as the opening if you don't want a window.
    - **Voting closes at** — the poll closes, the tally runs, and the report is
      emailed and pushed to you within five minutes, whether or not you're around.
 

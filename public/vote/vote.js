@@ -85,9 +85,11 @@ async function loadPoll() {
 
   $('pollTitle').textContent = poll.title || 'Where are we going?';
   document.title = `${poll.title || 'Where are we going?'} — rank your destinations`;
-  $('pollSubtitle').textContent = poll.subtitle || (poll.phase === 'nominate'
-    ? 'First we build the list. Add anywhere you\'d want to go — ranking comes later.'
-    : 'Drag the destinations into the order you want them. First place at the top.');
+  $('pollSubtitle').textContent = poll.subtitle || (poll.phase !== 'nominate'
+    ? 'Drag the destinations into the order you want them. First place at the top.'
+    : poll.allowAdds
+      ? 'First we build the list. Add anywhere you\'d want to go — ranking comes later.'
+      : 'Suggestions are in and the list is being tidied up. Ranking opens shortly.');
 
   renderDeadline();
   renderVotedPill();
@@ -533,10 +535,24 @@ function renderNominate(voter, mine) {
   const max = poll.maxAddsPerVoter || 2;
   const left = Math.max(0, max - mine.length);
 
-  $('nomRemaining').textContent = `${left} of ${max} left`;
-  $('nomForm').classList.toggle('hidden', left === 0);
-  $('nomDone').classList.toggle('hidden', left > 0);
-  if (left === 0) {
+  // Three states here, and the middle one is easy to miss: suggestions can shut
+  // before voting opens, leaving a grace window for the organizer to prune
+  // duplicates. Showing the form then would invite a submission the server is
+  // certain to reject.
+  const suggestionsShut = !poll.allowAdds;
+  const showForm = !suggestionsShut && left > 0;
+
+  $('nomRemaining').textContent = suggestionsShut ? 'Suggestions closed' : `${left} of ${max} left`;
+  $('nomForm').classList.toggle('hidden', !showForm);
+  $('nomDone').classList.toggle('hidden', showForm);
+
+  if (suggestionsShut) {
+    $('nomDone').textContent = poll.opensAt
+      ? `Suggestions are closed. The list is being tidied up — voting opens ${fmtWhen(new Date(poll.opensAt))}, and you'll rank the finished list then.`
+      : 'Suggestions are closed. Voting opens shortly.';
+    $('nomIntro').textContent =
+      "That's everyone's ideas in. Nothing to do right now — come back when voting opens.";
+  } else if (left === 0) {
     $('nomDone').textContent =
       `You've added your ${max}: ${mine.map(d => d.name).join(' and ')}. ` +
       `That's the limit — come back when voting opens to rank the full list.`;
@@ -557,6 +573,7 @@ function renderNominate(voter, mine) {
     list.appendChild(li);
   }
 
+  $('nomHeading').textContent = suggestionsShut ? 'Suggestions are in' : 'Where should we go?';
   $('nomFoot').textContent = poll.opensAt
     ? `Voting opens ${fmtWhen(new Date(poll.opensAt))}. That's when you'll see the full list and rank it.`
     : 'Voting opens once the organizer closes suggestions.';
