@@ -490,9 +490,15 @@ async function closeAndNotify({ force = false, alsoClose = true } = {}) {
     push = { sent: 0, error: err.message };
   }
 
-  await pool().query(`UPDATE vote_poll SET results_sent = true WHERE poll_id = $1`, [POLL_ID]);
-  console.log(`[vote] results delivered — mail:${mail.sent ? 'ok' : 'no'} push:${push.sent || 0}`);
-  return { mail, push, subject: report.subject };
+  // Only a real close marks the results as delivered. A preview send must never
+  // set this: the deadline cron skips a poll whose results_sent is true, so
+  // flagging a preview would silently suppress the actual results email — the
+  // one thing the whole poll exists to produce.
+  if (alsoClose) {
+    await pool().query(`UPDATE vote_poll SET results_sent = true WHERE poll_id = $1`, [POLL_ID]);
+  }
+  console.log(`[vote] results ${alsoClose ? 'delivered' : 'previewed'} — mail:${mail.sent ? 'ok' : 'no'} push:${push.sent || 0}`);
+  return { mail, push, subject: report.subject, preview: !alsoClose };
 }
 
 router.post('/api/admin/close', requireDb, requireAdmin, async (req, res) => {

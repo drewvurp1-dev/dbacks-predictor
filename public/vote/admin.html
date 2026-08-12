@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=2">
-<link rel="stylesheet" href="admin.css?v=2">
+<link rel="stylesheet" href="vote.css?v=3">
+<link rel="stylesheet" href="admin.css?v=3">
 </head>
 <body>
 
@@ -130,12 +130,15 @@
     <section class="card danger-card">
       <h2>Close voting</h2>
       <p class="muted small">
-        Closes the poll, tallies the ballots, and sends you the full report by
-        email and push. Voters see only "voting is closed".
+        <strong>Close &amp; send results</strong> closes the poll, tallies the
+        ballots, and sends you the full report by email and push — voters see
+        only "voting is closed". <strong>Email me a preview</strong> sends the
+        same report but changes nothing, so the deadline still delivers on its
+        own.
       </p>
       <div class="btn-row">
         <button type="button" class="btn btn-primary" data-action="close">Close &amp; send results</button>
-        <button type="button" class="btn btn-ghost" data-action="send">Send me the report now</button>
+        <button type="button" class="btn btn-ghost" data-action="send">Email me a preview</button>
         <button type="button" class="btn btn-ghost" data-action="reopen">Reopen voting</button>
       </div>
       <p id="deliveryNote" class="muted small"></p>
@@ -167,6 +170,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="admin.js?v=2"></script>
+<script type="module" src="admin.js?v=3"></script>
 </body>
 </html>
