@@ -5,6 +5,20 @@ const fs      = require('fs');
 const { spawn } = require('child_process');
 const app     = express();
 
+// A deployment dedicated to one sub-app can point the bare domain at it, so a
+// link that loses its path — or someone typing the host from memory — lands on
+// the right thing instead of the D-backs dashboard. Set ROOT_REDIRECT=/vote/
+// on the vote's host. Unset locally, so `npm start` still opens Snake Savant.
+//
+// Must sit above express.static, which would otherwise serve public/index.html
+// for '/' first. 302 rather than 301: browsers cache a permanent redirect hard
+// enough that undoing it means telling everyone to clear their cache.
+const ROOT_REDIRECT = process.env.ROOT_REDIRECT;
+if (ROOT_REDIRECT) {
+  app.get('/', (req, res) => res.redirect(302, ROOT_REDIRECT));
+  console.log(`[server] '/' redirects to ${ROOT_REDIRECT}`);
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/mlb',        require('./routes/mlb'));

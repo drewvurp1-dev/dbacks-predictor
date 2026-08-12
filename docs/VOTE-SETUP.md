@@ -41,6 +41,9 @@ destinations are seeded then too. Nothing to run by hand.
    `${{Postgres.DATABASE_URL}}` (type it literally — Railway resolves it), plus
    the rest of the variables below.
 4. App service → **Settings → Networking → Generate Domain** to get a public URL.
+5. Set `ROOT_REDIRECT=/vote/` so the bare domain opens the ballot. Without it,
+   `/` serves the D-backs dashboard — this repo hosts both apps, and the vote
+   lives under `/vote/`.
 
 Railway doesn't idle-sleep, so there's no cold start for voters.
 
@@ -81,6 +84,7 @@ a provider ever breaks the pattern.
 | `MAIL_FROM` | Optional | From address. Defaults to `SMTP_USER`, or Resend's sandbox sender. |
 | `VOTE_POLL_ID` | Optional | Namespaces the poll (default `trip`). Change it to run a second, separate vote. |
 | `DATABASE_SSL` | Optional | Set to `0` to disable SSL for a local Postgres. Auto-detected for localhost. |
+| `ROOT_REDIRECT` | Recommended | Set to `/vote/` on a host dedicated to the vote, so the bare domain lands on the ballot instead of the D-backs dashboard. Leave unset locally. |
 
 Push notifications reuse the app's existing setup — if `VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY` and `SYNC_KEY` are already configured, you'll also get a
