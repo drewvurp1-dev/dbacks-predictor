@@ -16,6 +16,7 @@ let poll = null;
 let dests = new Map();        // id -> destination
 let ranked = [];              // ordered ids — every destination, always
 let submitted = false;
+let hasPin = false;
 let saveTimer = null;
 let lastSavedJSON = null;
 
@@ -218,6 +219,11 @@ function render() {
     list.appendChild(li);
   });
 
+  $('pinStatus').textContent = hasPin
+    ? 'PIN set — you can open this ballot on another device with your name and PIN.'
+    : 'Without a PIN this ballot only opens on this device.';
+  $('pinToggleBtn').textContent = hasPin ? 'Change PIN' : 'Add a PIN';
+
   const btn = $('submitBtn');
   btn.textContent = submitted ? 'Ballot submitted ✓' : 'Submit my ballot';
   btn.classList.toggle('btn-done', submitted);
@@ -249,6 +255,13 @@ async function saveNow() {
   } catch (err) {
     $('saveState').textContent = '';
     if (err.code === 'POLL_CLOSED') { toast('Voting just closed — your last saved ballot stands.', true); return refresh(); }
+    if (err.status === 401) {
+      // This ballot was reopened on another device, which retires this token.
+      localStorage.removeItem(TOKEN_KEY);
+      toast('This ballot was opened on another device. Sign back in to keep editing.', true);
+      setTimeout(() => location.reload(), 2200);
+      return;
+    }
     toast(err.message, true);
   }
 }
@@ -271,6 +284,11 @@ function move(id, delta) {
 const ACTIONS = {
   up:     id => move(id, -1),
   down:   id => move(id, +1),
+  'pin-toggle': () => {
+    const f = $('pinSetForm');
+    f.classList.toggle('hidden');
+    if (!f.classList.contains('hidden')) $('pinSetInput').focus();
+  },
   submit: async () => {
     if (!ranked.length) return toast('Rank at least one destination first.', true);
     submitted = true;
@@ -340,21 +358,60 @@ document.addEventListener('drop', e => {
 
 // ── forms ───────────────────────────────────────────────────────────────────
 
+// The one PIN field does double duty: on a new name it sets the PIN, on a name
+// that already has one it unlocks the existing ballot. That keeps the screen
+// every voter has to get through down to two fields.
+function askForPin(msg) {
+  $('pinLabel').innerHTML = '4-digit PIN';
+  $('pinHelp').textContent = 'The PIN you chose when you started your ballot.';
+  $('nameSubmit').textContent = 'Open my ballot';
+  $('pinInput').focus();
+  if (msg) showError('nameError', msg);
+}
+
 $('nameForm').addEventListener('submit', async e => {
   e.preventDefault();
   clearError('nameError');
   const name = $('nameInput').value.trim();
+  const pin  = $('pinInput').value.trim();
   if (name.length < 2) return showError('nameError', 'Enter your name.');
+  if (pin && !/^\d{4}$/.test(pin)) return showError('nameError', 'A PIN must be exactly 4 digits.');
 
-  const btn = e.target.querySelector('button');
+  const btn = $('nameSubmit');
   btn.disabled = true;
   try {
-    const res = await api('/claim', { method: 'POST', body: { name } });
+    const res = await api('/claim', { method: 'POST', body: { name, pin } });
     if (res.token) localStorage.setItem(TOKEN_KEY, res.token);
     localStorage.setItem(NAME_KEY, res.voter);
     await startBallot(res);
+    if (res.recovered) toast('Welcome back — your ranking is exactly as you left it.');
   } catch (err) {
-    showError('nameError', err.message);
+    // A ballot exists and is PIN-protected: switch the form into unlock mode
+    // rather than showing a dead end.
+    if (err.code === 'PIN_REQUIRED') askForPin(err.message);
+    else if (err.code === 'PIN_WRONG' || err.code === 'PIN_LOCKED') showError('nameError', err.message);
+    else showError('nameError', err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('pinSetForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  clearError('pinSetError');
+  const pin = $('pinSetInput').value.trim();
+  if (!/^\d{4}$/.test(pin)) return showError('pinSetError', 'A PIN must be exactly 4 digits.');
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  try {
+    await api('/pin', { method: 'PUT', body: { pin } });
+    hasPin = true;
+    $('pinSetInput').value = '';
+    $('pinSetForm').classList.add('hidden');
+    render();
+    toast('PIN saved. Your name plus that PIN reopens this ballot anywhere.');
+  } catch (err) {
+    showError('pinSetError', err.message);
   } finally {
     btn.disabled = false;
   }
@@ -390,6 +447,7 @@ $('addForm').addEventListener('submit', async e => {
 async function startBallot(ballot) {
   $('voterName').textContent = ballot.voter;
   submitted = !!ballot.submitted;
+  hasPin = !!ballot.hasPin;
   const fresh = seatBallot(ballot.rankings);
   lastSavedJSON = JSON.stringify({ rankings: ballot.rankings || [], submitted });
   render();

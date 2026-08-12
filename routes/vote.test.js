@@ -86,6 +86,55 @@ test('addsOpen: the manual toggle still overrides an open nomination window', ()
     addsOpen({ status: 'open', closes_at: FUTURE, allow_adds: false, adds_close_at: FUTURE }), false);
 });
 
+// ── recovery PIN ──────────────────────────────────────────────────────────
+
+test('isValidPin accepts exactly four digits and nothing else', () => {
+  const { _isValidPin: v } = vote;
+  assert.strictEqual(v('0000'), true);
+  assert.strictEqual(v('9137'), true);
+  for (const bad of ['123', '12345', 'abcd', '12 4', '', '12.4', null, 1234, ' 1234 ']) {
+    assert.strictEqual(v(bad), false, `should reject ${JSON.stringify(bad)}`);
+  }
+});
+
+test('hashPin never stores the PIN in recoverable form', async () => {
+  const { _hashPin: hashPin } = vote;
+  const stored = await hashPin('4821');
+  assert.ok(!stored.includes('4821'), 'PIN appears verbatim in the stored value');
+  assert.match(stored, /^s1\$[0-9a-f]{32}\$[0-9a-f]{64}$/);
+});
+
+test('hashPin salts, so the same PIN hashes differently every time', async () => {
+  const { _hashPin: hashPin } = vote;
+  const a = await hashPin('1234');
+  const b = await hashPin('1234');
+  assert.notStrictEqual(a, b, 'identical PINs produced identical hashes — unsalted');
+});
+
+test('verifyPin accepts the right PIN and rejects the rest', async () => {
+  const { _hashPin: hashPin, _verifyPin: verifyPin } = vote;
+  const stored = await hashPin('4821');
+  assert.strictEqual(await verifyPin('4821', stored), true);
+  for (const wrong of ['4822', '1284', '0000', '482', '48210']) {
+    assert.strictEqual(await verifyPin(wrong, stored), false, `accepted ${wrong}`);
+  }
+});
+
+test('verifyPin rejects malformed or absent stored values instead of throwing', async () => {
+  const { _verifyPin: verifyPin } = vote;
+  for (const stored of [null, undefined, '', 'garbage', 's1$only-one-part', 'md5$aa$bb']) {
+    assert.strictEqual(await verifyPin('1234', stored), false, `stored=${stored}`);
+  }
+});
+
+test('verifyPin cannot be satisfied by an empty or non-string PIN', async () => {
+  const { _hashPin: hashPin, _verifyPin: verifyPin } = vote;
+  const stored = await hashPin('1234');
+  for (const pin of ['', null, undefined, 1234, {}]) {
+    assert.strictEqual(await verifyPin(pin, stored), false, `accepted ${JSON.stringify(pin)}`);
+  }
+});
+
 // ── database SSL selection ────────────────────────────────────────────────
 // Getting this wrong doesn't degrade, it refuses to connect: a private-network
 // host has no TLS to negotiate, and a public one won't talk without it.

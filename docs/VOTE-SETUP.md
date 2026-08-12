@@ -141,9 +141,22 @@ token, not the name, is what opens a ballot afterwards. So:
   endpoint at all.
 - Results come only from `/vote/api/admin/*`, behind `VOTE_ADMIN_KEY`.
 
-The tradeoff of name-only entry: if someone clears their browser or switches
-phones, they can't get back into their ballot. Use **Release a name** on the
-admin page — it deletes that ballot so they can start over.
+**Editing a vote.** On the same phone nobody ever sees the name screen again —
+the ballot reopens straight away and can be changed until voting closes.
+
+To edit from a *different* device, the voter needs the optional **4-digit PIN**.
+They can set one when they claim their name, or later from the "Another device"
+box on their ballot. Name + PIN then reopens the ballot anywhere, with their
+ranking intact; the most recent device wins, so the old one signs out.
+
+The PIN is hashed with scrypt and a per-ballot salt, and five wrong attempts
+lock that name for 15 minutes — a 4-digit PIN is only 10,000 combinations, so
+without both of those it would be worth guessing.
+
+If someone set no PIN and lost their device, use **Release a name** on the admin
+page. That deletes the ballot so they can start over — their old ranking is
+gone. The admin ballot list shows who has a PIN, so you can tell instantly
+whether a "let me back in" message needs you at all.
 
 The honest limit: nothing stops a determined person voting twice under two
 different names ("Drew" and "Drew V"). For a group trip that's fine, and it's
