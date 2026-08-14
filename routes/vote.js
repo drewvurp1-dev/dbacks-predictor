@@ -119,6 +119,11 @@ function ready() {
       // Once the poll closes, voters get to watch the runoff play out. Counts
       // only — never anyone's ballot. Off until the poll actually closes.
       await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS results_public BOOLEAN NOT NULL DEFAULT false`);
+      // Closing the poll and letting voters see the reveal don't have to be the
+      // same instant. If reveal_at is set, results_public waits for it instead
+      // of flipping true the moment the poll closes — the gap in between is a
+      // deliberate "results are in, reveal starts at ..." countdown window.
+      await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS reveal_at TIMESTAMPTZ`);
       await p.query(`
         CREATE TABLE IF NOT EXISTS vote_destinations (
           id         SERIAL PRIMARY KEY,
@@ -353,6 +358,13 @@ function phaseOf(poll) {
   return votingOpen(poll) ? 'vote' : 'nominate';
 }
 
+// True once a scheduled reveal_at has actually arrived. No reveal_at at all
+// means "reveal immediately on close", which is always due.
+function revealDue(poll) {
+  if (!poll.reveal_at) return true;
+  return new Date(poll.reveal_at).getTime() <= Date.now();
+}
+
 // ── public / voter endpoints ────────────────────────────────────────────────
 
 router.use(express.json({ limit: '64kb' }));
@@ -381,6 +393,9 @@ router.get('/api/poll', requireDb, async (req, res) => {
       addsCloseAt: poll.adds_close_at,
       maxAddsPerVoter: MAX_ADDS_PER_VOTER,
       resultsPublic: !isOpen(poll) && !!poll.results_public,
+      // Shown before close too, so a voter checking early sees a reveal is
+      // scheduled; meaningless once resultsPublic is already true.
+      revealAt: poll.reveal_at,
       // During nominations the field is withheld: voters suggest blind so
       // nobody anchors on what's already there, and the organizer prunes
       // duplicates before voting opens. Hiding it in the UI alone would be
@@ -687,7 +702,7 @@ async function computeResults() {
       status: poll.status, open: isOpen(poll),
       closesAt: poll.closes_at, addsCloseAt: poll.adds_close_at,
       opensAt: poll.opens_at, phase: phaseOf(poll), votingOpen: votingOpen(poll),
-      resultsPublic: !!poll.results_public,
+      revealAt: poll.reveal_at, resultsPublic: !!poll.results_public,
       allowAdds: poll.allow_adds, addsOpen: addsOpen(poll),
       resultsSent: poll.results_sent, closedAt: poll.closed_at,
     },
@@ -748,12 +763,37 @@ async function closeAndNotify({ force = false, alsoClose = true } = {}) {
   // set this: the deadline cron skips a poll whose results_sent is true, so
   // flagging a preview would silently suppress the actual results email — the
   // one thing the whole poll exists to produce.
+  //
+  // Publishing to voters is separate from that: closing always emails the
+  // organizer immediately, but if reveal_at is set and still ahead, the public
+  // reveal waits for it — checkRevealTime() flips results_public once it
+  // arrives. No reveal_at means no wait, same as before this existed.
   if (alsoClose) {
+    const fresh = await getPoll();
     await pool().query(
-      `UPDATE vote_poll SET results_sent = true, results_public = true WHERE poll_id = $1`, [POLL_ID]);
+      `UPDATE vote_poll SET results_sent = true, results_public = $2 WHERE poll_id = $1`,
+      [POLL_ID, revealDue(fresh)]);
   }
   console.log(`[vote] results ${alsoClose ? 'delivered' : 'previewed'} — mail:${mail.sent ? 'ok' : 'no'} push:${push.sent || 0}`);
   return { mail, push, subject: report.subject, preview: !alsoClose };
+}
+
+// Watched by cron every 5 minutes: once a scheduled reveal_at has passed on a
+// poll that's already closed but not yet public, this is what actually flips
+// results_public. Idempotent — only writes when it would change something, so
+// a repeated tick after publishing is a no-op like the rest of this file's
+// scheduled checks.
+async function checkRevealTime() {
+  await ready();
+  const poll = await getPoll();
+  if (isOpen(poll)) return { skipped: 'still-open' };
+  if (poll.results_public) return { skipped: 'already-public' };
+  if (!poll.reveal_at) return { skipped: 'no-scheduled-reveal' };
+  if (!revealDue(poll)) return { skipped: 'not-yet' };
+
+  await pool().query('UPDATE vote_poll SET results_public = true WHERE poll_id = $1', [POLL_ID]);
+  console.log('[vote] scheduled reveal time reached — results now public');
+  return { published: true };
 }
 
 router.post('/api/admin/close', requireDb, requireAdmin, async (req, res) => {
@@ -798,7 +838,8 @@ router.post('/api/admin/reopen', requireDb, requireAdmin, async (req, res) => {
        results_public = false,
        closes_at     = CASE WHEN closes_at     <= now() THEN NULL ELSE closes_at END,
        adds_close_at = CASE WHEN adds_close_at <= now() THEN NULL ELSE adds_close_at END,
-       opens_at      = CASE WHEN opens_at      <= now() THEN NULL ELSE opens_at END
+       opens_at      = CASE WHEN opens_at      <= now() THEN NULL ELSE opens_at END,
+       reveal_at     = CASE WHEN reveal_at     <= now() THEN NULL ELSE reveal_at END
        WHERE poll_id = $1`, [POLL_ID]);
     res.json({ ok: true });
   } catch (err) {
@@ -809,10 +850,15 @@ router.post('/api/admin/reopen', requireDb, requireAdmin, async (req, res) => {
 
 router.post('/api/admin/settings', requireDb, requireAdmin, async (req, res) => {
   try {
-    const { title, subtitle, closesAt, addsCloseAt, opensAt, allowAdds } = req.body || {};
+    const { title, subtitle, closesAt, addsCloseAt, opensAt, revealAt, allowAdds } = req.body || {};
     // Voting opening after it closes would leave a poll nobody can ever rank in.
     if (opensAt && closesAt && new Date(opensAt) >= new Date(closesAt)) {
       return errorResponse(res, 400, 'Voting would open after it closes', { code: ErrorCodes.BAD_INPUT });
+    }
+    // A reveal before the close it's revealing would be showing results for a
+    // poll that can still change.
+    if (revealAt && closesAt && new Date(revealAt) < new Date(closesAt)) {
+      return errorResponse(res, 400, 'The reveal would happen before voting closes', { code: ErrorCodes.BAD_INPUT });
     }
     if (title !== undefined) {
       await pool().query('UPDATE vote_poll SET title = $1 WHERE poll_id = $2',
@@ -822,7 +868,7 @@ router.post('/api/admin/settings', requireDb, requireAdmin, async (req, res) => 
       await pool().query('UPDATE vote_poll SET subtitle = $1 WHERE poll_id = $2',
         [cleanName(subtitle, 160) || null, POLL_ID]);
     }
-    for (const [field, col] of [[closesAt, 'closes_at'], [addsCloseAt, 'adds_close_at'], [opensAt, 'opens_at']]) {
+    for (const [field, col] of [[closesAt, 'closes_at'], [addsCloseAt, 'adds_close_at'], [opensAt, 'opens_at'], [revealAt, 'reveal_at']]) {
       if (field === undefined) continue;
       const at = field ? new Date(field) : null;
       if (at && isNaN(at.getTime())) {
@@ -906,6 +952,8 @@ module.exports.isOpen = isOpen;
 module.exports.addsOpen = addsOpen;
 module.exports.votingOpen = votingOpen;
 module.exports.phaseOf = phaseOf;
+module.exports.revealDue = revealDue;
+module.exports.checkRevealTime = checkRevealTime;
 module.exports._addsUsedBy = addsUsedBy;
 module.exports._mineOf = mineOf;
 module.exports._sslFor = sslFor;

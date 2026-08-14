@@ -375,6 +375,16 @@ six starting destinations are seeded then.
 `isOpen()` treats a passed `closes_at` as closed regardless of `status`, so a
 missed cron tick can't leave voting open past the deadline.
 
+**Closing and revealing are separate.** `reveal_at` (optional) delays only the
+*public* reveal: `closeAndNotify()` always emails the organizer at the close,
+but sets `results_public` to `revealDue(poll)` rather than unconditionally true.
+`checkRevealTime()` — cron, **every minute** rather than every five, because a
+scheduled reveal is a moment people watch for — flips it once the time arrives.
+The voter page shows a live countdown in the gap and polls `/api/poll` every 3s
+after its own clock hits zero, so it transitions itself without a refresh even
+though the server only checks once a minute. Settings rejects a `reveal_at`
+before `closes_at`.
+
 **Three dates, two phases.** `opens_at` splits the poll in half:
 
 - Before it — **nominate phase** (`phaseOf() === 'nominate'`). `PUT /api/ballot`

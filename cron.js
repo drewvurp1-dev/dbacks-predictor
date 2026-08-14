@@ -416,6 +416,19 @@ async function checkVoteDeadline() {
   }
 }
 
+// A closed poll with a scheduled reveal_at doesn't go public with the close —
+// this is the tick that actually opens it once that time arrives, so a poll
+// can close quietly and reveal itself later as its own small "event".
+async function checkRevealTime() {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    const voteRouter = require('./routes/vote');
+    await voteRouter.checkRevealTime();
+  } catch (err) {
+    console.error('[cron] vote reveal-time check failed:', err.message);
+  }
+}
+
 function start() {
   if (process.env.DISABLE_CRON === '1') {
     console.log('[cron] disabled via DISABLE_CRON=1');
@@ -440,10 +453,14 @@ function start() {
 
   if (process.env.DATABASE_URL) {
     cron.schedule('*/5 * * * *', checkVoteDeadline);
-    console.log('[cron] scheduled vote deadline check (every 5 minutes)');
+    // Every minute, not every 5 — a scheduled reveal is meant to be a moment
+    // people are actually watching for, so the lag between the clock hitting
+    // zero and results_public actually flipping should be short.
+    cron.schedule('* * * * *', checkRevealTime);
+    console.log('[cron] scheduled vote deadline check (5min) + reveal-time check (1min)');
   } else {
     console.log('[cron] vote deadline check disabled (DATABASE_URL not set)');
   }
 }
 
-module.exports = { start, checkLineup, checkFirstPitch, checkCharterPoll, checkVoteDeadline };
+module.exports = { start, checkLineup, checkFirstPitch, checkCharterPoll, checkVoteDeadline, checkRevealTime };

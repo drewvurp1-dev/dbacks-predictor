@@ -47,6 +47,7 @@ def main():
         ("Suggestions close", "addsCloseAt", poll.get("addsCloseAt")),
         ("Voting opens",      "opensAt",     poll.get("opensAt")),
         ("Voting closes",     "closesAt",    poll.get("closesAt")),
+        ("Reveal results (blank = same as voting closes)", "revealAt", poll.get("revealAt")),
     ]:
         v = ask_date(label, cur, tz)
         if v is not False:
@@ -112,6 +113,7 @@ def show(p, tz):
     print(f"    suggestions close  {local(p.get('addsCloseAt'), tz)}")
     print(f"    voting opens       {local(p.get('opensAt'), tz)}")
     print(f"    voting closes      {local(p.get('closesAt'), tz)}")
+    print(f"    reveal results     {local(p.get('revealAt'), tz)}")
 
 
 def ask(label, current):

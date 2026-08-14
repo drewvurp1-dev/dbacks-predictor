@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=12">
+<link rel="stylesheet" href="vote.css?v=14">
 <link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
@@ -111,6 +111,16 @@
           <span>New destinations close at <em>(blank = same as voting)</em></span>
           <input id="setAddsClose" type="datetime-local">
         </label>
+        <label class="field">
+          <span>Reveal results at <em>(blank = right when voting closes)</em></span>
+          <input id="setReveal" type="datetime-local">
+        </label>
+        <p class="muted small">
+          Set this to make closing and revealing two separate moments. Voters
+          see a live countdown after voting closes, and the results become
+          visible to everyone the instant this time arrives — must be at or
+          after "Voting closes at".
+        </p>
         <label class="check">
           <input id="setAdds" type="checkbox">
           <span>Let voters add new destinations</span>
@@ -156,10 +166,12 @@
     <section class="card">
       <h2>The reveal</h2>
       <p class="muted small">
-        After the close, voters visiting <code>/vote/</code> watch the runoff play
-        out round by round — counts only, never anyone's ballot. Closing the poll
-        publishes it automatically; hide it if you'd rather tell people yourself
-        first.
+        Voters visiting <code>/vote/</code> watch the runoff play out round by
+        round — counts only, never anyone's ballot. Closing the poll publishes
+        it automatically unless a later "Reveal results at" is set above, in
+        which case voters see a countdown instead and it opens on its own the
+        instant that time hits. Hide it any time if you'd rather tell people
+        yourself first.
       </p>
       <p class="muted small" id="revealState"></p>
       <div class="btn-row">
@@ -194,6 +206,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="admin.js?v=5"></script>
+<script type="module" src="admin.js?v=6"></script>
 </body>
 </html>
