@@ -196,13 +196,16 @@ function render() {
   $('setSubtitle').value = poll.subtitle || '';
   $('setAdds').checked = !!poll.allowAdds;
   $('setCloses').value = poll.closesAt ? toLocalInput(new Date(poll.closesAt)) : '';
+  $('setReveal').value = poll.revealAt ? toLocalInput(new Date(poll.revealAt)) : '';
   $('setOpens').value = poll.opensAt ? toLocalInput(new Date(poll.opensAt)) : '';
   $('setAddsClose').value = poll.addsCloseAt ? toLocalInput(new Date(poll.addsCloseAt)) : '';
   txt($('revealState'), poll.resultsPublic
     ? 'Voters can see the round-by-round results now.'
     : poll.open
       ? 'Nothing is visible to voters yet — the poll is still open.'
-      : 'The poll is closed but the results are hidden from voters.');
+      : poll.revealAt && new Date(poll.revealAt) > new Date()
+        ? `The poll is closed. Voters see a countdown — results open automatically ${fmtWhen(poll.revealAt)}.`
+        : 'The poll is closed but the results are hidden from voters.');
   txt($('addsStateNote'), poll.addsOpen
     ? 'Voters can add destinations right now.'
     : 'Nominations are closed — voters can still change their ranking.');
@@ -236,6 +239,12 @@ function render() {
   }
 
   txt($('reportText'), report.text);
+}
+
+function fmtWhen(iso) {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
 }
 
 // datetime-local wants local wall time, not an ISO/UTC string.
@@ -343,6 +352,7 @@ $('settingsForm').addEventListener('submit', async e => {
         subtitle: $('setSubtitle').value,
         opensAt: iso($('setOpens').value),
         closesAt: iso($('setCloses').value),
+        revealAt: iso($('setReveal').value),
         addsCloseAt: iso($('setAddsClose').value),
         allowAdds: $('setAdds').checked,
       },

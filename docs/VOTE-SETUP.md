@@ -125,6 +125,11 @@ still on the admin page. The email is just skipped, with a warning in the logs.
      instant as the opening if you don't want a window.
    - **Voting closes at** — the poll closes, the tally runs, and the report is
      emailed and pushed to you within five minutes, whether or not you're around.
+   - **Reveal results at** — optional, and only useful if you want the reveal to
+     be its own moment. Leave it blank and results go public the instant voting
+     closes. Set it later than the close and voters see a live countdown in the
+     gap, with the reveal opening by itself the minute it arrives. Your own
+     email still goes out at the close either way, so you always know first.
 
    Splitting nomination from ranking is the point: everyone ranks the same
    finished list, so nobody votes on Thursday and misses two destinations added
@@ -147,6 +152,12 @@ still on the admin page. The email is just skipped, with a warning in the logs.
    It shows **counts only — never a ballot and never a voter's name**. Use
    **The reveal → Hide them** on the admin page if you'd rather announce it
    yourself before anyone can look.
+
+   Eliminations are explained rather than asserted. When destinations tie for
+   last, the reveal says so explicitly — names who it was tied with, and whether
+   the tiebreak came down to ranking points across all ballots or, when those
+   were level too, alphabetical order. A bare "X came last" reads as wrong when
+   Y had the identical count and survived, so it never says that.
 
 ## 3b. Test it first
 

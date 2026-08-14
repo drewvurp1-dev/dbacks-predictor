@@ -61,7 +61,7 @@ function showError(id, msg) {
 function clearError(id) { $(id).classList.add('hidden'); }
 
 function show(...ids) {
-  for (const id of ['loadingCard', 'nameCard', 'closedCard', 'nominateCard', 'ballotCard', 'resultsCard']) {
+  for (const id of ['loadingCard', 'nameCard', 'closedCard', 'countdownCard', 'nominateCard', 'ballotCard', 'resultsCard']) {
     $(id).classList.toggle('hidden', !ids.includes(id));
   }
 }
@@ -649,7 +649,7 @@ async function playReveal() {
         rev.rows.get(id).classList.add('landing');
         await countUp(id, 0, r.counts[id], r.continuing, 620);
         rev.rows.get(id).classList.remove('landing');
-        await sleep(160);
+        await sleep(260);
       }
     } else {
       // Later rounds: only the numbers that actually changed move, and they
@@ -668,7 +668,7 @@ async function playReveal() {
         row.classList.add('landing');
         await countUp(id, prev[id] ?? 0, r.counts[id], r.continuing, 700);
         row.classList.remove('landing');
-        await sleep(220);
+        await sleep(320);
         row.querySelector('.rev-fill').classList.remove('gain');
       }
     }
@@ -693,34 +693,61 @@ async function playReveal() {
     setCaption(i === 0
       ? `Nothing has ${r.majority} of ${r.continuing} yet, so the last place goes out.`
       : `Still nothing at ${r.majority}. Last place goes out again.`);
-    await sleep(1100);
+    await sleep(1900);
     if (!revAlive(gen)) return;
 
     // Single out last place, then knock it out.
     if (r.eliminated.length) {
       const outIds = r.eliminated.map(e => e.id);
-      for (const id of outIds) rev.rows.get(id).classList.add('doomed');
-      const names = r.eliminated.map(e => e.name);
-      const votes = r.eliminated.reduce((a, e) => a + e.votes, 0);
-      setCaption(names.length === 1
-        ? `${names[0]} is last on ${r.eliminated[0].votes} — it's out.`
-        : `${names.join(' and ')} are out — together they had ${votes}, too few to catch anyone.`);
-      await sleep(1500);
-      if (!revAlive(gen)) return;
+      const solo = r.eliminated.length === 1 ? r.eliminated[0] : null;
+
+      // A tied elimination gets its own beat, held BEFORE anything starts
+      // pulsing red — the thing people don't believe is that the loser and a
+      // survivor had the exact same number, so that has to be said plainly
+      // and separately from "it's out", not folded into one rushed sentence.
+      if (solo && solo.tiedWith.length) {
+        for (const id of outIds) rev.rows.get(id).classList.add('doomed');
+        const others = solo.tiedWith.map(t => t.name);
+        const othersList = others.length === 1 ? others[0] : `${others.slice(0, -1).join(', ')} and ${others[others.length - 1]}`;
+        setCaption(`${solo.name} is tied with ${othersList} at ${solo.votes} ` +
+          `${solo.votes === 1 ? 'vote' : 'votes'} each — a dead heat for last place.`);
+        await sleep(2200);
+        if (!revAlive(gen)) return;
+
+        setCaption(solo.tieBreak === 'alpha'
+          ? `Ranked-choice breaks ties on overall ranking points first — and those were tied too. ` +
+            `With nothing left to separate them, it comes down to alphabetical order: ${solo.name} goes.`
+          : `Ranked-choice breaks ties using points from every ballot's full ranking, not just first ` +
+            `place. ${solo.name} had fewer of those points than ${othersList}, so it's the one that goes.`);
+        await sleep(2600);
+        if (!revAlive(gen)) return;
+      } else {
+        for (const id of outIds) rev.rows.get(id).classList.add('doomed');
+        const names = r.eliminated.map(e => e.name);
+        const votes = r.eliminated.reduce((a, e) => a + e.votes, 0);
+        setCaption(names.length === 1
+          ? `${names[0]} is last on ${solo.votes} — it's out.`
+          : `${names.join(', ')} are eliminated together — ${votes} combined votes, fewer than the ` +
+            `${r.batchThreshold} held by the next place up. Even if every one of those ballots had gone ` +
+            `to the same place, none of them could have caught it.`);
+        await sleep(2000);
+        if (!revAlive(gen)) return;
+      }
 
       for (const id of outIds) {
         rev.rows.get(id).classList.remove('doomed');
         rev.rows.get(id).classList.add('out');
       }
+      const votes = r.eliminated.reduce((a, e) => a + e.votes, 0);
       setCaption(votes
         ? `Those ${votes} ${votes === 1 ? 'ballot moves' : 'ballots move'} to whoever those voters ranked next.`
         : 'Nobody had it first, so no votes move.');
-      await sleep(1400);
+      await sleep(2000);
       if (!revAlive(gen)) return;
 
       for (const id of outIds) rev.rows.get(id).classList.add('gone');
       rankBadges();
-      await sleep(500);
+      await sleep(800);
     }
 
     prev = { ...r.counts };
@@ -878,14 +905,59 @@ async function refresh() {
   if (!poll.open) return showClosed();
 }
 
-// A closed poll either reveals the runoff or just says it's over, depending on
-// whether the organizer has let the results out.
+// A closed poll is in one of three states: the reveal is public (show it), a
+// reveal is scheduled for later (count down to it), or neither (just say
+// voting closed and the organizer has the results).
 async function showClosed() {
   if (poll.resultsPublic) {
     try { await loadResults(); return; }
-    catch { /* fall through to the plain closed card */ }
+    catch { /* fall through */ }
+  }
+  if (poll.revealAt && new Date(poll.revealAt).getTime() > Date.now()) {
+    showCountdown(new Date(poll.revealAt));
+    return;
   }
   show('closedCard');
+}
+
+let countdownTimer = null;
+
+function showCountdown(revealAt) {
+  clearInterval(countdownTimer);
+  $('countdownWhen').textContent = `Results reveal live ${fmtWhen(revealAt)}.`;
+  show('countdownCard');
+
+  const tick = () => {
+    const ms = revealAt - Date.now();
+    if (ms <= 0) {
+      // The clock hit zero, but the server only checks once a minute — poll
+      // for the real flip instead of reloading once and risking a "voting is
+      // closed" card for whoever loads in that gap.
+      clearInterval(countdownTimer);
+      $('countdownWhen').textContent = "It's time — waiting on the results…";
+      $('countdownClock').classList.add('hidden');
+      pollForReveal();
+      return;
+    }
+    const s = Math.floor(ms / 1000);
+    $('cdDays').textContent = Math.floor(s / 86400);
+    $('cdHours').textContent = String(Math.floor(s / 3600) % 24).padStart(2, '0');
+    $('cdMins').textContent = String(Math.floor(s / 60) % 60).padStart(2, '0');
+    $('cdSecs').textContent = String(s % 60).padStart(2, '0');
+  };
+  tick();
+  countdownTimer = setInterval(tick, 1000);
+}
+
+async function pollForReveal() {
+  for (let i = 0; i < 40; i++) {          // ~2 minutes at 3s apart
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const p = await api('/poll');
+      if (p.resultsPublic) { poll = p; return showClosed(); }
+    } catch { /* transient — keep trying */ }
+  }
+  location.reload();   // give up politely rather than loop forever
 }
 
 // ── nomination phase ────────────────────────────────────────────────────────

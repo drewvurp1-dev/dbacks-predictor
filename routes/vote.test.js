@@ -325,6 +325,45 @@ test('report flags a method disagreement so it is not silently ignored', () => {
   assert.match(r.text, /consensus score prefers Budapest, Hungary/);
 });
 
+test('report explains a tie-broken elimination rather than just naming a loser', () => {
+  // Same shape as the rcv.js borda-tie test: 2 and 3 tied at one vote, 3 goes
+  // out on fewer ranking points while 2 survives.
+  const dests3 = [
+    { id: '1', name: 'Istanbul, Türkiye' }, { id: '2', name: 'Budapest, Hungary' },
+    { id: '3', name: 'Phuket, Thailand' },
+  ];
+  const ballots = [
+    { voter: 'a', rankings: ['1', '2'] }, { voter: 'b', rankings: ['1', '2'] },
+    { voter: 'c', rankings: ['2', '1'] },
+    { voter: 'd', rankings: ['3'] },
+  ];
+  const r = buildReport(tally(ballots, dests3), ballots, {});
+  assert.match(r.text, /tied at 1 vote.*Budapest, Hungary/);
+  assert.match(r.text, /fewer ranking points/);
+  assert.match(r.html, /tied at 1 vote/);
+});
+
+test('report explains a batch elimination with the actual threshold number', () => {
+  const dests6 = [
+    { id: '1', name: 'Istanbul' }, { id: '2', name: 'Budapest' }, { id: '3', name: 'Phuket' },
+    { id: '4', name: 'Beijing' }, { id: '5', name: 'Rio' }, { id: '6', name: 'Hong Kong' },
+  ];
+  const ballots = [
+    { voter: 'a', rankings: ['1', '3'] }, { voter: 'b', rankings: ['1', '3'] },
+    { voter: 'c', rankings: ['1', '3'] }, { voter: 'd', rankings: ['3', '1'] },
+    { voter: 'e', rankings: ['5', '3'] }, { voter: 'f', rankings: ['5', '3'] },
+  ];
+  const r = buildReport(tally(ballots, dests6), ballots, {});
+  assert.match(r.text, /eliminated together.*fewer than the 2 held by the next place up/);
+});
+
+test('report gives a plain clear-last elimination no false tie framing', () => {
+  const r = buildReport(tally(BALLOTS, DESTS), BALLOTS, {});
+  // In the BALLOTS fixture Phuket wins round 1 outright, so there's no
+  // elimination line at all to check against a false tie claim.
+  assert.ok(!r.text.includes('tied at'), 'should not fabricate a tie where none occurred');
+});
+
 test('report notes a ballot that ranked nothing', () => {
   const ballots = [{ voter: 'Ghost', rankings: [] }, { voter: 'Drew', rankings: ['1'] }];
   const r = buildReport(tally(ballots, DESTS), ballots, {});

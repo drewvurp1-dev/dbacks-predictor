@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=13">
+<link rel="stylesheet" href="vote.css?v=14">
 </head>
 <body>
 
@@ -63,6 +63,20 @@
       The ballots are in and the results have gone to the organizer.
       They'll share the destination with the group.
     </p>
+  </section>
+
+  <!-- ── Closed, reveal scheduled for later ── -->
+  <section id="countdownCard" class="card countdown-card hidden">
+    <p class="label">Voting is closed</p>
+    <h2>The results are in.</h2>
+    <p class="muted small" id="countdownWhen"></p>
+    <div class="countdown-clock" id="countdownClock">
+      <div class="countdown-unit"><span class="countdown-num" id="cdDays">0</span><span class="countdown-label">days</span></div>
+      <div class="countdown-unit"><span class="countdown-num" id="cdHours">00</span><span class="countdown-label">hrs</span></div>
+      <div class="countdown-unit"><span class="countdown-num" id="cdMins">00</span><span class="countdown-label">min</span></div>
+      <div class="countdown-unit"><span class="countdown-num" id="cdSecs">00</span><span class="countdown-label">sec</span></div>
+    </div>
+    <p class="muted small center">Come back and refresh once it hits zero.</p>
   </section>
 
   <!-- ── Results reveal ── -->
@@ -255,6 +269,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="vote.js?v=13"></script>
+<script type="module" src="vote.js?v=14"></script>
 </body>
 </html>
