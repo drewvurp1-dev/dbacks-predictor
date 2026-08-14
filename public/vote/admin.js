@@ -191,6 +191,7 @@ function render() {
   }
 
   // Settings
+  $('settingsClosedWarning').classList.toggle('hidden', poll.open);
   $('setTitle').value = poll.title || '';
   $('setSubtitle').value = poll.subtitle || '';
   $('setAdds').checked = !!poll.allowAdds;
