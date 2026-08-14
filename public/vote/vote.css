@@ -224,6 +224,79 @@ input[type="text"]:focus {
 .ctl-drag { cursor: grab; touch-action: none; }
 .ctl-drag:active { cursor: grabbing; }
 
+/* ── Results reveal ── */
+.reveal-card { min-height: 300px; }
+.rev-meta { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+.rev-bars { margin-top: 18px; display: flex; flex-direction: column; gap: 9px; }
+
+.rev-row {
+  display: flex; align-items: center; gap: 10px;
+  /* Rows keep their slot as the field shrinks, so a bar the eye is following
+     doesn't jump somewhere else between rounds. */
+  transition: opacity .5s ease;
+}
+.rev-row.out { opacity: .35; }
+.rev-row.gone { opacity: 0; height: 0; margin: -4.5px 0; overflow: hidden; }
+
+.rev-name {
+  flex: 0 0 38%;
+  font-size: 13.5px;
+  line-height: 1.3;
+  transition: color .4s, font-weight .4s;
+}
+.rev-row.out .rev-name { text-decoration: line-through; color: var(--muted); }
+.rev-row.win .rev-name { font-weight: 700; color: var(--sage); }
+
+.rev-track { flex: 1; height: 24px; background: var(--cream-dk); border-radius: 5px; overflow: hidden; position: relative; }
+.rev-fill {
+  height: 100%;
+  width: 0;
+  background: var(--dark);
+  border-radius: 5px;
+  /* The whole point of the reveal — votes visibly sliding across. */
+  transition: width .85s cubic-bezier(.22,.9,.3,1), background .5s;
+}
+.rev-fill.win  { background: var(--sage); }
+.rev-fill.out  { background: var(--wine); }
+.rev-fill.gain { background: var(--gold); }
+
+.rev-val { flex: 0 0 34px; text-align: right; font-size: 13px; font-weight: 600; color: var(--dark); }
+.rev-row.out .rev-val { color: var(--muted); font-weight: 400; }
+
+.rev-caption {
+  margin-top: 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  min-height: 3.2em;
+  background: var(--cream);
+  border-left: 3px solid var(--gold);
+  padding: 11px 13px;
+  border-radius: 0 6px 6px 0;
+}
+.rev-controls { margin-top: 4px; align-items: center; }
+
+.winner-reveal {
+  border-left: 4px solid var(--sage);
+  animation: revPop .5s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes revPop {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+.rev-winner {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 30px;
+  line-height: 1.15;
+  margin: 4px 0 6px;
+}
+.rev-blurb { margin-top: 10px; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rev-fill { transition: none; }
+  .winner-reveal { animation: none; }
+}
+
 /* ── Suggestion list (nomination phase) ── */
 .sugg-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .sugg-item {

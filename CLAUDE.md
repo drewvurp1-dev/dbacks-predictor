@@ -343,9 +343,15 @@ can't see the winner.
   guarded by a lockout (5 fails → 15 min, `pin_fails`/`pin_locked_until`). Both
   defences are load-bearing — don't swap in a fast hash or drop the lockout.
   A voter with no PIN still needs the admin to release their name.
-- `GET /vote/api/poll` is the only public endpoint. It returns destinations and
-  *who* has voted, never rankings, counts or the winner — before or after the
-  close. **There is deliberately no public results endpoint.** Don't add one.
+- While the poll is open, `GET /vote/api/poll` is the only public endpoint. It
+  returns destinations and *who* has voted — never rankings, counts or the
+  winner.
+- After the close, `GET /vote/api/results` opens the runoff to everyone so
+  voters can see how the winner got there. It is gated on the poll being closed
+  **and** `vote_poll.results_public` (set on a genuine close, toggleable from
+  the admin page, cleared on reopen). It carries **per-round counts only** —
+  never a ballot, never a voter name. That line is the promise voters were
+  given; the reveal explains the mechanism without it.
 - Everything that reveals a result is under `/vote/api/admin/*` behind
   `VOTE_ADMIN_KEY` (constant-time compared).
 - Only `submitted` ballots are tallied; drafts are visible to the admin, flagged
@@ -357,7 +363,8 @@ the admin ballot list makes duplicates obvious.
 
 ### Tables
 
-`vote_poll` (one row per `VOTE_POLL_ID`), `vote_destinations` (soft-deleted via
+`vote_poll` (one row per `VOTE_POLL_ID`; `results_public` gates the voter-facing
+reveal), `vote_destinations` (soft-deleted via
 `removed` so ids already sitting in ballots stay resolvable), `vote_ballots`
 (unique on `poll_id, name_key`; `name_key` is lowercased/whitespace-collapsed so
 "Drew  V" and "drew v" are one person). Created lazily on first request, and the

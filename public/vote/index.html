@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=11">
+<link rel="stylesheet" href="vote.css?v=12">
 </head>
 <body>
 
@@ -56,13 +56,66 @@
     <p id="nameError" class="error hidden"></p>
   </section>
 
-  <!-- ── Closed ── -->
+  <!-- ── Closed, results not out ── -->
   <section id="closedCard" class="card hidden">
     <h2>Voting is closed</h2>
     <p class="muted">
       The ballots are in and the results have gone to the organizer.
       They'll share the destination with the group.
     </p>
+  </section>
+
+  <!-- ── Results reveal ── -->
+  <section id="resultsCard" class="hidden">
+
+    <div class="card reveal-card">
+      <p class="label" id="revRoundLabel">Round 1</p>
+      <p class="rev-meta" id="revMeta"></p>
+
+      <div id="revBars" class="rev-bars"></div>
+
+      <p id="revCaption" class="rev-caption"></p>
+
+      <div class="btn-row rev-controls">
+        <button type="button" class="btn btn-primary" data-action="rev-next" id="revNext">
+          Next round
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" data-action="rev-skip" id="revSkip">
+          Skip to the winner
+        </button>
+      </div>
+    </div>
+
+    <div class="card winner-reveal hidden" id="revWinnerCard">
+      <p class="label">We're going to</p>
+      <h2 class="rev-winner" id="revWinnerName"></h2>
+      <p class="muted small" id="revWinnerSub"></p>
+      <p id="revWinnerBlurb" class="rev-blurb"></p>
+      <div id="revFlags"></div>
+      <button type="button" class="btn btn-ghost btn-sm" data-action="rev-replay">Watch it again</button>
+    </div>
+
+    <div class="card">
+      <details id="revExplain">
+        <summary>How does ranked-choice work?</summary>
+        <p class="muted small" style="margin-top:10px">
+          Everyone put the destinations in order. Only your top surviving choice
+          counts at any moment.
+        </p>
+        <p class="muted small" style="margin-top:8px">
+          If nowhere has more than half the votes, the destination in last place
+          is knocked out — and everyone who had it first has their vote moved to
+          their next choice instead. That repeats until somewhere holds a
+          majority.
+        </p>
+        <p class="muted small" style="margin-top:8px">
+          It means you could rank a long shot first without wasting your vote:
+          if it goes out, your ballot still has a say between the ones left.
+        </p>
+      </details>
+    </div>
+
+    <p class="foot" id="revFoot"></p>
   </section>
 
   <!-- ── Nomination phase ── -->
@@ -205,6 +258,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="vote.js?v=11"></script>
+<script type="module" src="vote.js?v=12"></script>
 </body>
 </html>
