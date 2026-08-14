@@ -29,6 +29,7 @@ data/
   team_charters.json   MLB charter aircraft tail numbers + callsigns by team
 scripts/
   refresh_pitch_arsenal.py  Python script (pybaseball) that builds pitch_arsenal.json
+  vote-dryrun.py       Walks a deployed vote through every phase, with pauses + cleanup
   install-cron.sh      macOS launchd installer for the daily arsenal refresh
   com.dbacks-predictor.refresh-arsenal.plist
 public/

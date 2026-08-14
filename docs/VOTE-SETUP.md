@@ -144,6 +144,29 @@ still on the admin page. The email is just skipped, with a warning in the logs.
    **The reveal → Hide them** on the admin page if you'd rather announce it
    yourself before anyone can look.
 
+## 3b. Test it first
+
+`scripts/vote-dryrun.py` walks a deployment through every phase — nominate,
+grace window, voting, close, reveal — pausing at each step so you can open the
+site and see what a voter sees. It creates a few fake voters and ballots so the
+runoff has something to chew on, then offers to remove them.
+
+```bash
+python3 scripts/vote-dryrun.py https://your-app.up.railway.app YOUR_ADMIN_KEY
+```
+
+It **refuses to run if anybody has already started a ballot**, so it can't be
+pointed at a live poll mid-vote by accident. `--force` overrides that;
+`--cleanup` only undoes a previous run (and leaves real ballots alone).
+
+Safest is to test against a throwaway poll: set `VOTE_POLL_ID=dryrun` on the
+host, let it redeploy, run the script, then remove the variable. The real poll
+lives under a different `poll_id` and is never touched — its ballots, dates and
+destinations are exactly where you left them.
+
+The script also catches a **stale deployment**: if the host is still running
+older code it stops with a clear message rather than half-configuring the poll.
+
 ## 4. How privacy actually works
 
 Voters enter a name — no passwords, as you asked. The protection is that the
