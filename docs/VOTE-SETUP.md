@@ -134,11 +134,15 @@ still on the admin page. The email is just skipped, with a warning in the logs.
 4. Watch ballots arrive on the admin page. The voter page shows *who* has voted
    so you can chase stragglers — never *what* they voted.
 5. When you're ready, **Close & send results** (or let the deadline do it).
-6. Closing publishes the **reveal**: voters visiting `/vote/` now watch the
-   runoff play out a round at a time — bars for each destination, last place
-   struck through and knocked out, its votes visibly sliding into whoever those
-   voters ranked next, until something clears a majority. It ends on the winner
-   with the maths, and there's a "how does this work?" explainer underneath.
+6. Closing publishes the **reveal**: voters visiting `/vote/` watch the runoff
+   play itself out. Counts tick up one destination at a time, the rows re-sort
+   into the new standings as the numbers land, last place is singled out and
+   knocked out, and its votes visibly transfer to whoever those voters ranked
+   next. It narrows to the finalists and ends on the winner, with a
+   "how does this work?" explainer underneath.
+
+   It auto-plays; there's a skip and a replay. `prefers-reduced-motion` collapses
+   the animation to near-instant.
 
    It shows **counts only — never a ballot and never a voter's name**. Use
    **The reveal → Hide them** on the admin page if you'd rather announce it

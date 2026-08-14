@@ -307,22 +307,11 @@ function move(id, delta) {
 const ACTIONS = {
   up:     id => move(id, -1),
   down:   id => move(id, +1),
-  'rev-next': () => { if (rev && rev.i < rev.frames.length - 1) { rev.i++; revRender(); } },
-  'rev-skip': () => {
-    if (!rev) return;
-    // Jump straight to the final counts, keeping prev empty so nothing flashes
-    // as a "gain" it didn't earn on screen.
-    rev.i = rev.frames.length - 1;
-    rev.prev = {};
-    revRender();
-  },
+  'rev-skip':   () => { if (rev) revSkipToEnd(); },
   'rev-replay': () => {
     if (!rev) return;
-    rev.i = 0;
-    rev.prev = {};
-    $('revWinnerCard').classList.add('hidden');
-    revRender();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    playReveal();
   },
   'pin-toggle': () => {
     const f = $('pinSetForm');
@@ -514,124 +503,261 @@ $('addForm').addEventListener('submit', async e => {
 
 // ── results reveal ──────────────────────────────────────────────────────────
 //
-// Walks the runoff one beat at a time so the mechanism is visible: show the
-// round's counts, mark who came last, then let their votes visibly slide into
-// the bars of everyone still standing. Counts only — no ballots, ever.
+// Plays the runoff as a sequence rather than a table. Each round: the counts
+// tick up one destination at a time, the rows physically re-sort into the new
+// standings, last place is singled out and knocked out, and its votes visibly
+// land on whoever those voters ranked next. Then the finalists, then the winner.
+//
+// It is choreography, so it is written as one async function with awaited
+// pauses instead of a frame index — the order of events is the code. A
+// generation counter makes skip and replay safe: any older playthrough still
+// mid-await notices it has been superseded and returns.
 
-let rev = null;      // { data, frames, i, rows: Map, prev: {} }
+let rev = null;        // { data, rows: Map<id, el>, order: [] }
+let revGen = 0;        // bumped on every play; stale runs bail out
 
-function revBuildFrames(rounds) {
-  const frames = [];
-  for (const r of rounds) {
-    frames.push({ kind: 'counts', r });
-    if (r.eliminated.length) frames.push({ kind: 'out', r });
+const REDUCED = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+// Everything scales off one number, so the whole sequence can be slowed down,
+// sped up, or (for reduced motion) collapsed to near-instant in one place.
+const T = REDUCED ? 0.06 : 1;
+const ms = n => n * T;
+const sleep = n => new Promise(r => setTimeout(r, ms(n)));
+
+function revAlive(gen) { return gen === revGen; }
+
+// ── primitives ──────────────────────────────────────────────────────────────
+
+// Counts a number upward. The bar width rides the same clock so the two never
+// disagree — a bar that has finished growing under a number still climbing
+// looks broken.
+function countUp(id, from, to, of_, dur) {
+  const row = rev.rows.get(id);
+  const val = row.querySelector('.rev-val');
+  const fill = row.querySelector('.rev-fill');
+  if (REDUCED || from === to) {
+    val.textContent = to;
+    fill.style.width = of_ ? `${(to / of_) * 100}%` : '0%';
+    return Promise.resolve();
   }
-  return frames;
+  return new Promise(resolve => {
+    const t0 = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - t0) / ms(dur));
+      const eased = 1 - Math.pow(1 - p, 3);
+      const n = from + (to - from) * eased;
+      val.textContent = Math.round(n);
+      fill.style.width = of_ ? `${(n / of_) * 100}%` : '0%';
+      if (p < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
 }
 
-async function loadResults() {
-  const data = await api('/results');
-  rev = {
-    data,
-    frames: revBuildFrames(data.rounds),
-    i: 0,
-    rows: new Map(),
-    prev: {},
-  };
-
-  $('pollTitle').textContent = data.title || 'Where are we going?';
-  $('pollSubtitle').textContent = 'The votes are in. This is how it played out.';
-  $('deadlinePill').classList.add('hidden');
-  $('addsPill').classList.add('hidden');
-  $('votedPill').textContent =
-    `${data.countedBallots} ${data.countedBallots === 1 ? 'ballot' : 'ballots'} counted`;
-
-  // One row per destination that started the runoff, in a fixed order so a bar
-  // the eye is following never jumps position between rounds.
-  const first = data.rounds[0];
-  const order = Object.entries(first.counts).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+// FLIP: measure where every row is, reorder the DOM, then animate each row from
+// where it used to be to where it now is. Without this the list would jump and
+// nobody could follow a destination climbing the standings — which is the whole
+// thing worth watching.
+function sortRows(order, gen) {
   const wrap = $('revBars');
-  wrap.innerHTML = '';
-  for (const id of order) {
-    const row = document.createElement('div');
-    row.className = 'rev-row';
-    row.innerHTML = `<div class="rev-name"></div>
-      <div class="rev-track"><div class="rev-fill"></div></div>
-      <div class="rev-val">0</div>`;
-    row.querySelector('.rev-name').textContent = first.names[id];
-    wrap.appendChild(row);
-    rev.rows.set(id, row);
-  }
+  const before = new Map();
+  for (const [id, el] of rev.rows) before.set(id, el.getBoundingClientRect().top);
 
-  $('revFoot').textContent = data.closedAt
-    ? `Voting closed ${fmtWhen(new Date(data.closedAt))}.`
-    : '';
-  $('revWinnerCard').classList.add('hidden');
-  revRender();
-  show('resultsCard');
+  order.forEach(id => wrap.appendChild(rev.rows.get(id)));
+  rev.order = order;
+
+  if (REDUCED) return Promise.resolve();
+
+  let moved = false;
+  for (const [id, el] of rev.rows) {
+    const dy = before.get(id) - el.getBoundingClientRect().top;
+    if (Math.abs(dy) < 1) continue;
+    moved = true;
+    el.style.transition = 'none';
+    el.style.transform = `translateY(${dy}px)`;
+  }
+  if (!moved) return Promise.resolve();
+
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      if (!revAlive(gen)) return resolve();
+      for (const el of rev.rows.values()) {
+        el.style.transition = `transform ${ms(620)}ms cubic-bezier(.22,.9,.3,1)`;
+        el.style.transform = '';
+      }
+      setTimeout(resolve, ms(640));
+    });
+  });
 }
 
-function revRender() {
-  const f = rev.frames[rev.i];
-  const r = f.r;
-  const outIds = f.kind === 'out' ? r.eliminated.map(e => e.id) : [];
-  const live = new Set(Object.keys(r.counts));
-
-  $('revRoundLabel').textContent = `Round ${r.round}`;
-  $('revMeta').textContent =
-    `${r.continuing} ${r.continuing === 1 ? 'ballot' : 'ballots'} in play · ` +
-    `${r.majority} needed to win` + (r.exhausted ? ` · ${r.exhausted} exhausted` : '');
-
-  for (const [id, row] of rev.rows) {
-    const n = r.counts[id];
-    const fill = row.querySelector('.rev-fill');
-    const val = row.querySelector('.rev-val');
-
-    if (!live.has(id)) { row.className = 'rev-row gone'; continue; }
-
-    const isOut = outIds.includes(id);
-    const isWin = r.winner === id && f.kind === 'counts';
-    // Only flash gold for a bar that actually grew this beat — that's the
-    // transfer landing, and it's the thing people don't believe until they see.
-    const gained = f.kind === 'counts' && rev.prev[id] !== undefined && n > rev.prev[id];
-
-    row.className = 'rev-row' + (isOut ? ' out' : '') + (isWin ? ' win' : '');
-    fill.className = 'rev-fill' + (isWin ? ' win' : isOut ? ' out' : gained ? ' gain' : '');
-    fill.style.width = r.continuing ? `${(n / r.continuing) * 100}%` : '0%';
-    val.textContent = n;
-  }
-  if (f.kind === 'counts') rev.prev = { ...r.counts };
-
-  // Caption
-  const cap = $('revCaption');
-  if (f.kind === 'out') {
-    const names = r.eliminated.map(e => e.name);
-    const votes = r.eliminated.reduce((a, e) => a + e.votes, 0);
-    cap.textContent = names.length === 1
-      ? `${names[0]} finished last on ${r.eliminated[0].votes} ${r.eliminated[0].votes === 1 ? 'vote' : 'votes'} and is out. ` +
-        (votes ? 'Those ballots now move to each of those voters\' next choice.' : 'Nobody had it first, so no votes move.')
-      : `${names.join(', ')} are all out — together they had ${votes}, fewer than the next place up, so none of them could catch it. ` +
-        (votes ? 'Their ballots move to each voter\'s next choice.' : 'No votes move.');
-  } else if (r.winner) {
-    const w = r.counts[r.winner];
-    cap.textContent = `${r.names[r.winner]} has ${w} of ${r.continuing} — past ${r.majority}, so it's a majority. That's the trip.`;
-  } else if (r.round === 1) {
-    cap.textContent = `First choices only. ${r.majority} of ${r.continuing} would be a majority — nothing is there yet, so the runoff starts.`;
-  } else {
-    cap.textContent = `Votes redistributed. Still nothing at ${r.majority}, so the last place goes out next.`;
-  }
-
-  const last = rev.i >= rev.frames.length - 1;
-  $('revNext').classList.toggle('hidden', last);
-  $('revSkip').classList.toggle('hidden', last);
-  $('revNext').textContent = rev.frames[rev.i + 1]?.kind === 'out' ? 'Who\'s out?' : 'Next round';
-
-  if (last) revShowWinner();
+function setCaption(text) {
+  const el = $('revCaption');
+  el.classList.remove('pop');
+  void el.offsetWidth;          // restart the animation
+  el.textContent = text;
+  el.classList.add('pop');
 }
 
-function revShowWinner() {
+function rankBadges() {
+  rev.order.forEach((id, i) => {
+    const b = rev.rows.get(id)?.querySelector('.rev-rank');
+    if (b) b.textContent = rev.rows.get(id).classList.contains('gone') ? '' : i + 1;
+  });
+}
+
+// ── the playthrough ─────────────────────────────────────────────────────────
+
+async function playReveal() {
+  const gen = ++revGen;
   const d = rev.data;
+
+  $('revWinnerCard').classList.add('hidden');
+  $('revSkip').classList.remove('hidden');
+  // Reset the header before the opening re-sort, not after it — on a replay the
+  // old round number would otherwise sit there for most of a second.
+  $('revRoundLabel').textContent = 'Round 1';
+  $('revMeta').textContent = '';
+  setCaption('Counting the first choices…');
+
+  // Reset every row to zero and back into the starting order.
+  const startOrder = Object.keys(d.rounds[0].counts);
+  for (const el of rev.rows.values()) {
+    el.className = 'rev-row';
+    el.style.transform = '';
+    el.style.transition = '';
+    el.querySelector('.rev-val').textContent = '0';
+    el.querySelector('.rev-fill').style.width = '0%';
+    el.querySelector('.rev-fill').className = 'rev-fill';
+    el.querySelector('.rev-rank').textContent = '';
+  }
+  await sortRows(startOrder, gen);
+  if (!revAlive(gen)) return;
+
+  let prev = {};
+  for (let i = 0; i < d.rounds.length; i++) {
+    const r = d.rounds[i];
+    $('revRoundLabel').textContent = `Round ${r.round}`;
+    $('revMeta').textContent =
+      `${r.continuing} ${r.continuing === 1 ? 'ballot' : 'ballots'} in play · ${r.majority} to win`;
+
+    if (i === 0) {
+      setCaption('First-choice votes, coming in…');
+      // One at a time, so each number lands on its own instead of six moving at
+      // once and nothing being readable.
+      for (const id of rev.order) {
+        if (!revAlive(gen)) return;
+        rev.rows.get(id).classList.add('landing');
+        await countUp(id, 0, r.counts[id], r.continuing, 620);
+        rev.rows.get(id).classList.remove('landing');
+        await sleep(160);
+      }
+    } else {
+      // Later rounds: only the numbers that actually changed move, and they
+      // move one after another so you can see where the votes went.
+      const gainers = rev.order.filter(id => r.counts[id] !== undefined && r.counts[id] > (prev[id] ?? 0));
+      const same = rev.order.filter(id => r.counts[id] !== undefined && !gainers.includes(id));
+      for (const id of same) {
+        rev.rows.get(id).querySelector('.rev-val').textContent = r.counts[id];
+        rev.rows.get(id).querySelector('.rev-fill').style.width =
+          r.continuing ? `${(r.counts[id] / r.continuing) * 100}%` : '0%';
+      }
+      for (const id of gainers) {
+        if (!revAlive(gen)) return;
+        const row = rev.rows.get(id);
+        row.querySelector('.rev-fill').classList.add('gain');
+        row.classList.add('landing');
+        await countUp(id, prev[id] ?? 0, r.counts[id], r.continuing, 700);
+        row.classList.remove('landing');
+        await sleep(220);
+        row.querySelector('.rev-fill').classList.remove('gain');
+      }
+    }
+    if (!revAlive(gen)) return;
+
+    // Re-rank on the new numbers.
+    await sleep(240);
+    const ranked = [...rev.order]
+      .filter(id => r.counts[id] !== undefined)
+      .sort((a, b) => r.counts[b] - r.counts[a]);
+    const dead = rev.order.filter(id => r.counts[id] === undefined);
+    await sortRows([...ranked, ...dead], gen);
+    rankBadges();
+    if (!revAlive(gen)) return;
+
+    // Did anyone clear the bar?
+    if (r.winner) {
+      await revFinale(r, gen);
+      return;
+    }
+
+    setCaption(i === 0
+      ? `Nothing has ${r.majority} of ${r.continuing} yet, so the last place goes out.`
+      : `Still nothing at ${r.majority}. Last place goes out again.`);
+    await sleep(1100);
+    if (!revAlive(gen)) return;
+
+    // Single out last place, then knock it out.
+    if (r.eliminated.length) {
+      const outIds = r.eliminated.map(e => e.id);
+      for (const id of outIds) rev.rows.get(id).classList.add('doomed');
+      const names = r.eliminated.map(e => e.name);
+      const votes = r.eliminated.reduce((a, e) => a + e.votes, 0);
+      setCaption(names.length === 1
+        ? `${names[0]} is last on ${r.eliminated[0].votes} — it's out.`
+        : `${names.join(' and ')} are out — together they had ${votes}, too few to catch anyone.`);
+      await sleep(1500);
+      if (!revAlive(gen)) return;
+
+      for (const id of outIds) {
+        rev.rows.get(id).classList.remove('doomed');
+        rev.rows.get(id).classList.add('out');
+      }
+      setCaption(votes
+        ? `Those ${votes} ${votes === 1 ? 'ballot moves' : 'ballots move'} to whoever those voters ranked next.`
+        : 'Nobody had it first, so no votes move.');
+      await sleep(1400);
+      if (!revAlive(gen)) return;
+
+      for (const id of outIds) rev.rows.get(id).classList.add('gone');
+      rankBadges();
+      await sleep(500);
+    }
+
+    prev = { ...r.counts };
+    if (!revAlive(gen)) return;
+  }
+}
+
+// The last beat: dim everything but the survivors, hold, then the winner.
+async function revFinale(r, gen) {
+  const d = rev.data;
+  const finalists = [...rev.order].filter(id => r.counts[id] !== undefined);
+
+  for (const id of finalists) rev.rows.get(id).classList.add('finalist');
+  setCaption(finalists.length > 1
+    ? `Down to ${finalists.map(id => r.names[id]).join(' and ')}.`
+    : 'One left standing.');
+  await sleep(1500);
+  if (!revAlive(gen)) return;
+
+  for (const id of finalists) {
+    rev.rows.get(id).classList.remove('finalist');
+    if (id !== r.winner) rev.rows.get(id).classList.add('dim');
+  }
+  const wRow = rev.rows.get(r.winner);
+  wRow.classList.add('win');
+  wRow.querySelector('.rev-fill').classList.add('win');
+  setCaption(`${r.names[r.winner]} has ${r.counts[r.winner]} of ${r.continuing} — a majority. That's the trip.`);
+  await sleep(1400);
+  if (!revAlive(gen)) return;
+
+  revShowWinner(d);
+}
+
+function revShowWinner(d) {
+  $('revSkip').classList.add('hidden');
   const card = $('revWinnerCard');
+
   if (!d.winner) {
     $('revWinnerName').textContent = 'No winner';
     $('revWinnerSub').textContent = 'No ballots were submitted.';
@@ -640,7 +766,7 @@ function revShowWinner() {
   }
   $('revWinnerName').textContent = d.winner.name;
   $('revWinnerSub').textContent =
-    `${d.winner.votes} of ${d.winner.of} ballots in round ${d.rounds.length}`;
+    `${d.winner.votes} of ${d.winner.of} ballots · decided in round ${d.rounds.length}`;
   const dest = d.destinations.find(x => x.id === d.winner.id);
   $('revWinnerBlurb').textContent = dest?.blurb || '';
 
@@ -649,14 +775,77 @@ function revShowWinner() {
   if (d.tie) {
     const p = document.createElement('p');
     p.className = 'note';
-    p.textContent = `It ended level between ${d.tiedAmong.map(t => t.name).join('; ')}. ` +
-      `The tie was broken on overall ranking points, not a coin flip.`;
+    p.textContent = `It finished level between ${d.tiedAmong.map(t => t.name).join(' and ')}. ` +
+      'The tie broke on overall ranking points, not a coin flip.';
     flags.appendChild(p);
   }
   card.classList.remove('hidden');
-  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  card.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' });
 }
 
+// Jump straight to the finished state without playing anything.
+function revSkipToEnd() {
+  revGen++;                       // strand any in-flight playthrough
+  const d = rev.data;
+  const last = d.rounds[d.rounds.length - 1];
+
+  $('revRoundLabel').textContent = `Round ${last.round}`;
+  $('revMeta').textContent =
+    `${last.continuing} ${last.continuing === 1 ? 'ballot' : 'ballots'} in play · ${last.majority} to win`;
+
+  const ranked = Object.keys(last.counts).sort((a, b) => last.counts[b] - last.counts[a]);
+  const dead = [...rev.rows.keys()].filter(id => last.counts[id] === undefined);
+  for (const [id, el] of rev.rows) {
+    el.style.transition = 'none';
+    el.style.transform = '';
+    const n = last.counts[id];
+    if (n === undefined) { el.className = 'rev-row gone'; continue; }
+    el.className = 'rev-row' + (id === last.winner ? ' win' : ' dim');
+    el.querySelector('.rev-val').textContent = n;
+    const fill = el.querySelector('.rev-fill');
+    fill.className = 'rev-fill' + (id === last.winner ? ' win' : '');
+    fill.style.width = last.continuing ? `${(n / last.continuing) * 100}%` : '0%';
+  }
+  const wrap = $('revBars');
+  [...ranked, ...dead].forEach(id => wrap.appendChild(rev.rows.get(id)));
+  rev.order = [...ranked, ...dead];
+  rankBadges();
+  setCaption(last.winner
+    ? `${last.names[last.winner]} has ${last.counts[last.winner]} of ${last.continuing} — a majority.`
+    : 'No winner.');
+  revShowWinner(d);
+}
+
+async function loadResults() {
+  const data = await api('/results');
+  rev = { data, rows: new Map(), order: [] };
+
+  $('pollTitle').textContent = data.title || 'Where are we going?';
+  $('pollSubtitle').textContent = 'The votes are in. This is how it played out.';
+  $('deadlinePill').classList.add('hidden');
+  $('addsPill').classList.add('hidden');
+  $('votedPill').textContent =
+    `${data.countedBallots} ${data.countedBallots === 1 ? 'ballot' : 'ballots'} counted`;
+
+  const first = data.rounds[0];
+  const wrap = $('revBars');
+  wrap.innerHTML = '';
+  for (const id of Object.keys(first.counts)) {
+    const row = document.createElement('div');
+    row.className = 'rev-row';
+    row.innerHTML = `<div class="rev-rank"></div>
+      <div class="rev-name"></div>
+      <div class="rev-track"><div class="rev-fill"></div></div>
+      <div class="rev-val">0</div>`;
+    row.querySelector('.rev-name').textContent = first.names[id];
+    wrap.appendChild(row);
+    rev.rows.set(id, row);
+  }
+
+  $('revFoot').textContent = data.closedAt ? `Voting closed ${fmtWhen(new Date(data.closedAt))}.` : '';
+  show('resultsCard');
+  playReveal();
+}
 // ── boot ────────────────────────────────────────────────────────────────────
 
 async function startBallot(ballot) {
