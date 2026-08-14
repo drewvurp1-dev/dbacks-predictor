@@ -134,6 +134,15 @@ still on the admin page. The email is just skipped, with a warning in the logs.
 4. Watch ballots arrive on the admin page. The voter page shows *who* has voted
    so you can chase stragglers — never *what* they voted.
 5. When you're ready, **Close & send results** (or let the deadline do it).
+6. Closing publishes the **reveal**: voters visiting `/vote/` now watch the
+   runoff play out a round at a time — bars for each destination, last place
+   struck through and knocked out, its votes visibly sliding into whoever those
+   voters ranked next, until something clears a majority. It ends on the winner
+   with the maths, and there's a "how does this work?" explainer underneath.
+
+   It shows **counts only — never a ballot and never a voter's name**. Use
+   **The reveal → Hide them** on the admin page if you'd rather announce it
+   yourself before anyone can look.
 
 ## 4. How privacy actually works
 
@@ -143,10 +152,12 @@ token, not the name, is what opens a ballot afterwards. So:
 
 - Typing someone else's name does **not** show you their ballot. You get
   "already started a ballot on another device."
-- The public `/vote/api/poll` response contains no rankings, no counts, and no
-  winner — before or after the close. There is deliberately no public results
-  endpoint at all.
-- Results come only from `/vote/api/admin/*`, behind `VOTE_ADMIN_KEY`.
+- While voting is open, the public `/vote/api/poll` response contains no
+  rankings, no counts and no winner. Full results — including every ballot —
+  come only from `/vote/api/admin/*`, behind `VOTE_ADMIN_KEY`.
+- After the close, `/vote/api/results` shows everyone the round-by-round runoff
+  so the winner is explainable. It carries **per-round counts only**: no
+  ballots, no voter names, ever. Nobody learns what anyone else ranked.
 
 **Editing a vote.** On the same phone nobody ever sees the name screen again —
 the ballot reopens straight away and can be changed until voting closes.

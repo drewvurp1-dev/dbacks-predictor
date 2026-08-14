@@ -61,7 +61,7 @@ function showError(id, msg) {
 function clearError(id) { $(id).classList.add('hidden'); }
 
 function show(...ids) {
-  for (const id of ['loadingCard', 'nameCard', 'closedCard', 'nominateCard', 'ballotCard']) {
+  for (const id of ['loadingCard', 'nameCard', 'closedCard', 'nominateCard', 'ballotCard', 'resultsCard']) {
     $(id).classList.toggle('hidden', !ids.includes(id));
   }
 }
@@ -307,6 +307,23 @@ function move(id, delta) {
 const ACTIONS = {
   up:     id => move(id, -1),
   down:   id => move(id, +1),
+  'rev-next': () => { if (rev && rev.i < rev.frames.length - 1) { rev.i++; revRender(); } },
+  'rev-skip': () => {
+    if (!rev) return;
+    // Jump straight to the final counts, keeping prev empty so nothing flashes
+    // as a "gain" it didn't earn on screen.
+    rev.i = rev.frames.length - 1;
+    rev.prev = {};
+    revRender();
+  },
+  'rev-replay': () => {
+    if (!rev) return;
+    rev.i = 0;
+    rev.prev = {};
+    $('revWinnerCard').classList.add('hidden');
+    revRender();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
   'pin-toggle': () => {
     const f = $('pinSetForm');
     f.classList.toggle('hidden');
@@ -495,6 +512,151 @@ $('addForm').addEventListener('submit', async e => {
   }
 });
 
+// ── results reveal ──────────────────────────────────────────────────────────
+//
+// Walks the runoff one beat at a time so the mechanism is visible: show the
+// round's counts, mark who came last, then let their votes visibly slide into
+// the bars of everyone still standing. Counts only — no ballots, ever.
+
+let rev = null;      // { data, frames, i, rows: Map, prev: {} }
+
+function revBuildFrames(rounds) {
+  const frames = [];
+  for (const r of rounds) {
+    frames.push({ kind: 'counts', r });
+    if (r.eliminated.length) frames.push({ kind: 'out', r });
+  }
+  return frames;
+}
+
+async function loadResults() {
+  const data = await api('/results');
+  rev = {
+    data,
+    frames: revBuildFrames(data.rounds),
+    i: 0,
+    rows: new Map(),
+    prev: {},
+  };
+
+  $('pollTitle').textContent = data.title || 'Where are we going?';
+  $('pollSubtitle').textContent = 'The votes are in. This is how it played out.';
+  $('deadlinePill').classList.add('hidden');
+  $('addsPill').classList.add('hidden');
+  $('votedPill').textContent =
+    `${data.countedBallots} ${data.countedBallots === 1 ? 'ballot' : 'ballots'} counted`;
+
+  // One row per destination that started the runoff, in a fixed order so a bar
+  // the eye is following never jumps position between rounds.
+  const first = data.rounds[0];
+  const order = Object.entries(first.counts).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  const wrap = $('revBars');
+  wrap.innerHTML = '';
+  for (const id of order) {
+    const row = document.createElement('div');
+    row.className = 'rev-row';
+    row.innerHTML = `<div class="rev-name"></div>
+      <div class="rev-track"><div class="rev-fill"></div></div>
+      <div class="rev-val">0</div>`;
+    row.querySelector('.rev-name').textContent = first.names[id];
+    wrap.appendChild(row);
+    rev.rows.set(id, row);
+  }
+
+  $('revFoot').textContent = data.closedAt
+    ? `Voting closed ${fmtWhen(new Date(data.closedAt))}.`
+    : '';
+  $('revWinnerCard').classList.add('hidden');
+  revRender();
+  show('resultsCard');
+}
+
+function revRender() {
+  const f = rev.frames[rev.i];
+  const r = f.r;
+  const outIds = f.kind === 'out' ? r.eliminated.map(e => e.id) : [];
+  const live = new Set(Object.keys(r.counts));
+
+  $('revRoundLabel').textContent = `Round ${r.round}`;
+  $('revMeta').textContent =
+    `${r.continuing} ${r.continuing === 1 ? 'ballot' : 'ballots'} in play · ` +
+    `${r.majority} needed to win` + (r.exhausted ? ` · ${r.exhausted} exhausted` : '');
+
+  for (const [id, row] of rev.rows) {
+    const n = r.counts[id];
+    const fill = row.querySelector('.rev-fill');
+    const val = row.querySelector('.rev-val');
+
+    if (!live.has(id)) { row.className = 'rev-row gone'; continue; }
+
+    const isOut = outIds.includes(id);
+    const isWin = r.winner === id && f.kind === 'counts';
+    // Only flash gold for a bar that actually grew this beat — that's the
+    // transfer landing, and it's the thing people don't believe until they see.
+    const gained = f.kind === 'counts' && rev.prev[id] !== undefined && n > rev.prev[id];
+
+    row.className = 'rev-row' + (isOut ? ' out' : '') + (isWin ? ' win' : '');
+    fill.className = 'rev-fill' + (isWin ? ' win' : isOut ? ' out' : gained ? ' gain' : '');
+    fill.style.width = r.continuing ? `${(n / r.continuing) * 100}%` : '0%';
+    val.textContent = n;
+  }
+  if (f.kind === 'counts') rev.prev = { ...r.counts };
+
+  // Caption
+  const cap = $('revCaption');
+  if (f.kind === 'out') {
+    const names = r.eliminated.map(e => e.name);
+    const votes = r.eliminated.reduce((a, e) => a + e.votes, 0);
+    cap.textContent = names.length === 1
+      ? `${names[0]} finished last on ${r.eliminated[0].votes} ${r.eliminated[0].votes === 1 ? 'vote' : 'votes'} and is out. ` +
+        (votes ? 'Those ballots now move to each of those voters\' next choice.' : 'Nobody had it first, so no votes move.')
+      : `${names.join(', ')} are all out — together they had ${votes}, fewer than the next place up, so none of them could catch it. ` +
+        (votes ? 'Their ballots move to each voter\'s next choice.' : 'No votes move.');
+  } else if (r.winner) {
+    const w = r.counts[r.winner];
+    cap.textContent = `${r.names[r.winner]} has ${w} of ${r.continuing} — past ${r.majority}, so it's a majority. That's the trip.`;
+  } else if (r.round === 1) {
+    cap.textContent = `First choices only. ${r.majority} of ${r.continuing} would be a majority — nothing is there yet, so the runoff starts.`;
+  } else {
+    cap.textContent = `Votes redistributed. Still nothing at ${r.majority}, so the last place goes out next.`;
+  }
+
+  const last = rev.i >= rev.frames.length - 1;
+  $('revNext').classList.toggle('hidden', last);
+  $('revSkip').classList.toggle('hidden', last);
+  $('revNext').textContent = rev.frames[rev.i + 1]?.kind === 'out' ? 'Who\'s out?' : 'Next round';
+
+  if (last) revShowWinner();
+}
+
+function revShowWinner() {
+  const d = rev.data;
+  const card = $('revWinnerCard');
+  if (!d.winner) {
+    $('revWinnerName').textContent = 'No winner';
+    $('revWinnerSub').textContent = 'No ballots were submitted.';
+    card.classList.remove('hidden');
+    return;
+  }
+  $('revWinnerName').textContent = d.winner.name;
+  $('revWinnerSub').textContent =
+    `${d.winner.votes} of ${d.winner.of} ballots in round ${d.rounds.length}`;
+  const dest = d.destinations.find(x => x.id === d.winner.id);
+  $('revWinnerBlurb').textContent = dest?.blurb || '';
+
+  const flags = $('revFlags');
+  flags.innerHTML = '';
+  if (d.tie) {
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = `It ended level between ${d.tiedAmong.map(t => t.name).join('; ')}. ` +
+      `The tie was broken on overall ranking points, not a coin flip.`;
+    flags.appendChild(p);
+  }
+  card.classList.remove('hidden');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 // ── boot ────────────────────────────────────────────────────────────────────
 
 async function startBallot(ballot) {
@@ -524,7 +686,17 @@ async function startBallot(ballot) {
 
 async function refresh() {
   await loadPoll();
-  if (!poll.open) { show('closedCard'); return; }
+  if (!poll.open) return showClosed();
+}
+
+// A closed poll either reveals the runoff or just says it's over, depending on
+// whether the organizer has let the results out.
+async function showClosed() {
+  if (poll.resultsPublic) {
+    try { await loadResults(); return; }
+    catch { /* fall through to the plain closed card */ }
+  }
+  show('closedCard');
 }
 
 // ── nomination phase ────────────────────────────────────────────────────────
@@ -593,7 +765,7 @@ async function boot() {
   if (token()) {
     try {
       const ballot = await api('/ballot');
-      if (!poll.open) { show('closedCard'); return; }
+      if (!poll.open) return showClosed();
       await startBallot(ballot);
       return;
     } catch {
@@ -603,7 +775,7 @@ async function boot() {
     }
   }
 
-  if (!poll.open) { show('closedCard'); return; }
+  if (!poll.open) return showClosed();
 
   if (poll.phase === 'nominate') {
     $('nameCardTitle').textContent = "Who's suggesting?";

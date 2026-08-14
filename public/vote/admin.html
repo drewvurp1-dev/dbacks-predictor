@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="vote.css?v=8">
-<link rel="stylesheet" href="admin.css?v=4">
+<link rel="stylesheet" href="vote.css?v=12">
+<link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
 
@@ -149,6 +149,21 @@
     </section>
 
     <section class="card">
+      <h2>The reveal</h2>
+      <p class="muted small">
+        After the close, voters visiting <code>/vote/</code> watch the runoff play
+        out round by round — counts only, never anyone's ballot. Closing the poll
+        publishes it automatically; hide it if you'd rather tell people yourself
+        first.
+      </p>
+      <p class="muted small" id="revealState"></p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" data-action="publish">Show voters the results</button>
+        <button type="button" class="btn btn-ghost" data-action="unpublish">Hide them</button>
+      </div>
+    </section>
+
+    <section class="card">
       <h2>Release a name</h2>
       <p class="muted small">
         If someone lost their phone or cleared their browser, releasing their name
@@ -174,6 +189,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="admin.js?v=4"></script>
+<script type="module" src="admin.js?v=5"></script>
 </body>
 </html>

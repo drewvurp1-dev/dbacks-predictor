@@ -10,9 +10,14 @@
 // 409 NAME_TAKEN; the admin can release a name if somebody genuinely changes
 // device (POST /api/admin/reset-voter).
 //
-// Results — the winner, the counts, anybody's rankings — are only ever served
-// from the /api/admin/* endpoints behind VOTE_ADMIN_KEY, open poll or closed.
-// There is deliberately no public results endpoint.
+// While the poll is open, nothing about the outcome is public: no winner, no
+// counts, no rankings. Those come only from /api/admin/* behind VOTE_ADMIN_KEY.
+//
+// Once it closes, GET /api/results opens the round-by-round runoff to everyone
+// so voters can see how the winner got there — but it carries per-round counts
+// only. Individual ballots and voter names never leave the admin endpoints,
+// open or closed, because that is the promise voters were given when they cast
+// them.
 
 'use strict';
 
@@ -111,6 +116,9 @@ function ready() {
       // Nominations run first and ranking only opens at opens_at, so everybody
       // ranks the same finished field instead of a list that moves under them.
       await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS opens_at TIMESTAMPTZ`);
+      // Once the poll closes, voters get to watch the runoff play out. Counts
+      // only — never anyone's ballot. Off until the poll actually closes.
+      await p.query(`ALTER TABLE vote_poll ADD COLUMN IF NOT EXISTS results_public BOOLEAN NOT NULL DEFAULT false`);
       await p.query(`
         CREATE TABLE IF NOT EXISTS vote_destinations (
           id         SERIAL PRIMARY KEY,
@@ -372,6 +380,7 @@ router.get('/api/poll', requireDb, async (req, res) => {
       allowAdds: addsOpen(poll),
       addsCloseAt: poll.adds_close_at,
       maxAddsPerVoter: MAX_ADDS_PER_VOTER,
+      resultsPublic: !isOpen(poll) && !!poll.results_public,
       // During nominations the field is withheld: voters suggest blind so
       // nobody anchors on what's already there, and the organizer prunes
       // duplicates before voting opens. Hiding it in the UI alone would be
@@ -383,6 +392,44 @@ router.get('/api/poll', requireDb, async (req, res) => {
     });
   } catch (err) {
     console.error('[vote] poll error:', err.message);
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
+  }
+});
+
+// The one public window onto the outcome, and only after the poll has closed
+// and the organizer has let it out. Deliberately carries no ballots and no
+// voter names — round counts are enough to explain the runoff, and everything
+// finer would break the promise voters were given.
+router.get('/api/results', requireDb, async (req, res) => {
+  try {
+    const poll = await getPoll();
+    if (isOpen(poll)) {
+      return errorResponse(res, 403, 'Voting is still open', { code: 'POLL_OPEN' });
+    }
+    if (!poll.results_public) {
+      return errorResponse(res, 403, 'The results are not out yet', { code: 'RESULTS_NOT_PUBLIC' });
+    }
+
+    const destinations = await getDestinations();
+    const { rows } = await pool().query(
+      `SELECT rankings FROM vote_ballots WHERE poll_id = $1 AND submitted`, [POLL_ID]);
+    const result = tally(rows.map(r => ({ voter: null, rankings: r.rankings || [] })), destinations);
+
+    res.json({
+      title: poll.title,
+      subtitle: poll.subtitle,
+      closedAt: poll.closed_at,
+      winner: result.winner,
+      tie: result.tie,
+      tiedAmong: result.tiedAmong,
+      agreement: result.agreement,
+      consensusPick: result.consensusPick,
+      countedBallots: result.countedBallots,
+      rounds: result.rounds,
+      destinations: destinations.map(d => ({ id: d.id, name: d.name, blurb: d.blurb })),
+    });
+  } catch (err) {
+    console.error('[vote] results error:', err.message);
     errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
   }
 });
@@ -640,6 +687,7 @@ async function computeResults() {
       status: poll.status, open: isOpen(poll),
       closesAt: poll.closes_at, addsCloseAt: poll.adds_close_at,
       opensAt: poll.opens_at, phase: phaseOf(poll), votingOpen: votingOpen(poll),
+      resultsPublic: !!poll.results_public,
       allowAdds: poll.allow_adds, addsOpen: addsOpen(poll),
       resultsSent: poll.results_sent, closedAt: poll.closed_at,
     },
@@ -701,7 +749,8 @@ async function closeAndNotify({ force = false, alsoClose = true } = {}) {
   // flagging a preview would silently suppress the actual results email — the
   // one thing the whole poll exists to produce.
   if (alsoClose) {
-    await pool().query(`UPDATE vote_poll SET results_sent = true WHERE poll_id = $1`, [POLL_ID]);
+    await pool().query(
+      `UPDATE vote_poll SET results_sent = true, results_public = true WHERE poll_id = $1`, [POLL_ID]);
   }
   console.log(`[vote] results ${alsoClose ? 'delivered' : 'previewed'} — mail:${mail.sent ? 'ok' : 'no'} push:${push.sent || 0}`);
   return { mail, push, subject: report.subject, preview: !alsoClose };
@@ -729,10 +778,24 @@ router.post('/api/admin/send-report', requireDb, requireAdmin, async (req, res) 
   }
 });
 
+// Lets the organizer hold the reveal back (or release it early) without
+// touching the poll's own state.
+router.post('/api/admin/publish-results', requireDb, requireAdmin, async (req, res) => {
+  try {
+    const on = req.body?.publish !== false;
+    await pool().query('UPDATE vote_poll SET results_public = $1 WHERE poll_id = $2', [on, POLL_ID]);
+    res.json({ ok: true, resultsPublic: on });
+  } catch (err) {
+    console.error('[vote] publish-results error:', err.message);
+    errorResponse(res, 500, 'Server error', { code: ErrorCodes.INTERNAL });
+  }
+});
+
 router.post('/api/admin/reopen', requireDb, requireAdmin, async (req, res) => {
   try {
     await pool().query(
       `UPDATE vote_poll SET status = 'open', closed_at = NULL, results_sent = false,
+       results_public = false,
        closes_at     = CASE WHEN closes_at     <= now() THEN NULL ELSE closes_at END,
        adds_close_at = CASE WHEN adds_close_at <= now() THEN NULL ELSE adds_close_at END,
        opens_at      = CASE WHEN opens_at      <= now() THEN NULL ELSE opens_at END

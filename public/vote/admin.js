@@ -197,6 +197,11 @@ function render() {
   $('setCloses').value = poll.closesAt ? toLocalInput(new Date(poll.closesAt)) : '';
   $('setOpens').value = poll.opensAt ? toLocalInput(new Date(poll.opensAt)) : '';
   $('setAddsClose').value = poll.addsCloseAt ? toLocalInput(new Date(poll.addsCloseAt)) : '';
+  txt($('revealState'), poll.resultsPublic
+    ? 'Voters can see the round-by-round results now.'
+    : poll.open
+      ? 'Nothing is visible to voters yet — the poll is still open.'
+      : 'The poll is closed but the results are hidden from voters.');
   txt($('addsStateNote'), poll.addsOpen
     ? 'Voters can add destinations right now.'
     : 'Nominations are closed — voters can still change their ranking.');
@@ -283,6 +288,16 @@ const ACTIONS = {
     if (!confirm('Reopen voting?')) return;
     await api('/reopen', { method: 'POST' });
     toast('Voting reopened.');
+    await load();
+  },
+  publish: async () => {
+    await api('/publish-results', { method: 'POST', body: { publish: true } });
+    toast('Results are live for voters.');
+    await load();
+  },
+  unpublish: async () => {
+    await api('/publish-results', { method: 'POST', body: { publish: false } });
+    toast('Results hidden from voters.');
     await load();
   },
   'del-dest': async id => {
