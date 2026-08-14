@@ -57,7 +57,8 @@ public/
     *.test.js          Node test suite (node --test) — 94 tests covering math modules
   vote/                Ranked-choice destination vote (standalone mini-app, own CSS/JS)
     index.html         Voter ballot
-    vote.css / vote.js Ballot UI — drag + ▲▼ reorder, autosave, add-a-destination
+    vote.css / vote.js Ballot UI — drag + ▲▼ reorder, autosave, add-a-destination,
+                       and the animated round-by-round results reveal
     admin.html         Organizer dashboard (results, poll controls)
     admin.css / admin.js
 league-hub/            Standalone MLB-wide dashboard (separate Express app, port 3100)

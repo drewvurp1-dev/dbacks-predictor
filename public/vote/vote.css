@@ -225,76 +225,112 @@ input[type="text"]:focus {
 .ctl-drag:active { cursor: grabbing; }
 
 /* ── Results reveal ── */
-.reveal-card { min-height: 300px; }
+.reveal-card { min-height: 340px; }
 .rev-meta { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 
 .rev-bars { margin-top: 18px; display: flex; flex-direction: column; gap: 9px; }
 
 .rev-row {
-  display: flex; align-items: center; gap: 10px;
-  /* Rows keep their slot as the field shrinks, so a bar the eye is following
-     doesn't jump somewhere else between rounds. */
-  transition: opacity .5s ease;
+  display: flex; align-items: center; gap: 9px;
+  /* transform is driven by the FLIP re-sort in JS, so it must not be
+     transitioned here or the two fight each other. */
+  transition: opacity .45s ease, filter .45s ease;
+  will-change: transform;
 }
-.rev-row.out { opacity: .35; }
-.rev-row.gone { opacity: 0; height: 0; margin: -4.5px 0; overflow: hidden; }
 
-.rev-name {
-  flex: 0 0 38%;
-  font-size: 13.5px;
-  line-height: 1.3;
-  transition: color .4s, font-weight .4s;
+.rev-rank {
+  flex: 0 0 16px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+  text-align: right;
 }
-.rev-row.out .rev-name { text-decoration: line-through; color: var(--muted); }
-.rev-row.win .rev-name { font-weight: 700; color: var(--sage); }
 
-.rev-track { flex: 1; height: 24px; background: var(--cream-dk); border-radius: 5px; overflow: hidden; position: relative; }
-.rev-fill {
-  height: 100%;
-  width: 0;
-  background: var(--dark);
-  border-radius: 5px;
-  /* The whole point of the reveal — votes visibly sliding across. */
-  transition: width .85s cubic-bezier(.22,.9,.3,1), background .5s;
-}
-.rev-fill.win  { background: var(--sage); }
-.rev-fill.out  { background: var(--wine); }
+.rev-name { flex: 0 0 34%; font-size: 13.5px; line-height: 1.3; transition: color .4s; }
+.rev-track { flex: 1; height: 24px; background: var(--cream-dk); border-radius: 5px; overflow: hidden; }
+.rev-fill { height: 100%; width: 0; background: var(--dark); border-radius: 5px; transition: background .4s; }
+.rev-val { flex: 0 0 30px; text-align: right; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* A number currently ticking up — lifts slightly so the eye goes to it. */
+.rev-row.landing .rev-val { transform: scale(1.28); color: var(--gold); }
+.rev-row .rev-val { transition: transform .25s ease, color .25s ease; }
 .rev-fill.gain { background: var(--gold); }
 
-.rev-val { flex: 0 0 34px; text-align: right; font-size: 13px; font-weight: 600; color: var(--dark); }
-.rev-row.out .rev-val { color: var(--muted); font-weight: 400; }
+/* About to be eliminated: pulse red before it goes, so it is not a surprise. */
+.rev-row.doomed .rev-name { color: var(--danger); font-weight: 600; }
+.rev-row.doomed .rev-fill { background: var(--wine); }
+.rev-row.doomed { animation: revShake .5s ease-in-out 2; }
+@keyframes revShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.rev-row.out { opacity: .4; }
+.rev-row.out .rev-name { text-decoration: line-through; color: var(--muted); }
+.rev-row.out .rev-fill { background: var(--wine); }
+
+.rev-row.gone {
+  opacity: 0;
+  height: 0;
+  margin: -4.5px 0;
+  overflow: hidden;
+  transition: opacity .35s ease, height .45s ease, margin .45s ease;
+}
+
+.rev-row.dim { opacity: .4; filter: saturate(.4); }
+.rev-row.finalist .rev-name { font-weight: 700; }
+.rev-row.finalist .rev-track { box-shadow: 0 0 0 2px var(--gold); }
+
+.rev-row.win .rev-name { font-weight: 700; color: var(--sage); }
+.rev-fill.win { background: var(--sage); }
+.rev-row.win { animation: revWinPulse 1s ease-out; }
+@keyframes revWinPulse {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
 
 .rev-caption {
-  margin-top: 18px;
-  font-size: 14px;
+  margin-top: 20px;
+  font-size: 14.5px;
   line-height: 1.55;
-  min-height: 3.2em;
+  min-height: 3.4em;
   background: var(--cream);
   border-left: 3px solid var(--gold);
-  padding: 11px 13px;
+  padding: 12px 14px;
   border-radius: 0 6px 6px 0;
 }
-.rev-controls { margin-top: 4px; align-items: center; }
+.rev-caption.pop { animation: revCapIn .4s ease-out; }
+@keyframes revCapIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rev-controls { margin-top: 6px; }
 
 .winner-reveal {
   border-left: 4px solid var(--sage);
-  animation: revPop .5s cubic-bezier(.2,.9,.3,1.2);
+  animation: revPop .7s cubic-bezier(.2,.9,.3,1.3);
 }
 @keyframes revPop {
-  from { opacity: 0; transform: translateY(10px) scale(.98); }
-  to   { opacity: 1; transform: none; }
+  0%   { opacity: 0; transform: translateY(18px) scale(.94); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: none; }
 }
 .rev-winner {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1.15;
   margin: 4px 0 6px;
 }
 .rev-blurb { margin-top: 10px; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
 
 @media (prefers-reduced-motion: reduce) {
-  .rev-fill { transition: none; }
-  .winner-reveal { animation: none; }
+  .rev-row, .rev-fill, .rev-val { transition: none !important; animation: none !important; }
+  .winner-reveal, .rev-caption.pop { animation: none; }
+  .rev-row.doomed, .rev-row.win { animation: none; }
 }
 
 /* ── Suggestion list (nomination phase) ── */
