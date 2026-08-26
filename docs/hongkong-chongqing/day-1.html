@@ -5,42 +5,80 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dec 26 · Welcome to The Pearl of the Orient</title>
 <link rel="stylesheet" href="assets/shell.css?v=1">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── THEME · Day 1 — night harbour, neon on navy, pearl sheen ── */
+  /* ── THEME · Day 1 — "Pearl of the Orient" impasto oil painting:
+       twilight-lavender sky, dark teal peak, jewel-tone city, gold leaf,
+       vermilion junk sails, churning gilded water ── */
   :root {
-    --page-backdrop: #03050b;
-    --bg:        #0a1120;
-    --surface:   #101a2e;
-    --surface-2: #16233c;
-    --ink:       #eef4ff;
-    --ink-dim:   #8ea6c8;
-    --accent:    #5ad1cf;
-    --accent-2:  #ff6fb0;
-    --border:    rgba(120,175,255,0.16);
-    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --page-backdrop: #150e1a;
+    --bg:        #191228;
+    --surface:   #241a35;
+    --surface-2: #2f2343;
+    --ink:       #f6efe0;
+    --ink-dim:   #b7a9cd;
+    --accent:    #e7b23c;   /* gold leaf */
+    --accent-2:  #d1402f;   /* junk-sail vermilion / the red gate */
+    --border:    rgba(231,178,60,0.24);
+    --font-display: 'Playfair Display', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
   }
+
+  /* painterly canvas grain over the whole frame, very faint */
+  .frame::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 0;
+  }
+
   .hero {
     background:
-      radial-gradient(circle at 16% 8%, rgba(90,209,207,0.20), transparent 42%),
-      radial-gradient(circle at 88% 26%, rgba(255,111,176,0.16), transparent 44%),
-      linear-gradient(180deg, #0e1a30 0%, #0a1120 62%, #070d18 100%);
+      radial-gradient(ellipse 66% 42% at 50% 82%, rgba(231,178,60,0.30), transparent 72%),
+      radial-gradient(circle at 18% 60%, rgba(209,64,47,0.20), transparent 46%),
+      radial-gradient(circle at 84% 64%, rgba(64,120,210,0.18), transparent 46%),
+      linear-gradient(180deg,
+        #b9a9db 0%, #7a6aa6 18%, #4a3f6e 36%,
+        #2c2142 60%, #201733 82%, #16202a 100%);
   }
+  /* scattered jewel-tone "window lights" like impasto flecks */
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle, rgba(244,206,110,0.95) 0 1px, transparent 2px),
+      radial-gradient(circle, rgba(210,64,47,0.85) 0 1px, transparent 2px),
+      radial-gradient(circle, rgba(70,130,220,0.75) 0 1px, transparent 2px),
+      radial-gradient(circle, rgba(64,196,180,0.65) 0 1px, transparent 2px);
+    background-size: 92px 120px, 132px 92px, 68px 152px, 158px 108px;
+    background-position: 12px 24px, 44px 70px, 62px 12px, 4px 48px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  /* gilded shimmer line — the gold reflection on the water */
   .hero::after {
     content: '';
     position: absolute;
-    left: -20%; right: -20%; bottom: 22px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(90,209,207,0.6), transparent);
-    filter: blur(0.5px);
+    left: -18%; right: -18%; bottom: 20px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(231,178,60,0.75), rgba(255,238,190,0.6), transparent);
+    filter: blur(0.6px);
   }
+  .hero > * { position: relative; z-index: 1; }
+
   .hero h1 {
-    background: linear-gradient(100deg, #ffffff, #bfe9e8 40%, #ffd9ec 70%, #ffffff);
+    background: linear-gradient(105deg, #ffe6a2, #e7b23c 42%, #f8eec6 64%, #d99a3a 100%);
     -webkit-background-clip: text; background-clip: text;
     color: transparent;
+    text-shadow: 0 2px 34px rgba(231,178,60,0.28);
   }
-  .hero-eyebrow { color: var(--accent-2); }
+  .hero-eyebrow { color: #f0b9ae; }
+
+  details.card[open] > summary { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+  .footer { box-shadow: inset 0 2px 0 rgba(231,178,60,0.18); }
 </style>
 </head>
 <body>
