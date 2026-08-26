@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dec 29 · The Gang Travels 200+ MPH</title>
+<link rel="stylesheet" href="assets/shell.css?v=1">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── THEME · Day 4 — brushed-silver speed up top, Guilin river-mist below ── */
+  :root {
+    --page-backdrop: #0b0e0f;
+    --bg:        #10161a;
+    --surface:   #182029;
+    --surface-2: #1f2a33;
+    --ink:       #eef5f4;
+    --ink-dim:   #96adaf;
+    --accent:    #d3e3df;
+    --accent-2:  #57a98a;
+    --border:    rgba(180,210,210,0.16);
+    --font-display: 'Saira Condensed', 'Arial Narrow', sans-serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+  }
+  .hero {
+    background:
+      repeating-linear-gradient(115deg, rgba(211,227,223,0.09) 0 2px, transparent 2px 22px),
+      linear-gradient(180deg, #1a232a 0%, #141d1f 45%, #12211c 100%);
+  }
+  .hero h1 {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-style: italic;
+    line-height: 0.98;
+  }
+  .hero::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
+    background: linear-gradient(180deg, transparent, rgba(87,169,138,0.18));
+    pointer-events: none;
+  }
+  .block > h2 { text-transform: uppercase; letter-spacing: 0.03em; }
+  details.card.river { border-color: color-mix(in srgb, var(--accent-2) 40%, transparent); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 26 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">26</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">27</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">28</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">29</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-6.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 4 / 6</span>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow">Mon · Dec 29 · HK → Guilin</div>
+    <h1>The Gang Travels 200+ MPH</h1>
+    <p class="hero-sub">Board the bullet train at Hong Kong West Kowloon, clear into mainland China without a visa, and step off three hours later among the limestone spires from the banknotes.</p>
+    <div class="hero-meta">
+      <span>Depart HK ~10:00</span>
+      <span>Arrive Guilin ~13:30</span>
+      <span>Sleep: Guilin</span>
+    </div>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block">
+      <h2>The pivot day</h2>
+      <p class="lead">One night in Guilin turns a 7-hour rail slog into two easy legs and buys a river-town evening.</p>
+
+      <div class="alert">
+        <strong>⏱ West Kowloon, 90 minutes early.</strong> You clear Hong Kong exit <em>and</em> Chinese entry immigration inside the station, and the <strong>240-hour visa-free transit permit</strong> is issued here. Everyone needs their passport and the confirmed onward ticket out of the mainland. Full mechanics in the <a href="full-guide.html#rail">guide → Rail</a>.
+      </div>
+
+      <details class="card" open>
+        <summary>Leg 1 — West Kowloon → Guilin West<span class="card-sub">~3–3.5 hrs · direct · up to ~350 km/h</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">The train<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hong+Kong+West+Kowloon+Station" target="_blank" rel="noopener">Map</a></span>
+            580 km, no changes. Departures around 10:01 / 11:14 / 11:52 — take the ~10:00 for a full Guilin afternoon. Second class ~¥415–450 (~$58–63). 350 km/h is 217 mph, so the day's title checks out. Eat before the gate; on-train food is thin, but every car has boiling water for instant noodles.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Into town</span>
+            Guilin West is ~15 km / 25 min from the centre — grab two DiDis or taxis for the group.
+          </div>
+        </div>
+      </details>
+
+      <details class="card river" open>
+        <summary>Guilin afternoon — the river &amp; the karst<span class="card-sub">Pick one headline, don't cram</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Elephant Trunk Hill<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Elephant+Trunk+Hill+Guilin" target="_blank" rel="noopener">Map</a></span>
+            Guilin's emblem — a rock arch on the Li River shaped exactly like an elephant drinking. Visible for free from the park across the water or Binjiang Road; the paid park gets you closer.
+            <span class="cost">¥55–90 <span class="usd">(~$8–13)</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Reed Flute Cave<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Reed+Flute+Cave+Guilin" target="_blank" rel="noopener">Map</a></span>
+            A 240m illuminated limestone cavern, stalactites lit violet and green over a mirror pool. Kitschy lighting, real rock. ~1 hour. <em>Hours/price unverified for the holiday — check locally.</em>
+            <span class="cost">¥110 <span class="usd">(~$15)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <details class="card river">
+        <summary>The hike<span class="card-sub">Short and worth it — you only have the afternoon</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Xianggong Hill<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Xianggong+Hill+Guilin" target="_blank" rel="noopener">Map</a></span>
+            A 20-minute climb to the postcard Li River bend — best light early morning or late afternoon. It's ~1.5 hrs each way from town by car, so it works only if you skip the cave and have a driver.
+            <span class="cost">¥30 <span class="usd">(~$4) + car</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">In-town alternative</span>
+            Fubo Hill or Diecai Hill — short staircases straight up from the riverfront for a city-and-spires view, no drive needed. The Longji rice terraces are the famous hike but 2+ hrs each way — save them for a trip with more Guilin time.
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Evening — lights on the water<span class="card-sub">Then noodles</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Two Rivers &amp; Four Lakes night cruise<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Two+Rivers+Four+Lakes+Guilin" target="_blank" rel="noopener">Map</a></span>
+            ~1 hour through the lit canal ring around central Guilin — the twin Sun and Moon Pagodas, illuminated bridges, cormorant-fishing demos. The right way to spend a single Guilin evening. Book ahead.
+            <span class="cost">¥165–235 <span class="usd">(~$23–33)</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Guilin rice noodles (mǐfěn)</span>
+            Rice noodles, fried peanuts, pickled long beans, preserved radish, thin beef, in a dark five-spice broth you top up yourself. A couple of dollars a bowl. Late supper after the cruise.
+            <span class="cost">¥12–25 <span class="usd">(~$2–4)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 4 · per person</span><span class="v">~¥650–850 (~$90–120)</span></div>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-3.html"><span class="k">← Prev</span><span class="t">Bankers vs. Dealers</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="day-5.html"><span class="k">Next →</span><span class="t">Silver Snake</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=1"></script>
+</body>
+</html>

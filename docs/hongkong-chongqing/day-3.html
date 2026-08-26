@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dec 28 · The Lucky Bankers vs. The Evil Dealers</title>
+<link rel="stylesheet" href="assets/shell.css?v=1">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── THEME · Day 3 — Casino Royale: black felt, gold, crimson, Deco caps ── */
+  :root {
+    --page-backdrop: #040504;
+    --bg:        #0a0e0a;
+    --surface:   #10160f;
+    --surface-2: #161f0f;
+    --ink:       #f4efe0;
+    --ink-dim:   #b0a993;
+    --accent:    #d8b24a;
+    --accent-2:  #c21f38;
+    --border:    rgba(216,178,74,0.22);
+    --font-display: 'Cinzel', Georgia, serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+  }
+  /* faint playing-card suit pattern across the whole frame */
+  .frame::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23d8b24a' fill-opacity='0.05'%3E%3Cpath d='M30 20c-6 6-12 10-12 17a12 12 0 0024 0c0-7-6-11-12-17z'/%3E%3Cpath d='M90 84a12 12 0 00-24 0c0 7 6 11 12 17 6-6 12-10 12-17z'/%3E%3Ccircle cx='30' cy='88' r='9'/%3E%3Crect x='81' y='15' width='14' height='14' transform='rotate(45 88 22)'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 120px 120px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero {
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(216,178,74,0.16), transparent 55%),
+      radial-gradient(circle at 50% 60%, #16311b 0%, #0c1a0e 45%, #0a0e0a 78%);
+  }
+  .hero h1 { letter-spacing: 0.01em; text-shadow: 0 2px 24px rgba(216,178,74,0.25); }
+  details.card { border-top: 2px solid var(--accent); }
+  .tag { background: var(--accent-2); color: #fff; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 26 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">26</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">27</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">28</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">29</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-6.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 3 / 6</span>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow">Sun · Dec 28 · Macao</div>
+    <h1>The Lucky Bankers vs. The Evil Dealers</h1>
+    <p class="hero-sub">A day trip to Macao — the biggest casino floors on earth, the gold-lit skyline, and the bar-and-restaurant scene once the chips are down. Back in Hong Kong tonight.</p>
+    <div class="hero-meta">
+      <span>Ferry from HK</span>
+      <span>Casinos + night lights</span>
+      <span>Back to HK tonight</span>
+    </div>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block">
+      <h2>House rules</h2>
+      <p class="lead">It's a day trip on purpose — tomorrow's Guilin train leaves from Hong Kong.</p>
+
+      <div class="alert">
+        <strong>🛂 Passports both ways.</strong> Macao is a separate border. Bring them. Book the outbound ferry the night before for a group of nine, and keep an eye on the last sailing back (~22:00–23:00; some routes run 24h). Aim for a return by ~21:00 so nobody's wrecked for the early start.
+      </div>
+
+      <details class="card" open>
+        <summary>Across the water<span class="card-sub">~60–70 min · HKD ~175 each way</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">TurboJET or Cotai Water Jet<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hong+Kong+Macau+Ferry+Terminal+Sheung+Wan" target="_blank" rel="noopener">Map</a></span>
+            TurboJET from Sheung Wan → Macao Outer Harbour, or Cotai Water Jet → Taipa (drops you right by the casinos). First sailings ~07:00, then every 30–60 min.
+            <span class="cost">HKD ~175 <span class="usd">(~$22) each way</span></span>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>The floors<span class="card-sub">Cotai Strip + old-town glamour</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">The Venetian Macao<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=The+Venetian+Macao" target="_blank" rel="noopener">Map</a></span>
+            The largest casino floor on the planet, plus indoor canals with gondolas and a vast food hall — easy warm lunch for nine.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Wynn Palace &amp; The Parisian</span>
+            Wynn Palace: ride the free SkyCab over the Performance Lake fountain show. The Parisian: go up the half-scale Eiffel Tower. Both on the free shuttle loop.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Grand Lisboa (downtown)</span>
+            Old-school Macao glamour — a gold lotus tower over the historic gambling district. Higher minimums and more serious tables than the Cotai megaresorts.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Table etiquette</span>
+            21+, no photos on the floor, smart-casual. Main-floor minimums run higher than Vegas; look for the lower-limit rooms and the slot halls. Set a per-person budget before you sit down.
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>City night lights<span class="card-sub">Between the tables</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Senado Square &amp; Ruins of St. Paul's<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Ruins+of+St.+Paul%27s+Macau" target="_blank" rel="noopener">Map</a></span>
+            The UNESCO old centre — Portuguese wave-cobbles and pastel facades — lit and quieter after dark. The stone church facade at the top of the staircase is the city's signature shot.
+            <span class="cost free">Free</span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Macau Tower<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Macau+Tower" target="_blank" rel="noopener">Map</a></span>
+            338m observation deck with a glass floor; the world's highest commercial bungee if anyone's serious. Good at night.
+            <span class="cost">MOP 165 <span class="usd">(~$20)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Bars &amp; restaurants<span class="card-sub">Where to eat and drink</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Taipa Village<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Taipa+Village+Macau" target="_blank" rel="noopener">Map</a></span>
+            Narrow lanes of Macanese and Portuguese places — African chicken, minchi, bacalhau, pork chop bun, and Lord Stow's egg tarts. The best food stop of the day.
+            <span class="cost">MOP 150–300 pp <span class="usd">(~$19–37)</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Drinks after</span>
+            The Cotai resort bars are the easy option; for something with more character, the lanes around Rua da Felicidade and the old Inner Harbour. HKD is accepted everywhere in Macao at par — no need to change money for a day trip.
+          </div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 3 · per person</span><span class="v">~HKD 550–900 (~$70–115)</span></div>
+      <p class="lead" style="border:0;margin-top:8px;padding:0">Gambling budget is your own — and NYE-week crowds on the floors are real.</p>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-2.html"><span class="k">← Prev</span><span class="t">Park Hoppers</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="day-4.html"><span class="k">Next →</span><span class="t">200+ MPH</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=1"></script>
+</body>
+</html>
