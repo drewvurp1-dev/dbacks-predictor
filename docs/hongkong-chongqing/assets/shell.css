@@ -60,7 +60,9 @@ a { color: var(--accent); text-decoration: none; }
     min-height: calc(100dvh - 44px);
     border-radius: 24px;
     box-shadow: 0 24px 70px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
-    overflow: hidden;   /* rounded corners clip content; sticky lives outside */
+    /* `clip` (not `hidden`) rounds the corners WITHOUT making .frame a scroll
+       container — otherwise the sticky app bar / day nav have nothing to stick to */
+    overflow: clip;
   }
 }
 
@@ -468,7 +470,111 @@ table.tbl tr.rec td { background: color-mix(in srgb, var(--accent) 14%, transpar
   border-top: 1px solid var(--border);
 }
 
+/* ── SCROLLYTELLING ────────────────────────────────────────────────── */
+
+/* content eases in as it enters the viewport (shell.js adds .in) */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.7,0.2,1);
+  will-change: opacity, transform;
+}
+.reveal.in { opacity: 1; transform: none; }
+
+/* full-viewport cover hero: just the painting + one line, everything else
+   is below the fold. Set the background image in the page's theme block. */
+.hero--full {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 40px 22px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.hero--full::after {   /* legibility wash — keep it light, the painting is the point */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8,5,12,0.12), rgba(8,5,12,0.34));
+  pointer-events: none;
+}
+.hero-plate {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 24px 32px;
+  border: 1px solid var(--plate-border, rgba(255,255,255,0.55));
+  outline: 1px solid var(--plate-border, rgba(255,255,255,0.4));
+  outline-offset: 5px;
+  background: var(--plate-bg, rgba(18,12,22,0.30));
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  opacity: calc(1 - var(--hero-scroll, 0) * 1.4);
+  transform: translateY(calc(var(--hero-scroll, 0) * -14px));
+}
+.hero-script {
+  font-family: var(--font-script, 'Great Vibes', cursive);
+  font-weight: 400;
+  color: var(--script-ink, #f7e6df);
+  font-size: clamp(2.4rem, 11.5vw, 4.4rem);
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 22px rgba(0,0,0,0.35);
+}
+.scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--script-ink, var(--ink));
+  opacity: calc(0.85 - var(--hero-scroll, 0) * 1.6);
+}
+.scroll-cue::after {
+  content: '';
+  width: 1px;
+  height: 34px;
+  background: linear-gradient(var(--script-ink, var(--ink)), transparent);
+  animation: cuePulse 2.4s ease-in-out infinite;
+}
+@keyframes cuePulse {
+  0%, 100% { opacity: 0.2; transform: scaleY(0.55); transform-origin: top; }
+  50%      { opacity: 0.9; transform: scaleY(1);    transform-origin: top; }
+}
+
+/* on a cover-hero page the app bar melts away until you scroll past the hero */
+body.at-hero .appbar {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+body.at-hero .appbar-title,
+body.at-hero .appbar-chip {
+  opacity: 0;
+  pointer-events: none;
+}
+.appbar-title, .appbar-chip { transition: opacity 0.35s ease; }
+.appbar { transition: background 0.35s ease, border-color 0.35s ease; }
+
+/* the bottom day-nav also slides away while the painting owns the screen */
+.hero--full ~ .daynav { transition: transform 0.4s cubic-bezier(0.2,0.7,0.2,1); }
+body.at-hero .daynav { transform: translateY(100%); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; }
+  .hero-plate { opacity: 1; transform: none; }
 }
