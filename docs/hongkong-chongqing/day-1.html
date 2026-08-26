@@ -4,12 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dec 26 · Welcome to The Pearl of the Orient</title>
-<link rel="stylesheet" href="assets/shell.css?v=1">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/shell.css?v=2">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── THEME · Day 1 — "Pearl of the Orient" impasto oil painting:
-       twilight-lavender sky, dark teal peak, jewel-tone city, gold leaf,
-       vermilion junk sails, churning gilded water ── */
+  /* ── THEME · Day 1 — "Pearl of the Orient" impasto oil painting ──
+     Cover-hero: the painting fills the screen, one cursive line over it,
+     everything else is below the fold. Palette below the hero keeps the
+     painting's gold / vermilion / deep-plum. */
   :root {
     --page-backdrop: #150e1a;
     --bg:        #191228;
@@ -22,60 +23,29 @@
     --border:    rgba(231,178,60,0.24);
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
+
+    /* cover-hero title */
+    --font-script:   'Great Vibes', 'Segoe Script', cursive;
+    --script-ink:    #f8e7e0;                    /* light cream-pink */
+    --plate-bg:      rgba(17,10,20,0.42);        /* opaque enough to read over the painting; lower if it feels heavy */
+    --plate-border:  rgba(248,231,224,0.62);     /* cream-pink hairline frame */
   }
 
-  /* painterly canvas grain over the whole frame, very faint */
-  .frame::before {
-    content: '';
-    position: absolute; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    opacity: 0.05;
-    mix-blend-mode: overlay;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .hero {
-    background:
-      radial-gradient(ellipse 66% 42% at 50% 82%, rgba(231,178,60,0.30), transparent 72%),
-      radial-gradient(circle at 18% 60%, rgba(209,64,47,0.20), transparent 46%),
-      radial-gradient(circle at 84% 64%, rgba(64,120,210,0.18), transparent 46%),
-      linear-gradient(180deg,
-        #b9a9db 0%, #7a6aa6 18%, #4a3f6e 36%,
-        #2c2142 60%, #201733 82%, #16202a 100%);
-  }
-  /* scattered jewel-tone "window lights" like impasto flecks */
-  .hero::before {
-    content: '';
-    position: absolute; inset: 0;
+  .hero--full {
+    /* the painting sits on top; the impasto-toned gradient is the fallback
+       until assets/day-1-hero.jpg is added */
     background-image:
-      radial-gradient(circle, rgba(244,206,110,0.95) 0 1px, transparent 2px),
-      radial-gradient(circle, rgba(210,64,47,0.85) 0 1px, transparent 2px),
-      radial-gradient(circle, rgba(70,130,220,0.75) 0 1px, transparent 2px),
-      radial-gradient(circle, rgba(64,196,180,0.65) 0 1px, transparent 2px);
-    background-size: 92px 120px, 132px 92px, 68px 152px, 158px 108px;
-    background-position: 12px 24px, 44px 70px, 62px 12px, 4px 48px;
-    opacity: 0.5;
-    pointer-events: none;
+      url("assets/day-1-hero.jpg"),
+      radial-gradient(ellipse 66% 42% at 50% 82%, rgba(231,178,60,0.30), transparent 72%),
+      radial-gradient(circle at 18% 60%, rgba(209,64,47,0.22), transparent 46%),
+      radial-gradient(circle at 84% 64%, rgba(64,120,210,0.20), transparent 46%),
+      linear-gradient(180deg, #b9a9db 0%, #7a6aa6 18%, #4a3f6e 36%, #2c2142 60%, #201733 82%, #16202a 100%);
+    background-size: cover, cover, cover, cover, cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
-  /* gilded shimmer line — the gold reflection on the water */
-  .hero::after {
-    content: '';
-    position: absolute;
-    left: -18%; right: -18%; bottom: 20px;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(231,178,60,0.75), rgba(255,238,190,0.6), transparent);
-    filter: blur(0.6px);
-  }
-  .hero > * { position: relative; z-index: 1; }
 
-  .hero h1 {
-    background: linear-gradient(105deg, #ffe6a2, #e7b23c 42%, #f8eec6 64%, #d99a3a 100%);
-    -webkit-background-clip: text; background-clip: text;
-    color: transparent;
-    text-shadow: 0 2px 34px rgba(231,178,60,0.28);
-  }
-  .hero-eyebrow { color: #f0b9ae; }
+  .hero-script { text-shadow: 0 2px 26px rgba(0,0,0,0.45), 0 0 2px rgba(0,0,0,0.35); }
 
   details.card[open] > summary { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
   .footer { box-shadow: inset 0 2px 0 rgba(231,178,60,0.18); }
@@ -111,20 +81,26 @@
     <span class="appbar-chip">Day 1 / 6</span>
   </header>
 
-  <section class="hero">
-    <div class="hero-eyebrow">Fri · Dec 26 · Hong Kong</div>
-    <h1>Welcome to The Pearl of the Orient</h1>
-    <p class="hero-sub">Everyone lands. A settle-in day built around Victoria Harbour — don't fight the jet lag, lean into the evening.</p>
-    <div class="hero-meta">
-      <span>Everyone converges</span>
-      <span>Standby arrivals</span>
-      <span>Sleep: Hong Kong</span>
+  <section class="hero hero--full">
+    <div class="hero-plate">
+      <p class="hero-script">Welcome to<br>The Pearl of the Orient</p>
     </div>
+    <span class="scroll-cue">Scroll</span>
   </section>
 
   <main class="wrap">
 
-    <div class="block">
+    <div class="block reveal">
+      <div class="hero-eyebrow">Fri · Dec 26 · Hong Kong</div>
+      <p class="lead" style="border:0;padding:0;margin:0">Everyone lands. A settle-in day built around Victoria Harbour — don't fight the jet lag, lean into the evening.</p>
+      <div class="hero-meta" style="margin-top:14px">
+        <span>Everyone converges</span>
+        <span>Standby arrivals</span>
+        <span>Sleep: Hong Kong</span>
+      </div>
+    </div>
+
+    <div class="block reveal">
       <h2>The shape of the day</h2>
       <p class="lead">Nothing is time-critical. The Peak and the ferry are both better at dusk anyway, so a late start is fine.</p>
 
@@ -183,6 +159,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=1"></script>
+<script src="assets/shell.js?v=2"></script>
 </body>
 </html>
