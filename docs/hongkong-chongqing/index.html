@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hong Kong · Macao · Guilin · Chongqing — Dec 27 – Jan 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TRIP CONFIG — currency converter reads this.
+     Six of the nine days are on the mainland, so the converter is CNY.
+     Hong Kong (HKD ~7.8) and Macao (MOP ≈ HKD) are called out separately
+     in Tips → Money. Rates drift — recheck before you fly.
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+  window.TRIP = { currency: 'CNY', perUSD: 7.15 };
+</script>
+
+<style>
+
+  :root {
+    --wine:    #8B2635;
+    --wine-lt: #B03048;
+    --dark:    #1C2330;
+    --gold:    #C4973A;
+    --cream:   #F7F3EE;
+    --cream-dk:#EDE7DC;
+    --sage:    #4E6B51;
+    --muted:   #6B7280;
+    --white:   #FFFFFF;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--dark);
+    color: var(--white);
+    padding: 40px 24px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: var(--wine);
+    opacity: 0.18;
+  }
+  .hero-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .hero-sub {
+    font-size: 14px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 24px;
+  }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gold);
+    display: block;
+  }
+  .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.55);
+    margin-top: 2px;
+  }
+
+  /* ── TABS ── */
+  .tab-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--dark);
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 13px 16px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    color: var(--white);
+    border-bottom-color: var(--wine);
+  }
+
+  /* ── SECTIONS ── */
+  .section { display: none; padding: 24px 20px 48px; }
+  .section.active { display: block; }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 4px;
+  }
+  .section-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--cream-dk);
+  }
+
+  /* ── ROUTING ── */
+  .route-card {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--wine);
+  }
+  .route-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--wine);
+    margin-bottom: 4px;
+  }
+  .route-path {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .route-detail { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+  .alert {
+    background: #FEF3CD;
+    border: 1px solid #F3D96B;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .alert strong { color: #92600A; }
+  .alert-sage {
+    background: #EEF4EE;
+    border-color: #A8C4AA;
+  }
+  .alert-sage strong { color: var(--sage); }
+
+  /* ── ITINERARY ── */
+  .day {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 0;
+    position: relative;
+  }
+  .day-spine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .day-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--wine);
+    color: var(--white);
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .day-num.gold { background: var(--gold); }
+  .day-num.sage { background: var(--sage); }
+  .day-line {
+    width: 1px;
+    flex: 1;
+    background: var(--cream-dk);
+    margin: 4px 0;
+    min-height: 20px;
+  }
+  .day-content {
+    flex: 1;
+    padding-bottom: 24px;
+  }
+  .day-date {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .day-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .day-desc { font-size: 13.5px; color: #374151; line-height: 1.6; margin-bottom: 8px; }
+  .day-stops {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .stop {
+    background: var(--cream);
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #374151;
+  }
+  .stop-name {
+    font-weight: 600;
+    color: var(--dark);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-bottom: 8px;
+  }
+  .tag-ski { background: #DBEAFE; color: #1E40AF; }
+  .tag-culture { background: #FCE7F3; color: #9D174D; }
+  .tag-food { background: #D1FAE5; color: #065F46; }
+  .tag-event { background: #FDE8D0; color: #92330A; }
+  .tag-night { background: #1C2330; color: #C4973A; }
+  .tag-free { background: #E8F0E8; color: #3D5540; }
+  .tag-rail { background: #E0E7FF; color: #3730A3; }
+
+  /* ── MAP LINKS + COSTS ── */
+  .map-pin {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--wine-lt);
+    border: 1px solid rgba(176,48,72,0.28);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .map-pin:hover { background: rgba(176,48,72,0.08); border-color: var(--wine-lt); }
+  .stop-cost {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--white);
+    border: 1px solid var(--cream-dk);
+    border-radius: 5px;
+    padding: 3px 8px;
+    color: var(--wine);
+  }
+  .stop-cost.free { color: var(--sage); border-color: #C3D6C5; }
+  .stop-cost .usd { color: var(--muted); font-weight: 500; }
+  .day-total {
+    margin-top: 10px;
+    background: var(--dark);
+    color: var(--white);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .day-total-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+  }
+  .day-total-val { font-weight: 700; color: var(--gold); white-space: nowrap; }
+
+
+  /* ── INSTAGRAM REEL LINKS ── */
+  .ig-link {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 8px 6px 0 0;
+    padding: 7px 11px 7px 8px;
+    border-radius: 8px;
+    background: var(--white);
+    border: 1px solid var(--cream-dk);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #374151;
+    line-height: 1.4;
+    text-decoration: none;
+    max-width: 100%;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .ig-link:hover { border-color: #C13584; background: #FDF6FA; }
+  .ig-icon {
+    flex-shrink: 0;
+    width: 19px;
+    height: 19px;
+    margin-top: 1px;
+    border-radius: 5px;
+    background: linear-gradient(45deg, #F9CE34, #EE2A7B, #6228D7);
+    color: #fff;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ig-label strong { color: var(--dark); font-weight: 600; }
+  .stop .ig-link, .tip-body .ig-link, .alt-body .ig-link { color: #374151; }
+
+
+  /* ── PRE-TRIP BRIEF (collapsed) ── */
+  .prebrief {
+    background: var(--white);
+    border: 1px solid var(--cream-dk);
+    border-radius: 9px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .prebrief > summary {
+    list-style: none;
+    cursor: pointer;
+    position: relative;
+    padding: 12px 38px 12px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--dark);
+    transition: background 0.15s;
+  }
+  .prebrief > summary::-webkit-details-marker { display: none; }
+  .prebrief > summary::marker { content: ''; }
+  .prebrief > summary:hover { background: var(--cream); }
+  .prebrief > summary:focus-visible { outline: 2px solid var(--wine); outline-offset: -2px; }
+  .prebrief[open] > summary { background: var(--cream); border-bottom: 1px solid var(--cream-dk); }
+  .prebrief-note { font-weight: 400; color: var(--muted); }
+  .prebrief-chevron {
+    position: absolute;
+    top: 13px;
+    right: 14px;
+    font-size: 11px;
+    color: var(--wine);
+    transition: transform 0.2s;
+    pointer-events: none;
+  }
+  .prebrief[open] .prebrief-chevron { transform: rotate(180deg); }
+  .prebrief-body { padding: 14px 14px 2px; }
+  .prebrief-body .alert:last-child { margin-bottom: 12px; }
+
+  /* ── DAY ACCORDION ── */
+  .itin-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+  }
+  .itin-toggle-all {
+    background: var(--white);
+    border: 1px solid var(--cream-dk);
+    border-radius: 6px;
+    color: var(--wine);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .itin-toggle-all:hover { background: var(--cream); border-color: var(--wine); }
+
+  .day-card {
+    background: var(--white);
+    border: 1px solid var(--cream-dk);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .day-card > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 40px 14px 16px;
+    position: relative;
+    transition: background 0.15s;
+  }
+  .day-card > summary::-webkit-details-marker { display: none; }
+  .day-card > summary::marker { content: ''; }
+  .day-card > summary:hover { background: var(--cream); }
+  .day-card > summary:focus-visible { outline: 2px solid var(--wine); outline-offset: -2px; }
+  .day-card[open] > summary {
+    background: var(--cream);
+    border-bottom: 1px solid var(--cream-dk);
+  }
+  .day-chevron {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 12px;
+    color: var(--wine);
+    transition: transform 0.2s;
+    pointer-events: none;
+  }
+  .day-card[open] .day-chevron { transform: rotate(180deg); }
+
+  .day-preview {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .preview-row {
+    display: flex;
+    gap: 9px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #374151;
+  }
+  .preview-slot {
+    flex-shrink: 0;
+    width: 68px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--gold);
+    padding-top: 2px;
+  }
+  .day-card[open] .day-preview { display: none; }
+  .day-body { padding: 14px 16px 16px; }
+
+  /* ── ALTERNATIVES ── */
+  .alt-card {
+    background: var(--white);
+    border-radius: 9px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--sage);
+  }
+  .alt-card.wine { border-left-color: var(--wine); }
+  .alt-card.gold { border-left-color: var(--gold); }
+  .alt-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--dark);
+  }
+  .alt-meta {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .alt-body { font-size: 12.5px; color: #374151; line-height: 1.55; }
+
+  /* ── TRANSPORT GRID ── */
+  .transport-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .t-card {
+    background: var(--white);
+    border-radius: 9px;
+    padding: 14px 12px;
+    border-top: 3px solid var(--wine);
+  }
+  .t-card.sage { border-top-color: var(--sage); }
+  .t-card.gold { border-top-color: var(--gold); }
+  .t-card.dark { border-top-color: var(--dark); }
+  .t-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--dark);
+  }
+  .t-card-body { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  /* ── FARE TABLE ── */
+  .fare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    background: var(--white);
+    border-radius: 9px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .fare-table th {
+    background: var(--dark);
+    color: var(--white);
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .fare-table td { padding: 9px 12px; border-bottom: 1px solid var(--cream); }
+  .fare-table tr:last-child td { border-bottom: none; }
+  .fare-table tr:nth-child(odd) td { background: var(--cream); }
+
+  /* ── FLIGHT TIMETABLES ── */
+  .table-scroll { overflow-x: auto; margin-bottom: 12px; }
+  .table-scroll .fare-table { margin-bottom: 0; min-width: 340px; }
+  .fare-table td.t-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .fare-table td.t-flight {
+    font-weight: 700;
+    color: var(--wine);
+    white-space: nowrap;
+  }
+  .fare-table tr.rec td,
+  .fare-table tr.rec:nth-child(odd) td {
+    background: #FFF6E0;
+  }
+  .fare-table tr.rec td:first-child {
+    box-shadow: inset 3px 0 0 var(--gold);
+  }
+  .plus-day {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--wine-lt);
+    vertical-align: super;
+  }
+  .tt-caption {
+    font-size: 11px;
+    color: var(--muted);
+    margin: -4px 0 16px;
+    line-height: 1.5;
+  }
+  .tt-caption strong { color: var(--dark); }
+
+  /* ── RESORT / OPTION CARD (reused for rail legs) ── */
+  .resort-card {
+    background: var(--white);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .resort-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--cream-dk);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .resort-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .resort-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 4px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+  .badge-rec { background: var(--wine); color: var(--white); }
+  .badge-adv { background: var(--dark); color: var(--white); }
+  .badge-fam { background: var(--sage); color: var(--white); }
+  .resort-body { padding: 14px 16px; font-size: 13px; color: #374151; line-height: 1.6; }
+  .resort-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--cream-dk);
+  }
+  .r-stat {
+    padding: 10px 12px;
+    text-align: center;
+    border-right: 1px solid var(--cream-dk);
+  }
+  .r-stat:last-child { border-right: none; }
+  .r-stat-val { font-weight: 700; font-size: 14px; color: var(--wine); display: block; }
+  .r-stat-key { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ── TIPS ── */
+  .tip-list { display: flex; flex-direction: column; gap: 10px; }
+  .tip {
+    background: var(--white);
+    border-radius: 9px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .tip-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .tip-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .tip-body { font-size: 12.5px; color: #374151; line-height: 1.55; }
+
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 20px 0 10px;
+    padding-top: 4px;
+    border-top: 1px solid var(--cream-dk);
+  }
+  h3:first-of-type { border-top: none; margin-top: 0; }
+
+  .footer {
+    text-align: center;
+    padding: 24px 20px;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--cream-dk);
+  }
+
+  a { color: var(--wine); text-decoration: none; border-bottom: 1px solid rgba(139,38,53,0.3); }
+  a:hover { border-bottom-color: var(--wine); }
+  .stop a, .tip-body a { color: var(--wine-lt); }
+
+  .budget-group { margin-bottom: 28px; }
+  .budget-group-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--wine);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .budget-group-total { font-size: 12px; color: var(--wine); font-family: 'Inter', sans-serif; font-weight: 600; }
+  .budget-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 4px; }
+  .budget-table td { padding: 7px 10px; border-bottom: 1px solid var(--cream-dk); }
+  .budget-table tr:last-child td { border-bottom: none; }
+  .budget-table .item { color: var(--dark); }
+  .budget-table .note { font-size: 11px; color: var(--muted); display: block; margin-top: 1px; }
+  .budget-table .cost { text-align: right; font-weight: 600; white-space: nowrap; color: var(--dark); }
+  .budget-table tr:nth-child(odd) td { background: var(--cream); }
+  .budget-summary {
+    background: var(--dark);
+    color: var(--white);
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+  .budget-summary-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .budget-summary-row:last-child { border-bottom: none; font-weight: 700; font-size: 15px; margin-top: 6px; padding-top: 8px; color: var(--gold); }
+
+  .converter-card {
+    background: var(--dark);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .converter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .converter-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .converter-flip {
+    background: var(--gold);
+    color: var(--dark);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+  .converter-flip:active { transform: rotate(180deg); }
+  .converter-body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .converter-field {
+    flex: 1;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .converter-field label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .converter-field input {
+    width: 100%;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--white);
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    -moz-appearance: textfield;
+  }
+  .converter-field input::-webkit-outer-spin-button,
+  .converter-field input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .converter-field input::placeholder { color: rgba(255,255,255,0.3); }
+  .converter-arrow { color: rgba(255,255,255,0.4); font-size: 14px; flex-shrink: 0; }
+  .converter-rate {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 10px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Trip Planning Doc · PHX / ORD → HKG</div>
+  <h1>Hong Kong · Macao<br>Guilin · Chongqing</h1>
+  <div class="hero-sub">Sat Dec 27, 2026 – Sun Jan 4, 2027 · 9 days / 8 nights</div>
+  <div class="hero-stats">
+    <div class="stat"><span class="stat-val">HKG</span><span class="stat-label">Arrival</span></div>
+    <div class="stat"><span class="stat-val">9</span><span class="stat-label">Travellers</span></div>
+    <div class="stat"><span class="stat-val">~$95</span><span class="stat-label">Est./day pp</span></div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('itinerary', this)">Itinerary</button>
+  <button class="tab-btn" onclick="showTab('routing', this)">Getting There</button>
+  <button class="tab-btn" onclick="showTab('transport', this)">Getting Around</button>
+  <button class="tab-btn" onclick="showTab('rail', this)">The Rail Journey</button>
+  <button class="tab-btn" onclick="showTab('alternatives', this)">Alternatives</button>
+  <button class="tab-btn" onclick="showTab('tips', this)">Tips &amp; Practical</button>
+  <button class="tab-btn" onclick="showTab('budget', this)">Budget</button>
+</div>
+
+
+<!-- ══════════════════ ITINERARY ══════════════════ -->
+<div id="itinerary" class="section active">
+  <div class="section-title">Day-by-Day Itinerary</div>
+  <div class="section-desc">Two nights on the coast, one on the train through Guilin, five for New Year in Chongqing. <strong>Tap any day to expand it</strong>; tap 📍 on a stop to open it in Maps.</div>
+
+  <details class="prebrief">
+    <summary><span class="prebrief-chevron">▼</span>📋 Before you go — <span class="prebrief-note">China entry (the big one), why the trip is shaped this way, group logistics</span></summary>
+    <div class="prebrief-body">
+      <div class="alert">
+        <strong>⚠️ Mainland China entry — read this now, not in December.</strong> Hong Kong and Macao are visa-free for US passports (90 / 30 days). The mainland is not. This trip enters mainland China on the <strong>240-hour visa-free transit</strong> scheme: you board the bullet train at Hong Kong West Kowloon (an approved transit port since Nov 2025), clear Chinese immigration inside the station, and stay up to 10 days across Guangxi and Chongqing — both eligible regions. It works, but it has hard conditions and no margin for error with a group of nine. <strong>Tips → Entry Requirements</strong> has the full checklist and the zero-risk alternative (a regular 10-year tourist visa). Decide which route you're taking by <strong>early October</strong> — a visa takes weeks to arrange for nine people.
+      </div>
+      <div class="alert alert-sage">
+        <strong>Why the trip is shaped this way:</strong> The coast days are front-loaded because the group converges in Hong Kong from two cities (seven from PHX, two from ORD) and everyone needs a day on the ground before a 6am start. Macao is a day trip, not a base — the only fast train inland leaves from Hong Kong, so you come back to Hong Kong to catch it. Guilin is a single night on purpose: it breaks a 7-hour rail day into two 4-hour ones and buys a river-town evening, without committing a day the group would rather spend in Chongqing. Chongqing gets five nights because it's the actual destination — New Year's Eve, the day trips, and enough slack to lose a morning without the plan falling over.
+      </div>
+      <div class="alert alert-sage">
+        <strong>Group logistics:</strong> Nine people. Book train seats the moment the window opens (see The Rail Journey) — holiday-week second class sells out and a group split across two carriages is a headache with luggage. Restaurants for nine need calling ahead, especially in Hong Kong and on NYE. Assume two taxis / DiDis per hop, not one.
+      </div>
+    </div>
+  </details>
+
+  <div class="itin-controls">
+    <button class="itin-toggle-all" id="toggleAllBtn" onclick="toggleAllDays(this)">Expand all</button>
+  </div>
+
+  <!-- DAY 1 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">1</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Sat · Dec 27</div>
+          <div class="day-title">Hong Kong — everyone lands</div>
+          <span class="tag tag-culture">City</span> <span class="tag tag-night">Night</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>Arrivals from PHX and ORD, Airport Express to town, drop bags, dim sum.</span></div>
+            <div class="preview-row"><span class="preview-slot">Afternoon</span><span>Victoria Peak by tram, then the Star Ferry across the harbour at dusk.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>8pm Symphony of Lights from the TST promenade, dinner at Temple Street.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">A settle-in day built around the harbour rather than a checklist. Most trans-Pacific flights land Hong Kong in the afternoon, so treat the morning as buffer for the group to actually all be here, and don't fight the jet lag — the Peak and the ferry are both better at dusk anyway.</div>
+
+          <div class="alert alert-sage" style="margin-bottom:12px">
+            <strong>⏱ Meeting point:</strong> Pick one — the hotel lobby at a set time, or arrivals hall Terminal 1. The two ORD travellers may land on a different flight; agree who waits for whom before anyone takes off.
+          </div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Airport Express → Kowloon / Hong Kong station<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hong+Kong+Airport+Express" target="_blank">📍 Map</a></span>
+              24 minutes to Kowloon, HKD ~105 one way, trains every 10 min. Free porter and in-town check-in at the station. For nine people with luggage this beats taxis; a red taxi to TST is roughly HKD 270–350 if you'd rather.
+              <span class="stop-cost">HKD 105 <span class="usd">(~$13)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Dim sum lunch<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=dim+sum+Tsim+Sha+Tsui" target="_blank">📍 Map</a></span>
+              First meal on the ground. Tim Ho Wan (Michelin, cheap, several branches), Lin Heung Kui (old-school trolley service on HK Island), or Din Tai Fung if the group wants a safe bet. Book ahead for nine.
+              <span class="stop-cost">HKD 100–180 pp <span class="usd">(~$13–23)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Victoria Peak<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Victoria+Peak+Hong+Kong" target="_blank">📍 Map</a></span>
+              The view. Take the restored Peak Tram up (buy timed tickets online to skip the queue) or a taxi if the line is brutal. Walk the flat 3.5km Peak Circle Walk for the quieter panoramas away from the Sky Terrace crush. Go late afternoon so you catch daylight, sunset and the lights coming on.
+              <span class="stop-cost">HKD 88–148 <span class="usd">(~$11–19)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Star Ferry — Central to Tsim Sha Tsui<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Star+Ferry+Pier+Central" target="_blank">📍 Map</a></span>
+              The best HKD 5 in Asia. Ten minutes across Victoria Harbour on a 100-year-old green-and-white ferry, skyline on both sides. Sit on the open lower deck.
+              <span class="stop-cost">HKD 5 <span class="usd">(~$0.65)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Symphony of Lights + TST promenade<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Tsim+Sha+Tsui+Promenade" target="_blank">📍 Map</a></span>
+              Nightly 8:00pm laser-and-light show across the harbour towers, ~10 min, best viewed from the Avenue of Stars / promenade on the Kowloon side. Free. Wander the promenade afterward for the long-exposure skyline shot.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Temple Street Night Market<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Temple+Street+Night+Market" target="_blank">📍 Map</a></span>
+              Yau Ma Tei. Stalls, fortune tellers, and open-air <em>dai pai dong</em> seafood joints — clay-pot rice, typhoon-shelter crab, cheap beer. Rowdy, touristy, fun. A relaxed first-night dinner that doesn't need a reservation.
+              <span class="stop-cost">HKD 150–250 pp <span class="usd">(~$19–32)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 1 · per person</span><span class="day-total-val">~HKD 450–750 (~$60–95)</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 2 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num sage">2</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Sun · Dec 28</div>
+          <div class="day-title">Macao — Portugal, then the Cotai Strip</div>
+          <span class="tag tag-culture">Culture</span> <span class="tag tag-food">Food</span> <span class="tag tag-night">Night</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>Early ferry from Hong Kong; walk the Historic Centre — Senado Square to the Ruins of St. Paul's.</span></div>
+            <div class="preview-row"><span class="preview-slot">Afternoon</span><span>Taipa Village for egg tarts and Macanese lunch; A-Ma Temple or Mount Fortress.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>Cotai — the Venetian and Parisian, the light shows, back to Hong Kong on a late ferry.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">Macao does 450 years of Portuguese colonial history and the biggest casino floors on earth within a few miles of each other. One full day covers the old town on foot and an evening on the Cotai Strip. It's a day trip — you sleep in Hong Kong tonight because tomorrow's train leaves from there.</div>
+
+          <div class="alert" style="margin-bottom:12px">
+            <strong>⏱ If your booking actually has a Macao hotel night:</strong> the itinerary you gave me lists the 28th "in Macao." If that's an overnight, you still need to be back at <strong>Hong Kong West Kowloon</strong> by mid-morning on the 29th for the Guilin train — a first ferry (~07:00–07:30) plus the ride to West Kowloon is roughly 2 hours door to door. Tight but doable. Confirm which it is and adjust; this card assumes a same-day return.
+          </div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Ferry: Hong Kong → Macao<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hong+Kong+Macau+Ferry+Terminal+Sheung+Wan" target="_blank">📍 Map</a></span>
+              TurboJET from Sheung Wan (Hong Kong–Macau Ferry Terminal, → Macao Outer Harbour) or Cotai Water Jet (→ Taipa, handy for the casinos). ~60–70 min, first sailings around 07:00–07:30 then roughly every 30–60 min. Bring passports — it's an international border both ways. Book the outbound the night before for a group of nine.
+              <span class="stop-cost">HKD ~175 <span class="usd">(~$22) each way</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Senado Square &amp; the Historic Centre<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Senado+Square+Macau" target="_blank">📍 Map</a></span>
+              UNESCO-listed. Portuguese wave-pattern cobbles, pastel colonial facades, the Leal Senado building and St. Dominic's Church. Start here and follow the crowd uphill to St. Paul's.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Ruins of St. Paul's + Mount Fortress<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Ruins+of+St.+Paul%27s+Macau" target="_blank">📍 Map</a></span>
+              The stone facade of a 17th-century Jesuit church — all that survived an 1835 fire — standing at the top of a grand staircase. Macao's signature image. Walk up to the adjacent Mount Fortress for cannons and a city view; the Macao Museum is built into it.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Taipa Village<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Taipa+Village+Macau" target="_blank">📍 Map</a></span>
+              Lunch. Narrow lanes of Macanese and Portuguese restaurants — order African chicken, minchi, bacalhau, a pork chop bun, and Lord Stow's or Margaret's Café e Nata for the original Portuguese egg tarts. This is the food stop of the day.
+              <span class="stop-cost">MOP 150–300 pp <span class="usd">(~$19–37)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">A-Ma Temple<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=A-Ma+Temple+Macau" target="_blank">📍 Map</a></span>
+              The oldest temple in Macao (1488) and the source of the name "Macao" itself. Incense-hazed halls climbing a hillside near the Inner Harbour. Skip if the group's flagging — it's a 15-min taxi from the old centre.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Cotai Strip — Venetian, Parisian, Londoner<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=The+Venetian+Macao" target="_blank">📍 Map</a></span>
+              The evening. Free casino shuttle buses connect every resort and both ferry terminals. Ride the Venetian's indoor gondolas, go up the half-scale Eiffel Tower at the Parisian, catch the Wynn's free "Performance Lake" fountain show. Vast, air-conditioned, surreal — and an easy warm dinner for nine at any of the food halls.
+              <span class="stop-cost">Entry free · rides MOP 100–160</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Macau Tower <span style="color:var(--muted)">(optional)</span><a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Macau+Tower" target="_blank">📍 Map</a></span>
+              338m observation deck with a glass floor, and the world's highest commercial bungee if anyone's serious. Good at night. Only if you have the hour.
+              <span class="stop-cost">MOP 165 <span class="usd">(~$20)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Late ferry back to Hong Kong</span>
+              Sailings run until ~22:00–23:00 (some 24h from the Outer Harbour). Aim for one no later than 21:00 so nobody's wrecked for the 6am start. Passports again.
+              <span class="stop-cost">HKD ~175 <span class="usd">(~$22)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 2 · per person</span><span class="day-total-val">~HKD 550–850 (~$70–110)</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 3 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num gold">3</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Mon · Dec 29</div>
+          <div class="day-title">Bullet train to Guilin — into the karst</div>
+          <span class="tag tag-rail">Rail</span> <span class="tag tag-culture">Scenery</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>West Kowloon Station: mainland immigration + 240-hour transit processing, then the ~10:00 G-train.</span></div>
+            <div class="preview-row"><span class="preview-slot">Afternoon</span><span>Arrive Guilin ~13:30–14:00; Reed Flute Cave or Elephant Trunk Hill.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>Two Rivers Four Lakes night cruise, then Guilin rice noodles. Overnight Guilin.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">The pivot day. You leave Hong Kong on a high-speed train, clear into mainland China without a visa inside West Kowloon Station, and step off three hours later among the limestone spires that put Guilin on every Chinese banknote. One night here turns a brutal rail day into a gentle one.</div>
+
+          <div class="alert" style="margin-bottom:12px">
+            <strong>⏱ Get to West Kowloon 90 minutes early.</strong> You clear Hong Kong exit immigration <em>and</em> Chinese entry immigration inside the station before boarding, in the co-located Mainland Port Area, and the 240-hour transit permit is issued here. With nine people and holiday-week volume, do not cut this fine. Everyone needs their passport and the confirmed onward ticket out of the mainland (see Tips → Entry). Full detail in <strong>The Rail Journey</strong>.
+          </div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Hong Kong West Kowloon Station<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hong+Kong+West+Kowloon+Station" target="_blank">📍 Map</a></span>
+              Huge, modern, well signed. Departures ~10:01 / 11:14 / 11:52 to Guilin (verify on 12306 / Trip.com closer to the date — timetables shuffle). Eat before the gate; on-train catering is thin. The ~10:00 gets you the full Guilin afternoon.
+              <span class="stop-cost">2nd class ¥415–450 <span class="usd">(~$58–63)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">G-train: West Kowloon → Guilin West<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Guilin+West+Railway+Station" target="_blank">📍 Map</a></span>
+              ~3 to 3.5 hours, 580 km, up to ~200 mph. Direct — no changes. Watch the Pearl River Delta give way to karst hills as you cross into Guangxi. Guilin West is ~15 km / 25 min from the centre; grab two DiDis or taxis.
+              <span class="stop-cost">Included above</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Reed Flute Cave<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Reed+Flute+Cave+Guilin" target="_blank">📍 Map</a></span>
+              A 240m illuminated limestone cavern — stalactites lit in violet and green, a still pool doubling the "crystal palace" chamber. Kitschy lighting, genuinely impressive rock. ~1 hour. <em>Hours/price unverified for your dates — check locally.</em>
+              <span class="stop-cost">¥110 <span class="usd">(~$15)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Elephant Trunk Hill <span style="color:var(--muted)">(alt to the cave)</span><a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Elephant+Trunk+Hill+Guilin" target="_blank">📍 Map</a></span>
+              Guilin's emblem — a rock arch on the Li River that looks exactly like an elephant drinking. You can see it well for free from the riverside park across the water or from Binjiang Road; the paid park gets you closer. 30–45 min.
+              <span class="stop-cost">¥55–90 <span class="usd">(~$8–13)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Two Rivers &amp; Four Lakes night cruise<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Two+Rivers+Four+Lakes+Guilin" target="_blank">📍 Map</a></span>
+              ~1 hour by boat through the lit canal ring that loops central Guilin — the twin Sun and Moon Pagodas, illuminated bridges modelled on famous ones worldwide, cormorant-fishing demos. The right way to spend a single Guilin evening. Book ahead.
+              <span class="stop-cost">¥165–235 <span class="usd">(~$23–33)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Guilin rice noodles (Guilin mǐfěn)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Guilin+rice+noodles" target="_blank">📍 Map</a></span>
+              The local dish: rice noodles with crisp fried peanuts, pickled long beans, preserved radish and thin-sliced beef or "horse meat," in a dark spiced broth you add yourself. A few dollars a bowl at any <em>mǐfěn</em> shop. Late supper after the cruise.
+              <span class="stop-cost">¥12–25 <span class="usd">(~$2–4)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 3 · per person</span><span class="day-total-val">~¥650–800 (~$90–110)</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 4 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num gold">4</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Tue · Dec 30</div>
+          <div class="day-title">Guilin → Chongqing — the second leg</div>
+          <span class="tag tag-rail">Rail</span> <span class="tag tag-food">Food</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>Solitary Beauty Peak or a Li River viewpoint, then check out.</span></div>
+            <div class="preview-row"><span class="preview-slot">Midday</span><span>~4-hour G-train, Guilin West → Chongqing West.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>Check in, walk Jiefangbei, first Chongqing hotpot.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">A half-day of Guilin, then the train to Chongqing. Pick a mid-to-late-morning departure so you get a proper Guilin morning without arriving in Chongqing at midnight — the fastest trains do it in just under 4 hours, slower ones closer to 5–6, so check the exact service.</div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Solitary Beauty Peak &amp; Jingjiang Princes' City<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Solitary+Beauty+Peak+Guilin" target="_blank">📍 Map</a></span>
+              A single limestone tower rising straight out of a Ming-dynasty walled palace compound in the city centre. 300-odd steps to a 360° view over Guilin's spires. Compact, central, doable before a train. ~1–1.5 hours.
+              <span class="stop-cost">¥100–130 <span class="usd">(~$14–18)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Or: Li River viewpoint at Xianggong Hill <span style="color:var(--muted)">(if you have a car + 3 hrs)</span><a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Xianggong+Hill+Guilin" target="_blank">📍 Map</a></span>
+              The classic bend-in-the-river panorama is actually downstream toward Yangshuo. A short climb at Xianggong Hill gives you the postcard shot. Only worth it if you skipped the full river cruise and have a driver — it's ~1.5 hrs each way and eats the morning.
+              <span class="stop-cost">¥30 <span class="usd">(~$4) + car</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">G-train: Guilin West → Chongqing West<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+West+Railway+Station" target="_blank">📍 Map</a></span>
+              ~850 km. Fastest service (e.g. G320) about 3h56m; many are 4.5–6h with more stops — book a fast one. 20 pairs a day, roughly 07:15–18:05. Second class ~¥390. Chongqing West connects to metro Lines 5 and the Loop; your hotel is likely 30–45 min out.
+              <span class="stop-cost">2nd class ~¥390 <span class="usd">(~$55)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Jiefangbei (People's Liberation Monument)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Jiefangbei+Chongqing" target="_blank">📍 Map</a></span>
+              The neon heart of downtown — a 1940s clock tower now ringed by a canyon of LED-clad skyscrapers and malls. Walk it at night to get your bearings; Hongyadong is a 10-minute walk downhill from here.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">First hotpot<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+hotpot+Jiefangbei" target="_blank">📍 Map</a></span>
+              Chongqing invented <em>málà</em> hotpot — beef-tallow broth loaded with dried chilli and numbing Sichuan peppercorn. Order a <em>yuānyāng</em> split pot (spicy + mild) for the group, get tripe, luncheon meat, potato, lotus root, quail eggs, and a sesame-oil-and-garlic dip. Chains like Zhou Shi Mian Kuang, Houba, or Perilla are reliable for nine. Milk tea on standby.
+              <span class="stop-cost">¥80–130 pp <span class="usd">(~$11–18)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 4 · per person</span><span class="day-total-val">~¥600–750 (~$85–105)</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 5 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">5</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Wed · Dec 31</div>
+          <div class="day-title">Chongqing's greatest hits — and New Year's Eve</div>
+          <span class="tag tag-culture">City</span> <span class="tag tag-event">NYE</span> <span class="tag tag-night">Night</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>Ciqikou Ancient Town, then the Liziba train-through-a-building.</span></div>
+            <div class="preview-row"><span class="preview-slot">Afternoon</span><span>Yangtze River Cableway, Hongyadong by daylight, Shibati old quarter.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>NYE — watch Hongyadong light up from across the river, not from inside the crush.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">Chongqing is a mountain city stacked in vertical layers over the confluence of the Yangtze and Jialing — escalators between "ground floors," a monorail through an apartment block, a skyline that reads as pure cyberpunk after dark. This is the sightseeing day. It's also New Year's Eve, which changes how you handle the evening.</div>
+
+          <div class="alert" style="margin-bottom:12px">
+            <strong>⚠️ NYE crowds are the real hazard.</strong> Hongyadong and Jiefangbei draw enormous New Year's Eve crowds and have seen access controls and temporary closures in past years. Do <em>not</em> plan to be inside Hongyadong at midnight with nine people. Better: view the lit stilt-houses from the <strong>Qiansimen Bridge</strong> or the <strong>Jialing riverbank opposite</strong>, book an early-evening <strong>Yangtze night cruise</strong>, or a restaurant/bar with a view. Agree a meeting point and a "if we get separated" plan.
+          </div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Ciqikou Ancient Town<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Ciqikou+Ancient+Town+Chongqing" target="_blank">📍 Map</a></span>
+              A 1,000-year-old porcelain-trading port on the Jialing, now a warren of Ming-Qing lanes, teahouses and street food — <em>máhuā</em> fried dough twists, spicy tangyuan, hand-pulled sugar. Touristy and busy but a genuine old quarter. Go early before it packs out. ~2 hours.
+              <span class="stop-cost free">Free entry</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Liziba Monorail Station<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Liziba+Station+Chongqing" target="_blank">📍 Map</a></span>
+              Line 2 runs straight through a 19-storey residential building here, with a station <em>inside</em> it. There's a viewing platform across the street for the shot; a train comes roughly every few minutes. Better still, ride Line 2 along the Jialing cliffside — one of the world's great urban train rides. Free to ride (¥2–5 a hop).
+              <span class="stop-cost">¥2–5 <span class="usd">(~$0.50)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Yangtze River Cableway<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Yangtze+River+Cableway+Chongqing" target="_blank">📍 Map</a></span>
+              A working commuter cable car strung across the Yangtze between Xinhua Road and the south bank — ~5 minutes, big views up the gorge and back at the downtown wall of towers. Queues are long midday; go earlier or buy a timed ticket. ¥30 one way.
+              <span class="stop-cost">¥30 <span class="usd">(~$4)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Shibati (Eighteen Steps)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Shibati+Chongqing" target="_blank">📍 Map</a></span>
+              A restored cliffside stairway district of old Chongqing — teahouses, craftsmen, wartime-era houses, the layered-city feel without Ciqikou's crowds. Connects on foot toward the cableway's north station. ~1 hour.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Hongyadong (by daylight)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hongya+Cave+Chongqing" target="_blank">📍 Map</a></span>
+              An 11-storey complex of traditional stilt-house architecture (<em>diaojiaolou</em>) built into the cliff above the Jialing — shops, food, and folk-museum floors, with entrances on multiple "ground" levels. See it now while you can move; you'll view the famous night lighting from across the water tonight.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">NYE evening — the light show, from a safe distance<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Qiansimen+Bridge+Chongqing" target="_blank">📍 Map</a></span>
+              Hongyadong's gold lighting switches on around dusk. From the Qiansimen Bridge walkway or the opposite bank you get the whole cliff of lights reflected in the river, with room to breathe. A Liangjiang / Two Rivers night cruise (~1 hr, ¥120–150) is the other good call — it passes Hongyadong, Chaotianmen and the lit bridges.
+              <span class="stop-cost">Free · or cruise ¥120–150 <span class="usd">(~$17–21)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 5 · per person</span><span class="day-total-val">~¥250–400 (~$35–55)</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 6 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">6</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Thu · Jan 1</div>
+          <div class="day-title">Day trip — Dazu Rock Carvings or Wulong Karst</div>
+          <span class="tag tag-culture">Day trip</span> <span class="tag tag-free">UNESCO</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Option A</span><span>Dazu Rock Carvings — 800-year-old cliff sculpture, ~1.5–2 hrs each way.</span></div>
+            <div class="preview-row"><span class="preview-slot">Option B</span><span>Wulong Karst — Three Natural Bridges &amp; Furong Cave, ~2.5–3 hrs each way.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>Back in Chongqing for a slower dinner.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">New Year's Day. Pick one big thing outside the city. Both are UNESCO World Heritage sites and both are a real commitment of driving/rail time — don't try to do both, and confirm holiday opening hours before you commit.</div>
+
+          <div class="alert alert-sage" style="margin-bottom:12px">
+            <strong>Booking note:</strong> A private van + driver for nine is the sane way to do either of these — one vehicle, door to door, waits for you. Arrange through your hotel or Trip.com a few days ahead. Public options exist (HSR to Dazu South; long-distance bus or the tourism train to Wulong) but juggling nine people and timetables on a holiday isn't worth the saving.
+          </div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Option A — Dazu Rock Carvings<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Dazu+Rock+Carvings" target="_blank">📍 Map</a></span>
+              ~100 km west. Tens of thousands of Buddhist, Taoist and Confucian figures carved into hillsides from the 9th–13th centuries — the Baodingshan grotto is the masterpiece, a 31m Reclining Buddha and a wheel-of-life relief among them. Extraordinarily well preserved, far calmer than a city day. Allow ~3 hrs on site. <em>Entry price/hours unverified for the holiday — check.</em>
+              <span class="stop-cost">~¥115 <span class="usd">(~$16) + transport</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Option B — Wulong Karst<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Wulong+Karst+National+Geology+Park" target="_blank">📍 Map</a></span>
+              ~130 km southeast. The Three Natural Bridges — colossal limestone arches over a green sinkhole valley, a <em>Transformers</em> and <em>Curse of the Golden Flower</em> filming location — plus Furong Cave, one of China's most decorated show caves. Spectacular, more physical (lots of steps and walking), longer travel. Full day. Dress warm; the valley floor is cold in January.
+              <span class="stop-cost">~¥135 + ¥120 caves <span class="usd">(~$18 + $17)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Back in Chongqing — quieter dinner<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=restaurants+Jiefangbei+Chongqing" target="_blank">📍 Map</a></span>
+              After a long travel day, do a sit-down Sichuan restaurant rather than hotpot again — <em>làzi jī</em> (chilli chicken), <em>huíguō ròu</em> (twice-cooked pork), <em>kǒushuǐ jī</em> (mouth-watering chicken), <em>dàndàn</em> noodles. Book for nine.
+              <span class="stop-cost">¥70–110 pp <span class="usd">(~$10–15)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 6 · per person</span><span class="day-total-val">~¥350–550 (~$50–75) incl. shared van</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 7 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">7</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Fri · Jan 2</div>
+          <div class="day-title">Museums, parks and the skyline</div>
+          <span class="tag tag-culture">Culture</span> <span class="tag tag-night">Views</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>Three Gorges Museum &amp; the Great Hall of the People.</span></div>
+            <div class="preview-row"><span class="preview-slot">Afternoon</span><span>Eling Park for the ridge-top view; Chaotianmen &amp; Raffles City observation deck.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>Nanshan — the One Tree viewing platform for the full night skyline.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">A slower, more spread-out day: the city's best museum, its grandest civic set-piece, and two of its best viewpoints — one for daylight, one for the night skyline that Chongqing is famous for.</div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Three Gorges Museum<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+China+Three+Gorges+Museum" target="_blank">📍 Map</a></span>
+              Free, excellent, and the single best primer on the region — the Yangtze gorges before the dam flooded them, Ba-kingdom bronzes, and a raw permanent exhibit on Chongqing as China's wartime capital under Japanese bombing. ~2 hours. Bring passports for entry.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Great Hall of the People<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Great+Hall+of+the+People+Chongqing" target="_blank">📍 Map</a></span>
+              Directly opposite the museum across a vast plaza — a 1950s domed hall modelled on Beijing's Temple of Heaven, seating 4,000. You're mainly here for the exterior and the square. 20–30 min.
+              <span class="stop-cost">¥10 to go inside <span class="usd">(~$1.50)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Eling Park<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Eling+Park+Chongqing" target="_blank">📍 Map</a></span>
+              The oldest private garden in the city, on the highest ridge of the downtown peninsula. Terraces and a pavilion looking straight down the Yangtze at the skyscrapers — a favourite local sunset spot, far less mobbed than the cableway. Free.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Chaotianmen &amp; Raffles City "Crystal" skydeck<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Raffles+City+Chongqing+Crystal" target="_blank">📍 Map</a></span>
+              The tip of the peninsula where the two rivers meet, now crowned by Raffles City — eight towers with a horizontal glass "sky-bridge" laid across four of them at the 250m mark. Walk the observation deck for the confluence view: brown Yangtze meeting green Jialing.
+              <span class="stop-cost">¥120–150 <span class="usd">(~$17–21)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Nanshan — One Tree Viewing Platform (Yikeshu)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Yikeshu+Viewing+Platform+Nanshan+Chongqing" target="_blank">📍 Map</a></span>
+              On the southern mountain, the classic elevated view of the whole illuminated city wrapped around the rivers. Go up before dark, stay for the lights. Taxi/DiDi up — it's a winding climb. Pair with dinner on Nanshan's "Old Street" or the flowerpot-lined food strip.
+              <span class="stop-cost">¥30 <span class="usd">(~$4)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 7 · per person</span><span class="day-total-val">~¥200–350 (~$28–50)</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 8 -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num sage">8</div><div class="day-line"></div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Sat · Jan 3</div>
+          <div class="day-title">Buffer day — markets, arts district, last hotpot</div>
+          <span class="tag tag-food">Food</span> <span class="tag tag-culture">Easy</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>Arhat Temple, then Guanyinqiao for shopping and lunch.</span></div>
+            <div class="preview-row"><span class="preview-slot">Afternoon</span><span>Testbed 2 (Erchang) arts district, or repeat a favourite.</span></div>
+            <div class="preview-row"><span class="preview-slot">Evening</span><span>Farewell hotpot; pack for the airport.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">Deliberately loose. If the earlier days ran long or someone wants a second go at Hongyadong or the cableway, this is where that slack lives. Otherwise: a temple, a shopping district, an arts complex, and a proper last hotpot.</div>
+
+          <div class="alert alert-sage" style="margin-bottom:12px">
+            <strong>Why a buffer day:</strong> two rail legs, a NYE crowd day and a full-day excursion is a lot of moving parts for nine people over the holidays. Something will slip. Keeping Jan 3 unscheduled means a missed train or a lost morning doesn't cascade into the departure.
+          </div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Arhat Temple (Luóhàn Sì)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Arhat+Temple+Chongqing" target="_blank">📍 Map</a></span>
+              A working Buddhist temple wedged among downtown towers, known for its hall of 500 painted <em>arhat</em> statues and a rock-carving passage at the entrance. Quiet, incense-heavy, 30–45 min. Small entry fee.
+              <span class="stop-cost">¥10 <span class="usd">(~$1.50)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Guanyinqiao pedestrian street<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Guanyinqiao+Pedestrian+Street+Chongqing" target="_blank">📍 Map</a></span>
+              The other big downtown shopping zone, across the river in Jiangbei — malls, a giant open plaza, and the "Chongqing Circle" observation ring. Less touristy than Jiefangbei, good for lunch and last souvenirs.
+              <span class="stop-cost free">Free to wander</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Testbed 2 / Erchang (former printing factory)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Testbed+2+Chongqing" target="_blank">📍 Map</a></span>
+              A 1930s munitions-then-printing works on a hillside, reborn as a design and film-set district — cafés, galleries, murals, a well-known skyline terrace. Chongqing's answer to Beijing 798, at a fraction of the size. ~1.5 hours.
+              <span class="stop-cost free">Free</span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Farewell hotpot<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+hotpot" target="_blank">📍 Map</a></span>
+              One more. Try a <em>lǎo huǒguō</em> old-style joint with the compartmented "nine-grid" pot if you haven't — different sections of the pot run at different heats. Order less than you think; it adds up fast.
+              <span class="stop-cost">¥80–130 pp <span class="usd">(~$11–18)</span></span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 8 · per person</span><span class="day-total-val">~¥150–300 (~$21–42)</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DAY 9 — LAST DAY, no day-line -->
+  <div class="day">
+    <div class="day-spine"><div class="day-num">9</div></div>
+    <div class="day-content">
+      <details class="day-card">
+        <summary>
+          <span class="day-chevron">▼</span>
+          <div class="day-date">Sun · Jan 4</div>
+          <div class="day-title">Departure — Chongqing Jiangbei (CKG)</div>
+          <span class="tag tag-rail">Travel</span>
+          <div class="day-preview">
+            <div class="preview-row"><span class="preview-slot">Morning</span><span>Last breakfast, hotel → airport (~30–45 min, leave 3 hrs before an international flight).</span></div>
+            <div class="preview-row"><span class="preview-slot">Depart</span><span>CKG → home. This is your exit from the mainland — within the 240-hour window.</span></div>
+          </div>
+        </summary>
+        <div class="day-body">
+          <div class="day-desc">Chongqing Jiangbei International (CKG), Terminal 3A for most international departures. Metro Line 10 or 3 reaches it, but with nine people and check-in luggage, book two vans. For an international flight, be at the airport 3 hours early.</div>
+
+          <div class="alert" style="margin-bottom:12px">
+            <strong>⚠️ The 240-hour clock:</strong> your permitted transit stay runs from when you cleared immigration at West Kowloon on Dec 29. Dec 29 → Jan 4 is about 6 days — comfortably inside 10 — but your departure flight must leave the mainland <em>on or before</em> the permit's expiry, and it must go to a third country or region (your home country counts; Hong Kong / Macao / Taiwan count). Keep that onward booking and your entry stamp handy at check-in.
+          </div>
+
+          <div class="day-stops">
+            <div class="stop">
+              <span class="stop-name">Hotel → Chongqing Jiangbei Int'l (CKG)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+Jiangbei+International+Airport+T3" target="_blank">📍 Map</a></span>
+              ~30–45 min from downtown depending on hotel and traffic. Two pre-booked vans ≈ ¥120–180 each. Confirm your terminal (most long-haul / international is T3A).
+              <span class="stop-cost">¥25–45 pp <span class="usd">(~$4–6)</span></span>
+            </div>
+            <div class="stop">
+              <span class="stop-name">Check bags, clear exit immigration</span>
+              Standard Chinese departure formalities. Have the group's passports and boarding passes together; the transit-permit holder lanes are the normal ones. Duty-free and food are past security in T3A.
+              <span class="stop-cost free">—</span>
+            </div>
+          </div>
+
+          <div class="day-total"><span class="day-total-label">Day 9 · per person</span><span class="day-total-val">~¥25–45 (~$4–6) + flight</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════ GETTING THERE ══════════════════ -->
+<div id="routing" class="section">
+  <div class="section-title">Getting There</div>
+  <div class="section-desc">Flights and hotels are booked — this tab is for reference and for the two rail legs that aren't flights. All times <strong>local to the airport</strong>; <span class="plus-day">+1</span> marks a next-day arrival.</div>
+
+  <div class="alert">
+    <strong>⚠️ Fill in your actual booked flights below.</strong> The rows are placeholders showing typical routings. Replace them with your confirmed segments so everyone's working from the same times — especially the two ORD travellers, whose arrival may not match the PHX group's.
+  </div>
+
+  <h3>International — PHX group → Hong Kong</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Leg</th><th>Flight</th><th>Depart</th><th>Arrive</th></tr>
+      <tr><td>PHX → [hub]</td><td class="t-flight">[XX000]</td><td class="t-time">[Fri Dec 25, 00:00]</td><td class="t-time">[00:00]</td></tr>
+      <tr class="rec"><td>[hub] → HKG</td><td class="t-flight">[XX000]</td><td class="t-time">[00:00]</td><td class="t-time">[Sat Dec 27, 00:00]<span class="plus-day">+1</span></td></tr>
+    </table>
+  </div>
+  <div class="tt-caption"><strong>Typical:</strong> PHX has no nonstop to Asia — expect a West-Coast connection (LAX / SFO / SEA) or a Pacific hub (NRT / HND / ICN / TPE), then into HKG. Cathay Pacific via a US gateway, or a Star/SkyTeam hub carrier, are the usual builds. Total elapsed 18–24 hrs.</div>
+
+  <h3>International — ORD group → Hong Kong</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Leg</th><th>Flight</th><th>Depart</th><th>Arrive</th></tr>
+      <tr class="rec"><td>ORD → HKG</td><td class="t-flight">CX807</td><td class="t-time">[Fri Dec 26, ~00:50]</td><td class="t-time">[Sat Dec 27, ~05:20]<span class="plus-day">+1</span></td></tr>
+    </table>
+  </div>
+  <div class="tt-caption"><strong>Note:</strong> Cathay flies ORD–HKG nonstop (~15–16 hrs). If that's the booking, the ORD pair likely land <em>earlier</em> than the PHX group on the 27th — decide whether they wait at the airport or head to the hotel. Confirm the flight number and times against your ticket.</div>
+
+  <h3>Inland — the two rail legs</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Leg</th><th>Service</th><th>Depart</th><th>Arrive</th></tr>
+      <tr class="rec"><td>HK West Kowloon → Guilin West</td><td class="t-flight">G-train</td><td class="t-time">Mon Dec 29, ~10:01</td><td class="t-time">~13:30</td></tr>
+      <tr><td>Guilin West → Chongqing West</td><td class="t-flight">G-train</td><td class="t-time">Tue Dec 30, midday</td><td class="t-time">~4 hrs later</td></tr>
+    </table>
+  </div>
+  <div class="tt-caption"><strong>The catch:</strong> exact departure times shift each timetable period — lock them on 12306 / Trip.com when booking opens (see The Rail Journey). West Kowloon needs a 90-min pre-departure buffer for mainland immigration + the 240-hour transit permit.</div>
+
+  <h3>Fallback routings</h3>
+  <div class="route-card">
+    <div class="route-label">If a rail leg sells out or is missed</div>
+    <div class="route-path">Fly the inland leg</div>
+    <div class="route-detail">HKG → Guilin (KWL) and Guilin → Chongqing (CKG) both have daily direct flights, ~1h15m each. More expensive and you lose the scenery and the West Kowloon transit entry — you'd instead enter the mainland at the arrival airport, which is also a 240-hour transit port. Keep as a backstop only.</div>
+  </div>
+  <div class="route-card">
+    <div class="route-label">If Macao runs late on the 28th</div>
+    <div class="route-path">Sleep near West Kowloon</div>
+    <div class="route-detail">Whoever's on the last ferry should stay somewhere in Jordan / Tsim Sha Tsui within a short taxi of the station so the 29th morning isn't a scramble across town with luggage.</div>
+  </div>
+
+  <h3>Airport &amp; station info</h3>
+  <div class="alert alert-sage">
+    <strong>Hong Kong Int'l (HKG)</strong> — Airport Express is the move: 24 min to Kowloon, ~28 to Hong Kong station, HKD ~105 (cheaper for groups of 3–4 on a Group Ticket, and return-within-30-days deals exist). Taxis to TST ~HKD 270–350. Do <em>not</em> use unlicensed touts.
+  </div>
+  <div class="alert alert-sage">
+    <strong>Hong Kong West Kowloon Station</strong> — the high-speed rail terminus, connected to Kowloon MTR and a short taxi from TST hotels. Mainland immigration is <em>inside</em> the building (Mainland Port Area). Arrive 90 min early. Food court landside; eat before you clear.
+  </div>
+  <div class="alert alert-sage">
+    <strong>Chongqing Jiangbei Int'l (CKG)</strong> — T3A for most international flights. Metro Lines 10 &amp; 3 connect to the city (~30–45 min); pre-booked vans ~¥120–180 for a group. Be there 3 hrs before an international departure.
+  </div>
+</div>
+
+
+<!-- ══════════════════ GETTING AROUND ══════════════════ -->
+<div id="transport" class="section">
+  <div class="section-title">Getting Around</div>
+  <div class="section-desc">Three payment worlds in nine days: Hong Kong (Octopus + contactless), Macao (cash / HKD / casino shuttles), mainland China (Alipay &amp; WeChat Pay for everything). Set all of it up before you fly.</div>
+
+  <h3>Hong Kong</h3>
+  <div class="transport-cards">
+    <div class="t-card">
+      <div class="t-card-title">🚇 MTR + Octopus</div>
+      <div class="t-card-body">Clean, fast, covers the whole city. Get an Octopus card (or add one in Apple Wallet / Samsung Wallet) — it also pays for buses, trams, the Star Ferry, and convenience stores. Airport Express takes it too.</div>
+    </div>
+    <div class="t-card sage">
+      <div class="t-card-title">📱 Uber / taxi</div>
+      <div class="t-card-body">Uber works in Hong Kong. Street taxis are cheap and metered — red = urban, carry the destination in Chinese characters. HKTaxi / Fly Taxi apps also work.</div>
+    </div>
+    <div class="t-card gold">
+      <div class="t-card-title">⛴ Star Ferry &amp; trams</div>
+      <div class="t-card-body">The ferry (HKD 5) and the double-decker "ding ding" trams (HKD 3) are transport <em>and</em> sightseeing. Use them.</div>
+    </div>
+    <div class="t-card dark">
+      <div class="t-card-title">🚌 To Macao</div>
+      <div class="t-card-body">TurboJET (Sheung Wan → Outer Harbour) or Cotai Water Jet (→ Taipa). ~60–70 min, HKD ~175, first sailings ~07:00. Passport required.</div>
+    </div>
+  </div>
+
+  <h3>Mainland China — Guilin &amp; Chongqing</h3>
+  <div class="transport-cards">
+    <div class="t-card">
+      <div class="t-card-title">📱 DiDi (ride-hailing)</div>
+      <div class="t-card-body">The Uber of China — works in-app in English, pay via Alipay/WeChat. The reliable way to move a group. Chongqing drivers navigate the multi-level roads so you don't have to.</div>
+    </div>
+    <div class="t-card sage">
+      <div class="t-card-title">🚇 Chongqing Rail Transit</div>
+      <div class="t-card-body">Huge network, includes the famous cliffside monorail Lines 2 &amp; 3 and the through-a-building Liziba stop. ¥2–7 a ride, pay with an Alipay/WeChat transit QR. Guilin's metro is minimal — you'll mostly DiDi there.</div>
+    </div>
+    <div class="t-card gold">
+      <div class="t-card-title">💳 Alipay + WeChat Pay</div>
+      <div class="t-card-body">Bind a foreign Visa/Mastercard in both apps <em>before</em> you leave. This is how you pay for taxis, metro, noodles, tickets — cash and foreign cards are barely accepted. Carry ¥500–1,000 cash as backup.</div>
+    </div>
+    <div class="t-card dark">
+      <div class="t-card-title">🚄 Trains (12306)</div>
+      <div class="t-card-body">Book HSR seats via Trip.com (English, small fee) or the official 12306 app. Passport is your ticket — scan it at the gate. Arrive 60–90 min early for security + the passport lane.</div>
+    </div>
+  </div>
+
+  <h3>Fare reference</h3>
+  <div class="table-scroll">
+    <table class="fare-table">
+      <tr><th>Leg</th><th>Method</th><th>Cost (pp)</th></tr>
+      <tr><td>HKG → Kowloon</td><td>Airport Express</td><td>HKD ~105 (~$13)</td></tr>
+      <tr><td>Hong Kong ↔ Macao</td><td>Ferry</td><td>HKD ~175 (~$22) each way</td></tr>
+      <tr class="rec"><td><strong>West Kowloon → Guilin West</strong></td><td>G-train, 2nd class</td><td>¥415–450 (~$58–63)</td></tr>
+      <tr class="rec"><td><strong>Guilin West → Chongqing West</strong></td><td>G-train, 2nd class</td><td>~¥390 (~$55)</td></tr>
+      <tr><td>Around Chongqing</td><td>Metro / DiDi</td><td>¥2–7 / ¥15–40 a hop</td></tr>
+      <tr><td>Chongqing hotel → CKG airport</td><td>Pre-booked van</td><td>~¥25–45 (~$4–6)</td></tr>
+    </table>
+  </div>
+
+  <div class="alert alert-sage">
+    <strong>Download before you leave (you can't get some of these inside China):</strong> Alipay, WeChat, DiDi, Trip.com, a VPN (essential — set it up and test it at home), Amap or Baidu Maps (Google Maps doesn't work in the mainland), Pleco + Google Translate offline Chinese pack, Octopus for Hong Kong. Google / Gmail / Instagram / WhatsApp are all blocked on the mainland — Hong Kong and Macao are fine.
+  </div>
+</div>
+
+
+<!-- ══════════════════ THE RAIL JOURNEY ══════════════════ -->
+<div id="rail" class="section">
+  <div class="section-title">The Rail Journey</div>
+  <div class="section-desc">Two high-speed legs — Hong Kong → Guilin, then Guilin → Chongqing — and the border formality that happens inside a train station. This is the part that needs planning; get it right and the rest is easy.</div>
+
+  <div class="alert">
+    <strong>⚠️ Book the moment the window opens.</strong> Chinese HSR tickets go on sale ~15 days ahead (sometimes up to 30 on Trip.com). You're travelling in the New Year holiday week — second class on the popular departures <em>will</em> sell out, and a group of nine unbooked is a real problem. Put a reminder for mid-December.
+  </div>
+
+  <div class="resort-card">
+    <div class="resort-header">
+      <div>
+        <div class="resort-name">Leg 1 · West Kowloon → Guilin West</div>
+        <div style="font-size:12px;color:var(--muted)">Mon Dec 29 · direct G-train · the visa-free entry point</div>
+      </div>
+      <span class="resort-badge badge-rec">Book first</span>
+    </div>
+    <div class="resort-body">
+      580 km in about 3–3.5 hours, direct, no changes — the fastest service (G907/G908 family) does it in ~3 hrs. Typical departures around <strong>10:01, 11:14 and 11:52</strong>; take the ~10:00 for a full Guilin afternoon. <strong>The 240-hour visa-free transit permit is processed here, at West Kowloon's Mainland Port Area</strong>: you clear Hong Kong exit then Chinese entry immigration inside the station before boarding. Bring every passport and the confirmed onward ticket out of the mainland. Arrive <strong>90 minutes early</strong> — holiday-week queues plus a nine-person group. Guilin West station is ~15 km / 25 min from the city centre.
+    </div>
+    <div class="resort-stats">
+      <div class="r-stat"><span class="r-stat-val">~3–3.5h</span><span class="r-stat-key">Duration</span></div>
+      <div class="r-stat"><span class="r-stat-val">¥415–450</span><span class="r-stat-key">2nd class</span></div>
+      <div class="r-stat"><span class="r-stat-val">3/day</span><span class="r-stat-key">Direct trains</span></div>
+    </div>
+  </div>
+
+  <div class="resort-card">
+    <div class="resort-header">
+      <div>
+        <div class="resort-name">Leg 2 · Guilin West → Chongqing West</div>
+        <div style="font-size:12px;color:var(--muted)">Tue Dec 30 · direct G-train · pick a fast one</div>
+      </div>
+      <span class="resort-badge badge-adv">Check the time</span>
+    </div>
+    <div class="resort-body">
+      ~850 km. The fastest train (e.g. <strong>G320</strong>) is about <strong>3 h 56 m</strong>; many services are 4.5–6 hrs with more stops, so filter for the quick ones when booking. Around <strong>20 pairs a day</strong>, roughly 07:15 to 18:05 — a late-morning departure gives you a Guilin morning and an evening arrival in Chongqing. Second class ~¥390. Chongqing West connects to metro Line 5 and the Loop line; budget 30–45 min onward to your hotel.
+    </div>
+    <div class="resort-stats">
+      <div class="r-stat"><span class="r-stat-val">~4–6h</span><span class="r-stat-key">Duration</span></div>
+      <div class="r-stat"><span class="r-stat-val">~¥390</span><span class="r-stat-key">2nd class</span></div>
+      <div class="r-stat"><span class="r-stat-val">~20/day</span><span class="r-stat-key">Trains</span></div>
+    </div>
+  </div>
+
+  <h3>Booking &amp; boarding — how it works</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🎫</div>
+      <div>
+        <div class="tip-title">Book through Trip.com or 12306</div>
+        <div class="tip-body">Trip.com is English, takes foreign cards, and charges a few dollars a ticket. The official <strong>12306</strong> app is cheaper and now supports foreign passports but is fiddlier. Enter each passenger's name <em>exactly</em> as printed in the passport. For nine, book in one transaction so you're seated together.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🪪</div>
+      <div>
+        <div class="tip-title">Your passport is the ticket</div>
+        <div class="tip-body">No paper ticket, no collection. Scan the passport at the automated gate; foreign passengers occasionally get routed to a staffed window for a manual check, so keep 10 minutes spare. Everyone carries their own.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">⏱</div>
+      <div>
+        <div class="tip-title">Arrive early</div>
+        <div class="tip-body">West Kowloon: 90 min (immigration + transit permit). Guilin West: 60–75 min (airport-style security, big station). Gates close 3–5 min before departure and they <em>will</em> leave without you.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">💺</div>
+      <div>
+        <div class="tip-title">Second class is fine</div>
+        <div class="tip-body">2+3 seating, clean, power at every seat, tray tables. For legs under 4 hours it's not worth doubling the fare for first class — but if first-class seats are all that's left together for nine, take them.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🧳</div>
+      <div>
+        <div class="tip-title">Luggage</div>
+        <div class="tip-body">No check-in — you carry bags on. Racks at car ends for big cases, overhead shelves for the rest. Nine people's worth of luggage boards faster if you're grouped in one or two cars. Soft bags are easier to wedge than hard shells.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🍜</div>
+      <div>
+        <div class="tip-title">Food</div>
+        <div class="tip-body">Trolley service and a basic bar car exist but the food is poor and cash-light. Buy noodles, fruit, snacks and water before boarding — there's boiling water on every car for instant noodles.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════ ALTERNATIVES ══════════════════ -->
+<div id="alternatives" class="section">
+  <div class="section-title">Alternatives &amp; Swap-Ins</div>
+  <div class="section-desc">If weather, closures, crowds or fatigue change the plan.</div>
+
+  <h3>If the Guilin weather is grim</h3>
+  <div class="alt-card">
+    <div class="alt-title">Skip the river, do the caves and the city</div>
+    <div class="alt-meta">Guilin · Dec 29–30 · rain / cold plan</div>
+    <div class="alt-body">December in Guilin can be 5°C, grey and misty — which flatters the karst as often as it hides it, but the open-top river cruise is miserable in real rain. Fallback: Reed Flute Cave (indoors), Solitary Beauty Peak (quick), Jingjiang Princes' City, and an early night before the Chongqing train. The Two Rivers Four Lakes boats are covered and still run.</div>
+  </div>
+
+  <h3>If you want more Hong Kong instead of Macao</h3>
+  <div class="alt-card wine">
+    <div class="alt-title">Lantau — Big Buddha &amp; Ngong Ping 360</div>
+    <div class="alt-meta">Free–HKD 315 · half to full day · cable car</div>
+    <div class="alt-body">Trade the Macao day trip for Lantau Island: the 25-minute Ngong Ping cable car to the giant bronze Tian Tan Buddha, Po Lin Monastery's vegetarian hall, and the fishing-village stilt houses of Tai O. Less border faff, more nature, easier on a jet-lagged group. You'd lose the Portuguese-colonial contrast, which is the single most distinctive thing about the whole coast leg — so only swap if the group actively doesn't want Macao.</div>
+  </div>
+
+  <h3>Chongqing day trip — the one you didn't pick</h3>
+  <div class="alt-card gold">
+    <div class="alt-title">Dazu ⇄ Wulong</div>
+    <div class="alt-meta">Jan 1 · whichever you skipped</div>
+    <div class="alt-body">If you chose Dazu for Jan 1 and have appetite for another excursion on the buffer day, Wulong's Three Natural Bridges are the bigger spectacle (and vice versa). Doing both means two long travel days back-to-back — fine for some groups, punishing for others. Decide based on how Jan 1 actually felt.</div>
+  </div>
+
+  <h3>Chongqing rain / rest plan</h3>
+  <div class="alt-card">
+    <div class="alt-title">Indoor Chongqing</div>
+    <div class="alt-meta">Any Chongqing day · overcast is the default here</div>
+    <div class="alt-body">Chongqing is famously foggy — plan for grey. Three Gorges Museum, the Raffles City sky-bridge, Arhat Temple, a hotpot lunch that runs two hours, the Yangtze Cableway (still runs in fog, eerie), and Guanyinqiao's malls all work in bad weather. The night skyline views (Nanshan, Eling) are the only weather-dependent items.</div>
+  </div>
+
+  <h3>Too tired for a 6am ferry</h3>
+  <div class="alt-card wine">
+    <div class="alt-title">Compress Macao to a half-day</div>
+    <div class="alt-meta">Dec 28 · jet-lag contingency</div>
+    <div class="alt-body">If Day 1 wrecks everyone, take a mid-morning ferry instead, do just the Historic Centre (Senado Square → St. Paul's → a Taipa Village lunch), skip Cotai, and be back in Hong Kong by early evening for a proper sleep before the train. Macao's old town is genuinely a 3-hour walk if you're efficient.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════ TIPS & PRACTICAL ══════════════════ -->
+<div id="tips" class="section">
+  <div class="section-title">Tips &amp; Practical</div>
+  <div class="section-desc">Entry rules first — they can stop you boarding. Everything here was checked in <strong>August 2026</strong>; the China transit rules changed twice in 2024–25, so <strong>re-verify in November</strong>.</div>
+
+  <h3>⚠️ Entry Requirements</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🛂</div>
+      <div>
+        <div class="tip-title">Hong Kong &amp; Macao — visa-free</div>
+        <div class="tip-body">US passport holders: <strong>90 days</strong> visa-free in Hong Kong, <strong>30 days</strong> in Macao. No advance paperwork. Passport valid <strong>6+ months</strong> beyond entry with blank pages. That's it for the coast leg.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🇨🇳</div>
+      <div>
+        <div class="tip-title">Mainland China — the 240-hour visa-free transit</div>
+        <div class="tip-body">
+          This trip's plan is to enter the mainland <strong>without a visa</strong> under the 240-hour (10-day) transit scheme. As checked Aug 2026, the conditions are:
+          <br><br>
+          • <strong>Nationality:</strong> US is on the eligible list (~55 countries).<br>
+          • <strong>Entry port:</strong> must be an approved one. <strong>Hong Kong West Kowloon Station has been approved since Nov 5, 2025</strong> — you qualify by taking the train, clearing immigration in the station.<br>
+          • <strong>Onward ticket:</strong> you must already hold a confirmed ticket, fixed date and seat, leaving the mainland <strong>within 240 hours</strong> to a <strong>third country or region</strong> — not the place you came from. Your home country counts; Hong Kong, Macao and Taiwan each count as a "third region." Your Jan 4 CKG departure is the exit; have that booking with you at West Kowloon.<br>
+          • <strong>Area limit:</strong> you may only move within the ~24 eligible provinces/regions. <strong>Guangxi (incl. Guilin) and Chongqing are both eligible</strong> — this itinerary stays inside the zone. A side trip to a non-eligible province would break it.<br>
+          • <strong>On arrival:</strong> fill the arrival card (online/app or on paper) and register your accommodation address within 24 hours — hotels do this for you at check-in; keep the slip.<br>
+          • <strong>Processing:</strong> done at the West Kowloon Mainland Port Area. Allow extra time; approval is not instant.
+        </div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🧯</div>
+      <div>
+        <div class="tip-title">The zero-risk alternative — a regular tourist visa</div>
+        <div class="tip-body">
+          For a group of nine, the transit scheme has no margin: one person with a vague onward ticket, a delayed exit flight, or a rule tweak between now and December, and someone gets turned away at the port. The safe route is a standard <strong>10-year multiple-entry L (tourist) visa</strong> — apply in person at a Chinese Visa Application Service Center (there's one in Los Angeles serving Arizona; Chicago has its own), roughly <strong>$140 + ~$40 service fee</strong>, 4–7 working days, but allow <strong>weeks</strong> for nine people over the holidays. With the visa, the rail plan works exactly the same and none of the transit conditions apply. <strong>Decide by early October.</strong>
+        </div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">✅</div>
+      <div>
+        <div class="tip-title">Verify before you fly</div>
+        <div class="tip-body">Confirm current rules with <strong>your airline</strong> (they're liable if they board you wrongly and will know the port list) and China's <strong>National Immigration Administration</strong> site. Don't rely on this doc's August snapshot for a December border.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Money &amp; Payments</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">💴</div>
+      <div>
+        <div class="tip-title">Three currencies</div>
+        <div class="tip-body"><strong>Mainland:</strong> Chinese yuan (CNY / RMB / ¥), ~¥7.15 to $1. <strong>Hong Kong:</strong> Hong Kong dollar (HKD), pegged around 7.8 to $1. <strong>Macao:</strong> pataca (MOP), ≈ HKD, and HKD is accepted everywhere in Macao at par — no need to get patacas. The converter on the Budget tab is set to CNY since that's six of the nine days.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">📱</div>
+      <div>
+        <div class="tip-title">Alipay + WeChat Pay = how you pay in China</div>
+        <div class="tip-body">Install <strong>both</strong> and bind a foreign Visa/Mastercard <em>before</em> you leave — international cards have worked in both apps since 2023. On the mainland this is how you pay for taxis, the metro, street noodles, tickets, everything. Physical foreign cards are widely refused. Carry <strong>¥500–1,000 cash</strong> per person as backup and for tiny vendors; UnionPay ATMs dispense yuan.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">💳</div>
+      <div>
+        <div class="tip-title">Hong Kong &amp; Macao are card-normal</div>
+        <div class="tip-body">Contactless Visa/Mastercard and Apple Pay work almost everywhere. Get an <strong>Octopus</strong> card (or virtual one in your phone wallet) for transit and convenience stores. Tell your bank you'll be in HK/Macao/China so nothing gets frozen.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Connectivity</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🛜</div>
+      <div>
+        <div class="tip-title">The Great Firewall — mainland only</div>
+        <div class="tip-body">Google (Search, Maps, Gmail, Photos), Instagram, WhatsApp, Facebook, X and most Western news are <strong>blocked in mainland China</strong>. Hong Kong and Macao are completely open. <strong>Install and test a VPN at home</strong> — you often can't download one once you're inside. A roaming <strong>eSIM</strong> (Airalo, Nomad, etc.) on a Hong Kong or regional plan frequently routes around the firewall automatically; a physical mainland SIM does not.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🗺</div>
+      <div>
+        <div class="tip-title">Maps that actually work</div>
+        <div class="tip-body">Google Maps is useless on the mainland. Use <strong>Amap</strong> (高德, has an English mode) or <strong>Baidu Maps</strong>; Apple Maps works acceptably. DiDi handles navigation for taxis. Download an offline map before you go.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Weather &amp; Packing</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🧥</div>
+      <div>
+        <div class="tip-title">Late December – early January</div>
+        <div class="tip-body"><strong>Hong Kong / Macao:</strong> mild, ~15–20°C, humid, occasional drizzle — a light jacket and a rain shell. <strong>Guilin:</strong> cold and damp, ~5–12°C, often misty — a real warm layer. <strong>Chongqing:</strong> ~6–12°C, heavily overcast (it's nicknamed "Fog City"), rarely freezing, some drizzle — warm layers, waterproof shoes for wet stone steps. <strong>No snow anywhere on this route.</strong> Bring a small umbrella.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🚻</div>
+      <div>
+        <div class="tip-title">Small stuff</div>
+        <div class="tip-body">Carry tissues and hand sanitizer — public toilets outside hotels are often squat-style and BYO-paper. A power bank for long sightseeing days. Universal adapter (mainland uses types A/I/C; Hong Kong uses UK-style type G — different plug).</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Food — what to order</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🥟</div>
+      <div>
+        <div class="tip-title">Hong Kong — dim sum &amp; more</div>
+        <div class="tip-body">Har gow, siu mai, char siu bao, cheung fun, egg tarts, milk tea. Also roast goose, wonton noodles, clay-pot rice, and a bowl of congee. Yum cha (tea + dim sum) is a late-morning group meal by design.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🍮</div>
+      <div>
+        <div class="tip-title">Macao — Macanese &amp; Portuguese</div>
+        <div class="tip-body">Portuguese egg tarts (Lord Stow's / Margaret's), African chicken, minchi, bacalhau cod, pork chop bun, serradura pudding. Taipa Village is the place to eat.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🍜</div>
+      <div>
+        <div class="tip-title">Guilin — rice noodles</div>
+        <div class="tip-body">Guilin <em>mǐfěn</em>: rice noodles with fried peanuts, pickled beans, preserved radish, thin beef, in a five-spice broth you ladle on yourself. A couple of dollars, eaten standing up or at a plastic stool.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">🌶</div>
+      <div>
+        <div class="tip-title">Chongqing — hotpot &amp; Sichuan</div>
+        <div class="tip-body"><em>Málà</em> hotpot is the local religion — beef-tallow broth, dried chilli, numbing peppercorn. Order a <strong>split pot</strong> (spicy + clear), a sesame-oil-garlic dip, and go easy on the order size. Also: <em>xiǎomiàn</em> (breakfast chilli noodles), <em>làzi jī</em>, <em>huíguō ròu</em>, <em>kǒushuǐ jī</em>. The spice is genuine — say "<em>wēi là</em>" (mild) if you mean it. Sweet soy milk or milk tea cuts the burn better than water.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>New Year's Eve — Chongqing</h3>
+  <div class="tip-list">
+    <div class="tip">
+      <div class="tip-icon">🎆</div>
+      <div>
+        <div class="tip-title">Treat the crowds as a safety issue, not an inconvenience</div>
+        <div class="tip-body">Hongyadong and Jiefangbei pull massive NYE crowds and have had access limits and short-notice closures in past years. With nine people: don't be in the crush at midnight. View the lights from <strong>Qiansimen Bridge</strong> or the opposite bank, or book an <strong>early-evening river cruise</strong> or a <strong>restaurant/bar with a view</strong>. Set a meeting point and a lost-phone plan. Keep the buffer day (Jan 3) genuinely free in case NYE eats more time than planned.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════ BUDGET ══════════════════ -->
+<div id="budget" class="section">
+  <div class="section-title">Line-Item Budget</div>
+  <div class="section-desc">Ground costs for 9 people, 9 days / 8 nights. <strong>Flights and hotels are booked and excluded</strong> — these are the on-the-ground spends. Yuan converted at ~¥7.15 / $1; Hong Kong days are pricier and shown in HKD.</div>
+
+  <div class="converter-card">
+    <div class="converter-header">
+      <span class="converter-title">💱 Currency Converter</span>
+      <button class="converter-flip" onclick="flipConverter()" aria-label="Flip currencies">⇄</button>
+    </div>
+    <div class="converter-body">
+      <div class="converter-field">
+        <label id="converterFromLabel">USD</label>
+        <input type="number" id="converterFrom" inputmode="decimal" placeholder="0" oninput="convertFrom()">
+      </div>
+      <span class="converter-arrow">→</span>
+      <div class="converter-field">
+        <label id="converterToLabel"></label>
+        <input type="number" id="converterTo" inputmode="decimal" placeholder="0" oninput="convertTo()">
+      </div>
+    </div>
+    <div class="converter-rate" id="converterRate"></div>
+  </div>
+
+  <div class="alert">
+    <strong>Flights &amp; hotels:</strong> booked separately, not in these totals. This budget is transport-on-the-ground, food, activities, and the visa question.
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🚆 Intercity Transport<span class="budget-group-total">~$100–170 pp</span></div>
+    <table class="budget-table">
+      <tr class="rec"><td class="item">HK West Kowloon → Guilin<span class="note">G-train, 2nd class</span></td><td class="cost">$58–63</td></tr>
+      <tr><td class="item">Guilin → Chongqing<span class="note">G-train, 2nd class (~$90 if 1st)</span></td><td class="cost">$55</td></tr>
+      <tr><td class="item">Airport transfers<span class="note">HKG Airport Express + CKG van share</span></td><td class="cost">$17–30</td></tr>
+    </table>
+    <div class="tt-caption"><strong>Ferry to Macao</strong> is under Day 2 / Local, not here. First class on the longer Guilin–Chongqing leg is worth it only if that's all that's left together.</div>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🚕 Local Transport<span class="budget-group-total">~$70–110 pp</span></div>
+    <table class="budget-table">
+      <tr><td class="item">Hong Kong ↔ Macao ferry<span class="note">round trip</span></td><td class="cost">$44</td></tr>
+      <tr><td class="item">Hong Kong MTR / ferry / trams<span class="note">2 days, Octopus</span></td><td class="cost">$10–18</td></tr>
+      <tr><td class="item">Guilin DiDi / taxis<span class="note">station transfers + sights</span></td><td class="cost">$8–15</td></tr>
+      <tr class="rec"><td class="item">Chongqing metro + DiDi<span class="note">5 days, incl. day-trip van share</span></td><td class="cost">$25–45</td></tr>
+    </table>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🍽 Food &amp; Drink<span class="budget-group-total">~$260–430 pp</span></div>
+    <table class="budget-table">
+      <tr><td class="item">Hong Kong<span class="note">2 days — dim sum, night market, one nice dinner</span></td><td class="cost">$70–120</td></tr>
+      <tr><td class="item">Macao<span class="note">1 day — Taipa lunch, Cotai dinner</span></td><td class="cost">$30–50</td></tr>
+      <tr><td class="item">Guilin<span class="note">noodles + one sit-down</span></td><td class="cost">$15–25</td></tr>
+      <tr class="rec"><td class="item">Chongqing<span class="note">5 days — hotpot, Sichuan, street food</span></td><td class="cost">$90–160</td></tr>
+      <tr><td class="item">Coffee, snacks, drinks<span class="note">throughout</span></td><td class="cost">$40–70</td></tr>
+    </table>
+    <div class="tt-caption"><strong>Split personality:</strong> Hong Kong and Macao run $40–70/day; mainland food is $15–30/day even eating well. The range above assumes a mix of cheap and one nicer meal per city.</div>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🎟 Activities &amp; Entries<span class="budget-group-total">~$110–190 pp</span></div>
+    <table class="budget-table">
+      <tr><td class="item">Hong Kong<span class="note">Peak Tram, Star Ferry</span></td><td class="cost">$12–22</td></tr>
+      <tr><td class="item">Macao<span class="note">mostly free; Venetian gondola / Macau Tower optional</span></td><td class="cost">$0–40</td></tr>
+      <tr><td class="item">Guilin<span class="note">night cruise + Reed Flute or Elephant Hill</span></td><td class="cost">$30–48</td></tr>
+      <tr class="rec"><td class="item">Chongqing<span class="note">cableway, Raffles deck, Nanshan, day-trip entries</span></td><td class="cost">$55–90</td></tr>
+    </table>
+  </div>
+
+  <div class="budget-group">
+    <div class="budget-group-title">🛂 Visa &amp; Admin<span class="budget-group-total">$55–115 pp + visa if used</span></div>
+    <table class="budget-table">
+      <tr class="rec"><td class="item">240-hour transit<span class="note">if you go this route — free</span></td><td class="cost">$0</td></tr>
+      <tr><td class="item">10-year L tourist visa<span class="note">if you go this route — fee + service center</span></td><td class="cost">~$180</td></tr>
+      <tr><td class="item">eSIM / roaming + VPN<span class="note">~10 days data, VPN subscription</span></td><td class="cost">$15–35</td></tr>
+      <tr><td class="item">Travel insurance<span class="note">not mandatory here, but get it</span></td><td class="cost">$40–80</td></tr>
+    </table>
+    <div class="tt-caption"><strong>Unlike Georgia, no country on this route mandates travel insurance to enter.</strong> Buy it anyway — China medical bills for foreigners are cash-up-front.</div>
+  </div>
+
+  <div class="budget-summary">
+    <div class="budget-summary-row"><span>🚆 Intercity transport</span><span>$100–170</span></div>
+    <div class="budget-summary-row"><span>🚕 Local transport</span><span>$70–110</span></div>
+    <div class="budget-summary-row"><span>🍽 Food &amp; drink</span><span>$260–430</span></div>
+    <div class="budget-summary-row"><span>🎟 Activities &amp; entries</span><span>$110–190</span></div>
+    <div class="budget-summary-row"><span>🛂 Visa &amp; admin (transit route)</span><span>$55–115</span></div>
+    <div class="budget-summary-row"><span>Per person, ground costs</span><span>~$600–1,000</span></div>
+  </div>
+
+  <div class="alert alert-sage" style="margin-top:16px">
+    <strong>Bottom line:</strong> roughly <strong>$600–1,000 per person on the ground</strong> (add ~$180 pp if everyone gets the tourist visa instead of the transit permit), on top of the booked flights and hotels. That's a mid-range number — you could shave $200 by eating simpler on the mainland, or add $300+ with taxis-everywhere and the optional Macao attractions. About $75–110/person/day once you're moving.
+  </div>
+</div>
+
+<div class="footer">Hong Kong · Macao · Guilin · Chongqing · Updated August 2026 · re-verify China entry rules in November</div>
+
+<script>
+
+  const TRIP = window.TRIP || { currency: 'XXX', perUSD: 1 };
+  let converterIsUsdToLocal = true;
+
+  function showTab(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function toggleAllDays(btn) {
+    const cards = document.querySelectorAll('.day-card');
+    const shouldOpen = Array.from(cards).some(c => !c.open);
+    cards.forEach(c => { c.open = shouldOpen; });
+    btn.textContent = shouldOpen ? 'Collapse all' : 'Expand all';
+  }
+
+  function _convLabels() {
+    const f = document.getElementById('converterFromLabel');
+    const t = document.getElementById('converterToLabel');
+    if (!f || !t) return;
+    f.textContent = converterIsUsdToLocal ? 'USD' : TRIP.currency;
+    t.textContent = converterIsUsdToLocal ? TRIP.currency : 'USD';
+  }
+
+  function convertFrom() {
+    const f = document.getElementById('converterFrom');
+    const t = document.getElementById('converterTo');
+    const v = parseFloat(f.value);
+    if (isNaN(v)) { t.value = ''; return; }
+    t.value = (converterIsUsdToLocal ? v * TRIP.perUSD : v / TRIP.perUSD).toFixed(2);
+  }
+
+  function convertTo() {
+    const f = document.getElementById('converterFrom');
+    const t = document.getElementById('converterTo');
+    const v = parseFloat(t.value);
+    if (isNaN(v)) { f.value = ''; return; }
+    f.value = (converterIsUsdToLocal ? v / TRIP.perUSD : v * TRIP.perUSD).toFixed(2);
+  }
+
+  function flipConverter() {
+    converterIsUsdToLocal = !converterIsUsdToLocal;
+    _convLabels();
+    const f = document.getElementById('converterFrom');
+    const t = document.getElementById('converterTo');
+    const tmp = f.value; f.value = t.value; t.value = tmp;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    _convLabels();
+    const rateEl = document.getElementById('converterRate');
+    if (rateEl) rateEl.textContent = `1 USD ≈ ${TRIP.perUSD} ${TRIP.currency} — fixed estimate, check the live rate before you travel`;
+
+    const btn = document.getElementById('toggleAllBtn');
+    const cards = document.querySelectorAll('.day-card');
+    if (!btn || !cards.length) return;
+    cards.forEach(card => card.addEventListener('toggle', () => {
+      btn.textContent = Array.from(cards).every(c => c.open) ? 'Collapse all' : 'Expand all';
+    }));
+  });
+</script>
+</body>
+</html>
