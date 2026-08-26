@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dec 30 · Silver Snake to THE CYBERPUNK CITY</title>
+<link rel="stylesheet" href="assets/shell.css?v=1">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── THEME · Day 5 — Chongqing cyberpunk: neon on near-black, scanlines ── */
+  :root {
+    --page-backdrop: #050507;
+    --bg:        #0a0a11;
+    --surface:   #111120;
+    --surface-2: #17172a;
+    --ink:       #eafcff;
+    --ink-dim:   #7fa6bb;
+    --accent:    #17f0d6;
+    --accent-2:  #ff2fb9;
+    --border:    rgba(23,240,214,0.18);
+    --font-display: 'Chakra Petch', system-ui, sans-serif;
+    --font-body:    'Rajdhani', system-ui, sans-serif;
+  }
+  body { font-size: 16.5px; }
+  .frame::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 4px),
+      linear-gradient(180deg, transparent 60%, rgba(23,240,214,0.05));
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero {
+    background:
+      linear-gradient(180deg, rgba(255,47,185,0.16), transparent 40%),
+      linear-gradient(0deg, rgba(23,240,214,0.14), transparent 45%),
+      #08080f;
+  }
+  .hero h1 {
+    text-transform: uppercase;
+    letter-spacing: 0.015em;
+    color: #fff;
+    text-shadow: 0 0 18px rgba(23,240,214,0.55), 0 0 40px rgba(255,47,185,0.35);
+  }
+  .hero-eyebrow { color: var(--accent-2); }
+  .block > h2 { text-transform: uppercase; letter-spacing: 0.04em; text-shadow: 0 0 14px rgba(23,240,214,0.35); }
+  details.card > summary { text-transform: uppercase; letter-spacing: 0.02em; font-size: 13.5px; }
+  .tag { color: #05121a; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 26 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">26</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">27</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">28</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">29</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-6.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 5 / 6</span>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow">Tue · Dec 30 · Guilin → Chongqing</div>
+    <h1>Silver Snake to THE CYBERPUNK CITY</h1>
+    <p class="hero-sub">Half a day of Guilin, then the last rail leg into Chongqing — a mountain city stacked in vertical layers over two rivers, pure neon after dark.</p>
+    <div class="hero-meta">
+      <span>Guilin morning</span>
+      <span>~4-hr G-train</span>
+      <span>Check into Chongqing</span>
+    </div>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block">
+      <h2>Getting the rest of the way</h2>
+      <p class="lead">Pick a mid-to-late-morning departure: a proper Guilin morning, an evening arrival in the neon.</p>
+
+      <details class="card" open>
+        <summary>Half-day Guilin<span class="card-sub">Central, quick, before the train</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Solitary Beauty Peak &amp; Jingjiang Princes' City<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Solitary+Beauty+Peak+Guilin" target="_blank" rel="noopener">Map</a></span>
+            A single limestone tower rising straight out of a Ming-dynasty walled palace in the city centre — ~300 steps to a 360° view over Guilin's spires. Compact and central; doable before a train. ~1–1.5 hrs.
+            <span class="cost">¥100–130 <span class="usd">(~$14–18)</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Or just take it slow</span>
+            A riverside breakfast and a wander if the group's tired from Day 4. Check out, drop bags, head for Guilin West.
+          </div>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Leg 2 — Guilin West → Chongqing West<span class="card-sub">~4 hrs if you book a fast one</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">The train<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+West+Railway+Station" target="_blank" rel="noopener">Map</a></span>
+            ~850 km. Fastest service (e.g. G320) is about 3h56m; many are 4.5–6 hrs with more stops — filter for the quick ones. ~20 trains a day, roughly 07:15–18:05. Second class ~¥390 (~$55).
+          </div>
+          <div class="stop">
+            <span class="stop-name">Into the city</span>
+            Chongqing West connects to metro Line 5 and the Loop line; your hotel is likely 30–45 min out. Two DiDis with luggage is simplest.
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>First night in the neon<span class="card-sub">A walk, not a grind</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Jiefangbei<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Jiefangbei+Chongqing" target="_blank" rel="noopener">Map</a></span>
+            The neon heart — a 1940s clock tower now ringed by a canyon of LED-clad towers. Walk it to get your bearings.
+            <span class="cost free">Free</span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Hongyadong, from across the water<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Qiansimen+Bridge+Chongqing" target="_blank" rel="noopener">Map</a></span>
+            The gold-lit cliff of stilt-houses is the city's signature night view. See it from the Qiansimen Bridge or the opposite bank — don't fight the crowd inside, especially this week.
+            <span class="cost free">Free</span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">A warm-up hot pot</span>
+            A lighter one tonight to break the group in — tomorrow's the real event. Split pot, sesame-oil dip, milk tea on standby.
+            <span class="cost">¥70–110 pp <span class="usd">(~$10–15)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 5 · per person</span><span class="v">~¥550–750 (~$75–105)</span></div>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-4.html"><span class="k">← Prev</span><span class="t">200+ MPH</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="day-6.html"><span class="k">Next →</span><span class="t">Hot Pot &amp; Drones</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dec 26 · Welcome to The Pearl of the Orient</title>
+<link rel="stylesheet" href="assets/shell.css?v=1">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── THEME · Day 1 — night harbour, neon on navy, pearl sheen ── */
+  :root {
+    --page-backdrop: #03050b;
+    --bg:        #0a1120;
+    --surface:   #101a2e;
+    --surface-2: #16233c;
+    --ink:       #eef4ff;
+    --ink-dim:   #8ea6c8;
+    --accent:    #5ad1cf;
+    --accent-2:  #ff6fb0;
+    --border:    rgba(120,175,255,0.16);
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+  }
+  .hero {
+    background:
+      radial-gradient(circle at 16% 8%, rgba(90,209,207,0.20), transparent 42%),
+      radial-gradient(circle at 88% 26%, rgba(255,111,176,0.16), transparent 44%),
+      linear-gradient(180deg, #0e1a30 0%, #0a1120 62%, #070d18 100%);
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    left: -20%; right: -20%; bottom: 22px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(90,209,207,0.6), transparent);
+    filter: blur(0.5px);
+  }
+  .hero h1 {
+    background: linear-gradient(100deg, #ffffff, #bfe9e8 40%, #ffd9ec 70%, #ffffff);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  .hero-eyebrow { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 26 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">26</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">27</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">28</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">29</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-6.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 1 / 6</span>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow">Fri · Dec 26 · Hong Kong</div>
+    <h1>Welcome to The Pearl of the Orient</h1>
+    <p class="hero-sub">Everyone lands. A settle-in day built around Victoria Harbour — don't fight the jet lag, lean into the evening.</p>
+    <div class="hero-meta">
+      <span>Everyone converges</span>
+      <span>Standby arrivals</span>
+      <span>Sleep: Hong Kong</span>
+    </div>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block">
+      <h2>The shape of the day</h2>
+      <p class="lead">Nothing is time-critical. The Peak and the ferry are both better at dusk anyway, so a late start is fine.</p>
+
+      <div class="alert">
+        <strong>📍 Meeting point.</strong> Pick one before anyone takes off — hotel lobby at a set time, or the HKG arrivals hall. The two travelling from ORD may land on a different flight; agree who waits for whom.
+      </div>
+
+      <details class="card" open>
+        <summary>Afternoon — get your bearings<span class="card-sub">Peak + harbour crossing</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Victoria Peak<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Victoria+Peak+Hong+Kong" target="_blank" rel="noopener">Map</a></span>
+            The view. Restored Peak Tram up (buy a timed ticket online to skip the queue) or a taxi if the line is brutal. Walk the flat Peak Circle Walk for the quieter panoramas. Go late afternoon for daylight, sunset and the lights coming on in one visit.
+            <span class="cost">HKD 88–148 <span class="usd">(~$11–19)</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Star Ferry — Central → Tsim Sha Tsui<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Star+Ferry+Pier+Central" target="_blank" rel="noopener">Map</a></span>
+            The best HKD 5 in Asia — ten minutes across the harbour on a century-old ferry, skyline on both sides. Sit on the open lower deck.
+            <span class="cost">HKD 5 <span class="usd">(~$0.65)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Evening — the harbour show<span class="card-sub">8pm lights, then dinner</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Symphony of Lights<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Tsim+Sha+Tsui+Promenade" target="_blank" rel="noopener">Map</a></span>
+            Nightly 8:00pm laser-and-light show across the harbour towers, ~10 min, best from the TST promenade / Avenue of Stars on the Kowloon side. Free.
+            <span class="cost free">Free</span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Temple Street Night Market<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Temple+Street+Night+Market" target="_blank" rel="noopener">Map</a></span>
+            Yau Ma Tei. Stalls, fortune tellers, and open-air <em>dai pai dong</em> seafood — clay-pot rice, typhoon-shelter crab, cheap beer. A relaxed first-night dinner that needs no reservation.
+            <span class="cost">HKD 150–250 pp <span class="usd">(~$19–32)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>If a flight slips<span class="card-sub">Standby contingency</span></summary>
+        <div class="card-body">
+          <div class="stop">The whole plan is Peak + ferry + dinner, and any subset of that still makes a good first night. If the group lands late, just do the promenade and Temple Street. Save the Peak for a clear morning later if you have to.</div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 1 · per person</span><span class="v">~HKD 450–750 (~$60–95)</span></div>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <span class="nav-prev" aria-disabled="true"><span class="k">Start</span><span class="t">First day</span></span>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="day-2.html"><span class="k">Next →</span><span class="t">Park Hoppers</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=1"></script>
+</body>
+</html>

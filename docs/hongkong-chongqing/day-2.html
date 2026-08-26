@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dec 27 · Plus-Sized Park Hoppers</title>
+<link rel="stylesheet" href="assets/shell.css?v=1">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── THEME · Day 2 — theme-park bright, LIGHT, with a jade Buddha accent ── */
+  :root {
+    --page-backdrop: #e9e2ff;
+    --bg:        #fffbf4;
+    --surface:   #ffffff;
+    --surface-2: #f2ecff;
+    --ink:       #2b2450;
+    --ink-dim:   #6d6596;
+    --accent:    #7c5cff;
+    --accent-2:  #12a37a;
+    --border:    rgba(43,36,80,0.14);
+    --radius:    16px;
+    --font-display: 'Fredoka', system-ui, sans-serif;
+    --font-body:    'Nunito', system-ui, sans-serif;
+  }
+  .hero {
+    background:
+      radial-gradient(circle at 18% 12%, rgba(124,92,255,0.16), transparent 40%),
+      radial-gradient(circle at 85% 8%, rgba(255,179,46,0.20), transparent 40%),
+      radial-gradient(circle at 70% 90%, rgba(79,184,255,0.16), transparent 45%),
+      linear-gradient(180deg, #fff8ec, #fffbf4);
+  }
+  .hero h1 { color: var(--accent); }
+  .hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle, rgba(124,92,255,0.35) 1.5px, transparent 1.6px),
+      radial-gradient(circle, rgba(255,179,46,0.35) 1.5px, transparent 1.6px);
+    background-size: 42px 42px, 30px 30px;
+    background-position: 0 0, 16px 20px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .hero > * { position: relative; z-index: 1; }
+  details.card.jade { border-color: color-mix(in srgb, var(--accent-2) 40%, transparent); }
+  details.card.jade > summary::after { border-color: var(--accent-2); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 26 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">26</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">27</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">28</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">29</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-6.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 2 / 6</span>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow">Sat · Dec 27 · Lantau Island</div>
+    <h1>Plus-Sized Park Hoppers</h1>
+    <p class="hero-sub">A full day at Hong Kong Disneyland — the only park with Mystic Manor and a World of Frozen — with the Big Buddha next door if the legs hold up.</p>
+    <div class="hero-meta">
+      <span>Rope drop</span>
+      <span>Full day in park</span>
+      <span>Big Buddha if time</span>
+    </div>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block">
+      <h2>Before the gates</h2>
+      <p class="lead">Small park by Disney standards, but New Year week is peak. A plan beats wandering.</p>
+
+      <div class="alert">
+        <strong>🎟 Buy ahead.</strong> Park tickets online in advance, plus decide on <em>Premier Access</em> (paid ride skips) for the headliners. Put one person in charge of the group's tickets. Check the official calendar for opening time (often ~10:30) and the parade / fireworks schedule.
+      </div>
+
+      <details class="card" open>
+        <summary>Hong Kong Disneyland — the run of show<span class="card-sub">Rope drop the newest, save shows for last</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">World of Frozen<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hong+Kong+Disneyland" target="_blank" rel="noopener">Map</a></span>
+            The newest land and the longest lines — hit it at rope drop. Wandering Oaken's Sliding Sleighs (family coaster) and Frozen Ever After (boat dark ride).
+          </div>
+          <div class="stop">
+            <span class="stop-name">Mystic Manor</span>
+            The park's signature ride — a trackless dark ride that <em>no other Disney park has</em>. Do this before the crowd finds it.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Iron Man Experience &amp; Ant-Man and The Wasp</span>
+            Tomorrowland's Marvel pair — a motion-simulator flight over Hong Kong and a shooter dark ride.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Adventureland</span>
+            Jungle River Cruise, the Rafts to Tarzan's treehouse, and the Festival of the Lion King stage show (worth the sit-down).
+          </div>
+          <div class="stop">
+            <span class="stop-name">Lunch for nine</span>
+            Book a sit-down — Royal Banquet Hall (Fantasyland) seats groups and takes reservations; otherwise Comrade Sandwiches or the World of Frozen market stalls.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Afternoon parade → nighttime spectacular</span>
+            Grab a curb spot ~20 min before the parade. End the night with <em>"Momentous"</em>, the castle projection-and-fireworks show — stake a viewing spot on the hub early.
+            <span class="cost">Park ticket ~HKD 640–750 <span class="usd">(~$82–96)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <details class="card jade">
+        <summary>Big Buddha / Ngong Ping — the optional add<span class="card-sub">A half-day of its own</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Ngong Ping 360 + Tian Tan Buddha<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Tian+Tan+Buddha+Hong+Kong" target="_blank" rel="noopener">Map</a></span>
+            The 34m bronze Big Buddha, Po Lin Monastery, and the Wisdom Path, reached by a 25-minute cable car with glass-floor cabins over the hills. It's genuinely a half-day — realistic only if you skip the Disney night show, or split the group. One MTR hop from the Disney side: Sunny Bay → Tung Chung, then the cable car (or bus 23).
+            <span class="cost">Cable car round trip ~HKD 270–315 <span class="usd">(~$35–40)</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Honest call</span>
+            With a full Disney day, most groups won't have the energy. Consider moving the Buddha to a spare morning, or treating it as the plan if Disneyland doesn't appeal to everyone.
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Getting there &amp; around<span class="card-sub">Dedicated Disney train</span></summary>
+        <div class="card-body">
+          <div class="stop">MTR to Sunny Bay, change to the Disneyland Resort line — a short shuttle train with Mickey-shaped windows. Stroller and wheelchair rental inside the park entrance. Re-entry is fine, so a mid-day breather at the hotel is possible but eats an hour each way.</div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 2 · per person</span><span class="v">~HKD 750–1,100 (~$95–140)</span></div>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-1.html"><span class="k">← Prev</span><span class="t">Pearl of the Orient</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="day-3.html"><span class="k">Next →</span><span class="t">Bankers vs. Dealers</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=1"></script>
+</body>
+</html>
