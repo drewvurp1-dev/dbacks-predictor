@@ -26,16 +26,25 @@
 
     /* cover-hero title */
     --font-script:   'Great Vibes', 'Segoe Script', cursive;
-    --script-ink:    #f8e7e0;                    /* light cream-pink */
-    --plate-bg:      rgba(17,10,20,0.42);        /* opaque enough to read over the painting; lower if it feels heavy */
-    --plate-border:  rgba(248,231,224,0.62);     /* cream-pink hairline frame */
+    --script-ink:    #f9e9e3;                    /* light cream-pink */
+    --plate-bg:      rgba(14,9,17,0.14);         /* barely there — the painting shows through */
+    --plate-border:  rgba(249,233,227,0.7);      /* cream-pink hairline frame */
+  }
+
+  /* frosted glass does the legibility work instead of a dark fill */
+  .hero-plate {
+    -webkit-backdrop-filter: blur(6px) saturate(1.05);
+    backdrop-filter: blur(6px) saturate(1.05);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  }
+  .hero-script {
+    text-shadow: 0 1px 2px rgba(0,0,0,0.55), 0 3px 22px rgba(0,0,0,0.5);
   }
 
   .hero--full {
-    /* the painting sits on top; the impasto-toned gradient is the fallback
-       until assets/day-1-hero.jpg is added */
+    /* the painting sits on top; the impasto-toned gradient is the fallback */
     background-image:
-      url("assets/day-1-hero.jpg"),
+      url("assets/HongKong.jpeg"),
       radial-gradient(ellipse 66% 42% at 50% 82%, rgba(231,178,60,0.30), transparent 72%),
       radial-gradient(circle at 18% 60%, rgba(209,64,47,0.22), transparent 46%),
       radial-gradient(circle at 84% 64%, rgba(64,120,210,0.20), transparent 46%),
@@ -44,8 +53,6 @@
     background-position: center;
     background-repeat: no-repeat;
   }
-
-  .hero-script { text-shadow: 0 2px 26px rgba(0,0,0,0.45), 0 0 2px rgba(0,0,0,0.35); }
 
   details.card[open] > summary { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
   .footer { box-shadow: inset 0 2px 0 rgba(231,178,60,0.18); }
