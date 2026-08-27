@@ -8,37 +8,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── THEME · Day 1 — "Pearl of the Orient" impasto oil painting ──
-     Cover-hero: the painting fills the screen, one cursive line over it,
-     everything else is below the fold. Palette below the hero keeps the
-     painting's gold / vermilion / deep-plum. */
+     Cover hero: the painting fills the screen, the title inked over it as
+     an outline, then a dark opaque journal below the fold. */
   :root {
-    --page-backdrop: #150e1a;
-    --bg:        #191228;
-    --surface:   #241a35;
-    --surface-2: #2f2343;
+    --page-backdrop: #0b0a0e;
+    --bg:        #100e13;   /* opaque near-black — no navy */
+    --surface:   #191519;
+    --surface-2: #241f25;
     --ink:       #f6efe0;
-    --ink-dim:   #b7a9cd;
+    --ink-dim:   #bcae9a;
     --accent:    #e7b23c;   /* gold leaf */
     --accent-2:  #d1402f;   /* junk-sail vermilion / the red gate */
-    --border:    rgba(231,178,60,0.24);
+    --border:    rgba(231,178,60,0.22);
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
-
-    /* cover-hero title */
-    --font-script:   'Great Vibes', 'Segoe Script', cursive;
-    --script-ink:    #f9e9e3;                    /* light cream-pink */
-    --plate-bg:      rgba(14,9,17,0.14);         /* barely there — the painting shows through */
-    --plate-border:  rgba(249,233,227,0.7);      /* cream-pink hairline frame */
-  }
-
-  /* frosted glass does the legibility work instead of a dark fill */
-  .hero-plate {
-    -webkit-backdrop-filter: blur(6px) saturate(1.05);
-    backdrop-filter: blur(6px) saturate(1.05);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.35);
-  }
-  .hero-script {
-    text-shadow: 0 1px 2px rgba(0,0,0,0.55), 0 3px 22px rgba(0,0,0,0.5);
+    --font-script:  'Great Vibes', 'Segoe Script', cursive;
   }
 
   .hero--full {
@@ -48,11 +32,79 @@
       radial-gradient(ellipse 66% 42% at 50% 82%, rgba(231,178,60,0.30), transparent 72%),
       radial-gradient(circle at 18% 60%, rgba(209,64,47,0.22), transparent 46%),
       radial-gradient(circle at 84% 64%, rgba(64,120,210,0.20), transparent 46%),
-      linear-gradient(180deg, #b9a9db 0%, #7a6aa6 18%, #4a3f6e 36%, #2c2142 60%, #201733 82%, #16202a 100%);
+      linear-gradient(180deg, #b9a9db 0%, #7a6aa6 18%, #4a3f6e 36%, #2c2142 60%, #1b1622 82%, #100e13 100%);
     background-size: cover, cover, cover, cover, cover;
     background-position: center;
     background-repeat: no-repeat;
   }
+
+  /* ── the inked title — no box, outline lettering over the painting ── */
+  .hero-mark {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    padding: 0 7vw;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
+    transform: translateY(calc(var(--hero-scroll, 0) * -12px));
+  }
+  .hero-welcome,
+  .hero-title {
+    font-family: var(--font-script);
+    color: transparent;
+    -webkit-text-stroke: 1.2px #0b0b0d;
+    text-stroke: 1.2px #0b0b0d;
+    paint-order: stroke fill;
+    /* a tight cream halo hugs the black outline so it reads on any part of the painting */
+    filter: drop-shadow(0 0 4px rgba(255,248,244,0.9)) drop-shadow(0 2px 7px rgba(0,0,0,0.55));
+  }
+  .hero-welcome {
+    font-size: clamp(1.15rem, 4.4vw, 1.7rem);
+    margin-left: -1%;
+    margin-bottom: -0.1em;
+    transform: rotate(-3deg);
+    opacity: 0;
+    animation: hw-fade 0.6s ease 0.15s forwards;
+  }
+  .hero-title {
+    font-size: clamp(2.7rem, 12vw, 4.6rem);
+    line-height: 1.06;
+    -webkit-text-stroke-width: 2px;
+    margin-top: -0.05em;
+  }
+  .hero-title .ln {
+    display: block;
+    white-space: nowrap;
+    /* a soft-edged diagonal wipe that sweeps the letters in like ink */
+    -webkit-mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
+            mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
+    -webkit-mask-size: 260% 100%;
+            mask-size: 260% 100%;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-position: 132% 0;
+            mask-position: 132% 0;
+    animation: ink-in 1.2s cubic-bezier(0.55, 0, 0.3, 1) 0.55s forwards;
+  }
+  .hero-title .ln:nth-child(2) { animation-delay: 1.35s; }
+
+  @keyframes hw-fade { to { opacity: 1; } }
+  @keyframes ink-in {
+    from { -webkit-mask-position: 132% 0; mask-position: 132% 0; }
+    to   { -webkit-mask-position: 0% 0;   mask-position: 0% 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-welcome { opacity: 1; animation: none; }
+    .hero-title .ln {
+      animation: none;
+      -webkit-mask-image: none;
+              mask-image: none;
+    }
+  }
+
+  .scroll-cue { color: #f5efe6; }
 
   details.card[open] > summary { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
   .footer { box-shadow: inset 0 2px 0 rgba(231,178,60,0.18); }
@@ -89,8 +141,9 @@
   </header>
 
   <section class="hero hero--full">
-    <div class="hero-plate">
-      <p class="hero-script">Welcome to<br>The Pearl of the Orient</p>
+    <div class="hero-mark">
+      <span class="hero-welcome">Welcome to</span>
+      <span class="hero-title"><span class="ln">The Pearl</span><span class="ln">of the Orient</span></span>
     </div>
     <span class="scroll-cue">Scroll</span>
   </section>
@@ -100,20 +153,11 @@
     <div class="block reveal">
       <div class="hero-eyebrow">Fri · Dec 26 · Hong Kong</div>
       <p class="lead" style="border:0;padding:0;margin:0">Everyone lands. A settle-in day built around Victoria Harbour — don't fight the jet lag, lean into the evening.</p>
-      <div class="hero-meta" style="margin-top:14px">
-        <span>Everyone converges</span>
-        <span>Standby arrivals</span>
-        <span>Sleep: Hong Kong</span>
-      </div>
     </div>
 
     <div class="block reveal">
       <h2>The shape of the day</h2>
       <p class="lead">Nothing is time-critical. The Peak and the ferry are both better at dusk anyway, so a late start is fine.</p>
-
-      <div class="alert">
-        <strong>📍 Meeting point.</strong> Pick one before anyone takes off — hotel lobby at a set time, or the HKG arrivals hall. The two travelling from ORD may land on a different flight; agree who waits for whom.
-      </div>
 
       <details class="card" open>
         <summary>Afternoon — get your bearings<span class="card-sub">Peak + harbour crossing</span></summary>
@@ -144,13 +188,6 @@
             Yau Ma Tei. Stalls, fortune tellers, and open-air <em>dai pai dong</em> seafood — clay-pot rice, typhoon-shelter crab, cheap beer. A relaxed first-night dinner that needs no reservation.
             <span class="cost">HKD 150–250 pp <span class="usd">(~$19–32)</span></span>
           </div>
-        </div>
-      </details>
-
-      <details class="card">
-        <summary>If a flight slips<span class="card-sub">Standby contingency</span></summary>
-        <div class="card-body">
-          <div class="stop">The whole plan is Peak + ferry + dinner, and any subset of that still makes a good first night. If the group lands late, just do the promenade and Temple Street. Save the Peak for a clear morning later if you have to.</div>
         </div>
       </details>
 
