@@ -53,12 +53,11 @@
   .hero-welcome,
   .hero-title {
     font-family: var(--font-script);
-    color: transparent;
+    color: #f8e3da;                       /* pink-cream fill inside the outline */
     -webkit-text-stroke: 1.2px #0b0b0d;
     text-stroke: 1.2px #0b0b0d;
-    paint-order: stroke fill;
-    /* a tight cream halo hugs the black outline so it reads on any part of the painting */
-    filter: drop-shadow(0 0 4px rgba(255,248,244,0.9)) drop-shadow(0 2px 7px rgba(0,0,0,0.55));
+    paint-order: stroke fill;             /* outline behind the fill = crisp edge */
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.55)) drop-shadow(0 0 16px rgba(0,0,0,0.38));
   }
   .hero-welcome {
     font-size: clamp(1.15rem, 4.4vw, 1.7rem);
@@ -66,9 +65,12 @@
     margin-bottom: -0.1em;
     transform: rotate(-3deg);
     opacity: 0;
-    animation: hw-fade 0.6s ease 0.15s forwards;
+    animation: hw-fade 0.9s ease 0.2s forwards;
   }
   .hero-title {
+    align-self: center;                   /* centre the title on screen */
+    width: 100%;
+    text-align: center;
     font-size: clamp(2.7rem, 12vw, 4.6rem);
     line-height: 1.06;
     -webkit-text-stroke-width: 2px;
@@ -86,9 +88,9 @@
             mask-repeat: no-repeat;
     -webkit-mask-position: 132% 0;
             mask-position: 132% 0;
-    animation: ink-in 1.2s cubic-bezier(0.55, 0, 0.3, 1) 0.55s forwards;
+    animation: ink-in 2.3s cubic-bezier(0.4, 0, 0.35, 1) 0.7s forwards;
   }
-  .hero-title .ln:nth-child(2) { animation-delay: 1.35s; }
+  .hero-title .ln:nth-child(2) { animation-delay: 2.6s; }
 
   @keyframes hw-fade { to { opacity: 1; } }
   @keyframes ink-in {
