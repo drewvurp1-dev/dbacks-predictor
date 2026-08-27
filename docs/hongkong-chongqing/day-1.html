@@ -45,7 +45,7 @@
     align-items: flex-start;
     text-align: left;
     width: 100%;
-    padding: 0 7vw;
+    padding: 0 5vw;
     transition: opacity 0.4s ease, transform 0.4s ease;
     opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
     transform: translateY(calc(var(--hero-scroll, 0) * -12px));
@@ -71,14 +71,18 @@
     align-self: center;                   /* centre the title on screen */
     width: 100%;
     text-align: center;
-    font-size: clamp(2.7rem, 12vw, 4.6rem);
-    line-height: 1.06;
+    /* sized so the script's leading/trailing swashes (T, l, t) don't reach
+       the clipped edge of the hero */
+    font-size: clamp(2.2rem, 10.5vw, 4rem);
+    line-height: 1.08;
     -webkit-text-stroke-width: 2px;
     margin-top: -0.05em;
+    padding-inline: 0.3em;
+    overflow: visible;
   }
   .hero-title .ln {
     display: block;
-    white-space: nowrap;
+    overflow: visible;
     /* a soft-edged diagonal wipe that sweeps the letters in like ink */
     -webkit-mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
             mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
