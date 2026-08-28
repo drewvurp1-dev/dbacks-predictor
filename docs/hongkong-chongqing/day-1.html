@@ -50,7 +50,6 @@
     opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
     transform: translateY(calc(var(--hero-scroll, 0) * -12px));
   }
-  .hero-welcome,
   .hero-title {
     font-family: var(--font-script);
     font-weight: 400;                     /* Pinyon Script is a single weight */
@@ -59,18 +58,6 @@
     text-stroke: 0.9px #0b0b0d;
     paint-order: stroke fill;             /* outline behind the fill = crisp edge */
     filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(0,0,0,0.4));
-  }
-  .hero-welcome {
-    position: relative;
-    z-index: 1;
-    font-size: clamp(1.7rem, 7.5vw, 2.8rem);
-    /* sit snug above "The Pearl", slightly left, hand-tilted */
-    margin-bottom: 0.12em;
-    transform: translateX(-24%) rotate(-2deg);
-    opacity: 0;
-    animation: hw-fade 0.9s ease 0.2s forwards;
-  }
-  .hero-title {
     width: 100%;
     text-align: center;
     font-size: clamp(2.6rem, 18vw, 5rem);
@@ -97,13 +84,11 @@
   }
   .hero-title .ln:nth-child(2) { animation-delay: 2.6s; }
 
-  @keyframes hw-fade { to { opacity: 1; } }
   @keyframes ink-in {
     from { -webkit-mask-position: 132% 0; mask-position: 132% 0; }
     to   { -webkit-mask-position: 0% 0;   mask-position: 0% 0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .hero-welcome { opacity: 1; animation: none; }
     .hero-title .ln {
       animation: none;
       -webkit-mask-image: none;
@@ -149,7 +134,6 @@
 
   <section class="hero hero--full">
     <div class="hero-mark">
-      <span class="hero-welcome">Welcome to</span>
       <span class="hero-title"><span class="ln">The Pearl</span><span class="ln">of the Orient</span></span>
     </div>
     <span class="scroll-cue">Scroll</span>
