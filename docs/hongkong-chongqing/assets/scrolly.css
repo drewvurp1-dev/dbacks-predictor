@@ -1,0 +1,419 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   SCROLLYTELLING DAY-PAGE TEMPLATE
+   ---------------------------------------------------------------------
+   A full-screen fixed artwork that blurs and zooms as you scroll, with
+   floating frosted cards riding over it. Every day page uses this; only
+   the art and the palette change.
+
+   ── HOW TO USE ──────────────────────────────────────────────────────
+   1. Link it after shell.css:
+        <link rel="stylesheet" href="assets/shell.css?v=5">
+        <link rel="stylesheet" href="assets/scrolly.css?v=5">
+
+   2. Put the art stage as the FIRST thing in <body>, before .frame:
+        <div class="bg-stage" aria-hidden="true">
+          <div class="bg-art"></div>     <-- or <img class="bg-art" src="...">
+          <div class="bg-tint"></div>
+        </div>
+
+   3. Make the hero a cover hero, title only — everything else goes in
+      cards below the fold:
+        <section class="hero hero--full">
+          <div class="hero-mark">
+            <span class="hero-title"><span class="ln">Line one</span><span class="ln">Line two</span></span>
+          </div>
+          <span class="scroll-cue">Scroll</span>
+        </section>
+
+   4. Give every .block a `reveal` class so it eases in on scroll.
+
+   5. Set the day's palette in the page's own <style>, on `body`:
+        body {
+          --sc-art: url("assets/whatever.jpg");
+          --sc-accent: #9a6b12;
+          ...
+        }
+      Add class="glass-dark" to <body> for the dark-glass card preset.
+
+   Page <style> blocks are unlayered and therefore beat this file and
+   shell.css at any specificity — override freely with plain selectors.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@layer scrolly {
+
+/* ── TOKENS ──────────────────────────────────────────────────────────
+   Declared on `body` (not :root) so the .glass-dark preset below can
+   re-point them and have the shell mappings re-resolve. */
+body {
+  /* the artwork */
+  --sc-art:       none;          /* url(…) or a gradient stack; omit when using <img class="bg-art"> */
+  --sc-art-size:  cover;
+  --sc-art-pos:   center;
+  --sc-art-repeat: repeat;       /* `cover` layers fill exactly, so this only tiles pattern layers */
+  --sc-blur:      25px;          /* blur at full scroll */
+  --sc-zoom:      0.08;          /* extra scale at full scroll — also overscans the blurred edges */
+
+  /* the scrim over the art — deepens as you scroll so cards keep contrast */
+  --sc-scrim:     linear-gradient(180deg, rgba(10,7,14,0.10), rgba(10,7,14,0.30));
+  --sc-scrim-min: 0.35;
+  --sc-scrim-max: 1;
+
+  /* card system — LIGHT GLASS by default */
+  --sc-card:      rgba(251,244,240,0.86);
+  --sc-card-2:    rgba(255,253,251,0.72);
+  --sc-card-3:    rgba(247,236,230,0.78);
+  --sc-ink:       #1c1c1c;
+  --sc-ink-2:     #4a423e;
+  --sc-ink-dim:   #574d48;
+  --sc-edge:      rgba(28,28,28,0.14);
+  --sc-edge-2:    rgba(28,28,28,0.28);
+  --sc-hair:      rgba(255,255,255,0.55);   /* inset top highlight on a card */
+  --sc-shadow:    0 14px 40px rgba(0,0,0,0.34);
+  --sc-chip:      rgba(255,255,255,0.7);    /* cost / map-pin fill */
+  --sc-press:     rgba(28,28,28,0.05);      /* summary hover / open fill */
+  --sc-radius:    16px;
+
+  --sc-accent:    #9a6b12;
+  --sc-accent-2:  #b03a26;
+  --sc-free:      #3f6b45;       /* the "Free" cost chip */
+
+  /* the dark anchor bar at the end of a day */
+  --sc-total-bg:  #1c1c1c;
+  --sc-total-k:   rgba(255,255,255,0.6);
+  --sc-total-v:   #e7b23c;
+
+  /* chrome */
+  --sc-chrome:    rgba(251,244,240,0.82);
+  --sc-footer:    #e8ddd6;
+
+  /* the slide-in drawer stays dark on every day, light or not */
+  --sc-nav-bg:    #14121a;
+  --sc-nav-ink:   #f6efe0;
+  --sc-nav-dim:   #a99c92;
+  --sc-nav-edge:  rgba(255,255,255,0.1);
+  --sc-nav-accent: var(--sc-accent-2);
+
+  /* the title over the art */
+  --sc-title-font:     var(--font-display);
+  --sc-title-size:     clamp(2.2rem, 11.5vw, 4rem);
+  --sc-title-weight:   700;
+  --sc-title-lh:       1.12;
+  --sc-title-tracking: -0.01em;
+  --sc-title-case:     none;
+  --sc-title-ink:      #f8ede6;
+  --sc-title-stroke:   #0b0b0d;
+  --sc-title-stroke-w: 0;        /* day 1's calligraphy sets this; most days rely on the shadow */
+  --sc-title-shadow:   drop-shadow(0 2px 4px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(0,0,0,0.45));
+
+  /* ── map onto the shell's tokens so its components inherit ── */
+  --bg:      transparent;
+  --ink:     var(--sc-ink);
+  --ink-dim: var(--sc-ink-dim);
+  --accent:  var(--sc-accent);
+  --accent-2: var(--sc-accent-2);
+  --border:  var(--sc-edge);
+  --radius:  var(--sc-radius);
+}
+
+/* DARK GLASS preset — for the night days (casino, neon, drone show).
+   Only neutral values; each page still sets its own tints and accents. */
+body.glass-dark {
+  --sc-card:    rgba(20,19,26,0.68);
+  --sc-card-2:  rgba(255,255,255,0.055);
+  --sc-card-3:  rgba(255,255,255,0.045);
+  --sc-ink:     #f4f1ea;
+  --sc-ink-2:   #ddd7cd;
+  --sc-ink-dim: #a49d94;
+  --sc-edge:    rgba(255,255,255,0.14);
+  --sc-edge-2:  rgba(255,255,255,0.26);
+  --sc-hair:    rgba(255,255,255,0.10);
+  --sc-shadow:  0 16px 44px rgba(0,0,0,0.5);
+  --sc-chip:    rgba(255,255,255,0.07);
+  --sc-press:   rgba(255,255,255,0.06);
+  --sc-free:    #7fbf8d;
+  --sc-scrim:   linear-gradient(180deg, rgba(6,5,10,0.16), rgba(6,5,10,0.44));
+
+  --sc-total-bg: rgba(0,0,0,0.42);
+  --sc-total-k:  rgba(255,255,255,0.55);
+
+  --sc-chrome:   rgba(16,15,21,0.72);
+  --sc-footer:   #b9b2a8;
+}
+
+/* ── 1. THE FIXED ARTWORK ────────────────────────────────────────────
+   A viewport-sized fixed layer behind everything. .bg-art works as
+   either an <img> (object-fit) or a <div> (background) so a day can use
+   a photograph or a gradient until its art lands. */
+.bg-stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bg-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--sc-art-pos);
+  background-image: var(--sc-art);
+  background-size: var(--sc-art-size);
+  background-position: var(--sc-art-pos);
+  background-repeat: var(--sc-art-repeat);
+  /* 2. SCROLL-DRIVEN BLUR — 0 at the top of the hero, ramping to
+     --sc-blur as you scroll into the content. Blurring the art itself
+     (rather than a viewport-wide backdrop-filter) avoids the sampling
+     artifacts backdrop-filter leaves at the screen edges; the paired
+     scale() overscans so blurred edges never come into view. */
+  filter: blur(min(var(--sc-blur), calc(var(--hero-scroll, 0) * var(--sc-blur) * 1.3)));
+  transform: scale(calc(1 + var(--hero-scroll, 0) * var(--sc-zoom)));
+  transform-origin: center;
+  will-change: filter, transform;
+}
+.bg-tint {
+  position: absolute;
+  inset: 0;
+  background: var(--sc-scrim);
+  opacity: min(var(--sc-scrim-max), calc(var(--sc-scrim-min) + var(--hero-scroll, 0) * 0.85));
+  transition: opacity 0.2s linear;
+}
+
+/* the frame stops being a solid panel — it's just the column now */
+.frame {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+@media (min-width: 540px) {
+  .frame { box-shadow: none; }
+}
+
+/* ── THE COVER HERO ──────────────────────────────────────────────── */
+.hero--full { background: none; }
+.hero--full::after { display: none; }   /* .bg-tint does the wash instead */
+
+.hero-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  padding: 0 1vw;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
+  transform: translateY(calc(var(--hero-scroll, 0) * -12px));
+}
+.hero-title {
+  width: 100%;
+  text-align: center;
+  font-family: var(--sc-title-font);
+  font-weight: var(--sc-title-weight);
+  font-size: var(--sc-title-size);
+  line-height: var(--sc-title-lh);
+  letter-spacing: var(--sc-title-tracking);
+  text-transform: var(--sc-title-case);
+  color: var(--sc-title-ink);
+  -webkit-text-stroke: var(--sc-title-stroke-w) var(--sc-title-stroke);
+  paint-order: stroke fill;
+  filter: var(--sc-title-shadow);
+  padding-inline: 0.04em;
+  overflow: visible;
+}
+.hero-title .ln {
+  display: block;
+  overflow: visible;
+  opacity: 0;
+  animation: sc-line-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.hero-title .ln:nth-child(1) { animation-delay: 0.25s; }
+.hero-title .ln:nth-child(2) { animation-delay: 0.55s; }
+.hero-title .ln:nth-child(3) { animation-delay: 0.85s; }
+@keyframes sc-line-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* INK-WIPE variant — a soft diagonal sweep, for calligraphic titles */
+.hero-title--ink .ln {
+  white-space: nowrap;
+  opacity: 1;
+  -webkit-mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
+          mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
+  -webkit-mask-size: 260% 100%;
+          mask-size: 260% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: 132% 0;
+          mask-position: 132% 0;
+  animation: sc-ink-in 2.3s cubic-bezier(0.4, 0, 0.35, 1) 0.7s forwards;
+}
+.hero-title--ink .ln:nth-child(2) { animation-delay: 2.6s; }
+.hero-title--ink .ln:nth-child(3) { animation-delay: 4.5s; }
+@keyframes sc-ink-in {
+  from { -webkit-mask-position: 132% 0; mask-position: 132% 0; }
+  to   { -webkit-mask-position: 0% 0;   mask-position: 0% 0; }
+}
+
+.scroll-cue { color: var(--sc-title-ink); text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-title .ln { opacity: 1; animation: none; transform: none; }
+  .hero-title--ink .ln { -webkit-mask-image: none; mask-image: none; }
+  .bg-art { filter: none; transform: none; }
+}
+
+/* ── 3. THE FLOATING CARDS ───────────────────────────────────────── */
+.wrap { padding: 22px 14px calc(var(--daynav-h) + 30px); }
+
+.block {
+  background: var(--sc-card);
+  -webkit-backdrop-filter: blur(14px) saturate(1.25);
+          backdrop-filter: blur(14px) saturate(1.25);
+  border: 1px solid var(--sc-edge);
+  border-radius: var(--sc-radius);
+  padding: 20px 18px 22px;
+  margin-bottom: 16px;
+  box-shadow: var(--sc-shadow), inset 0 1px 0 var(--sc-hair);
+  color: var(--sc-ink);
+}
+.block > h2 { color: var(--sc-ink); font-size: 21px; }
+.block > .lead { color: var(--sc-ink-2); border-bottom: 1px solid var(--sc-edge); }
+.hero-eyebrow { color: var(--sc-accent-2); letter-spacing: 0.15em; }
+
+/* nested collapsible — an inset panel, not a second floating card */
+details.card {
+  background: var(--sc-card-2);
+  border: 1px solid var(--sc-edge);
+  border-radius: 12px;
+  box-shadow: none;
+  margin-bottom: 10px;
+}
+details.card > summary {
+  color: var(--sc-ink);
+  border-left: 3px solid var(--sc-accent-2);
+  border-radius: 12px 12px 0 0;
+}
+details.card > summary::after {
+  border-right-color: var(--sc-ink-2);
+  border-bottom-color: var(--sc-ink-2);
+}
+details.card > summary:hover { background: var(--sc-press); }
+details.card[open] > summary {
+  background: var(--sc-press);
+  border-bottom: 1px solid var(--sc-edge);
+}
+.card-sub { color: var(--sc-ink-dim); }
+
+.stop {
+  background: var(--sc-card-3);
+  border: 1px solid var(--sc-edge);
+  border-radius: 10px;
+  color: var(--sc-ink-2);
+}
+.stop-name { color: var(--sc-ink); }
+.stop b, .stop strong { color: var(--sc-ink); }
+
+.map-pin {
+  color: var(--sc-accent-2);
+  border-color: var(--sc-edge-2);
+  background: var(--sc-chip);
+}
+.cost {
+  background: var(--sc-chip);
+  border: 1px solid var(--sc-edge-2);
+  color: var(--sc-accent);
+}
+.cost .usd { color: var(--sc-ink-dim); }
+.cost.free { color: var(--sc-free); border-color: color-mix(in srgb, var(--sc-free) 40%, transparent); }
+
+.alert {
+  background: var(--sc-card-2);
+  border: 1px solid var(--sc-edge-2);
+  border-left: 3px solid var(--sc-accent-2);
+  border-radius: 11px;
+  color: var(--sc-ink-2);
+}
+.alert strong { color: var(--sc-ink); }
+
+.tag { background: var(--sc-accent-2); color: #fff; }
+.tag.ghost { background: none; color: var(--sc-accent); border-color: var(--sc-edge-2); }
+
+table.tbl { background: var(--sc-card-2); color: var(--sc-ink-2); }
+table.tbl th { background: var(--sc-press); color: var(--sc-ink-dim); }
+table.tbl td { border-top-color: var(--sc-edge); }
+
+/* the day total is a deliberate dark anchor at the end of the card */
+.daytotal {
+  background: var(--sc-total-bg);
+  border: 1px solid var(--sc-total-bg);
+  border-radius: 12px;
+}
+.daytotal .k { color: var(--sc-total-k); }
+.daytotal .v { color: var(--sc-total-v); }
+
+/* ── CHROME ──────────────────────────────────────────────────────── */
+.appbar {
+  background: var(--sc-chrome);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+          backdrop-filter: blur(14px) saturate(1.2);
+  border-bottom: 1px solid var(--sc-edge);
+}
+.appbar-title { color: var(--sc-ink-2); }
+.appbar-chip { color: var(--sc-accent); border-color: var(--sc-edge-2); }
+.navbtn { color: var(--sc-ink); border-color: var(--sc-edge-2); }
+
+/* While the art owns the screen the bar melts away. This has to be restated
+   here rather than inherited from shell.css: `scrolly` is the later layer,
+   so a plain `.appbar` rule here outranks shell's `body.at-hero .appbar`. */
+body.at-hero .appbar {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+          backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+/* …and flip the menu button to light so it stays visible against the art */
+body.at-hero .navbtn {
+  color: #f7ece6;
+  border-color: rgba(255,255,255,0.45);
+  background: rgba(12,10,16,0.22);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
+}
+
+.daynav {
+  background: var(--sc-chrome);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+          backdrop-filter: blur(14px) saturate(1.2);
+  border-top: 1px solid var(--sc-edge);
+}
+.daynav a, .daynav span { color: var(--sc-ink); }
+.daynav .k { color: var(--sc-ink-dim); }
+.daynav .nav-hub { color: var(--sc-accent-2); border-inline-color: var(--sc-edge); }
+
+.footer {
+  color: var(--sc-footer);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.55);
+  border-top: 1px solid rgba(255,255,255,0.14);
+}
+
+/* ── THE DRAWER stays dark on every day, light glass or not ──────── */
+.drawer {
+  background: var(--sc-nav-bg);
+  border-right: 1px solid var(--sc-nav-edge);
+}
+.drawer-head { border-color: var(--sc-nav-edge); }
+.drawer-head h2 { color: var(--sc-nav-ink); }
+.drawer-head p,
+.drawer nav a .d-num,
+.drawer nav a .d-sub,
+.drawer nav .nav-sep { color: var(--sc-nav-dim); }
+.drawer nav .nav-sep { border-color: var(--sc-nav-edge); }
+.drawer nav a { color: var(--sc-nav-ink); }
+.drawer nav a:active,
+.drawer nav a[aria-current="page"] { background: rgba(255,255,255,0.06); }
+.drawer nav a[aria-current="page"] { border-left-color: var(--sc-nav-accent); }
+.drawer nav a[aria-current="page"] .d-num { color: var(--sc-nav-accent); }
+
+} /* @layer scrolly */

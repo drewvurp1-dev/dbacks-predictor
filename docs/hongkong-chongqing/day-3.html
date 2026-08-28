@@ -3,44 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dec 28 · The Lucky Bankers vs. The Evil Dealers</title>
-<link rel="stylesheet" href="assets/shell.css?v=4">
+<title>Dec 28 &middot; The Lucky Bankers vs. The Evil Dealers</title>
+<link rel="stylesheet" href="assets/shell.css?v=7">
+<link rel="stylesheet" href="assets/scrolly.css?v=7">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── THEME · Day 3 — Casino Royale: black felt, gold, crimson, Deco caps ── */
-  :root {
+  /* ── DAY 3 — "Lucky Bankers vs. Evil Dealers" · Casino Royale
+     Green felt under gold light, playing-card suits in the weave. ── */
+  body {
     --page-backdrop: #040504;
-    --bg:        #0a0e0a;
-    --surface:   #10160f;
-    --surface-2: #161f0f;
-    --ink:       #f4efe0;
-    --ink-dim:   #b0a993;
-    --accent:    #d8b24a;
-    --accent-2:  #c21f38;
-    --border:    rgba(216,178,74,0.22);
     --font-display: 'Cinzel', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
+
+    --sc-art:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23d8b24a' fill-opacity='0.16'%3E%3Cpath d='M30 20c-6 6-12 10-12 17a12 12 0 0024 0c0-7-6-11-12-17z'/%3E%3Cpath d='M90 84a12 12 0 00-24 0c0 7 6 11 12 17 6-6 12-10 12-17z'/%3E%3Ccircle cx='30' cy='88' r='9'/%3E%3Crect x='81' y='15' width='14' height='14' transform='rotate(45 88 22)'/%3E%3C/g%3E%3C/svg%3E"),
+      radial-gradient(ellipse at 50% -8%, rgba(216,178,74,0.42), transparent 56%),
+      radial-gradient(circle at 50% 58%, #1d4426 0%, #0d2413 46%, #060d08 82%);
+    --sc-art-size: 120px 120px, cover, cover;
+
+    --sc-accent:   #d8b24a;   /* gold leaf */
+    --sc-accent-2: #c21f38;   /* crimson */
+    --sc-total-v:  #d8b24a;
+
+    --sc-title-size:     clamp(1.7rem, 8.4vw, 2.9rem);
+    --sc-title-case:     uppercase;
+    --sc-title-tracking: 0.02em;
+    --sc-title-lh:       1.22;
+    --sc-title-ink:      #f7e8c2;
+    --sc-title-shadow:   drop-shadow(0 2px 5px rgba(0,0,0,0.75)) drop-shadow(0 0 26px rgba(216,178,74,0.4));
   }
-  /* faint playing-card suit pattern across the whole frame */
-  .frame::before {
-    content: '';
-    position: absolute; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23d8b24a' fill-opacity='0.05'%3E%3Cpath d='M30 20c-6 6-12 10-12 17a12 12 0 0024 0c0-7-6-11-12-17z'/%3E%3Cpath d='M90 84a12 12 0 00-24 0c0 7 6 11 12 17 6-6 12-10 12-17z'/%3E%3Ccircle cx='30' cy='88' r='9'/%3E%3Crect x='81' y='15' width='14' height='14' transform='rotate(45 88 22)'/%3E%3C/g%3E%3C/svg%3E");
-    background-size: 120px 120px;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .hero {
-    background:
-      radial-gradient(ellipse at 50% -10%, rgba(216,178,74,0.16), transparent 55%),
-      radial-gradient(circle at 50% 60%, #16311b 0%, #0c1a0e 45%, #0a0e0a 78%);
-  }
-  .hero h1 { letter-spacing: 0.01em; text-shadow: 0 2px 24px rgba(216,178,74,0.25); }
-  details.card { border-top: 2px solid var(--accent); }
-  .tag { background: var(--accent-2); color: #fff; }
+  /* the middle "vs." line reads as a divider, not a headline */
+  .hero-title .ln:nth-child(2) { font-size: 0.5em; opacity: 0.85; letter-spacing: 0.3em; }
 </style>
 </head>
-<body>
+<body class="glass-dark">
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <div class="bg-tint"></div>
+</div>
+
 <div class="frame">
 
   <div class="scrim" id="scrim"></div>
@@ -70,20 +72,21 @@
     <span class="appbar-chip">Day 3 / 6</span>
   </header>
 
-  <section class="hero">
-    <div class="hero-eyebrow">Sun · Dec 28 · Macao</div>
-    <h1>The Lucky Bankers vs. The Evil Dealers</h1>
-    <p class="hero-sub">A day trip to Macao — the biggest casino floors on earth, the gold-lit skyline, and the bar-and-restaurant scene once the chips are down. Back in Hong Kong tonight.</p>
-    <div class="hero-meta">
-      <span>Ferry from HK</span>
-      <span>Casinos + night lights</span>
-      <span>Back to HK tonight</span>
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">The Lucky Bankers</span><span class="ln">vs.</span><span class="ln">The Evil Dealers</span></span>
     </div>
+    <span class="scroll-cue">Scroll</span>
   </section>
 
   <main class="wrap">
 
-    <div class="block">
+    <div class="block reveal">
+      <div class="hero-eyebrow">Sun &middot; Dec 28 &middot; Macao</div>
+      <p class="lead" style="border:0;padding:0;margin:0">A day trip to Macao &mdash; the biggest casino floors on earth, the gold-lit skyline, and the bar-and-restaurant scene once the chips are down. Back in Hong Kong tonight.</p>
+    </div>
+
+    <div class="block reveal">
       <h2>House rules</h2>
       <p class="lead">It's a day trip on purpose — tomorrow's Guilin train leaves from Hong Kong.</p>
 
@@ -168,6 +171,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=4"></script>
+<script src="assets/shell.js?v=7"></script>
 </body>
 </html>

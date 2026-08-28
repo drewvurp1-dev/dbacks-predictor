@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TEMPLATE · New day page</title>
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCROLLYTELLING DAY PAGE — copy this file to day-N.html and edit the
+     five spots marked ✏️. Everything else is the shared template.
+     Full token reference: assets/scrolly.css
+     ═══════════════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="assets/shell.css?v=7">
+<link rel="stylesheet" href="assets/scrolly.css?v=7">
+<!-- ✏️ 1. FONTS — pick a display face that suits the day -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ✏️ 2. THE DAY'S PALETTE.
+     Declare on `body` (not :root) — the .glass-dark preset re-points these
+     and the shell mappings have to re-resolve from the same element.
+     This <style> is unlayered, so it beats shell.css and scrolly.css at
+     any specificity: override anything with a plain selector. */
+  body {
+    --page-backdrop: #0b0a0e;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+
+    /* THE ART. Either a photo on <img class="bg-art"> (leave --sc-art
+       unset), or a gradient stack here with <div class="bg-art">.
+       Include a repeating pattern layer so the scroll blur has texture
+       to work with — a smooth gradient blurs into nothing. */
+    --sc-art:
+      radial-gradient(circle, rgba(255,255,255,0.5) 1.4px, transparent 1.8px),
+      radial-gradient(circle at 25% 15%, rgba(201,162,74,0.4), transparent 45%),
+      linear-gradient(180deg, #2a2340 0%, #171526 50%, #0b0a0e 100%);
+    --sc-art-size: 44px 44px, cover, cover;
+
+    --sc-accent:   #c9a24a;   /* headings, cost chips, the day total */
+    --sc-accent-2: #b03a26;   /* card edge bars, map pins, the eyebrow */
+
+    /* ✏️ 3. THE TITLE over the art */
+    --sc-title-size:   clamp(2.2rem, 12vw, 3.9rem);
+    --sc-title-ink:    #f6efe4;
+    --sc-title-shadow: drop-shadow(0 2px 5px rgba(0,0,0,0.65)) drop-shadow(0 0 24px rgba(0,0,0,0.45));
+    /* --sc-title-case: uppercase;  --sc-title-lh: 1.05;  --sc-title-tracking: 0.02em; */
+  }
+</style>
+</head>
+
+<!-- ✏️ 4. Add class="glass-dark" for the dark-glass card preset (night days).
+     Omit it for light pink-cream cards. -->
+<body class="glass-dark">
+
+<!-- the fixed full-screen artwork, behind everything -->
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <!-- …or, with a photograph:  <img class="bg-art" src="assets/YourArt.jpeg" alt=""> -->
+  <div class="bg-tint"></div>
+</div>
+
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 26 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">26</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">27</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">28</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">29</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-6.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day N / 6</span>
+  </header>
+
+  <!-- THE COVER HERO — title only. One <span class="ln"> per line; they
+       stagger in. Add class="hero-title--ink" for the calligraphic
+       diagonal ink-wipe (see day-1). -->
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">First Line</span><span class="ln">Second Line</span></span>
+    </div>
+    <span class="scroll-cue">Scroll</span>
+  </section>
+
+  <main class="wrap">
+
+    <!-- ✏️ 5. CONTENT. Every .block is a floating frosted card — give each
+         one `reveal` so it eases in on scroll. The date + one-line summary
+         go in the first card; nothing but the title sits over the art. -->
+    <div class="block reveal">
+      <div class="hero-eyebrow">Day · Date · Place</div>
+      <p class="lead" style="border:0;padding:0;margin:0">One sentence on what this day is.</p>
+    </div>
+
+    <div class="block reveal">
+      <h2>Section heading</h2>
+      <p class="lead">A line of framing for the sections below.</p>
+
+      <details class="card">
+        <summary>A group of stops<span class="card-sub">The short version</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">A place<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=PLACE" target="_blank" rel="noopener">Map</a></span>
+            What it is and why it's worth the time.
+            <span class="cost">¥000 <span class="usd">(~$00)</span></span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Another place</span>
+            Detail. Use <span class="cost free">Free</span> for no-cost stops.
+          </div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day N · per person</span><span class="v">~¥000–000 (~$00–00)</span></div>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-PREV.html"><span class="k">← Prev</span><span class="t">Previous day</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="day-NEXT.html"><span class="k">Next →</span><span class="t">Next day</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=7"></script>
+</body>
+</html>

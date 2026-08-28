@@ -7,7 +7,17 @@
    Every page links this first, then overrides the :root THEME TOKENS in
    its own <style> block. Keep per-page overrides short so a redesign
    against real art stays a local change.
+
+   CASCADE LAYERS — this whole file lives in the `shell` layer, and
+   assets/scrolly.css lives in `scrolly`. A page's own <style> block is
+   unlayered, and unlayered styles beat every layer regardless of
+   specificity. So a day page can override anything here with a plain
+   selector and win, without specificity gymnastics.
    ═══════════════════════════════════════════════════════════════════════ */
+
+@layer shell, scrolly;
+
+@layer shell {
 
 :root {
   /* ── THEME TOKENS — day pages override these ── */
@@ -579,3 +589,5 @@ body.at-hero .daynav { transform: translateY(100%); }
   .reveal { opacity: 1; transform: none; }
   .hero-plate { opacity: 1; transform: none; }
 }
+
+} /* @layer shell */

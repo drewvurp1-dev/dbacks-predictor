@@ -3,50 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dec 27 · Plus-Sized Park Hoppers</title>
-<link rel="stylesheet" href="assets/shell.css?v=4">
+<title>Dec 27 &middot; Plus-Sized Park Hoppers</title>
+<link rel="stylesheet" href="assets/shell.css?v=7">
+<link rel="stylesheet" href="assets/scrolly.css?v=7">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── THEME · Day 2 — theme-park bright, LIGHT, with a jade Buddha accent ── */
-  :root {
-    --page-backdrop: #e9e2ff;
-    --bg:        #fffbf4;
-    --surface:   #ffffff;
-    --surface-2: #f2ecff;
-    --ink:       #2b2450;
-    --ink-dim:   #6d6596;
-    --accent:    #7c5cff;
-    --accent-2:  #12a37a;
-    --border:    rgba(43,36,80,0.14);
-    --radius:    16px;
+  /* ── DAY 2 — "Plus-Sized Park Hoppers" · theme-park candy sky
+     Bright confetti gradient behind light glass; jade accent for the
+     Big Buddha half of the day. ── */
+  body {
+    --page-backdrop: #2a1f52;
     --font-display: 'Fredoka', system-ui, sans-serif;
     --font-body:    'Nunito', system-ui, sans-serif;
+
+    --sc-art:
+      radial-gradient(circle, rgba(255,255,255,0.6) 2px, transparent 2.4px),
+      radial-gradient(circle, rgba(255,214,102,0.55) 2px, transparent 2.4px),
+      radial-gradient(circle at 18% 12%, #8f6bff, transparent 46%),
+      radial-gradient(circle at 86% 10%, #ffb32e, transparent 42%),
+      radial-gradient(circle at 72% 88%, #4fb8ff, transparent 48%),
+      linear-gradient(180deg, #4a2ba8 0%, #7b4fd8 34%, #d96aa8 70%, #ff9f5e 100%);
+    --sc-art-size: 46px 46px, 34px 34px, cover, cover, cover, cover;
+
+    --sc-accent:   #6a3fd6;   /* park purple, darkened for cream */
+    --sc-accent-2: #0f8a67;   /* jade — the Big Buddha thread */
+
+    --sc-title-size:   clamp(2.4rem, 13vw, 4.2rem);
+    --sc-title-ink:    #fffdf7;
+    --sc-title-shadow: drop-shadow(0 3px 6px rgba(60,20,110,0.45)) drop-shadow(0 0 26px rgba(60,20,110,0.35));
   }
-  .hero {
-    background:
-      radial-gradient(circle at 18% 12%, rgba(124,92,255,0.16), transparent 40%),
-      radial-gradient(circle at 85% 8%, rgba(255,179,46,0.20), transparent 40%),
-      radial-gradient(circle at 70% 90%, rgba(79,184,255,0.16), transparent 45%),
-      linear-gradient(180deg, #fff8ec, #fffbf4);
-  }
-  .hero h1 { color: var(--accent); }
-  .hero::after {
-    content: '';
-    position: absolute; inset: 0;
-    background-image:
-      radial-gradient(circle, rgba(124,92,255,0.35) 1.5px, transparent 1.6px),
-      radial-gradient(circle, rgba(255,179,46,0.35) 1.5px, transparent 1.6px);
-    background-size: 42px 42px, 30px 30px;
-    background-position: 0 0, 16px 20px;
-    opacity: 0.5;
-    pointer-events: none;
-  }
-  .hero > * { position: relative; z-index: 1; }
-  details.card.jade { border-color: color-mix(in srgb, var(--accent-2) 40%, transparent); }
-  details.card.jade > summary::after { border-color: var(--accent-2); }
+  details.card.jade > summary { border-left-color: var(--sc-accent-2); }
 </style>
 </head>
 <body>
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <div class="bg-tint"></div>
+</div>
+
 <div class="frame">
 
   <div class="scrim" id="scrim"></div>
@@ -76,20 +71,21 @@
     <span class="appbar-chip">Day 2 / 6</span>
   </header>
 
-  <section class="hero">
-    <div class="hero-eyebrow">Sat · Dec 27 · Lantau Island</div>
-    <h1>Plus-Sized Park Hoppers</h1>
-    <p class="hero-sub">A full day at Hong Kong Disneyland — the only park with Mystic Manor and a World of Frozen — with the Big Buddha next door if the legs hold up.</p>
-    <div class="hero-meta">
-      <span>Rope drop</span>
-      <span>Full day in park</span>
-      <span>Big Buddha if time</span>
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">Plus-Sized</span><span class="ln">Park Hoppers</span></span>
     </div>
+    <span class="scroll-cue">Scroll</span>
   </section>
 
   <main class="wrap">
 
-    <div class="block">
+    <div class="block reveal">
+      <div class="hero-eyebrow">Sat &middot; Dec 27 &middot; Lantau Island</div>
+      <p class="lead" style="border:0;padding:0;margin:0">A full day at Hong Kong Disneyland &mdash; the only park with Mystic Manor and a World of Frozen &mdash; with the Big Buddha next door if the legs hold up.</p>
+    </div>
+
+    <div class="block reveal">
       <h2>Before the gates</h2>
       <p class="lead">Small park by Disney standards, but New Year week is peak. A plan beats wandering.</p>
 
@@ -162,6 +158,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=4"></script>
+<script src="assets/shell.js?v=7"></script>
 </body>
 </html>

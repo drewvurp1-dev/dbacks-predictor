@@ -3,275 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dec 26 · The Pearl of the Orient</title>
-<link rel="stylesheet" href="assets/shell.css?v=4">
+<title>Dec 26 &middot; The Pearl of the Orient</title>
+<link rel="stylesheet" href="assets/shell.css?v=7">
+<link rel="stylesheet" href="assets/scrolly.css?v=7">
 <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ═══════════════════════════════════════════════════════════════════
-     DAY 1 — "The Pearl of the Orient"
-     Full-screen FIXED painting + scroll-driven blur, with floating
-     pink-cream frosted cards scrolling over it.
-     ═══════════════════════════════════════════════════════════════════ */
-  :root {
+  /* ── DAY 1 — "The Pearl of the Orient" · impasto harbour painting ──
+     Light pink-cream glass over the painting. Art is a real photo, so
+     the stage uses <img class="bg-art"> and --sc-art stays unset. */
+  body {
     --page-backdrop: #0b0a0e;
-    --bg:        transparent;          /* the frame is a glass column now */
-    --ink:       #1c1c1c;              /* dark charcoal on the cream cards */
-    --ink-dim:   #574d48;
-    --accent:    #9a6b12;              /* dark gold — legible on cream */
-    --accent-2:  #b03a26;              /* junk-sail vermilion */
-    --border:    rgba(28,28,28,0.16);
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
-    --font-script:  'Pinyon Script', 'Snell Roundhand', 'Apple Chancery', cursive;
 
-    /* card system */
-    --card:      rgba(251,244,240,0.86);   /* pink-cream, frosted */
-    --card-2:    rgba(255,253,251,0.72);   /* nested panel */
-    --card-3:    rgba(247,236,230,0.78);   /* a stop */
-    --edge:      rgba(28,28,28,0.14);
-    --edge-2:    rgba(28,28,28,0.28);
-    --ink-2:     #4a423e;
-    --radius:    16px;
-  }
-  body { background: var(--page-backdrop); }
+    --sc-accent:   #9a6b12;   /* dark gold — legible on cream */
+    --sc-accent-2: #b03a26;   /* junk-sail vermilion */
 
-  /* ── 1. FIXED FULL-SCREEN ARTWORK ───────────────────────────────────
-     A viewport-sized fixed layer behind everything. The <img> is a real
-     replaced element so object-fit:cover does the framing. ── */
-  .bg-stage {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0;
-    overflow: hidden;
-    pointer-events: none;
+    --sc-title-font:     'Pinyon Script', 'Snell Roundhand', 'Apple Chancery', cursive;
+    --sc-title-weight:   400;
+    --sc-title-size:     clamp(2.6rem, 18vw, 5rem);
+    --sc-title-lh:       1.16;
+    --sc-title-tracking: 0;
+    --sc-title-ink:      #f8e3da;
+    --sc-title-stroke-w: 1.4px;
+    --sc-title-shadow:   drop-shadow(0 2px 3px rgba(0,0,0,0.55)) drop-shadow(0 0 16px rgba(0,0,0,0.38));
   }
-  .bg-art {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    /* 2. SCROLL-DRIVEN BLUR — 0px at the top of the hero, ramping to 25px
-       as you scroll into the content. Blurring the image itself (rather
-       than a backdrop-filter overlay) avoids the sampling artifacts a
-       full-viewport backdrop-filter leaves at the screen edges; the
-       matching scale() overscans so blurred edges never show. */
-    filter: blur(min(25px, calc(var(--hero-scroll, 0) * 32px)));
-    transform: scale(calc(1 + var(--hero-scroll, 0) * 0.08));
-    transform-origin: center;
-    will-change: filter, transform;
-  }
-  /* tint deepens with the blur so the cream cards keep their contrast */
-  .bg-tint {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(10,7,14,0.10), rgba(10,7,14,0.30));
-    opacity: min(1, calc(0.35 + var(--hero-scroll, 0) * 0.85));
-    transition: opacity 0.2s linear;
-  }
-
-  /* the frame stops being a solid panel — it's just the column now */
-  .frame {
-    position: relative;
-    z-index: 1;
-    background: transparent;
-  }
-  @media (min-width: 540px) {
-    .frame { box-shadow: none; }
-  }
-
-  /* ── HERO — now just a full-height stage for the title ── */
-  .hero--full { background: none; }
-  .hero--full::after { display: none; }   /* the .bg-tint handles the wash */
-
-  .hero-mark {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    width: 100%;
-    padding: 0 1vw;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-    opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
-    transform: translateY(calc(var(--hero-scroll, 0) * -12px));
-  }
-  .hero-title {
-    font-family: var(--font-script);
-    font-weight: 400;
-    color: #f8e3da;                       /* pink-cream fill in a dark outline */
-    -webkit-text-stroke: 0.9px #0b0b0d;
-    text-stroke: 0.9px #0b0b0d;
-    paint-order: stroke fill;
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(0,0,0,0.4));
-    width: 100%;
-    text-align: center;
-    font-size: clamp(2.6rem, 18vw, 5rem);
-    line-height: 1.16;
-    -webkit-text-stroke-width: 1.4px;
-    padding-inline: 0.04em;
-    overflow: visible;
-  }
-  .hero-title .ln {
-    display: block;
-    overflow: visible;
-    white-space: nowrap;
-    /* a soft diagonal wipe that inks the letters on */
-    -webkit-mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
-            mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
-    -webkit-mask-size: 260% 100%;
-            mask-size: 260% 100%;
-    -webkit-mask-repeat: no-repeat;
-            mask-repeat: no-repeat;
-    -webkit-mask-position: 132% 0;
-            mask-position: 132% 0;
-    animation: ink-in 2.3s cubic-bezier(0.4, 0, 0.35, 1) 0.7s forwards;
-  }
-  .hero-title .ln:nth-child(2) { animation-delay: 2.6s; }
-  @keyframes ink-in {
-    from { -webkit-mask-position: 132% 0; mask-position: 132% 0; }
-    to   { -webkit-mask-position: 0% 0;   mask-position: 0% 0; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hero-title .ln { animation: none; -webkit-mask-image: none; mask-image: none; }
-    .bg-art { filter: none; transform: none; }
-  }
-  .scroll-cue { color: #f7ece6; text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
-
-  /* ── 3 + 4. FLOATING CONTENT CARDS ──────────────────────────────────
-     Each .block is a frosted pink-cream card that scrolls over the fixed
-     art. Text is dark charcoal for contrast; corners 16px. ── */
-  .wrap { padding: 22px 14px calc(var(--daynav-h) + 30px); }
-
-  .block {
-    background: var(--card);
-    -webkit-backdrop-filter: blur(14px) saturate(1.25);
-            backdrop-filter: blur(14px) saturate(1.25);
-    border: 1px solid var(--edge);
-    border-radius: var(--radius);
-    padding: 20px 18px 22px;
-    margin-bottom: 16px;
-    box-shadow: 0 14px 40px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.55);
-    color: var(--ink);
-  }
-  .block > h2 {
-    font-family: var(--font-display);
-    color: var(--ink);
-    font-size: 21px;
-  }
-  .block > .lead {
-    color: var(--ink-2);
-    border-bottom: 1px solid var(--edge);
-  }
-  .hero-eyebrow {
-    color: var(--accent-2);
-    letter-spacing: 0.15em;
-  }
-
-  /* nested collapsible — an inset panel, not a second floating card */
-  details.card {
-    background: var(--card-2);
-    border: 1px solid var(--edge);
-    border-radius: 12px;
-    box-shadow: none;
-    margin-bottom: 10px;
-  }
-  details.card > summary {
-    color: var(--ink);
-    border-left: 3px solid var(--accent-2);
-    border-radius: 12px 12px 0 0;
-  }
-  details.card > summary::after {
-    border-right-color: var(--ink-2);
-    border-bottom-color: var(--ink-2);
-  }
-  details.card > summary:hover { background: rgba(28,28,28,0.05); }
-  details.card[open] > summary {
-    background: rgba(28,28,28,0.05);
-    border-bottom: 1px solid var(--edge);
-  }
-  .card-sub { color: var(--ink-dim); }
-
-  .stop {
-    background: var(--card-3);
-    border: 1px solid rgba(28,28,28,0.08);
-    border-radius: 10px;
-    color: var(--ink-2);
-  }
-  .stop-name { color: var(--ink); }
-  .stop b, .stop strong { color: var(--ink); }
-
-  .map-pin {
-    color: var(--accent-2);
-    border-color: rgba(176,58,38,0.45);
-    background: rgba(255,255,255,0.5);
-  }
-  .cost {
-    background: rgba(255,255,255,0.7);
-    border: 1px solid var(--edge-2);
-    color: #8a5a10;
-  }
-  .cost .usd { color: var(--ink-dim); }
-  .cost.free { color: #3f6b45; border-color: rgba(63,107,69,0.4); }
-
-  /* the day total stays dark — a deliberate anchor at the end of the card */
-  .daytotal {
-    background: #1c1c1c;
-    border: 1px solid #1c1c1c;
-    border-radius: 12px;
-  }
-  .daytotal .k { color: rgba(255,255,255,0.6); }
-  .daytotal .v { color: #e7b23c; }
-
-  /* ── CHROME — frosted to match, but keep the drawer dark ── */
-  .appbar {
-    background: rgba(251,244,240,0.8);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
-            backdrop-filter: blur(14px) saturate(1.2);
-    border-bottom: 1px solid var(--edge);
-  }
-  .appbar-title { color: var(--ink-2); }
-  .appbar-title a { color: inherit; }
-  .appbar-chip { color: var(--accent); border-color: var(--edge-2); }
-  .navbtn { color: var(--ink); border-color: var(--edge-2); }
-
-  /* over the painting the bar melts away — flip the button to light */
-  body.at-hero .navbtn {
-    color: #f7ece6;
-    border-color: rgba(255,255,255,0.45);
-    background: rgba(12,10,16,0.22);
-    -webkit-backdrop-filter: blur(6px);
-            backdrop-filter: blur(6px);
-  }
-
-  .daynav {
-    background: rgba(251,244,240,0.82);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
-            backdrop-filter: blur(14px) saturate(1.2);
-    border-top: 1px solid var(--edge);
-  }
-  .daynav a, .daynav span { color: var(--ink); }
-  .daynav .k { color: var(--ink-dim); }
-  .daynav .nav-hub { color: var(--accent-2); border-inline-color: var(--edge); }
-
-  .footer {
-    color: #e8ddd6;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.55);
-    border-top: 1px solid rgba(255,255,255,0.14);
-  }
-
-  /* the slide-in nav stays dark, matching the rest of the trip */
-  .drawer {
-    background: #14121a;
-    border-right: 1px solid rgba(255,255,255,0.1);
-  }
-  .drawer-head h2 { color: #f6efe0; }
-  .drawer-head p, .drawer nav a .d-num, .drawer nav a .d-sub, .drawer nav .nav-sep { color: #a99c92; }
-  .drawer-head, .drawer nav .nav-sep { border-color: rgba(255,255,255,0.1); }
-  .drawer nav a { color: #f6efe0; }
-  .drawer nav a:active, .drawer nav a[aria-current="page"] { background: rgba(255,255,255,0.06); }
-  .drawer nav a[aria-current="page"] { border-left-color: #e7b23c; }
-  .drawer nav a[aria-current="page"] .d-num { color: #e7b23c; }
 </style>
 </head>
 <body>
@@ -313,7 +69,7 @@
 
   <section class="hero hero--full">
     <div class="hero-mark">
-      <span class="hero-title"><span class="ln">The Pearl</span><span class="ln">of the Orient</span></span>
+      <span class="hero-title hero-title--ink"><span class="ln">The Pearl</span><span class="ln">of the Orient</span></span>
     </div>
     <span class="scroll-cue">Scroll</span>
   </section>
@@ -373,6 +129,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=4"></script>
+<script src="assets/shell.js?v=7"></script>
 </body>
 </html>
