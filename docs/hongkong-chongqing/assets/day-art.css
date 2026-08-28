@@ -12,10 +12,10 @@
    assets/ itself. Every page using these sits in the same directory, so
    one form works for all of them.
 
-   Day 1 is the exception: it has a real photograph, so day-1.html loads
-   the full-size painting through <img class="bg-art"> (better loading
-   priority for what is the page's LCP element) and --art-1 below is the
-   small thumbnail, used only by the hub tile.
+   Days 1 and 3 are the exception: they have real paintings, so those
+   pages load the full-size file through <img class="bg-art"> (better
+   loading priority for what is the page's LCP element) and --art-1 /
+   --art-3 below are small thumbnails, used only by the hub tiles.
    ═══════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -33,12 +33,11 @@
     linear-gradient(180deg, #4a2ba8 0%, #7b4fd8 34%, #d96aa8 70%, #ff9f5e 100%);
   --art-2-size: 46px 46px, 34px 34px, cover, cover, cover, cover;
 
-  /* 3 · Lucky Bankers vs. Evil Dealers — card suits over gold-lit green felt */
-  --art-3:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23d8b24a' fill-opacity='0.16'%3E%3Cpath d='M30 20c-6 6-12 10-12 17a12 12 0 0024 0c0-7-6-11-12-17z'/%3E%3Cpath d='M90 84a12 12 0 00-24 0c0 7 6 11 12 17 6-6 12-10 12-17z'/%3E%3Ccircle cx='30' cy='88' r='9'/%3E%3Crect x='81' y='15' width='14' height='14' transform='rotate(45 88 22)'/%3E%3C/g%3E%3C/svg%3E"),
-    radial-gradient(ellipse at 50% -8%, rgba(216,178,74,0.42), transparent 56%),
-    radial-gradient(circle at 50% 58%, #1d4426 0%, #0d2413 46%, #060d08 82%);
-  --art-3-size: 120px 120px, cover, cover;
+  /* 3 · Lucky Bankers vs. Evil Dealers — impasto painting: the Grand
+     Lisboa's gold lotus tower rising over Macao's tenement lanes
+     (thumbnail; hub tile only — day-3.html loads the full file) */
+  --art-3: url("assets/MacaoPaint-thumb.jpg");
+  --art-3-size: cover;
 
   /* 4 · The Gang Travels 200+ MPH — motion streaks dissolving into river mist */
   --art-4:
