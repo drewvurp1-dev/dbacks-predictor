@@ -4,24 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dec 29 &middot; The Gang Travels 200+ MPH</title>
-<link rel="stylesheet" href="assets/shell.css?v=16">
-<link rel="stylesheet" href="assets/scrolly.css?v=16">
-<link rel="stylesheet" href="assets/day-art.css?v=16">
-<link href="https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/shell.css?v=17">
+<link rel="stylesheet" href="assets/scrolly.css?v=17">
+<link rel="stylesheet" href="assets/day-art.css?v=17">
+<link rel="preload" href="assets/Textile.woff" as="font" type="font/woff" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 4 — "The Gang Travels 200+ MPH"
      Staged as an It's Always Sunny in Philadelphia title card: the absurd
-     episode title in white serif, centred on a pure black field, no glow
-     — a hard cut to the card.
+     episode title in white Textile — the face the show's own intertitles
+     use — centred on a pure black field, no glow: a hard cut to the card.
 
-     The show's intertitles are set in Textile (a commercial Bitstream
-     face, not web-available). It's first in the stack, so it renders for
-     anyone who has it installed; everyone else falls to Sorts Mill Goudy
-     — the closest free vintage-oldstyle serif. Swap in a self-hosted
-     @font-face if a licensed Textile file gets added to assets/. ── */
+     Textile is self-hosted from assets/ (WOFF, 40 KB, converted from the
+     supplied TTF; the TTF is kept alongside as the source and as a
+     fallback src). Georgia stands in for the moment before it loads. ── */
+  @font-face {
+    font-family: 'Textile';
+    src: url('assets/Textile.woff') format('woff'),
+         url('assets/Textile.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
   body {
     --page-backdrop: #000;
-    --font-display: 'Textile', 'Sorts Mill Goudy', Georgia, 'Times New Roman', serif;
+    --font-display: 'Textile', Georgia, 'Times New Roman', serif;
     --font-body:    'Inter', system-ui, sans-serif;
 
     --sc-art:      linear-gradient(#000, #000);   /* the title-card void */
@@ -36,15 +43,19 @@
     --sc-title-font:     var(--font-display);
     --sc-title-weight:   400;
     --sc-title-case:     none;                     /* title case, like the show */
-    --sc-title-size:     clamp(1.9rem, 7.8vw, 3.2rem);
-    --sc-title-lh:       1.3;
-    --sc-title-tracking: 0.01em;
+    /* Textile is wide. Sized to ~93% of the available line so "The Gang
+       Travels" holds one line; the clamp floor keeps 320px safe and the
+       ceiling stops it overflowing once .frame caps at 468px. */
+    --sc-title-size:     clamp(1.7rem, 8.5vw, 2.5rem);
+    --sc-title-lh:       1.26;
+    --sc-title-tracking: 0.005em;
     --sc-title-ink:      #f4f1e9;                  /* near-white, filmic */
     --sc-title-stroke-w: 0;
     --sc-title-shadow:   none;                     /* flat white on black */
   }
-  /* generous side margins, like the card */
-  .hero-mark { padding-inline: 6vw; }
+  /* side margins as a % of the frame, not vw — the frame stops growing at
+     468px but vw doesn't, which would squeeze the title on desktop */
+  .hero-mark { padding-inline: 4%; }
   /* the title just appears — a hard cut, not a scroll-in */
   .hero-title .ln { animation: none; opacity: 1; transform: none; }
   .hero-title { opacity: 0; animation: sunny-card 0.4s ease 0.25s forwards; }
@@ -189,6 +200,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=16"></script>
+<script src="assets/shell.js?v=17"></script>
 </body>
 </html>
