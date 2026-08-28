@@ -60,35 +60,46 @@
     els.forEach(function (el) { io.observe(el); });
   })();
 
-  /* ── 3. cover hero: fade the plate on scroll, melt the app bar ──── */
+  /* ── 3. cover hero: fade the title on scroll, melt the chrome ────── */
   (function () {
     var hero = document.querySelector('.hero--full');
     if (!hero) return;
 
-    // app bar starts transparent while the hero fills the screen
-    if ('IntersectionObserver' in window) {
-      var obs = new IntersectionObserver(function (entries) {
-        body.classList.toggle('at-hero', entries[0].isIntersecting && entries[0].intersectionRatio > 0.55);
-      }, { threshold: [0, 0.55, 1] });
-      obs.observe(hero);
-    }
     body.classList.add('at-hero');
 
-    if (reduce) return;
     var ticking = false;
     function onScroll() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(function () {
         var p = Math.min(1, Math.max(0, window.scrollY / (hero.offsetHeight || 1)));
-        hero.style.setProperty('--hero-scroll', p.toFixed(3));
-        // also on :root, so fixed layers outside the hero (a full-screen
-        // background, a blur overlay) can drive off the same progress
-        document.documentElement.style.setProperty('--hero-scroll', p.toFixed(3));
+
+        /* The chrome melts away while the artwork owns the screen.
+           This is driven off scroll position rather than an
+           IntersectionObserver on purpose: IO delivers BATCHED entries,
+           and a fast or momentum scroll crosses several thresholds in
+           one callback. Reading a single entry out of that batch applies
+           stale state, which left `at-hero` stuck on — so the bottom nav
+           stayed pushed out of place even once the hero was long gone. */
+        body.classList.toggle('at-hero', p < 0.5);
+
+        if (!reduce) {
+          hero.style.setProperty('--hero-scroll', p.toFixed(3));
+          // also on :root, so fixed layers outside the hero (a full-screen
+          // background, a blur overlay) can drive off the same progress
+          document.documentElement.style.setProperty('--hero-scroll', p.toFixed(3));
+        }
         ticking = false;
       });
     }
     addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll, { passive: true });
+    /* A backgrounded tab never runs requestAnimationFrame, so a scroll
+       that lands right before you switch away leaves `ticking` latched
+       and the handler dead for good. Clear it and re-sync on return. */
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) { ticking = false; onScroll(); }
+    });
     onScroll();
   })();
 })();
