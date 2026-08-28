@@ -63,9 +63,9 @@
   .hero-welcome {
     position: relative;
     z-index: 1;
-    font-size: clamp(2rem, 9vw, 3.4rem);
-    /* sit clearly above "The Pearl", slightly left, hand-tilted */
-    margin-bottom: 0.5em;
+    font-size: clamp(1.7rem, 7.5vw, 2.8rem);
+    /* sit snug above "The Pearl", slightly left, hand-tilted */
+    margin-bottom: 0.12em;
     transform: translateX(-24%) rotate(-2deg);
     opacity: 0;
     animation: hw-fade 0.9s ease 0.2s forwards;
@@ -74,7 +74,7 @@
     width: 100%;
     text-align: center;
     font-size: clamp(2.6rem, 18vw, 5rem);
-    line-height: 1.32;
+    line-height: 1.16;
     -webkit-text-stroke-width: 1.4px;
     margin-top: 0;
     padding-inline: 0.04em;
@@ -95,7 +95,7 @@
             mask-position: 132% 0;
     animation: ink-in 2.3s cubic-bezier(0.4, 0, 0.35, 1) 0.7s forwards;
   }
-  .hero-title .ln:nth-child(2) { animation-delay: 2.6s; margin-top: 0.28em; }
+  .hero-title .ln:nth-child(2) { animation-delay: 2.6s; }
 
   @keyframes hw-fade { to { opacity: 1; } }
   @keyframes ink-in {
