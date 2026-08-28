@@ -4,18 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dec 29 &middot; The Gang Travels 200+ MPH</title>
-<link rel="stylesheet" href="assets/shell.css?v=15">
-<link rel="stylesheet" href="assets/scrolly.css?v=15">
-<link rel="stylesheet" href="assets/day-art.css?v=15">
-<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Libre+Caslon+Text:ital,wght@0,400;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/shell.css?v=16">
+<link rel="stylesheet" href="assets/scrolly.css?v=16">
+<link rel="stylesheet" href="assets/day-art.css?v=16">
+<link href="https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 4 — "The Gang Travels 200+ MPH"
-     Staged as an It's Always Sunny in Philadelphia title card: the
-     absurd episode title in white Caslon, centred on a pure black field,
-     no glow — a hard cut to the card. ── */
+     Staged as an It's Always Sunny in Philadelphia title card: the absurd
+     episode title in white serif, centred on a pure black field, no glow
+     — a hard cut to the card.
+
+     The show's intertitles are set in Textile (a commercial Bitstream
+     face, not web-available). It's first in the stack, so it renders for
+     anyone who has it installed; everyone else falls to Sorts Mill Goudy
+     — the closest free vintage-oldstyle serif. Swap in a self-hosted
+     @font-face if a licensed Textile file gets added to assets/. ── */
   body {
     --page-backdrop: #000;
-    --font-display: 'Libre Caslon Display', 'Libre Caslon Text', Georgia, 'Times New Roman', serif;
+    --font-display: 'Textile', 'Sorts Mill Goudy', Georgia, 'Times New Roman', serif;
     --font-body:    'Inter', system-ui, sans-serif;
 
     --sc-art:      linear-gradient(#000, #000);   /* the title-card void */
@@ -30,15 +36,15 @@
     --sc-title-font:     var(--font-display);
     --sc-title-weight:   400;
     --sc-title-case:     none;                     /* title case, like the show */
-    --sc-title-size:     clamp(1.95rem, 8.4vw, 3.2rem);
-    --sc-title-lh:       1.32;
-    --sc-title-tracking: 0.012em;
+    --sc-title-size:     clamp(1.9rem, 7.8vw, 3.2rem);
+    --sc-title-lh:       1.3;
+    --sc-title-tracking: 0.01em;
     --sc-title-ink:      #f4f1e9;                  /* near-white, filmic */
     --sc-title-stroke-w: 0;
     --sc-title-shadow:   none;                     /* flat white on black */
   }
   /* generous side margins, like the card */
-  .hero-mark { padding-inline: 9vw; }
+  .hero-mark { padding-inline: 6vw; }
   /* the title just appears — a hard cut, not a scroll-in */
   .hero-title .ln { animation: none; opacity: 1; transform: none; }
   .hero-title { opacity: 0; animation: sunny-card 0.4s ease 0.25s forwards; }
@@ -183,6 +189,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=15"></script>
+<script src="assets/shell.js?v=16"></script>
 </body>
 </html>
