@@ -3,53 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dec 30 · Silver Snake to THE CYBERPUNK CITY</title>
-<link rel="stylesheet" href="assets/shell.css?v=4">
+<title>Dec 30 &middot; Silver Snake to THE CYBERPUNK CITY</title>
+<link rel="stylesheet" href="assets/shell.css?v=7">
+<link rel="stylesheet" href="assets/scrolly.css?v=7">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── THEME · Day 5 — Chongqing cyberpunk: neon on near-black, scanlines ── */
-  :root {
+  /* ── DAY 5 — "Silver Snake to the Cyberpunk City" · Chongqing neon
+     Magenta and cyan bleeding through CRT scanlines. ── */
+  body {
     --page-backdrop: #050507;
-    --bg:        #0a0a11;
-    --surface:   #111120;
-    --surface-2: #17172a;
-    --ink:       #eafcff;
-    --ink-dim:   #7fa6bb;
-    --accent:    #17f0d6;
-    --accent-2:  #ff2fb9;
-    --border:    rgba(23,240,214,0.18);
     --font-display: 'Chakra Petch', system-ui, sans-serif;
     --font-body:    'Rajdhani', system-ui, sans-serif;
+
+    --sc-art:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 4px),
+      radial-gradient(circle at 20% 14%, rgba(255,47,185,0.55), transparent 46%),
+      radial-gradient(circle at 84% 80%, rgba(23,240,214,0.45), transparent 46%),
+      linear-gradient(180deg, #150827 0%, #0a0a1c 46%, #05141a 100%);
+    --sc-art-size: cover, cover, cover, cover;
+
+    --sc-accent:   #17f0d6;   /* cyan */
+    --sc-accent-2: #ff2fb9;   /* magenta */
+    --sc-total-v:  #17f0d6;
+
+    --sc-title-size:     clamp(2rem, 11vw, 3.6rem);
+    --sc-title-case:     uppercase;
+    --sc-title-tracking: 0.015em;
+    --sc-title-lh:       1.06;
+    --sc-title-ink:      #ffffff;
+    --sc-title-shadow:   drop-shadow(0 0 12px rgba(23,240,214,0.7)) drop-shadow(0 0 34px rgba(255,47,185,0.5)) drop-shadow(0 2px 4px rgba(0,0,0,0.7));
   }
   body { font-size: 16.5px; }
-  .frame::before {
-    content: '';
-    position: absolute; inset: 0;
-    background:
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 4px),
-      linear-gradient(180deg, transparent 60%, rgba(23,240,214,0.05));
-    pointer-events: none;
-    z-index: 0;
-  }
-  .hero {
-    background:
-      linear-gradient(180deg, rgba(255,47,185,0.16), transparent 40%),
-      linear-gradient(0deg, rgba(23,240,214,0.14), transparent 45%),
-      #08080f;
-  }
-  .hero h1 {
-    text-transform: uppercase;
-    letter-spacing: 0.015em;
-    color: #fff;
-    text-shadow: 0 0 18px rgba(23,240,214,0.55), 0 0 40px rgba(255,47,185,0.35);
-  }
-  .hero-eyebrow { color: var(--accent-2); }
-  .block > h2 { text-transform: uppercase; letter-spacing: 0.04em; text-shadow: 0 0 14px rgba(23,240,214,0.35); }
+  .block > h2 { text-transform: uppercase; letter-spacing: 0.04em; }
   details.card > summary { text-transform: uppercase; letter-spacing: 0.02em; font-size: 13.5px; }
-  .tag { color: #05121a; }
 </style>
 </head>
-<body>
+<body class="glass-dark">
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <div class="bg-tint"></div>
+</div>
+
 <div class="frame">
 
   <div class="scrim" id="scrim"></div>
@@ -79,20 +74,21 @@
     <span class="appbar-chip">Day 5 / 6</span>
   </header>
 
-  <section class="hero">
-    <div class="hero-eyebrow">Tue · Dec 30 · Guilin → Chongqing</div>
-    <h1>Silver Snake to THE CYBERPUNK CITY</h1>
-    <p class="hero-sub">Half a day of Guilin, then the last rail leg into Chongqing — a mountain city stacked in vertical layers over two rivers, pure neon after dark.</p>
-    <div class="hero-meta">
-      <span>Guilin morning</span>
-      <span>~4-hr G-train</span>
-      <span>Check into Chongqing</span>
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">Silver Snake to the</span><span class="ln">Cyberpunk City</span></span>
     </div>
+    <span class="scroll-cue">Scroll</span>
   </section>
 
   <main class="wrap">
 
-    <div class="block">
+    <div class="block reveal">
+      <div class="hero-eyebrow">Tue &middot; Dec 30 &middot; Guilin &rarr; Chongqing</div>
+      <p class="lead" style="border:0;padding:0;margin:0">Half a day of Guilin, then the last rail leg into Chongqing &mdash; a mountain city stacked in vertical layers over two rivers, pure neon after dark.</p>
+    </div>
+
+    <div class="block reveal">
       <h2>Getting the rest of the way</h2>
       <p class="lead">Pick a mid-to-late-morning departure: a proper Guilin morning, an evening arrival in the neon.</p>
 
@@ -158,6 +154,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=4"></script>
+<script src="assets/shell.js?v=7"></script>
 </body>
 </html>

@@ -3,46 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dec 29 · The Gang Travels 200+ MPH</title>
-<link rel="stylesheet" href="assets/shell.css?v=4">
+<title>Dec 29 &middot; The Gang Travels 200+ MPH</title>
+<link rel="stylesheet" href="assets/shell.css?v=7">
+<link rel="stylesheet" href="assets/scrolly.css?v=7">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── THEME · Day 4 — brushed-silver speed up top, Guilin river-mist below ── */
-  :root {
+  /* ── DAY 4 — "The Gang Travels 200+ MPH" · speed into river mist
+     Motion streaks up top dissolving into Guilin green below. ── */
+  body {
     --page-backdrop: #0b0e0f;
-    --bg:        #10161a;
-    --surface:   #182029;
-    --surface-2: #1f2a33;
-    --ink:       #eef5f4;
-    --ink-dim:   #96adaf;
-    --accent:    #d3e3df;
-    --accent-2:  #57a98a;
-    --border:    rgba(180,210,210,0.16);
     --font-display: 'Saira Condensed', 'Arial Narrow', sans-serif;
     --font-body:    'Inter', system-ui, sans-serif;
+
+    --sc-art:
+      repeating-linear-gradient(115deg, rgba(211,227,223,0.15) 0 3px, transparent 3px 26px),
+      linear-gradient(180deg, #26343d 0%, #1a262b 38%, #1e3d32 74%, #10201b 100%);
+    --sc-art-size: cover, cover;
+
+    --sc-accent:   #cfe3de;   /* brushed silver */
+    --sc-accent-2: #57a98a;   /* river jade */
+    --sc-total-v:  #cfe3de;
+
+    --sc-title-size:     clamp(2.2rem, 12vw, 3.9rem);
+    --sc-title-case:     uppercase;
+    --sc-title-tracking: 0.01em;
+    --sc-title-lh:       0.98;
+    --sc-title-ink:      #f2fbf8;
+    --sc-title-shadow:   drop-shadow(0 2px 5px rgba(0,0,0,0.7)) drop-shadow(0 0 24px rgba(87,169,138,0.4));
   }
-  .hero {
-    background:
-      repeating-linear-gradient(115deg, rgba(211,227,223,0.09) 0 2px, transparent 2px 22px),
-      linear-gradient(180deg, #1a232a 0%, #141d1f 45%, #12211c 100%);
-  }
-  .hero h1 {
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    font-style: italic;
-    line-height: 0.98;
-  }
-  .hero::after {
-    content: '';
-    position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
-    background: linear-gradient(180deg, transparent, rgba(87,169,138,0.18));
-    pointer-events: none;
-  }
+  .hero-title { font-style: italic; }
   .block > h2 { text-transform: uppercase; letter-spacing: 0.03em; }
-  details.card.river { border-color: color-mix(in srgb, var(--accent-2) 40%, transparent); }
+  details.card.river > summary { border-left-color: var(--sc-accent-2); }
 </style>
 </head>
-<body>
+<body class="glass-dark">
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <div class="bg-tint"></div>
+</div>
+
 <div class="frame">
 
   <div class="scrim" id="scrim"></div>
@@ -72,20 +72,21 @@
     <span class="appbar-chip">Day 4 / 6</span>
   </header>
 
-  <section class="hero">
-    <div class="hero-eyebrow">Mon · Dec 29 · HK → Guilin</div>
-    <h1>The Gang Travels 200+ MPH</h1>
-    <p class="hero-sub">Board the bullet train at Hong Kong West Kowloon, clear into mainland China without a visa, and step off three hours later among the limestone spires from the banknotes.</p>
-    <div class="hero-meta">
-      <span>Depart HK ~10:00</span>
-      <span>Arrive Guilin ~13:30</span>
-      <span>Sleep: Guilin</span>
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">The Gang Travels</span><span class="ln">200+ MPH</span></span>
     </div>
+    <span class="scroll-cue">Scroll</span>
   </section>
 
   <main class="wrap">
 
-    <div class="block">
+    <div class="block reveal">
+      <div class="hero-eyebrow">Mon &middot; Dec 29 &middot; Hong Kong &rarr; Guilin</div>
+      <p class="lead" style="border:0;padding:0;margin:0">Bullet train inland to Guilin &mdash; brushed-silver speed for three hours, then karst towers and river mist at the other end.</p>
+    </div>
+
+    <div class="block reveal">
       <h2>The pivot day</h2>
       <p class="lead">One night in Guilin turns a 7-hour rail slog into two easy legs and buys a river-town evening.</p>
 
@@ -166,6 +167,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=4"></script>
+<script src="assets/shell.js?v=7"></script>
 </body>
 </html>
