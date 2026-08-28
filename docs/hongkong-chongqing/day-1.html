@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dec 26 · Welcome to The Pearl of the Orient</title>
 <link rel="stylesheet" href="assets/shell.css?v=2">
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@400;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── THEME · Day 1 — "Pearl of the Orient" impasto oil painting ──
      Cover hero: the painting fills the screen, the title inked over it as
@@ -22,7 +22,7 @@
     --border:    rgba(231,178,60,0.22);
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
-    --font-script:  'Great Vibes', 'Segoe Script', cursive;
+    --font-script:  'Tangerine', 'Snell Roundhand', 'Segoe Script', cursive;
   }
 
   .hero--full {
@@ -45,7 +45,7 @@
     align-items: center;
     text-align: center;
     width: 100%;
-    padding: 0 3.5vw;
+    padding: 0 2vw;
     transition: opacity 0.4s ease, transform 0.4s ease;
     opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
     transform: translateY(calc(var(--hero-scroll, 0) * -12px));
@@ -53,6 +53,7 @@
   .hero-welcome,
   .hero-title {
     font-family: var(--font-script);
+    font-weight: 700;                     /* Tangerine needs the bold to carry at size */
     color: #f8e3da;                       /* pink-cream fill inside the outline */
     -webkit-text-stroke: 1.2px #0b0b0d;
     text-stroke: 1.2px #0b0b0d;
@@ -62,26 +63,27 @@
   .hero-welcome {
     position: relative;
     z-index: 1;
-    font-size: clamp(1.2rem, 5vw, 1.9rem);
-    /* nestle it just above the first "The", slightly left, hand-tilted */
-    margin-bottom: -0.42em;
-    transform: translateX(-30%) rotate(-3deg);
+    font-size: clamp(2rem, 9vw, 3.4rem);
+    /* sit clearly above "The Pearl", slightly left, hand-tilted */
+    margin-bottom: 0.5em;
+    transform: translateX(-24%) rotate(-2deg);
     opacity: 0;
     animation: hw-fade 0.9s ease 0.2s forwards;
   }
   .hero-title {
     width: 100%;
     text-align: center;
-    font-size: clamp(2.6rem, 12.5vw, 4.8rem);
-    line-height: 1.08;
+    font-size: clamp(3.2rem, 21vw, 7rem);
+    line-height: 1.24;
     -webkit-text-stroke-width: 2px;
-    margin-top: -0.05em;
-    padding-inline: 0.12em;
+    margin-top: 0;
+    padding-inline: 0.04em;
     overflow: visible;
   }
   .hero-title .ln {
     display: block;
     overflow: visible;
+    white-space: nowrap;                  /* keep each phrase on its own single line */
     /* a soft-edged diagonal wipe that sweeps the letters in like ink */
     -webkit-mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
             mask-image: linear-gradient(105deg, #000 42%, rgba(0,0,0,0) 62%);
@@ -93,7 +95,7 @@
             mask-position: 132% 0;
     animation: ink-in 2.3s cubic-bezier(0.4, 0, 0.35, 1) 0.7s forwards;
   }
-  .hero-title .ln:nth-child(2) { animation-delay: 2.6s; }
+  .hero-title .ln:nth-child(2) { animation-delay: 2.6s; margin-top: 0.28em; }
 
   @keyframes hw-fade { to { opacity: 1; } }
   @keyframes ink-in {
