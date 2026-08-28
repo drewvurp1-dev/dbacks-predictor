@@ -298,6 +298,7 @@ details.card[open] > summary::after { transform: translateY(-30%) rotate(225deg)
 details.card[open] > summary { border-bottom: 1px solid var(--border); }
 .card-body { padding: 14px 16px 16px; }
 .card-sub {
+  display: block;          /* its own line — inline made summaries read "bearingsPeak + …" */
   font-size: 11px;
   color: var(--ink-dim);
   font-weight: 500;
