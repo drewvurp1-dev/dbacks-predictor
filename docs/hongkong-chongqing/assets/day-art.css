@@ -39,11 +39,10 @@
   --art-3: url("assets/MacaoPaint-thumb.jpg");
   --art-3-size: cover;
 
-  /* 4 · The Gang Travels 200+ MPH — motion streaks dissolving into river mist */
-  --art-4:
-    repeating-linear-gradient(115deg, rgba(211,227,223,0.15) 0 3px, transparent 3px 26px),
-    linear-gradient(180deg, #26343d 0%, #1a262b 38%, #1e3d32 74%, #10201b 100%);
-  --art-4-size: cover, cover;
+  /* 4 · The Gang Travels 200+ MPH — pure black, an It's Always Sunny
+     title card (the white Caslon title lives on the page itself) */
+  --art-4: linear-gradient(#000, #000);
+  --art-4-size: cover;
 
   /* 5 · Silver Snake to the Cyberpunk City — neon bleeding through scanlines */
   --art-5:

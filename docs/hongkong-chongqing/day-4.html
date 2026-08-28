@@ -4,34 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dec 29 &middot; The Gang Travels 200+ MPH</title>
-<link rel="stylesheet" href="assets/shell.css?v=14">
-<link rel="stylesheet" href="assets/scrolly.css?v=14">
-<link rel="stylesheet" href="assets/day-art.css?v=14">
-<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/shell.css?v=15">
+<link rel="stylesheet" href="assets/scrolly.css?v=15">
+<link rel="stylesheet" href="assets/day-art.css?v=15">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Libre+Caslon+Text:ital,wght@0,400;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── DAY 4 — "The Gang Travels 200+ MPH" · speed into river mist
-     Motion streaks up top dissolving into Guilin green below. ── */
+  /* ── DAY 4 — "The Gang Travels 200+ MPH"
+     Staged as an It's Always Sunny in Philadelphia title card: the
+     absurd episode title in white Caslon, centred on a pure black field,
+     no glow — a hard cut to the card. ── */
   body {
-    --page-backdrop: #0b0e0f;
-    --font-display: 'Saira Condensed', 'Arial Narrow', sans-serif;
+    --page-backdrop: #000;
+    --font-display: 'Libre Caslon Display', 'Libre Caslon Text', Georgia, 'Times New Roman', serif;
     --font-body:    'Inter', system-ui, sans-serif;
 
-    --sc-art:      var(--art-4);
-    --sc-art-size: var(--art-4-size);
+    --sc-art:      linear-gradient(#000, #000);   /* the title-card void */
+    --sc-art-size: cover;
+    --sc-blur:     0px;                            /* nothing to blur on black */
+    --sc-zoom:     0;
 
-    --sc-accent:   #cfe3de;   /* brushed silver */
-    --sc-accent-2: #57a98a;   /* river jade */
-    --sc-total-v:  #cfe3de;
+    --sc-accent:   #d8cdb4;   /* aged paper */
+    --sc-accent-2: #b7472e;   /* the show's clay red */
+    --sc-total-v:  #e7dcc2;
 
-    --sc-title-size:     clamp(2.2rem, 12vw, 3.9rem);
-    --sc-title-case:     uppercase;
-    --sc-title-tracking: 0.01em;
-    --sc-title-lh:       0.98;
-    --sc-title-ink:      #f2fbf8;
-    --sc-title-shadow:   drop-shadow(0 2px 5px rgba(0,0,0,0.7)) drop-shadow(0 0 24px rgba(87,169,138,0.4));
+    --sc-title-font:     var(--font-display);
+    --sc-title-weight:   400;
+    --sc-title-case:     none;                     /* title case, like the show */
+    --sc-title-size:     clamp(1.95rem, 8.4vw, 3.2rem);
+    --sc-title-lh:       1.32;
+    --sc-title-tracking: 0.012em;
+    --sc-title-ink:      #f4f1e9;                  /* near-white, filmic */
+    --sc-title-stroke-w: 0;
+    --sc-title-shadow:   none;                     /* flat white on black */
   }
-  .hero-title { font-style: italic; }
-  .block > h2 { text-transform: uppercase; letter-spacing: 0.03em; }
+  /* generous side margins, like the card */
+  .hero-mark { padding-inline: 9vw; }
+  /* the title just appears — a hard cut, not a scroll-in */
+  .hero-title .ln { animation: none; opacity: 1; transform: none; }
+  .hero-title { opacity: 0; animation: sunny-card 0.4s ease 0.25s forwards; }
+  @keyframes sunny-card { to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .hero-title { opacity: 1; animation: none; } }
+  .scroll-cue { color: rgba(244,241,233,0.55); }
+
+  /* the frosted cards need a little more body over pure black */
+  .block { background: rgba(24,23,29,0.9); }
+  details.card { background: rgba(255,255,255,0.05); }
   details.card.river > summary { border-left-color: var(--sc-accent-2); }
 </style>
 </head>
@@ -166,6 +183,6 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=14"></script>
+<script src="assets/shell.js?v=15"></script>
 </body>
 </html>
