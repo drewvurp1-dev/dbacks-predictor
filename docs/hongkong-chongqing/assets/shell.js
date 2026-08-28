@@ -82,6 +82,9 @@
       requestAnimationFrame(function () {
         var p = Math.min(1, Math.max(0, window.scrollY / (hero.offsetHeight || 1)));
         hero.style.setProperty('--hero-scroll', p.toFixed(3));
+        // also on :root, so fixed layers outside the hero (a full-screen
+        // background, a blur overlay) can drive off the same progress
+        document.documentElement.style.setProperty('--hero-scroll', p.toFixed(3));
         ticking = false;
       });
     }
