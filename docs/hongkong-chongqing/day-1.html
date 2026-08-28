@@ -42,10 +42,10 @@
   .hero-mark {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
+    align-items: center;
+    text-align: center;
     width: 100%;
-    padding: 0 5vw;
+    padding: 0 3.5vw;
     transition: opacity 0.4s ease, transform 0.4s ease;
     opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
     transform: translateY(calc(var(--hero-scroll, 0) * -12px));
@@ -60,24 +60,23 @@
     filter: drop-shadow(0 2px 3px rgba(0,0,0,0.55)) drop-shadow(0 0 16px rgba(0,0,0,0.38));
   }
   .hero-welcome {
-    font-size: clamp(1.15rem, 4.4vw, 1.7rem);
-    margin-left: -1%;
-    margin-bottom: -0.1em;
-    transform: rotate(-3deg);
+    position: relative;
+    z-index: 1;
+    font-size: clamp(1.2rem, 5vw, 1.9rem);
+    /* nestle it just above the first "The", slightly left, hand-tilted */
+    margin-bottom: -0.42em;
+    transform: translateX(-30%) rotate(-3deg);
     opacity: 0;
     animation: hw-fade 0.9s ease 0.2s forwards;
   }
   .hero-title {
-    align-self: center;                   /* centre the title on screen */
     width: 100%;
     text-align: center;
-    /* sized so the script's leading/trailing swashes (T, l, t) don't reach
-       the clipped edge of the hero */
-    font-size: clamp(2.2rem, 10.5vw, 4rem);
+    font-size: clamp(2.6rem, 12.5vw, 4.8rem);
     line-height: 1.08;
     -webkit-text-stroke-width: 2px;
     margin-top: -0.05em;
-    padding-inline: 0.3em;
+    padding-inline: 0.12em;
     overflow: visible;
   }
   .hero-title .ln {
