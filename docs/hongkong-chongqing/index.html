@@ -3,68 +3,166 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Hong Kong → Chongqing</title>
-<link rel="stylesheet" href="assets/shell.css?v=4">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Hong Kong / Macao / Chongqing</title>
+<link rel="stylesheet" href="assets/shell.css?v=10">
+<link rel="stylesheet" href="assets/day-art.css?v=10">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* ── THE HUB — a day picker. Each tile previews that day's cover art
+     (--art-N from day-art.css, the same token the day page itself uses),
+     so the hub background stays dark and quiet and the art does the
+     talking. ── */
   :root {
-    --page-backdrop: #0a0a0f;
-    --bg: #13131b;
-    --surface: #1d1d27;
-    --surface-2: #262632;
+    --page-backdrop: #08080d;
+    --bg: #100f17;
+    --surface: #1a1922;
+    --surface-2: #23222e;
     --ink: #f4f2ec;
     --ink-dim: #9c98a8;
     --accent: #c9a24a;
     --accent-2: #3aa0a0;
   }
-  .hero { background:
-    radial-gradient(circle at 12% 0%, rgba(201,162,74,0.16), transparent 45%),
-    radial-gradient(circle at 92% 22%, rgba(58,160,160,0.14), transparent 45%),
-    linear-gradient(180deg, #191924, #13131b); }
 
-  .days { display: flex; flex-direction: column; gap: 10px; }
-  .daytile {
-    display: block;
+  /* ── HEADER ─────────────────────────────────────────────────────── */
+  .hub-head {
     position: relative;
-    background: var(--surface);
+    z-index: 1;
+    text-align: center;
+    padding: 34px 20px 26px;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(201,162,74,0.14), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 80% 30%, rgba(58,160,160,0.10), transparent 70%);
+  }
+  .hub-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.19em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 12px;
+  }
+  .hub-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: clamp(1.25rem, 6.2vw, 2.05rem);
+    line-height: 1.2;
+    letter-spacing: 0.005em;
+    text-wrap: balance;
+  }
+  /* city names stay whole; the spaces around the slashes are the only
+     places the title is allowed to break */
+  .hub-title span { white-space: nowrap; }
+  .hub-title i {          /* the separators — not emphasis */
+    font-style: normal;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* ── "SELECT YOUR DAY" — the label over the picker ──────────────── */
+  .hub-select {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-family: var(--font-body);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+  .hub-select::before,
+  .hub-select::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  /* ── THE DAY TILES ──────────────────────────────────────────────── */
+  .days { display: flex; flex-direction: column; gap: 12px; }
+
+  .daytile {
+    position: relative;
+    display: block;
     border: 1px solid var(--border);
     border-left: 4px solid var(--tile, var(--accent));
-    border-radius: var(--radius);
-    padding: 14px 16px 15px;
+    border-radius: 18px;
+    overflow: hidden;
     color: var(--ink);
+    isolation: isolate;
   }
-  .daytile:active { background: var(--surface-2); }
-  .daytile .dt-top {
+  /* the preview — that day's own cover art */
+  .dt-art {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image: var(--art);
+    background-size: var(--art-size, cover);
+    background-position: var(--art-pos, center);
+    background-repeat: repeat;
+    transition: transform 0.45s cubic-bezier(0.2,0.7,0.2,1);
+  }
+  .dt-art::after {         /* legibility scrim — the text sits at the bottom */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8,7,12,0.18) 0%, rgba(8,7,12,0.58) 42%, rgba(8,7,12,0.90) 100%);
+  }
+  .daytile:active .dt-art { transform: scale(1.05); }
+
+  .dt-body {
+    position: relative;
+    z-index: 1;
+    min-height: 158px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 14px 16px 15px;
+  }
+  .dt-top {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
   }
-  .daytile .dt-date {
+  .dt-date {
     font-size: 10.5px;
     font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--tile, var(--accent));
+    text-shadow: 0 1px 4px rgba(0,0,0,0.85);
   }
-  .daytile .dt-tag {
+  .dt-tag {
     margin-left: auto;
     font-size: 9.5px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--ink-dim);
+    color: rgba(255,255,255,0.7);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.85);
   }
   .daytile h3 {
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 4px;
+    line-height: 1.18;
+    margin-bottom: 5px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
   }
-  .daytile p { font-size: 12.5px; color: var(--ink-dim); line-height: 1.5; }
-  .daytile.tbd { border-left-style: dashed; opacity: 0.72; }
-  .daytile.tbd h3 { color: var(--ink-dim); }
+  .daytile p {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: rgba(244,242,236,0.8);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.85);
+  }
+
+  .daytile.tbd { border-left-style: dashed; }
+  .daytile.tbd .dt-body { min-height: 124px; }
+  .daytile.tbd h3 { color: rgba(244,242,236,0.7); }
 
   .miniList { font-size: 12.5px; color: var(--ink-dim); line-height: 1.7; }
   .miniList a { font-weight: 600; }
@@ -100,70 +198,88 @@
     <span class="appbar-chip">Dec 26–Jan 4</span>
   </header>
 
-  <section class="hero">
-    <div class="hero-eyebrow">Family Trip · Winter 2026</div>
-    <h1>Hong Kong<br>→ Chongqing</h1>
-    <p class="hero-sub">Six themed days from the harbour to the cyberpunk city — arrival in Hong Kong, a park day, Macao's tables, the bullet train through Guilin, and New Year's Eve over the Yangtze.</p>
-    <div class="hero-meta">
-      <span>9 travellers</span>
-      <span>PHX + ORD → HKG</span>
-      <span>Standby · dates fluid</span>
-    </div>
+  <section class="hub-head">
+    <div class="hub-eyebrow">Family trip · Winter 2026 · 9 travellers</div>
+    <h1 class="hub-title"><span>Hong Kong</span> <i>/</i> <span>Macao</span> <i>/</i> <span>Chongqing</span></h1>
   </section>
 
   <main class="wrap">
 
     <div class="block">
-      <h2>The Days</h2>
-      <p class="lead">Tap a day for its own page. Each one is themed to what's planned — art and details still landing.</p>
+      <h2 class="hub-select">Select your day</h2>
       <div class="days">
 
-        <a class="daytile" href="day-1.html" style="--tile:#59d6d0">
-          <div class="dt-top"><span class="dt-date">Fri · Dec 26</span><span class="dt-tag">Hong Kong</span></div>
-          <h3>The Pearl of the Orient</h3>
-          <p>Everyone lands. Settle in, get on the harbour, and see what the city puts in front of you.</p>
+        <!-- the painting is tall; frame low so the junk boats show, not just towers -->
+        <a class="daytile" href="day-1.html" style="--tile:#59d6d0; --art:var(--art-1); --art-size:var(--art-1-size); --art-pos:center 72%">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Fri · Dec 26</span><span class="dt-tag">Hong Kong</span></div>
+            <h3>The Pearl of the Orient</h3>
+            <p>Everyone lands. Settle in, get on the harbour, and see what the city puts in front of you.</p>
+          </div>
         </a>
 
-        <a class="daytile" href="day-2.html" style="--tile:#7c5cff">
-          <div class="dt-top"><span class="dt-date">Sat · Dec 27</span><span class="dt-tag">Hong Kong</span></div>
-          <h3>Plus-Sized Park Hoppers</h3>
-          <p>Hong Kong Disneyland all day — and maybe the Big Buddha on Lantau on the way.</p>
+        <a class="daytile" href="day-2.html" style="--tile:#a98cff; --art:var(--art-2); --art-size:var(--art-2-size)">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Sat · Dec 27</span><span class="dt-tag">Hong Kong</span></div>
+            <h3>Plus-Sized Park Hoppers</h3>
+            <p>Hong Kong Disneyland all day — and maybe the Big Buddha on Lantau on the way.</p>
+          </div>
         </a>
 
-        <a class="daytile" href="day-3.html" style="--tile:#d4af37">
-          <div class="dt-top"><span class="dt-date">Sun · Dec 28</span><span class="dt-tag">Macao</span></div>
-          <h3>The Lucky Bankers vs. The Evil Dealers</h3>
-          <p>Macao. The casino floors, the city night lights, and the bar-and-restaurant scene after.</p>
+        <a class="daytile" href="day-3.html" style="--tile:#d8b24a; --art:var(--art-3); --art-size:var(--art-3-size)">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Sun · Dec 28</span><span class="dt-tag">Macao</span></div>
+            <h3>The Lucky Bankers vs. The Evil Dealers</h3>
+            <p>Macao. The casino floors, the city night lights, and the bar-and-restaurant scene after.</p>
+          </div>
         </a>
 
-        <a class="daytile" href="day-4.html" style="--tile:#8fb9a8">
-          <div class="dt-top"><span class="dt-date">Mon · Dec 29</span><span class="dt-tag">→ Guilin</span></div>
-          <h3>The Gang Travels 200+ MPH</h3>
-          <p>Bullet train inland to Guilin. River tour, a hike into the karst, and a night in town.</p>
+        <a class="daytile" href="day-4.html" style="--tile:#8fd8bb; --art:var(--art-4); --art-size:var(--art-4-size)">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Mon · Dec 29</span><span class="dt-tag">→ Guilin</span></div>
+            <h3>The Gang Travels 200+ MPH</h3>
+            <p>Bullet train inland to Guilin. River tour, a hike into the karst, and a night in town.</p>
+          </div>
         </a>
 
-        <a class="daytile" href="day-5.html" style="--tile:#ff2fb9">
-          <div class="dt-top"><span class="dt-date">Tue · Dec 30</span><span class="dt-tag">→ Chongqing</span></div>
-          <h3>Silver Snake to THE CYBERPUNK CITY</h3>
-          <p>The rest of the way by rail. Check into the hotel and get the first look at the neon.</p>
+        <a class="daytile" href="day-5.html" style="--tile:#ff2fb9; --art:var(--art-5); --art-size:var(--art-5-size)">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Tue · Dec 30</span><span class="dt-tag">→ Chongqing</span></div>
+            <h3>Silver Snake to THE CYBERPUNK CITY</h3>
+            <p>The rest of the way by rail. Check into the hotel and get the first look at the neon.</p>
+          </div>
         </a>
 
-        <a class="daytile" href="day-6.html" style="--tile:#ff7a1a">
-          <div class="dt-top"><span class="dt-date">Wed · Dec 31</span><span class="dt-tag">Chongqing · NYE</span></div>
-          <h3>Hot Pot and The Greatest Drone Show on Earth</h3>
-          <p>Málà hot pot, then the New Year's Eve drone show over the river from Jiangtan Park.</p>
+        <a class="daytile" href="day-6.html" style="--tile:#ff7a1a; --art:var(--art-6); --art-size:var(--art-6-size)">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Wed · Dec 31</span><span class="dt-tag">Chongqing · NYE</span></div>
+            <h3>Hot Pot and The Greatest Drone Show on Earth</h3>
+            <p>Málà hot pot, then the New Year's Eve drone show over the river from Jiangtan Park.</p>
+          </div>
         </a>
 
-        <div class="daytile tbd" style="--tile:#c9a24a">
-          <div class="dt-top"><span class="dt-date">Jan 1 – 3</span><span class="dt-tag">Chongqing</span></div>
-          <h3>New Year in the mountain city</h3>
-          <p>Ciqikou, the cableway, Liziba, a day trip to Dazu or Wulong — itinerary still to be built out.</p>
+        <div class="daytile tbd" style="--tile:#c9a24a; --art:var(--art-tbd); --art-size:var(--art-tbd-size)">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Jan 1 – 3</span><span class="dt-tag">Chongqing</span></div>
+            <h3>New Year in the mountain city</h3>
+            <p>Ciqikou, the cableway, Liziba, a day trip to Dazu or Wulong — still to be built out.</p>
+          </div>
         </div>
 
-        <div class="daytile tbd" style="--tile:#8a8a99">
-          <div class="dt-top"><span class="dt-date">Jan 4</span><span class="dt-tag">Fly home</span></div>
-          <h3>Departure — whenever standby clears</h3>
-          <p>Out of Chongqing (CKG). Flights are standby, so this end of the trip stays loose.</p>
+        <div class="daytile tbd" style="--tile:#8a8a99; --art:var(--art-tbd); --art-size:var(--art-tbd-size)">
+          <div class="dt-art" aria-hidden="true"></div>
+          <div class="dt-body">
+            <div class="dt-top"><span class="dt-date">Jan 4</span><span class="dt-tag">Fly home</span></div>
+            <h3>Departure — whenever standby clears</h3>
+            <p>Out of Chongqing (CKG). Flights are standby, so this end of the trip stays loose.</p>
+          </div>
         </div>
 
       </div>
@@ -230,6 +346,6 @@
   </footer>
 
 </div>
-<script src="assets/shell.js?v=4"></script>
+<script src="assets/shell.js?v=10"></script>
 </body>
 </html>
