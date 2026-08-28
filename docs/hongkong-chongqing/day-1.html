@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dec 26 · Welcome to The Pearl of the Orient</title>
 <link rel="stylesheet" href="assets/shell.css?v=2">
-<link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@400;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── THEME · Day 1 — "Pearl of the Orient" impasto oil painting ──
      Cover hero: the painting fills the screen, the title inked over it as
@@ -22,7 +22,7 @@
     --border:    rgba(231,178,60,0.22);
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
-    --font-script:  'Tangerine', 'Snell Roundhand', 'Segoe Script', cursive;
+    --font-script:  'Pinyon Script', 'Snell Roundhand', 'Apple Chancery', cursive;
   }
 
   .hero--full {
@@ -45,7 +45,7 @@
     align-items: center;
     text-align: center;
     width: 100%;
-    padding: 0 2vw;
+    padding: 0 1vw;
     transition: opacity 0.4s ease, transform 0.4s ease;
     opacity: calc(1 - var(--hero-scroll, 0) * 1.35);
     transform: translateY(calc(var(--hero-scroll, 0) * -12px));
@@ -53,12 +53,12 @@
   .hero-welcome,
   .hero-title {
     font-family: var(--font-script);
-    font-weight: 700;                     /* Tangerine needs the bold to carry at size */
+    font-weight: 400;                     /* Pinyon Script is a single weight */
     color: #f8e3da;                       /* pink-cream fill inside the outline */
-    -webkit-text-stroke: 1.2px #0b0b0d;
-    text-stroke: 1.2px #0b0b0d;
+    -webkit-text-stroke: 0.9px #0b0b0d;   /* thin — Pinyon's hairlines are delicate */
+    text-stroke: 0.9px #0b0b0d;
     paint-order: stroke fill;             /* outline behind the fill = crisp edge */
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.55)) drop-shadow(0 0 16px rgba(0,0,0,0.38));
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(0,0,0,0.4));
   }
   .hero-welcome {
     position: relative;
@@ -73,9 +73,9 @@
   .hero-title {
     width: 100%;
     text-align: center;
-    font-size: clamp(3.2rem, 21vw, 7rem);
-    line-height: 1.24;
-    -webkit-text-stroke-width: 2px;
+    font-size: clamp(2.6rem, 18vw, 5rem);
+    line-height: 1.32;
+    -webkit-text-stroke-width: 1.4px;
     margin-top: 0;
     padding-inline: 0.04em;
     overflow: visible;
