@@ -373,6 +373,16 @@ body.at-hero .appbar {
           backdrop-filter: none;
   border-bottom-color: transparent;
 }
+/* The day marker stays legible over the artwork: plain small text with a
+   shadow, no pill — it's a quiet label, not a control. It regains its
+   outlined chip once the solid app bar materialises on scroll. */
+body.at-hero .appbar-chip {
+  color: #f7ece6;
+  background: none;
+  border-color: transparent;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.8), 0 0 14px rgba(0,0,0,0.55);
+}
+
 /* …and flip the menu button to light so it stays visible against the art */
 body.at-hero .navbtn {
   color: #f7ece6;
