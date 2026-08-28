@@ -579,9 +579,16 @@ body.at-hero .appbar-chip {
 .appbar-title, .appbar-chip { transition: opacity 0.35s ease; }
 .appbar { transition: background 0.35s ease, border-color 0.35s ease; }
 
-/* the bottom day-nav also slides away while the painting owns the screen */
-.hero--full ~ .daynav { transition: transform 0.4s cubic-bezier(0.2,0.7,0.2,1); }
-body.at-hero .daynav { transform: translateY(100%); }
+/* The bottom day-nav also melts away while the painting owns the screen.
+   It FADES rather than sliding, and that is load-bearing: .daynav is
+   `position: sticky`, and animating `transform` on a sticky element
+   promotes it to its own compositor layer, where iOS Safari stops
+   keeping the sticky offset in sync during momentum scroll — the bar
+   gets stranded halfway up the screen, floating over the content.
+   Opacity/visibility leave the sticky geometry alone, and it matches the
+   app bar above, which already fades. Do not put a transform back here. */
+.hero--full ~ .daynav { transition: opacity 0.35s ease, visibility 0.35s ease; }
+body.at-hero .daynav { opacity: 0; visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
