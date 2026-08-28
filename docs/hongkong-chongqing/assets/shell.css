@@ -571,8 +571,10 @@ body.at-hero .appbar {
   backdrop-filter: none;
   border-bottom-color: transparent;
 }
-body.at-hero .appbar-title,
-body.at-hero .appbar-chip {
+/* The trip name melts away over the artwork — but the day marker does
+   NOT. It's the one thing you need before you've scrolled: which day am
+   I looking at. It gets an over-art treatment in scrolly.css. */
+body.at-hero .appbar-title {
   opacity: 0;
   pointer-events: none;
 }
