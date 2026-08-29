@@ -247,10 +247,10 @@ body.glass-dark {
           mask-repeat: no-repeat;
   -webkit-mask-position: 132% 0;
           mask-position: 132% 0;
-  animation: sc-ink-in 2.3s cubic-bezier(0.4, 0, 0.35, 1) 0.7s forwards;
+  animation: sc-ink-in 1.2s cubic-bezier(0.55, 0, 0.3, 1) 0.55s forwards;
 }
-.hero-title--ink .ln:nth-child(2) { animation-delay: 2.6s; }
-.hero-title--ink .ln:nth-child(3) { animation-delay: 4.5s; }
+.hero-title--ink .ln:nth-child(2) { animation-delay: 1.35s; }
+.hero-title--ink .ln:nth-child(3) { animation-delay: 2.15s; }
 @keyframes sc-ink-in {
   from { -webkit-mask-position: 132% 0; mask-position: 132% 0; }
   to   { -webkit-mask-position: 0% 0;   mask-position: 0% 0; }
