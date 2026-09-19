@@ -1,7 +1,7 @@
 {
   "name": "Hong Kong / Macao / Chongqing",
   "short_name": "HK → CQ",
-  "description": "The winter 2026 family trip — six themed days from the harbour to the cyberpunk city.",
+  "description": "The winter 2026 family trip — seven themed days from the harbour to the cyberpunk city.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

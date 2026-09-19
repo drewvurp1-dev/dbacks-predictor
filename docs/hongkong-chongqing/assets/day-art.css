@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   THE SIX DAYS' COVER ART — one definition, two uses
+   THE SEVEN DAYS' COVER ART — one definition, two uses
    ---------------------------------------------------------------------
    Each day page uses its --art-N as the fixed full-screen background
    (--sc-art in scrolly.css), and the hub uses the same token as that
@@ -44,22 +44,32 @@
   --art-4: linear-gradient(#000, #000);
   --art-4-size: cover;
 
-  /* 5 · Silver Snake to the Cyberpunk City — neon bleeding through scanlines */
+  /* 5 · Ten Thousand Peaks — misty jade karst over the Li River, a single
+     shaft of pale light standing in for the boat's-eye view */
   --art-5:
+    radial-gradient(circle, rgba(255,255,255,0.35) 1.3px, transparent 1.7px),
+    radial-gradient(ellipse 60% 30% at 50% 96%, rgba(46,107,84,0.55), transparent 70%),
+    radial-gradient(circle at 22% 22%, rgba(210,225,214,0.30), transparent 50%),
+    radial-gradient(circle at 78% 12%, rgba(120,168,150,0.28), transparent 46%),
+    linear-gradient(180deg, #cdd9d2 0%, #7fa593 32%, #3f6f59 62%, #17281f 100%);
+  --art-5-size: 42px 42px, cover, cover, cover, cover;
+
+  /* 6 · Silver Snake to the Cyberpunk City — neon bleeding through scanlines */
+  --art-6:
     repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 4px),
     radial-gradient(circle at 20% 14%, rgba(255,47,185,0.55), transparent 46%),
     radial-gradient(circle at 84% 80%, rgba(23,240,214,0.45), transparent 46%),
     linear-gradient(180deg, #150827 0%, #0a0a1c 46%, #05141a 100%);
-  --art-5-size: cover, cover, cover, cover;
+  --art-6-size: cover, cover, cover, cover;
 
-  /* 6 · Hot Pot & the Drone Show — chilli oil fading into a drone-lit night */
-  --art-6:
+  /* 7 · Hot Pot & the Drone Show — chilli oil fading into a drone-lit night */
+  --art-7:
     radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1.4px),
     radial-gradient(circle, rgba(160,190,255,0.65) 1px, transparent 1.4px),
     radial-gradient(circle at 22% 12%, rgba(255,122,26,0.6), transparent 42%),
     radial-gradient(circle at 80% 8%, rgba(215,38,61,0.5), transparent 44%),
     linear-gradient(180deg, #3d1610 0%, #26100f 38%, #12122a 76%, #090920 100%);
-  --art-6-size: 38px 38px, 54px 54px, cover, cover, cover;
+  --art-7-size: 38px 38px, 54px 54px, cover, cover, cover;
 
   /* not-yet-planned days — a quiet placeholder so the tiles still read */
   --art-tbd:
