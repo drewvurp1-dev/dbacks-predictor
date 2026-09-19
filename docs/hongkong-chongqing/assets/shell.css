@@ -473,6 +473,46 @@ table.tbl tr.rec td { background: color-mix(in srgb, var(--accent) 14%, transpar
 }
 .daynav [aria-disabled="true"] { opacity: 0.32; pointer-events: none; }
 
+/* ── TOP DAY-TO-DAY NAV (hero state only) ─────────────────────────────
+   The mirror of .daynav above: two small floating glass pills, pinned
+   just under the app bar, visible ONLY while the hero art owns the
+   screen. It fades out at the exact same scroll threshold .daynav fades
+   in at (see body.at-hero rules below), so the handoff from "floating
+   over the art" to "docked at the bottom" reads as one continuous nav,
+   never both or neither. Neutral dark glass + white text on purpose —
+   it has to read on every day's art, from Day 1's cream harbour to Day 6's
+   neon, so it can't borrow the page's own (very different) accent color. */
+.heronav {
+  position: sticky;
+  top: var(--appbar-h);
+  z-index: 35;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px 0;
+  pointer-events: none;
+}
+.heronav a {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: rgba(10,9,14,0.32);
+  border: 1px solid rgba(255,255,255,0.22);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+  transition: background 0.15s ease;
+}
+.heronav a:active { background: rgba(10,9,14,0.5); }
+.heronav svg { width: 15px; height: 15px; flex-shrink: 0; }
+.heronav .nav-next { flex-direction: row-reverse; }
+.heronav [aria-disabled="true"] { visibility: hidden; }
+
 .footer {
   padding: 22px 18px 30px;
   text-align: center;
@@ -591,6 +631,11 @@ body.at-hero .appbar-title {
    app bar above, which already fades. Do not put a transform back here. */
 .hero--full ~ .daynav { transition: opacity 0.35s ease, visibility 0.35s ease; }
 body.at-hero .daynav { opacity: 0; visibility: hidden; }
+
+/* .heronav is the inverse: hidden by default, shown only at-hero. Same
+   opacity/visibility-only approach, same reasoning — no transform. */
+.heronav { opacity: 0; visibility: hidden; transition: opacity 0.35s ease, visibility 0.35s ease; }
+body.at-hero .heronav { opacity: 1; visibility: visible; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
