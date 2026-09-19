@@ -171,5 +171,12 @@
 
 </div>
 <script src="assets/shell.js?v=19"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch((err) => {
+    console.log("Service Worker registration failed:", err);
+  });
+}
+</script>
 </body>
 </html>
