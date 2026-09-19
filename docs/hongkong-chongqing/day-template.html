@@ -17,8 +17,8 @@
      five spots marked ✏️. Everything else is the shared template.
      Full token reference: assets/scrolly.css
      ═══════════════════════════════════════════════════════════════════ -->
-<link rel="stylesheet" href="assets/shell.css?v=20">
-<link rel="stylesheet" href="assets/scrolly.css?v=20">
+<link rel="stylesheet" href="assets/shell.css?v=21">
+<link rel="stylesheet" href="assets/scrolly.css?v=21">
 <!-- ✏️ 1. FONTS — pick a display face that suits the day -->
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -95,6 +95,15 @@
     <span class="appbar-chip">Day N / 7</span>
   </header>
 
+  <!-- ✏️ Optional but recommended: the floating hero-state prev/next pair.
+       Point the hrefs at the same day-PREV.html/day-NEXT.html as the
+       bottom .daynav below, and drop the aria-disabled span (day 1 only)
+       if there's no previous day. -->
+  <nav class="heronav">
+    <a class="nav-prev" href="day-PREV.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Prev</span></a>
+    <a class="nav-next" href="day-NEXT.html"><span>Next</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>
+  </nav>
+
   <!-- THE COVER HERO — title only. One <span class="ln"> per line; they
        stagger in. Add class="hero-title--ink" for the calligraphic
        diagonal ink-wipe (see day-1). -->
@@ -146,7 +155,7 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=20"></script>
+<script src="assets/shell.js?v=21"></script>
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((err) => {
