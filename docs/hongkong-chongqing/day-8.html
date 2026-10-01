@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/app-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12101c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="HK → CQ">
+<title>Jan 1 &middot; New Year, Old Town</title>
+<link rel="stylesheet" href="assets/shell.css?v=22">
+<link rel="stylesheet" href="assets/scrolly.css?v=22">
+<link rel="stylesheet" href="assets/day-art.css?v=22">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── DAY 8 — "New Year, Old Town" · a slow-start morning after NYE
+     Hazy dawn gold over grey-tiled rooftops — the quietest palette on
+     the site, on purpose. Nothing here is time-critical. ── */
+  body {
+    --page-backdrop: #241f28;
+    --font-display: 'Lora', Georgia, serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+
+    --sc-art:      var(--art-8);
+    --sc-art-size: var(--art-8-size);
+
+    --sc-accent:   #b4793f;   /* dawn gold */
+    --sc-accent-2: #a1636a;   /* dusty rose */
+    --sc-total-v:  #d9a65c;
+
+    --sc-title-weight:   600;
+    --sc-title-size:     clamp(2.3rem, 12.5vw, 4rem);
+    --sc-title-lh:       1.16;
+    --sc-title-ink:      #fbf0e4;
+    --sc-title-shadow:   drop-shadow(0 2px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 26px rgba(50,30,30,0.5));
+  }
+  .hero-title { font-style: italic; }
+</style>
+</head>
+<body class="glass-dark">
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <div class="bg-tint"></div>
+</div>
+
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 25 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">25</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">26</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">27</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">28</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">29</span><span>Ten Thousand Peaks<span class="d-sub">Boat tour &amp; hiking · Guilin</span></span></a>
+      <a href="day-6.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-7.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <a href="day-8.html"><span class="d-num">1</span><span>New Year, Old Town<span class="d-sub">Ciqikou · Hongyadong</span></span></a>
+      <a href="day-9.html"><span class="d-num">2</span><span>Pandas &amp; the Printing Press<span class="d-sub">Zoo · Eling Park</span></span></a>
+      <a href="day-10.html"><span class="d-num">3</span><span>Cut from the Same Cloth<span class="d-sub">Suits · Three Gorges Museum</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 8 / 10</span>
+  </header>
+
+  <nav class="heronav">
+    <a class="nav-prev" href="day-7.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Prev</span></a>
+    <a class="nav-next" href="day-9.html"><span>Next</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>
+  </nav>
+
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">New Year,</span><span class="ln">Old Town</span></span>
+    </div>
+    <span class="scroll-cue">Scroll</span>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block reveal">
+      <div class="hero-eyebrow">Fri &middot; Jan 1 &middot; Chongqing</div>
+      <p class="lead" style="border:0;padding:0;margin:0">A deliberately slow day after the drone show. Two stops, both an easy metro ride, neither one in a hurry.</p>
+    </div>
+
+    <div class="block reveal">
+      <h2>The shape of the day</h2>
+      <p class="lead">Late start on purpose. Ciqikou is best before the crowds find it; Hongyadong is better once the lights come up.</p>
+
+      <details class="card" open>
+        <summary>Morning — Ciqikou in daylight<span class="card-sub">Line 1 · Ciqikou Station (磁器口站)</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Ciqikou Ancient Town<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Ciqikou+Ancient+Town+Chongqing" target="_blank" rel="noopener">Map</a></span>
+            A 1,000-year-old porcelain-trading port, now a warren of Ming-Qing lanes and street food — <em>máhuā</em> fried dough twists, spicy tangyuan, hand-pulled sugar. One stop, direct, no transfer. Go before midday; it packs out fast on a holiday.
+            <span class="cost free">Free entry</span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Breakfast, slowly</span>
+            Nothing time-critical. A teahouse table and a wander through the lanes beats a checklist today.
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Afternoon / evening — Hongyadong, properly this time<span class="card-sub">Line 2 · Linjiangmen (临江门站), exit 2</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Hongyadong<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hongyadong+Chongqing" target="_blank" rel="noopener">Map</a></span>
+            Day 6 only saw this stilt-house cliff complex from across the river at night. Today, actually walk it — eleven floors of shops, snack stalls, and viewing terraces stacked up the hillside. Exit 2 at Linjiangmen puts you right at it, ~11 min on foot.
+            <span class="cost free">Free to enter</span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">Stay for the lights</span>
+            It's built for both ends of the day — browse in daylight, then let the gold lighting come up around dusk before heading back. No need to rush off.
+          </div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 8 · per person</span><span class="v">~¥60–120 (~$8–17)</span></div>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-7.html"><span class="k">← Prev</span><span class="t">Hot Pot &amp; Drones</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="day-9.html"><span class="k">Next →</span><span class="t">Pandas &amp; Printing</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=22"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch((err) => {
+    console.log("Service Worker registration failed:", err);
+  });
+}
+</script>
+</body>
+</html>

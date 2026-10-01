@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   THE SEVEN DAYS' COVER ART — one definition, two uses
+   THE TEN DAYS' COVER ART — one definition, two uses
    ---------------------------------------------------------------------
    Each day page uses its --art-N as the fixed full-screen background
    (--sc-art in scrolly.css), and the hub uses the same token as that
@@ -70,6 +70,33 @@
     radial-gradient(circle at 80% 8%, rgba(215,38,61,0.5), transparent 44%),
     linear-gradient(180deg, #3d1610 0%, #26100f 38%, #12122a 76%, #090920 100%);
   --art-7-size: 38px 38px, 54px 54px, cover, cover, cover;
+
+  /* 8 · New Year, Old Town — hazy dawn gold over grey-tiled rooftops, a
+     slow-start morning after the drone show */
+  --art-8:
+    radial-gradient(circle, rgba(255,255,255,0.3) 1.2px, transparent 1.6px),
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(90,86,96,0.5), transparent 70%),
+    radial-gradient(circle at 50% 18%, rgba(239,196,138,0.55), transparent 55%),
+    linear-gradient(180deg, #e9d2b4 0%, #c9958a 32%, #6b5a68 68%, #332c3a 100%);
+  --art-8-size: 42px 42px, cover, cover, cover;
+
+  /* 9 · The Pandas & the Printing Press — panda black-and-white meets
+     retro-industrial ink red */
+  --art-9:
+    radial-gradient(circle, rgba(255,255,255,0.5) 1.6px, transparent 2px),
+    radial-gradient(circle at 20% 16%, rgba(245,245,240,0.9), transparent 40%),
+    radial-gradient(circle at 82% 78%, rgba(181,69,27,0.6), transparent 46%),
+    linear-gradient(180deg, #faf8f3 0%, #d9d3c8 30%, #2a2622 68%, #141210 100%);
+  --art-9-size: 40px 40px, cover, cover, cover;
+
+  /* 10 · Cut from the Same Cloth — charcoal suiting flannel, a gold
+     tape-measure thread of light */
+  --art-10:
+    repeating-linear-gradient(115deg, rgba(255,255,255,0.045) 0 1px, transparent 1px 10px),
+    radial-gradient(circle at 78% 14%, rgba(201,162,74,0.4), transparent 48%),
+    radial-gradient(circle at 15% 85%, rgba(162,59,59,0.28), transparent 46%),
+    linear-gradient(180deg, #44434a 0%, #302f36 46%, #19181d 100%);
+  --art-10-size: cover, cover, cover, cover;
 
   /* not-yet-planned days — a quiet placeholder so the tiles still read */
   --art-tbd:
