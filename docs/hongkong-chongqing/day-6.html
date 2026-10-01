@@ -15,13 +15,29 @@
 <link rel="stylesheet" href="assets/shell.css?v=24">
 <link rel="stylesheet" href="assets/scrolly.css?v=24">
 <link rel="stylesheet" href="assets/day-art.css?v=24">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="assets/Neon.woff" as="font" type="font/woff" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 6 — "Silver Snake to the Cyberpunk City" · Chongqing neon
-     Magenta and cyan bleeding through CRT scanlines. ── */
+     Magenta and cyan bleeding through CRT scanlines.
+
+     Neon is self-hosted from assets/ (WOFF, 6 KB, converted from the
+     supplied TTF; the TTF is kept alongside as the source and as a
+     fallback src) — drawn as literal glass-tube outlines, so it carries
+     the sign aesthetic on its own even before the glow animation below
+     touches it. Freeware (fontspace.com/neon-font). system-ui stands in
+     for the moment before it loads. ── */
+  @font-face {
+    font-family: 'Neon';
+    src: url('assets/Neon.woff') format('woff'),
+         url('assets/Neon.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
   body {
     --page-backdrop: #050507;
-    --font-display: 'Chakra Petch', system-ui, sans-serif;
+    --font-display: 'Neon', system-ui, sans-serif;
     --font-body:    'Rajdhani', system-ui, sans-serif;
 
     --sc-art:      var(--art-6);
@@ -41,6 +57,36 @@
   body { font-size: 16.5px; }
   .block > h2 { text-transform: uppercase; letter-spacing: 0.04em; }
   details.card > summary { text-transform: uppercase; letter-spacing: 0.02em; font-size: 13.5px; }
+
+  /* ── THE SIGN BUZZING TO LIFE ──────────────────────────────────────
+     "Cyberpunk City" flickers once it's in place, then holds a steady
+     glow. It needs an actual opacity swing, not just a text-shadow
+     change — .hero-title already carries a constant drop-shadow glow
+     across BOTH lines (it's a parent-level filter, so it renders
+     whether this line's own shadow is on or off), which would swallow
+     a shadow-only flicker without a visible dim/bright cut to go with
+     it. Delayed to start only after the shared sc-line-in entrance
+     (scrolly.css) finishes at 0.55s + 1.1s = 1.65s, rather than running
+     both at once — two animations fighting over the same element's
+     opacity at the same time is exactly the kind of thing that looks
+     like a bug instead of a flicker. steps(1, end) keeps every on/off
+     switch an instant cut rather than a smooth fade. */
+  @keyframes neon-flicker {
+    0%, 100%                   { opacity: 1;    text-shadow: 0 0 4px #fff, 0 0 11px #fff, 0 0 19px var(--sc-accent-2), 0 0 40px var(--sc-accent-2), 0 0 70px var(--sc-accent), 0 0 90px var(--sc-accent); }
+    8%, 20%, 55%               { opacity: 0.22; text-shadow: none; }
+    4%, 12%, 16%, 24%, 50%, 60% { opacity: 1;    text-shadow: 0 0 4px #fff, 0 0 10px var(--sc-accent); }
+  }
+  .hero-title .ln.neon-sign {
+    animation:
+      sc-line-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.55s forwards,
+      neon-flicker 1.4s steps(1, end) 1.65s forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-title .ln.neon-sign {
+      animation: sc-line-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.55s forwards;
+      text-shadow: 0 0 4px #fff, 0 0 11px #fff, 0 0 19px var(--sc-accent-2), 0 0 40px var(--sc-accent-2), 0 0 70px var(--sc-accent), 0 0 90px var(--sc-accent);
+    }
+  }
 </style>
 </head>
 <body class="glass-dark">
@@ -91,7 +137,7 @@
 
   <section class="hero hero--full">
     <div class="hero-mark">
-      <span class="hero-title"><span class="ln">Silver Snake to the</span><span class="ln">Cyberpunk City</span></span>
+      <span class="hero-title"><span class="ln">Silver Snake to the</span><span class="ln neon-sign">Cyberpunk City</span></span>
     </div>
     <span class="scroll-cue">Scroll</span>
   </section>
