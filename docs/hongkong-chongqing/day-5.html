@@ -12,13 +12,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="HK → CQ">
 <title>Dec 29 &middot; Ten Thousand Peaks</title>
-<link rel="stylesheet" href="assets/shell.css?v=24">
-<link rel="stylesheet" href="assets/scrolly.css?v=24">
-<link rel="stylesheet" href="assets/day-art.css?v=24">
+<link rel="stylesheet" href="assets/shell.css?v=27">
+<link rel="stylesheet" href="assets/scrolly.css?v=27">
+<link rel="stylesheet" href="assets/day-art.css?v=27">
 <link rel="preload" href="assets/Yabatzoe.woff" as="font" type="font/woff" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── DAY 5 — "Ten Thousand Peaks" · misty jade karst over the Li River
+  /* ── DAY 5 — "Ten Thousand Peaks" · a real shanshui (ink-wash) painting
+     of the Li River karst, inscribed "桂林山水甲天下" — Guilin's landscape
+     is the finest under heaven. Art is a real painting, so the stage
+     uses <img class="bg-art"> and --sc-art stays unset (see Day 1).
      A full day in Guilin proper — the only day with nothing to catch,
      so the palette is the calmest on the site: jade, mist, pale light.
 
@@ -43,9 +46,6 @@
     --font-display: 'Yabatzoe', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
 
-    --sc-art:      var(--art-5);
-    --sc-art-size: var(--art-5-size);
-
     --sc-accent:   #4a8f6e;   /* jade */
     --sc-accent-2: #6b8fa3;   /* misty river blue-grey */
     --sc-total-v:  #7fbf9c;
@@ -63,7 +63,7 @@
 <body class="glass-dark">
 
 <div class="bg-stage" aria-hidden="true">
-  <div class="bg-art"></div>
+  <img class="bg-art" src="assets/GuilinPaint.jpeg" alt="">
   <div class="bg-tint"></div>
 </div>
 
@@ -194,7 +194,7 @@
   </nav>
 
 </div>
-<script src="assets/shell.js?v=24"></script>
+<script src="assets/shell.js?v=27"></script>
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((err) => {

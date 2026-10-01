@@ -12,10 +12,11 @@
    assets/ itself. Every page using these sits in the same directory, so
    one form works for all of them.
 
-   Days 1 and 3 are the exception: they have real paintings, so those
+   Days 1, 3 and 5 are the exception: they have real paintings, so those
    pages load the full-size file through <img class="bg-art"> (better
    loading priority for what is the page's LCP element) and --art-1 /
-   --art-3 below are small thumbnails, used only by the hub tiles.
+   --art-3 / --art-5 below are small thumbnails, used only by the hub
+   tiles.
    ═══════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -44,15 +45,12 @@
   --art-4: linear-gradient(#000, #000);
   --art-4-size: cover;
 
-  /* 5 · Ten Thousand Peaks — misty jade karst over the Li River, a single
-     shaft of pale light standing in for the boat's-eye view */
-  --art-5:
-    radial-gradient(circle, rgba(255,255,255,0.35) 1.3px, transparent 1.7px),
-    radial-gradient(ellipse 60% 30% at 50% 96%, rgba(46,107,84,0.55), transparent 70%),
-    radial-gradient(circle at 22% 22%, rgba(210,225,214,0.30), transparent 50%),
-    radial-gradient(circle at 78% 12%, rgba(120,168,150,0.28), transparent 46%),
-    linear-gradient(180deg, #cdd9d2 0%, #7fa593 32%, #3f6f59 62%, #17281f 100%);
-  --art-5-size: 42px 42px, cover, cover, cover, cover;
+  /* 5 · Ten Thousand Peaks — a shanshui (ink-wash) painting of the Li
+     River karst, inscribed "桂林山水甲天下" — Guilin's landscape is the
+     finest under heaven (thumbnail; hub tile only — day-5.html loads
+     the full file) */
+  --art-5: url("assets/GuilinPaint-thumb.jpg");
+  --art-5-size: cover;
 
   /* 6 · Silver Snake to the Cyberpunk City — neon bleeding through scanlines */
   --art-6:
