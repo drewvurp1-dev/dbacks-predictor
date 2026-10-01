@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="HK → CQ">
 <title>Hong Kong / Macao / Chongqing</title>
-<link rel="stylesheet" href="assets/shell.css?v=22">
-<link rel="stylesheet" href="assets/day-art.css?v=22">
+<link rel="stylesheet" href="assets/shell.css?v=24">
+<link rel="stylesheet" href="assets/day-art.css?v=24">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   /* ── THE HUB — a day picker. Each tile previews that day's cover art
@@ -197,6 +197,7 @@
       <a href="day-8.html"><span class="d-num">1</span><span>New Year, Old Town<span class="d-sub">Ciqikou · Hongyadong</span></span></a>
       <a href="day-9.html"><span class="d-num">2</span><span>Pandas &amp; the Printing Press<span class="d-sub">Zoo · Eling Park</span></span></a>
       <a href="day-10.html"><span class="d-num">3</span><span>Cut from the Same Cloth<span class="d-sub">Suits · Three Gorges Museum</span></span></a>
+      <a href="day-11.html"><span class="d-num">4</span><span>Standby for Takeoff<span class="d-sub">Getaway day</span></span></a>
       <div class="nav-sep">Reference</div>
       <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
     </nav>
@@ -312,14 +313,14 @@
           </div>
         </a>
 
-        <div class="daytile tbd" style="--tile:#8a8a99; --art:var(--art-tbd); --art-size:var(--art-tbd-size)">
+        <a class="daytile" href="day-11.html" style="--tile:#f0a93c; --art:var(--art-11); --art-size:var(--art-11-size)">
           <div class="dt-art" aria-hidden="true"></div>
           <div class="dt-body">
-            <div class="dt-top"><span class="dt-date">Jan 4</span><span class="dt-tag">Fly home</span></div>
-            <h3>Departure — whenever standby clears</h3>
-            <p>Out of Chongqing (CKG) via Hong Kong, with Seoul as the backup gateway. Flights are standby, so this end of the trip stays loose.</p>
+            <div class="dt-top"><span class="dt-date">Mon · Jan 4</span><span class="dt-tag">Fly home</span></div>
+            <h3>Standby for Takeoff</h3>
+            <p>Out of Chongqing via Hong Kong, Seoul as backup. Flights are standby, so this end of the trip stays loose.</p>
           </div>
-        </div>
+        </a>
 
       </div>
     </div>
@@ -349,7 +350,7 @@
         <div class="card-body">
           <div class="stop"><span class="stop-name">Primary: Hong Kong (HKG)</span>CKG → HKG runs 3x/day across 5 airlines, so a full flight just means trying the next one. From HKG, Cathay alone covers 7 US cities (incl. DFW, LAX, JFK, SFO, SEA) plus United and Delta — and unlike mainland China routes, none of it sits under the US–China bilateral flight cap that's currently throttling PVG/Shanghai capacity.</div>
           <div class="stop"><span class="stop-name">Backup #2: Seoul (ICN)</span>CKG → ICN is daily except Tue/Sat, 2 airlines. Korean Air alone flies nonstop to 11 US cities — arguably the single biggest network of any option here — plus Asiana. Same advantage as HKG: Korea isn't capped either.</div>
-          <div class="stop"><span class="stop-name">Also considered, ruled out for now</span>Tokyo (NRT) has the largest US network in isolation (United alone runs 10 daily flights), but CKG → NRT is only 4x/week on one airline, and Haneda isn't reachable nonstop from CKG at all — too thin a first leg. Taipei (TPE) is tempting since China Airlines just launched TPE → PHX nonstop (straight to the 7 PHX-based travelers' home airport), but it only flies Wed/Fri/Sun, and CKG → TPE skips Mondays — which is exactly the planned Jan 4 departure day. Worth revisiting if the return date ever moves.</div>
+          <div class="stop"><span class="stop-name">Also considered, ruled out for now</span>Tokyo (NRT) has the largest US network in isolation (United alone runs 10 daily flights), but CKG → NRT is only 4x/week on one airline, and Haneda isn't reachable nonstop from CKG at all — too thin a first leg. Taipei (TPE) is tempting since China Airlines just launched TPE → PHX nonstop (straight to the 7 PHX-based travelers' home airport), but it only flies Wed/Fri/Sun, and CKG → TPE skips Mondays — which is exactly the planned Jan 4 departure day. Worth revisiting if the return date ever moves. Full day-of writeup on <a href="day-11.html">Day 11 →</a></div>
         </div>
       </details>
 
@@ -394,7 +395,7 @@
   </footer>
 
 </div>
-<script src="assets/shell.js?v=22"></script>
+<script src="assets/shell.js?v=24"></script>
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch((err) => {

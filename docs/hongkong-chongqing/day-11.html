@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/app-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12101c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="HK → CQ">
+<title>Jan 4 &middot; Standby for Takeoff</title>
+<link rel="stylesheet" href="assets/shell.css?v=24">
+<link rel="stylesheet" href="assets/scrolly.css?v=24">
+<link rel="stylesheet" href="assets/day-art.css?v=24">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── DAY 11 — "Standby for Takeoff" · a split-flap departure board
+     The one day on the site with no fixed plan, on purpose — the art
+     says so before the copy does. ── */
+  body {
+    --page-backdrop: #0a0b0e;
+    --font-display: 'Space Mono', 'Courier New', monospace;
+    --font-body:    'Inter', system-ui, sans-serif;
+
+    --sc-art:      var(--art-11);
+    --sc-art-size: var(--art-11-size);
+
+    --sc-accent:   #f0a93c;   /* departure-board amber */
+    --sc-accent-2: #4a7fa8;   /* night-terminal blue */
+    --sc-total-v:  #f0a93c;
+
+    --sc-title-weight:   700;
+    --sc-title-case:     uppercase;
+    --sc-title-size:     clamp(1.8rem, 9.5vw, 3.1rem);
+    --sc-title-tracking: 0.04em;
+    --sc-title-lh:       1.22;
+    --sc-title-ink:      #ffd27a;
+    --sc-title-stroke-w: 0;
+    --sc-title-shadow:   drop-shadow(0 0 14px rgba(240,169,60,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+  }
+  details.card.backup > summary { border-left-color: var(--sc-accent-2); }
+</style>
+</head>
+<body class="glass-dark">
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <div class="bg-tint"></div>
+</div>
+
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 25 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">25</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">26</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">27</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">28</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">29</span><span>Ten Thousand Peaks<span class="d-sub">Boat tour &amp; hiking · Guilin</span></span></a>
+      <a href="day-6.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-7.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <a href="day-8.html"><span class="d-num">1</span><span>New Year, Old Town<span class="d-sub">Ciqikou · Hongyadong</span></span></a>
+      <a href="day-9.html"><span class="d-num">2</span><span>Pandas &amp; the Printing Press<span class="d-sub">Zoo · Eling Park</span></span></a>
+      <a href="day-10.html"><span class="d-num">3</span><span>Cut from the Same Cloth<span class="d-sub">Suits · Three Gorges Museum</span></span></a>
+      <a href="day-11.html"><span class="d-num">4</span><span>Standby for Takeoff<span class="d-sub">Getaway day</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 11 / 11</span>
+  </header>
+
+  <nav class="heronav">
+    <a class="nav-prev" href="day-10.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Prev</span></a>
+    <span class="nav-next" aria-disabled="true"><span>Next</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+  </nav>
+
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">Standby</span><span class="ln">for Takeoff</span></span>
+    </div>
+    <span class="scroll-cue">Scroll</span>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block reveal">
+      <div class="hero-eyebrow">Mon &middot; Jan 4 &middot; Departure</div>
+      <p class="lead" style="border:0;padding:0;margin:0">The one day on this site with no fixed plan, on purpose. Seven of the nine are flying non-rev out of Chongqing (CKG) — the other two already have tickets home and aren't part of any of this.</p>
+    </div>
+
+    <div class="block reveal">
+      <h2>The shape of the day</h2>
+      <p class="lead">Nothing is bookable in advance. The job today is staying flexible and knowing the backup before you need it.</p>
+
+      <div class="alert">
+        <strong>✈️ Nothing here is locked in.</strong> Standby means exactly that — don't plan anything time-critical around a departure time, and keep bags light enough to move fast if a seat opens on short notice.
+      </div>
+
+      <details class="card" open>
+        <summary>Primary gateway — Hong Kong (HKG)<span class="card-sub">CKG → HKG, 3x/day · 5 airlines</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Why HKG<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Hong+Kong+International+Airport" target="_blank" rel="noopener">Map</a></span>
+            Three nonstops a day across five airlines (Air China, Cathay Pacific, Hong Kong Airlines, Greater Bay, Chongqing Airlines) — a full flight just means trying the next one a few hours later, or switching carriers outright.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Onward from HKG</span>
+            Cathay Pacific alone flies nonstop to 7 US cities (Boston, Chicago, Dallas-Fort Worth, Los Angeles, New York JFK, San Francisco, Seattle), plus United and Delta. None of that capacity sits under the US–China bilateral flight cap currently throttling mainland gateways like Shanghai — Hong Kong flies its own, uncapped, aviation agreement with the US.
+          </div>
+        </div>
+      </details>
+
+      <details class="card backup">
+        <summary>Backup — Seoul (ICN)<span class="card-sub">CKG → ICN, daily except Tue/Sat · 2 airlines</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">If HKG doesn't pan out<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Incheon+International+Airport" target="_blank" rel="noopener">Map</a></span>
+            A slightly thinner first leg than Hong Kong's, but Korean Air alone flies nonstop to 11 US cities — the single biggest network of any option considered — plus Asiana. Same advantage as Hong Kong: Korea isn't capped by the US-China treaty either.
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Considered, not it<span class="card-sub">Tokyo and Taipei — ruled out, not forgotten</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Tokyo (NRT)</span>
+            The biggest US network of anywhere on this list in isolation — United alone runs 10 daily flights out of Narita. But CKG → NRT is only 4x/week on a single carrier, and Haneda isn't reachable nonstop from Chongqing at all. Too thin a first leg to risk it.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Taipei (TPE)</span>
+            China Airlines just launched a nonstop TPE → PHX flight — straight to the seven PHX-based travelers' home airport. Genuinely tempting, but it only flies Wed/Fri/Sun, and CKG → TPE skips Mondays, which is today. Worth revisiting if the departure date ever moves.
+          </div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 11 · per person</span><span class="v">No fixed cost — standby fares vary</span></div>
+      <p class="lead" style="border:0;margin-top:8px;padding:0">However it goes today, it's the last line in the logbook. <a href="index.html">Back to overview →</a></p>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-10.html"><span class="k">← Prev</span><span class="t">Same Cloth</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <span class="nav-next" aria-disabled="true"><span class="k">End</span><span class="t">Last day</span></span>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=24"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch((err) => {
+    console.log("Service Worker registration failed:", err);
+  });
+}
+</script>
+</body>
+</html>

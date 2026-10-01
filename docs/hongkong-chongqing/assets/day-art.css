@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   THE TEN DAYS' COVER ART — one definition, two uses
+   THE ELEVEN DAYS' COVER ART — one definition, two uses
    ---------------------------------------------------------------------
    Each day page uses its --art-N as the fixed full-screen background
    (--sc-art in scrolly.css), and the hub uses the same token as that
@@ -97,6 +97,16 @@
     radial-gradient(circle at 15% 85%, rgba(162,59,59,0.28), transparent 46%),
     linear-gradient(180deg, #44434a 0%, #302f36 46%, #19181d 100%);
   --art-10-size: cover, cover, cover, cover;
+
+  /* 11 · Standby for Takeoff — a split-flap departure board: amber
+     scanlines, a glow at the top (the board itself) fading into a dark
+     terminal-at-night blue */
+  --art-11:
+    repeating-linear-gradient(0deg, rgba(240,169,60,0.06) 0 2px, transparent 2px 6px),
+    radial-gradient(ellipse 80% 35% at 50% 8%, rgba(240,169,60,0.24), transparent 60%),
+    radial-gradient(circle at 15% 88%, rgba(74,127,168,0.22), transparent 50%),
+    linear-gradient(180deg, #171a1f 0%, #0e0f13 50%, #06070a 100%);
+  --art-11-size: cover, cover, cover, cover;
 
   /* not-yet-planned days — a quiet placeholder so the tiles still read */
   --art-tbd:
