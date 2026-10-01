@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/app-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12101c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="HK → CQ">
+<title>Jan 3 &middot; Cut from the Same Cloth</title>
+<link rel="stylesheet" href="assets/shell.css?v=22">
+<link rel="stylesheet" href="assets/scrolly.css?v=22">
+<link rel="stylesheet" href="assets/day-art.css?v=22">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── DAY 10 — "Cut from the Same Cloth" · the last full day
+     Charcoal suiting flannel with a thread of gold — tailoring on one
+     side, museum-grey gravitas on the other. Deliberately the lightest-
+     paced day on the site: this is the day before a standby flight. ── */
+  body {
+    --page-backdrop: #19181c;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+
+    --sc-art:      var(--art-10);
+    --sc-art-size: var(--art-10-size);
+
+    --sc-accent:   #c9a24a;   /* gold thread */
+    --sc-accent-2: #a23b3b;   /* tailor's chalk red */
+    --sc-total-v:  #c9a24a;
+
+    --sc-title-size:     clamp(2rem, 10vw, 3.4rem);
+    --sc-title-lh:       1.14;
+    --sc-title-ink:      #f4efe6;
+    --sc-title-shadow:   drop-shadow(0 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 22px rgba(201,162,74,0.3));
+  }
+  details.card.museum > summary { border-left-color: var(--sc-accent-2); }
+</style>
+</head>
+<body class="glass-dark">
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-art"></div>
+  <div class="bg-tint"></div>
+</div>
+
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 25 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="day-1.html"><span class="d-num">25</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">26</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">27</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">28</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">29</span><span>Ten Thousand Peaks<span class="d-sub">Boat tour &amp; hiking · Guilin</span></span></a>
+      <a href="day-6.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-7.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <a href="day-8.html"><span class="d-num">1</span><span>New Year, Old Town<span class="d-sub">Ciqikou · Hongyadong</span></span></a>
+      <a href="day-9.html"><span class="d-num">2</span><span>Pandas &amp; the Printing Press<span class="d-sub">Zoo · Eling Park</span></span></a>
+      <a href="day-10.html"><span class="d-num">3</span><span>Cut from the Same Cloth<span class="d-sub">Suits · Three Gorges Museum</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Day 10 / 10</span>
+  </header>
+
+  <nav class="heronav">
+    <a class="nav-prev" href="day-9.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Prev</span></a>
+    <a class="nav-next" href="index.html"><span>Next</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>
+  </nav>
+
+  <section class="hero hero--full">
+    <div class="hero-mark">
+      <span class="hero-title"><span class="ln">Cut from the</span><span class="ln">Same Cloth</span></span>
+    </div>
+    <span class="scroll-cue">Scroll</span>
+  </section>
+
+  <main class="wrap">
+
+    <div class="block reveal">
+      <div class="hero-eyebrow">Sun &middot; Jan 3 &middot; Chongqing</div>
+      <p class="lead" style="border:0;padding:0;margin:0">Suits in the morning, culture in the afternoon, nothing in the evening — this is the last full day before a standby flight, and it's built light on purpose.</p>
+    </div>
+
+    <div class="block reveal">
+      <h2>The shape of the day</h2>
+      <p class="lead">Both halves of today sit a few minutes apart in central Yuzhong — no need to range far.</p>
+
+      <div class="alert">
+        <strong>🧵 Still to confirm.</strong> The plan is a ready-made Zhongshan suit (中山装 — the "Mao suit," named for Sun Yat-sen) for each brother, taken in on the spot rather than built from scratch, since there's no spare day left in the trip for full bespoke turnaround. Jiefangbei is the right neighborhood for it, but the specific shop isn't locked in — ask the hotel concierge to recommend and call ahead once you're there, and confirm same-day alteration is actually on offer before the whole group shows up.
+      </div>
+
+      <details class="card" open>
+        <summary>Morning — suits, Jiefangbei<span class="card-sub">Off-the-rack + on-the-spot alterations</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Jiefangbei (解放碑)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Jiefangbei+Chongqing" target="_blank" rel="noopener">Map</a></span>
+            Chongqing's old central shopping district, and historically its tailoring district — close enough to Chaotianmen to walk if the hotel's the starting point. Ask for a 中山装 (Zhongshan suit) specifically; it's the correct term and what any tailor there will recognize immediately.
+          </div>
+          <div class="stop">
+            <span class="stop-name">Buy ready-made, alter on the spot</span>
+            A finished suit takes days to build from nothing — alterations (waist, sleeve, length) run hours, not days, and still get each of you a suit that actually fits. Budget a few hours for the whole group.
+            <span class="cost">Suit + alterations, estimate only <span class="usd">— confirm pricing locally</span></span>
+          </div>
+        </div>
+      </details>
+
+      <details class="card museum">
+        <summary>Afternoon — Three Gorges Museum &amp; the Great Hall<span class="card-sub">Line 10 · Grand Hall Station (大礼堂站), exit 1</span></summary>
+        <div class="card-body">
+          <div class="stop">
+            <span class="stop-name">Chongqing China Three Gorges Museum<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+China+Three+Gorges+Museum" target="_blank" rel="noopener">Map</a></span>
+            Bronze-age Ba-Shu artifacts, Han-dynasty sculpture, and the full Three Gorges Dam story, all under one roof. Free, but reserve a time slot online ahead if you can — some special exhibits charge separately.
+            <span class="cost free">Free (reserve ahead)</span>
+          </div>
+          <div class="stop">
+            <span class="stop-name">The Great Hall of the People (人民大礼堂)<a class="map-pin" href="https://www.google.com/maps/search/?api=1&amp;query=Chongqing+Great+Hall+of+the+People" target="_blank" rel="noopener">Map</a></span>
+            Right across People's Square from the museum — one of Chongqing's most recognizable buildings, part Soviet-scale rotunda, part traditional Chinese roofline. The square itself is free; going inside the hall is a small add-on.
+            <span class="cost">¥8 pp for the interior <span class="usd">(~$1)</span></span>
+          </div>
+        </div>
+      </details>
+
+      <div class="daytotal"><span class="k">Day 10 · per person</span><span class="v">Suit cost TBC + ~¥8 (~$1)</span></div>
+      <p class="lead" style="border:0;margin-top:8px;padding:0">Keep the evening open — pack, eat something easy, and don't plan around a departure time that standby hasn't given you yet.</p>
+    </div>
+
+  </main>
+
+  <nav class="daynav">
+    <a class="nav-prev" href="day-9.html"><span class="k">← Prev</span><span class="t">Pandas &amp; Printing</span></a>
+    <a class="nav-hub" href="index.html">Overview</a>
+    <a class="nav-next" href="index.html"><span class="k">Next →</span><span class="t">Jan 4 · TBD</span></a>
+  </nav>
+
+</div>
+<script src="assets/shell.js?v=22"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch((err) => {
+    console.log("Service Worker registration failed:", err);
+  });
+}
+</script>
+</body>
+</html>
