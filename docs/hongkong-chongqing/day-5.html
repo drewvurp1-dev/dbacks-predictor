@@ -15,14 +15,32 @@
 <link rel="stylesheet" href="assets/shell.css?v=24">
 <link rel="stylesheet" href="assets/scrolly.css?v=24">
 <link rel="stylesheet" href="assets/day-art.css?v=24">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="assets/Yabatzoe.woff" as="font" type="font/woff" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 5 — "Ten Thousand Peaks" · misty jade karst over the Li River
      A full day in Guilin proper — the only day with nothing to catch,
-     so the palette is the calmest on the site: jade, mist, pale light. ── */
+     so the palette is the calmest on the site: jade, mist, pale light.
+
+     Yabatzoe is self-hosted from assets/ (WOFF, 26 KB, converted from the
+     supplied OTF; the OTF is kept alongside as the source and as a
+     fallback src) — a hand-brushed, bamboo-stroke face that reads like
+     the ink-wash (shanshui) paintings this landscape is famous for.
+     Freeware, non-commercial license (fontspace.com/yabatzoe-font).
+     Georgia stands in for the moment before it loads. It's a single
+     weight, so --sc-title-weight stays at 400 — a synthetic bold on a
+     brush face just smears the strokes. ── */
+  @font-face {
+    font-family: 'Yabatzoe';
+    src: url('assets/Yabatzoe.woff') format('woff'),
+         url('assets/Yabatzoe.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
   body {
     --page-backdrop: #0c1310;
-    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-display: 'Yabatzoe', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
 
     --sc-art:      var(--art-5);
@@ -32,10 +50,10 @@
     --sc-accent-2: #6b8fa3;   /* misty river blue-grey */
     --sc-total-v:  #7fbf9c;
 
-    --sc-title-weight:   600;
-    --sc-title-size:     clamp(2.6rem, 15vw, 4.6rem);
-    --sc-title-lh:       1.1;
-    --sc-title-tracking: 0.01em;
+    --sc-title-weight:   400;
+    --sc-title-size:     clamp(2.4rem, 14vw, 4.3rem);
+    --sc-title-lh:       1.15;
+    --sc-title-tracking: 0em;
     --sc-title-ink:      #f2f6f2;
     --sc-title-shadow:   drop-shadow(0 2px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 30px rgba(20,50,38,0.55));
   }
