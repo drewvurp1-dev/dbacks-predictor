@@ -37,6 +37,7 @@
   --maxw: 468px;
   --appbar-h: 54px;
   --daynav-h: 58px;
+  --heronav-h: 47px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -537,6 +538,11 @@ table.tbl tr.rec td { background: color-mix(in srgb, var(--accent) 14%, transpar
 .hero--full {
   min-height: 100vh;
   min-height: 100svh;
+  /* The app bar and the floating prev/next row sit in flow above the hero,
+     which pushed its center ~100px below the middle of the screen. Pulling
+     the hero up under them (they're transparent at the top) centers the
+     title on the actual viewport. */
+  margin-top: calc(-1 * (var(--appbar-h) + var(--heronav-h)));
   display: grid;
   place-items: center;
   text-align: center;
