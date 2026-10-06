@@ -636,12 +636,19 @@
 
 
   /* ── Metro network overlay ───────────────────────────────────────────────
-     Real line geometry + stations from OpenStreetMap (Overpass), fetched by the
-     visitor's browser the first time a map is opened and then kept in localStorage,
-     so it keeps working offline. Nothing here is hand-drawn: if OSM has no data for
-     an area (or the visitor is offline on first open) the overlay simply doesn't show. */
-  var OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+     Real line geometry + stations from OpenStreetMap (Overpass), fetched by the visitor's
+     browser the first time a map is opened and then kept in localStorage, so it keeps
+     working offline. Nothing here is hand-drawn. The public Overpass servers are often busy,
+     so: lines are fetched via *ways* (fast, indexed) with the owning relations only for
+     name/colour, several mirrors are tried in turn, and a failure says why and can be retried. */
+  var OVERPASS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+  ];
   var METRO_TTL = 30 * 24 * 3600 * 1000;
+  var CACHE_PREFIX = 'dm-metro-v2:';
 
   function cacheGet(key) {
     try {
@@ -655,43 +662,78 @@
     try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: data })); } catch (e) { /* quota / private mode */ }
   }
 
-  function fetchOverpass(query, i) {
-    i = i || 0;
-    var ctl = ('AbortController' in window) ? new AbortController() : null;
-    var timer = ctl ? setTimeout(function () { ctl.abort(); }, 30000) : null;
-    return fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(query),
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl ? ctl.signal : undefined })
-      .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('overpass ' + r.status); return r.json(); })
-      .catch(function (err) {
-        if (timer) clearTimeout(timer);
-        if (i + 1 < OVERPASS.length) return fetchOverpass(query, i + 1);
-        throw err;
-      });
+  function hostOf(url) { return url.replace(/^https?:\/\//, '').split('/')[0]; }
+
+  /* POST an Overpass query, trying each mirror in turn. Rejects with a readable reason. */
+  function fetchOverpass(query) {
+    var reasons = [];
+    function attempt(i) {
+      if (i >= OVERPASS.length) return Promise.reject(new Error(reasons.join(' · ')));
+      var ctl = ('AbortController' in window) ? new AbortController() : null;
+      var timer = ctl ? setTimeout(function () { ctl.abort(); }, 28000) : null;
+      var host = hostOf(OVERPASS[i]);
+      return fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(query),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl ? ctl.signal : undefined })
+        .then(function (r) {
+          if (timer) clearTimeout(timer);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json().catch(function () { throw new Error('bad response'); });
+        })
+        .then(function (json) {
+          if (json && json.remark && /error|timed out|out of memory/i.test(json.remark) && !(json.elements && json.elements.length)) {
+            throw new Error('server busy');
+          }
+          return json;
+        })
+        .catch(function (err) {
+          if (timer) clearTimeout(timer);
+          reasons.push(host + ': ' + (err && err.name === 'AbortError' ? 'timed out' : (err && err.message === 'Failed to fetch' ? 'network blocked' : (err && err.message) || 'failed')));
+          return attempt(i + 1);
+        });
+    }
+    return attempt(0);
   }
 
-  /* Reduce the Overpass answer to what we draw: [{name, colour, ref, paths:[[[lat,lng]…]]}] + stations. */
-  function parseMetro(json) {
-    var lines = [], stations = [], seen = {};
+  function r5(n) { return Math.round(n * 1e5) / 1e5; }
+
+  /* Ways (geometry) + their relations (name/colour) → [{name, colour, paths}], grouped by line. */
+  function parseLines(json) {
+    var ways = [], wayRel = {};
     (json.elements || []).forEach(function (e) {
-      if (e.type === 'relation' && e.tags) {
-        var paths = [];
+      if (e.type === 'way' && e.geometry && e.geometry.length > 1) {
+        ways.push(e);
+      } else if (e.type === 'relation' && e.tags) {
         (e.members || []).forEach(function (m) {
-          if (m.type === 'way' && m.geometry && m.geometry.length > 1) {
-            paths.push(m.geometry.map(function (g) { return [g.lat, g.lon]; }));
-          }
+          if (m.type === 'way') (wayRel[m.ref] = wayRel[m.ref] || []).push(e);
         });
-        if (!paths.length) return;
-        var name = e.tags['name:en'] || e.tags.name || e.tags.ref || 'Metro';
-        name = name.split(':')[0].replace(/\s*[(（].*$/, '').trim();
-        lines.push({ name: name, colour: e.tags.colour || e.tags.color || '', ref: e.tags.ref || '', paths: paths });
-      } else if (e.type === 'node' && e.tags && e.tags.name) {
-        var key = e.tags.name + '|' + e.lat.toFixed(4) + '|' + e.lon.toFixed(4);
-        if (seen[key]) return;
-        seen[key] = 1;
-        stations.push({ ll: [e.lat, e.lon], name: e.tags['name:en'] ? e.tags.name + ' · ' + e.tags['name:en'] : e.tags.name });
       }
     });
-    return { lines: lines, stations: stations };
+    var groups = {}, order = [];
+    ways.forEach(function (w) {
+      var rels = wayRel[w.id] || [];
+      var rel = null;
+      rels.forEach(function (r) { if (!rel && (r.tags.colour || r.tags.color)) rel = r; });
+      if (!rel && rels.length) rel = rels[0];
+      var t = rel ? rel.tags : (w.tags || {});
+      var name = (t['name:en'] || t.name || t.ref || 'Metro line').split(':')[0].replace(/\s*[(（].*$/, '').trim();
+      var colour = t.colour || t.color || '';
+      var key = name + '|' + colour;
+      if (!groups[key]) { groups[key] = { name: name, colour: colour, paths: [] }; order.push(key); }
+      groups[key].paths.push(w.geometry.map(function (g) { return [r5(g.lat), r5(g.lon)]; }));
+    });
+    return order.map(function (k) { return groups[k]; });
+  }
+
+  function parseStations(json) {
+    var out = [], seen = {};
+    (json.elements || []).forEach(function (e) {
+      if (e.type !== 'node' || !e.tags || !e.tags.name) return;
+      var key = e.tags.name + '|' + e.lat.toFixed(4) + '|' + e.lon.toFixed(4);
+      if (seen[key]) return;
+      seen[key] = 1;
+      out.push({ ll: [r5(e.lat), r5(e.lon)], name: e.tags['name:en'] ? e.tags.name + ' · ' + e.tags['name:en'] : e.tags.name });
+    });
+    return out;
   }
 
   function cssColour(c) {
@@ -720,7 +762,7 @@
       if (on) { group.addTo(map); syncStations(); } else { map.removeLayer(group); map.removeLayer(stationGroup); }
     });
     legend.appendChild(btn);
-    var list = el('span', 'dm-leg-list', 'Loading metro lines…');
+    var list = el('span', 'dm-leg-list');
     legend.appendChild(list);
 
     function syncStations() {
@@ -730,6 +772,7 @@
     map.on('zoomend', syncStations);
 
     function draw(data) {
+      group.clearLayers(); stationGroup.clearLayers();
       var uniq = {};
       data.lines.forEach(function (ln) {
         var col = cssColour(ln.colour);
@@ -738,7 +781,7 @@
         });
         if (!uniq[ln.name]) uniq[ln.name] = col;
       });
-      data.stations.forEach(function (st) {
+      (data.stations || []).forEach(function (st) {
         L.circleMarker(st.ll, { radius: 4, color: '#222', weight: 1.5, fillColor: '#fff', fillOpacity: 1, pane: 'metro' })
           .bindTooltip(st.name, { direction: 'top' }).addTo(stationGroup);
       });
@@ -755,21 +798,43 @@
     }
 
     // bbox of what the map is showing, padded a little
-    var b = map.getBounds().pad(0.15);
+    var b = map.getBounds().pad(0.1);
     var bbox = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (n) { return n.toFixed(4); }).join(',');
-    var key = 'dm-metro-v1:' + dayNum + ':' + bbox;
-    var cached = cacheGet(key);
-    if (cached) { draw(cached); return; }
+    var key = CACHE_PREFIX + dayNum + ':' + bbox;
 
-    var q = '[out:json][timeout:25];(relation["route"~"^(subway|light_rail|monorail)$"](' + bbox + ');' +
-            'node["railway"="station"]["station"~"^(subway|light_rail|monorail)$"](' + bbox + '););out geom(' + bbox + ');';
-    fetchOverpass(q).then(function (json) {
-      var data = parseMetro(json);
-      cachePut(key, data);
-      draw(data);
-    }).catch(function () {
-      list.textContent = 'Metro lines unavailable — they load the first time you open this map with a connection.';
-    });
+    function load() {
+      var cached = cacheGet(key);
+      if (cached) { draw(cached); return; }
+      list.textContent = 'Loading metro lines…';
+
+      // 1) track: ways in view, plus the relations they belong to (for name + colour only)
+      var qLines = '[out:json][timeout:40];' +
+        'way["railway"~"^(subway|light_rail|monorail)$"](' + bbox + ')->.w;' +
+        'rel(bw.w)["route"~"^(subway|light_rail|monorail)$"]->.r;' +
+        '.w out geom(' + bbox + ');.r out body;';
+      // 2) stations (small, optional)
+      var qStations = '[out:json][timeout:25];' +
+        'node["railway"="station"]["station"~"^(subway|light_rail|monorail)$"](' + bbox + ');out;';
+
+      fetchOverpass(qLines).then(function (json) {
+        var data = { lines: parseLines(json), stations: [] };
+        draw(data);
+        if (data.lines.length) cachePut(key, data);
+        return fetchOverpass(qStations).then(function (sj) {
+          data.stations = parseStations(sj);
+          draw(data);
+          if (data.lines.length) cachePut(key, data);
+        }).catch(function () { /* stations are optional */ });
+      }).catch(function (err) {
+        list.textContent = '';
+        list.appendChild(el('span', 'dm-leg-err', 'Couldn’t load metro lines (' + ((err && err.message) || 'no connection') + ').'));
+        var retry = el('button', 'dm-retry', 'Retry');
+        retry.type = 'button';
+        retry.addEventListener('click', load);
+        list.appendChild(retry);
+      });
+    }
+    load();
   }
 
   function init() {
