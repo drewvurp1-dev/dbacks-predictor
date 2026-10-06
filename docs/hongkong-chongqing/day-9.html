@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="assets/shell.css?v=29">
 <link rel="stylesheet" href="assets/scrolly.css?v=29">
 <link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
-<link rel="stylesheet" href="assets/daymap.css?v=6">
+<link rel="stylesheet" href="assets/daymap.css?v=7">
 <link rel="stylesheet" href="assets/day-art.css?v=29">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -103,10 +103,6 @@
       <p class="lead" style="border:0;padding:0;margin:0">Two metro rides, one transfer, zero taxis — pandas in the morning, a retro-industrial arts park in the afternoon. Nothing about today needs a driver.</p>
     </div>
 
-    <div class="block reveal">
-      <h2>Today on the map</h2>
-      <div class="daymap-wrap" data-day="9"><noscript><p class="dm-noscript">The map needs JavaScript.</p></noscript></div>
-    </div>
 
     <div class="block reveal">
       <h2>The shape of the day</h2>
@@ -145,6 +141,11 @@
       <div class="daytotal"><span class="k">Day 9 · per person</span><span class="v">~¥10–30 (~$1–4)</span></div>
     </div>
 
+    <div class="block reveal">
+      <h2>Getting around today</h2>
+      <div class="daymap-wrap" data-day="9"><noscript><p class="dm-noscript">The map needs JavaScript.</p></noscript></div>
+    </div>
+
   </main>
 
   <nav class="daynav">
@@ -156,7 +157,7 @@
 </div>
 <script src="assets/shell.js?v=29"></script>
 <script src="assets/leaflet/leaflet.js?v=1"></script>
-<script src="assets/daymap.js?v=6"></script>
+<script src="assets/daymap.js?v=7"></script>
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((err) => {
