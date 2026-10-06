@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hk-trip-v43';
+const CACHE_NAME = 'hk-trip-v44';
 const ASSETS = [
   './',
   './index.html',
@@ -21,8 +21,8 @@ const ASSETS = [
   './assets/shell.js?v=29',
   './assets/leaflet/leaflet.css?v=1',
   './assets/leaflet/leaflet.js?v=1',
-  './assets/daymap.css?v=11',
-  './assets/daymap.js?v=11',
+  './assets/daymap.css?v=12',
+  './assets/daymap.js?v=12',
   './assets/Textile.ttf',
   './assets/Yabatzoe.otf',
   './assets/Neon.ttf',

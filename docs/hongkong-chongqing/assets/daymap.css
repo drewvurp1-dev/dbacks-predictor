@@ -180,3 +180,6 @@
 
 .dm-sub { font-size: 15px; font-weight: 700; margin: 20px 0 10px; }
 .dm-sub:first-of-type { margin-top: 6px; }
+
+.dm-leg-err { opacity: .9; }
+.dm-retry { font: 800 11px/1 var(--font-body, system-ui, sans-serif); letter-spacing: .06em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; cursor: pointer; background: #f4f2ec; color: #14131c; border: 0; margin-left: 8px; }
