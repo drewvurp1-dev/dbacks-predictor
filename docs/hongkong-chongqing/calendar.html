@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/app-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12101c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="HK → CQ">
+<title>Trip Calendar</title>
+<link rel="stylesheet" href="assets/shell.css?v=29">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page-backdrop: #08080d; --bg: #100f17; --surface: #1a1922; --surface-2: #23222e;
+    --ink: #f4f2ec; --ink-dim: #9c98a8; --accent: #c9a24a;
+  }
+  .cal-head { text-align: center; padding: 30px 20px 8px; }
+  .cal-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .19em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 8px; }
+  .cal-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.4rem, 6.4vw, 2rem); text-transform: uppercase; }
+
+  .ribbon { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin: 4px 0 10px; }
+  .ribbon a { flex: 1; background: var(--c); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11.5px; color: var(--ink-dim); margin-bottom: 14px; }
+  .legend u { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  .month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .wd { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .1em; color: var(--ink-dim); padding-bottom: 2px; }
+  .cell { position: relative; min-height: 64px; border-radius: 8px; padding: 5px 4px 4px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+  .cell.off { background: var(--surface); opacity: .35; }
+  .cell.on { color: #0d0c12; background: var(--c); }
+  .cell b { position: absolute; top: 4px; left: 6px; font-size: 14px; font-weight: 800; line-height: 1; }
+  .cell i { font-style: normal; font-size: 9.5px; font-weight: 700; line-height: 1.15; }
+  .cell .mo { position: absolute; top: 5px; right: 5px; font-size: 8.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+  .cell.off .mo { color: var(--ink-dim); }
+  .cell.off b { color: var(--ink-dim); font-weight: 600; }
+  .cell.on:active { transform: scale(.97); }
+
+  .day { background: var(--surface); border-radius: 14px; margin-bottom: 14px; overflow: hidden; position: relative; scroll-margin-top: calc(var(--appbar-h) + 10px); }
+  .day::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--c); }
+  .day header { display: flex; align-items: center; gap: 14px; padding: 14px 14px 10px 20px; }
+  .dd { text-align: center; line-height: 1.1; min-width: 40px; }
+  .dd span { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+  .dd b { display: block; font-family: var(--font-display); font-size: 26px; font-weight: 800; }
+  .dh { flex: 1; min-width: 0; }
+  .city { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+  .dh h3 { font-family: var(--font-display); font-size: 17px; line-height: 1.2; }
+  .go { font-size: 26px; color: var(--ink-dim); padding: 0 4px; }
+  .slot { display: grid; grid-template-columns: 74px 1fr; gap: 8px; padding: 9px 14px 9px 20px; border-top: 1px solid rgba(255,255,255,.06); }
+  .when { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); padding-top: 2px; }
+  .what strong { display: block; font-size: 13.5px; }
+  .what span { display: block; font-size: 12.5px; color: var(--ink-dim); line-height: 1.5; }
+  .note { margin: 0; padding: 9px 14px 11px 20px; font-size: 12px; color: var(--accent); border-top: 1px solid rgba(255,255,255,.06); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Trip navigation">
+    <div class="drawer-head">
+      <h2>Hong Kong → Chongqing</h2>
+      <p>DEC 25 – JAN 4 · PARTY OF 9</p>
+    </div>
+    <nav>
+      <a href="index.html"><span class="d-num">◆</span><span>Trip overview<span class="d-sub">Logistics, entry, budget</span></span></a>
+      <a href="calendar.html" aria-current="page"><span class="d-num">▦</span><span>Trip calendar<span class="d-sub">All 11 days at a glance</span></span></a>
+      <a href="calendar.html"><span class="d-num">▦</span><span>Trip calendar<span class="d-sub">All 11 days at a glance</span></span></a>
+      <a href="day-1.html"><span class="d-num">25</span><span>Pearl of the Orient<span class="d-sub">Arrive Hong Kong</span></span></a>
+      <a href="day-2.html"><span class="d-num">26</span><span>Plus-Sized Park Hoppers<span class="d-sub">Disneyland · Big Buddha</span></span></a>
+      <a href="day-3.html"><span class="d-num">27</span><span>Lucky Bankers vs. Evil Dealers<span class="d-sub">Macao</span></span></a>
+      <a href="day-4.html"><span class="d-num">28</span><span>The Gang Travels 200+ MPH<span class="d-sub">Bullet train to Guilin</span></span></a>
+      <a href="day-5.html"><span class="d-num">29</span><span>Ten Thousand Peaks<span class="d-sub">Boat tour &amp; hiking · Guilin</span></span></a>
+      <a href="day-6.html"><span class="d-num">30</span><span>Silver Snake to the Cyberpunk City<span class="d-sub">On to Chongqing</span></span></a>
+      <a href="day-7.html"><span class="d-num">31</span><span>Hot Pot &amp; the Drone Show<span class="d-sub">NYE · Jiangtan Park</span></span></a>
+      <a href="day-8.html"><span class="d-num">1</span><span>New Year, Old Town<span class="d-sub">Ciqikou · Hongyadong</span></span></a>
+      <a href="day-9.html"><span class="d-num">2</span><span>Pandas &amp; the Printing Press<span class="d-sub">Zoo · Eling Park</span></span></a>
+      <a href="day-10.html"><span class="d-num">3</span><span>Cut from the Same Cloth<span class="d-sub">Suits · Three Gorges Museum</span></span></a>
+      <a href="day-11.html"><span class="d-num">4</span><span>Standby for Takeoff<span class="d-sub">Getaway day</span></span></a>
+      <div class="nav-sep">Reference</div>
+      <a href="full-guide.html"><span class="d-num">≡</span><span>Full printable guide<span class="d-sub">Getting there · rail · tips · budget</span></span></a>
+    </nav>
+  </aside>
+
+  <header class="appbar">
+    <button class="navbtn" id="navToggle" aria-label="Open trip menu" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="appbar-title"><a href="index.html">Hong Kong · Chongqing</a></div>
+    <span class="appbar-chip">Dec 25–Jan 4</span>
+  </header>
+
+  <section class="cal-head">
+    <div class="cal-eyebrow">11 days · party of 9</div>
+    <h1 class="cal-title">Trip Calendar</h1>
+  </section>
+
+  <main class="wrap">
+    <div class="block">
+      <div class="ribbon" aria-hidden="false"><a href="#day-1" style="--c:#59d6d0" aria-label="Day 1"></a><a href="#day-2" style="--c:#59d6d0" aria-label="Day 2"></a><a href="#day-3" style="--c:#d8b24a" aria-label="Day 3"></a><a href="#day-4" style="--c:linear-gradient(135deg,#59d6d0 0 50%,#6fbf94 50% 100%)" aria-label="Day 4"></a><a href="#day-5" style="--c:#6fbf94" aria-label="Day 5"></a><a href="#day-6" style="--c:linear-gradient(135deg,#6fbf94 0 50%,#ff5fb0 50% 100%)" aria-label="Day 6"></a><a href="#day-7" style="--c:#ff5fb0" aria-label="Day 7"></a><a href="#day-8" style="--c:#ff5fb0" aria-label="Day 8"></a><a href="#day-9" style="--c:#ff5fb0" aria-label="Day 9"></a><a href="#day-10" style="--c:#ff5fb0" aria-label="Day 10"></a><a href="#day-11" style="--c:#ff5fb0" aria-label="Day 11"></a></div>
+      <div class="legend"><span><u style="background:#59d6d0"></u>Hong Kong</span><span><u style="background:#d8b24a"></u>Macao</span><span><u style="background:#6fbf94"></u>Guilin</span><span><u style="background:#ff5fb0"></u>Chongqing</span></div>
+      <div class="month"><div class="wd">S</div><div class="wd">M</div><div class="wd">T</div><div class="wd">W</div><div class="wd">T</div><div class="wd">F</div><div class="wd">S</div><div class="cell off"><b>20</b></div><div class="cell off"><b>21</b></div><div class="cell off"><b>22</b></div><div class="cell off"><b>23</b></div><div class="cell off"><b>24</b></div><a class="cell on" href="#day-1" style="--c:#59d6d0" aria-label="Dec 25: The Pearl of the Orient"><span class="mo">Dec</span><b>25</b><i>Arrive</i></a><a class="cell on" href="#day-2" style="--c:#59d6d0" aria-label="Dec 26: Plus-Sized Park Hoppers"><b>26</b><i>Disney</i></a><a class="cell on" href="#day-3" style="--c:#d8b24a" aria-label="Dec 27: Lucky Bankers vs. Evil Dealers"><b>27</b><i>Macao</i></a><a class="cell on" href="#day-4" style="--c:linear-gradient(135deg,#59d6d0 0 50%,#6fbf94 50% 100%)" aria-label="Dec 28: The Gang Travels 200+ MPH"><b>28</b><i>→ Guilin</i></a><a class="cell on" href="#day-5" style="--c:#6fbf94" aria-label="Dec 29: Ten Thousand Peaks"><b>29</b><i>Peaks</i></a><a class="cell on" href="#day-6" style="--c:linear-gradient(135deg,#6fbf94 0 50%,#ff5fb0 50% 100%)" aria-label="Dec 30: Silver Snake to the Cyberpunk City"><b>30</b><i>→ CQ</i></a><a class="cell on" href="#day-7" style="--c:#ff5fb0" aria-label="Dec 31: Hot Pot &amp; the Drone Show"><b>31</b><i>NYE</i></a><a class="cell on" href="#day-8" style="--c:#ff5fb0" aria-label="Jan 1: New Year, Old Town"><span class="mo">Jan</span><b>1</b><i>Old Town</i></a><a class="cell on" href="#day-9" style="--c:#ff5fb0" aria-label="Jan 2: The Pandas &amp; the Printing Press"><b>2</b><i>Pandas</i></a><a class="cell on" href="#day-10" style="--c:#ff5fb0" aria-label="Jan 3: Cut from the Same Cloth"><b>3</b><i>Suits</i></a><a class="cell on" href="#day-11" style="--c:#ff5fb0" aria-label="Jan 4: Standby for Takeoff"><b>4</b><i>Fly home</i></a><div class="cell off"><b>5</b></div><div class="cell off"><b>6</b></div><div class="cell off"><b>7</b></div><div class="cell off"><b>8</b></div><div class="cell off"><b>9</b></div></div>
+      <p class="lead" style="margin-top:10px">Tap a date to jump to its day. Two-tone days are travel days.</p>
+    </div>
+
+    <div class="block">
+      <h2>Day by day</h2>
+<article class="day" id="day-1" style="--c:#59d6d0">
+<header><div class="dd"><span>Fri</span><b>25</b><span>Dec</span></div><div class="dh"><div class="city">Hong Kong</div><h3>The Pearl of the Orient</h3></div><a class="go" href="day-1.html" aria-label="Open day 1">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Arrivals</strong><span>Everyone lands in Hong Kong on standby flights — times are loose.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Get your bearings</strong><span>Victoria Peak at dusk, then the Star Ferry across the harbour.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Harbour lights</strong><span>8pm Symphony of Lights, dinner, Temple Street Night Market.</span></div></div><p class="note">Optional: Sha Tin Racecourse if there is racing.</p></article>
+<article class="day" id="day-2" style="--c:#59d6d0">
+<header><div class="dd"><span>Sat</span><b>26</b><span>Dec</span></div><div class="dh"><div class="city">Hong Kong</div><h3>Plus-Sized Park Hoppers</h3></div><a class="go" href="day-2.html" aria-label="Open day 2">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Disneyland, rope drop</strong><span>Hit the newest land first (World of Frozen, Mystic Manor).</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Park all day</strong><span>Iron Man, Ant-Man, Adventureland, lunch for nine.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Nighttime spectacular</strong><span>Afternoon parade into the nighttime spectacular.</span></div></div><p class="note">Optional: Big Buddha / Ngong Ping is a half-day of its own.</p></article>
+<article class="day" id="day-3" style="--c:#d8b24a">
+<header><div class="dd"><span>Sun</span><b>27</b><span>Dec</span></div><div class="dh"><div class="city">Macao</div><h3>Lucky Bankers vs. Evil Dealers</h3></div><a class="go" href="day-3.html" aria-label="Open day 3">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Ferry to Macao</strong><span>TurboJET or Cotai Water Jet, ~60–70 min. First sailings ~07:00.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>The floors</strong><span>Venetian, Wynn Palace, Parisian, Grand Lisboa.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>City night lights</strong><span>Senado Square, Ruins of St. Paul&#x27;s, Macau Tower, Taipa Village, drinks.</span></div></div><p class="note">Aim for the ferry back by ~21:00; last sailings ~22:00–23:00.</p></article>
+<article class="day" id="day-4" style="--c:linear-gradient(135deg,#59d6d0 0 50%,#6fbf94 50% 100%)">
+<header><div class="dd"><span>Mon</span><b>28</b><span>Dec</span></div><div class="dh"><div class="city">Hong Kong → Guilin</div><h3>The Gang Travels 200+ MPH</h3></div><a class="go" href="day-4.html" aria-label="Open day 4">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Bullet train</strong><span>West Kowloon → Guilin West, ~10:00 departure, ~3–3.5 hrs. Arrive 90 min early for mainland immigration.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Settle in</strong><span>Land early-to-mid afternoon, check in, walk Binjiang Road.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Easy dinner</strong><span>Guilin rice noodles (mǐfěn) near the hotel.</span></div></div><p class="note">Travel day: Hong Kong → Guilin.</p></article>
+<article class="day" id="day-5" style="--c:#6fbf94">
+<header><div class="dd"><span>Tue</span><b>29</b><span>Dec</span></div><div class="dh"><div class="city">Guilin</div><h3>Ten Thousand Peaks</h3></div><a class="go" href="day-5.html" aria-label="Open day 5">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Solitary Beauty Peak</strong><span>~300 steps, 360° view, ~1–1.5 hrs.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Elephant Trunk Hill, then the hike</strong><span>Riverside lunch, then Xianggong Hill for golden hour (~1.5 hrs each way by car).</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Night cruise</strong><span>Two Rivers &amp; Four Lakes cruise (~1 hr), then rice noodles.</span></div></div><p class="note">Under review: may move the base to Yangshuo.</p></article>
+<article class="day" id="day-6" style="--c:linear-gradient(135deg,#6fbf94 0 50%,#ff5fb0 50% 100%)">
+<header><div class="dd"><span>Wed</span><b>30</b><span>Dec</span></div><div class="dh"><div class="city">Guilin → Chongqing</div><h3>Silver Snake to the Cyberpunk City</h3></div><a class="go" href="day-6.html" aria-label="Open day 6">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Check out</strong><span>Slow breakfast, drop bags, head for Guilin West.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Bullet train</strong><span>Guilin West → Chongqing West, ~4 hrs. Pick a fast one. Then DiDi to the hotel.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>First night in the neon</strong><span>Jiefangbei, Hongyadong from across the water, a warm-up hot pot.</span></div></div><p class="note">Travel day: Guilin → Chongqing.</p></article>
+<article class="day" id="day-7" style="--c:#ff5fb0">
+<header><div class="dd"><span>Thu</span><b>31</b><span>Dec</span></div><div class="dh"><div class="city">Chongqing</div><h3>Hot Pot &amp; the Drone Show</h3></div><a class="go" href="day-7.html" aria-label="Open day 7">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Mountain city</strong><span>Pick two or three: Liziba Station, Yangtze Cableway, Ciqikou, Shibati.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Málà hot pot</strong><span>Chongqing invented it. Book ahead for NYE.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Drone show</strong><span>Jiangtan Park — get there early. Midnight on the river.</span></div></div></article>
+<article class="day" id="day-8" style="--c:#ff5fb0">
+<header><div class="dd"><span>Fri</span><b>1</b><span>Jan</span></div><div class="dh"><div class="city">Chongqing</div><h3>New Year, Old Town</h3></div><a class="go" href="day-8.html" aria-label="Open day 8">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Ciqikou in daylight</strong><span>Line 1 to Ciqikou. Slow breakfast, wander.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Open</strong><span>A deliberately slow day. Head to Hongyadong later (Line 2, Linjiangmen).</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Hongyadong on foot</strong><span>Stay for the gold lights at dusk.</span></div></div></article>
+<article class="day" id="day-9" style="--c:#ff5fb0">
+<header><div class="dd"><span>Sat</span><b>2</b><span>Jan</span></div><div class="dh"><div class="city">Chongqing</div><h3>The Pandas &amp; the Printing Press</h3></div><a class="go" href="day-9.html" aria-label="Open day 9">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Chongqing Zoo</strong><span>Giant and red pandas. Line 2 to Zoo Station.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Eling Park &amp; Erchang</strong><span>Line 1 to Eling, change at Lianglukou. Retro-industrial arts park.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Open</strong><span>Nothing scheduled.</span></div></div></article>
+<article class="day" id="day-10" style="--c:#ff5fb0">
+<header><div class="dd"><span>Sun</span><b>3</b><span>Jan</span></div><div class="dh"><div class="city">Chongqing</div><h3>Cut from the Same Cloth</h3></div><a class="go" href="day-10.html" aria-label="Open day 10">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Suits in Jiefangbei</strong><span>Buy ready-made, alter on the spot.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Museum &amp; Great Hall</strong><span>Three Gorges Museum and the Great Hall of the People (Line 10).</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Nothing planned</strong><span>Last full day before the flights home.</span></div></div></article>
+<article class="day" id="day-11" style="--c:#ff5fb0">
+<header><div class="dd"><span>Mon</span><b>4</b><span>Jan</span></div><div class="dh"><div class="city">Chongqing</div><h3>Standby for Takeoff</h3></div><a class="go" href="day-11.html" aria-label="Open day 11">›</a></header>
+<div class="slot"><div class="when">Morning</div><div class="what"><strong>Out of Chongqing</strong><span>CKG → HKG (3x/day, 5 airlines) is the primary gateway.</span></div></div><div class="slot"><div class="when">Afternoon</div><div class="what"><strong>Onward from HKG</strong><span>Seoul (ICN) is the backup gateway if HKG doesn&#x27;t pan out.</span></div></div><div class="slot"><div class="when">Evening</div><div class="what"><strong>Flights are standby</strong><span>Keep this day loose.</span></div></div><p class="note">Standby: leave slack for the next flight.</p></article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    Hong Kong · Macao · Guilin · Chongqing<br>Times are approximate. Open a day for the full detail.
+  </footer>
+
+</div>
+<script src="assets/shell.js?v=29"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(function (err) { console.log('Service Worker registration failed:', err); });
+}
+</script>
+</body>
+</html>
