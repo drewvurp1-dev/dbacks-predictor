@@ -98,7 +98,7 @@
     ] },
     7: { color: CQ, home: CQ_HOTEL, stops: [
       { n: 'Liziba Station', tag: 'Line 2 through the building', ll: [29.5521, 106.5317], mode: 'metro',
-        how: 'From Raffles City take a DiDi, or the metro from Chaotianmen (Line 1) with a change to Line 2 — confirm the transfer in Amap. The station is inside a 19-storey apartment block; viewing platform across the street.' },
+        how: 'From Raffles City: Line 1 from Chaotianmen two stops to Jiaochangkou, then Line 2 toward Yudong (6 stops). The station is inside a 19-storey apartment block; viewing platform across the street.' },
       { n: 'Yangtze River Cableway', ll: [29.5565, 106.5825], mode: 'didi',
         how: 'DiDi ~15 min (no clean metro link). Go early or buy a timed ticket.' },
       { n: 'Shibati (Eighteen Steps)', ll: [29.5543, 106.5667], mode: 'didi',
@@ -112,13 +112,13 @@
       { n: 'Ciqikou Ancient Town', ll: [29.5800, 106.4495], mode: 'metro',
         how: 'Line 1 from Chaotianmen (at Raffles City) straight to Ciqikou Station (磁器口站) — no change.' },
       { n: 'Hongyadong', tag: 'On foot this time', ll: [29.5622, 106.5779], mode: 'metro',
-        how: 'Line 2 to Linjiangmen (临江门站), Exit 2 — or walk from Raffles City (~25 min). Walk it top to bottom, then stay for the lights at dusk.' }
+        how: 'Line 2 to Linjiangmen (临江门站), Exit 2 — via Line 1 to Jiaochangkou from Raffles City — or just walk (~25 min). Walk it top to bottom, then stay for the lights at dusk.' }
     ] },
     9: { color: CQ, home: CQ_HOTEL, stops: [
       { n: 'Chongqing Zoo', ll: [29.5060, 106.5160], mode: 'metro',
-        how: 'Line 2 to Zoo Station (动物园站), Exit 1 — it lets out right at the gate. From Raffles City, a DiDi works too; confirm the metro transfer in Amap.' },
+        how: 'From Raffles City: Line 1 to Daping, change to Line 2 toward Yudong, then Zoo Station (动物园站), Exit 1 — it lets out right at the gate.' },
       { n: 'Eling Park', tag: '瞰胜楼 viewing building', ll: [29.5512, 106.5267], mode: 'metro',
-        how: 'From the Zoo, change at Lianglukou (Lines 1/2/3) onto Line 1 to Eling Station (鹅岭站).' },
+        how: 'From the Zoo, Line 2 toward Jiaochangkou to Daping, then change to Line 1 for one stop to Eling Station (鹅岭站).' },
       { n: 'Erchang Creative Park', ll: [29.5462, 106.5290], mode: 'walk',
         how: 'Right next to Eling Park — a short walk.' }
     ] },
@@ -154,7 +154,10 @@
     TC: SL([['香港','Hong Kong'],['九龍','Kowloon'],['奧運','Olympic'],['南昌','Nam Cheong'],['荔景','Lai King'],['青衣','Tsing Yi'],['欣澳','Sunny Bay'],['東涌','Tung Chung']]),
     DRL: SL([['欣澳','Sunny Bay'],['迪士尼','Disneyland Resort']]),
     ER: SL([['金鐘','Admiralty'],['會展','Exhibition Centre'],['紅磡','Hung Hom'],['旺角東','Mong Kok East'],['九龍塘','Kowloon Tong'],['大圍','Tai Wai'],['沙田','Sha Tin'],['火炭','Fo Tan'],['馬場','Racecourse']]),
-    TM: SL([['紅磡','Hung Hom'],['尖東','East Tsim Sha Tsui'],['柯士甸','Austin']])
+    TM: SL([['紅磡','Hung Hom'],['尖東','East Tsim Sha Tsui'],['柯士甸','Austin']]),
+    // Chongqing — order checked against a Trip.com subway map (older: it predates the Loop line and the Chaotianmen / Bishan ends of Line 1)
+    CQ1: SL([['朝天门','Chaotianmen'],['小什字','Xiaoshizi'],['较场口','Jiaochangkou'],['七星岗','Qixinggang'],['两路口','Lianglukou'],['鹅岭','Eling'],['大坪','Daping'],['石油路','Shiyou Road'],['歇台子','Xietaizi'],['石桥铺','Shiqiaopu'],['高庙村','Gaomiaocun'],['马家岩','Majiayan'],['小龙坎','Xiaolongkan'],['沙坪坝','Shapingba'],['杨公桥','Yanggongqiao'],['烈士墓','Martyrs Cemetery'],['磁器口','Ciqikou']]),
+    CQ2: SL([['较场口','Jiaochangkou'],['临江门','Linjiangmen'],['黄花园','Huanghuayuan'],['大溪沟','Daxigou'],['曾家岩','Zengjiayan'],['牛角沱','Niujiaotuo'],['李子坝','Liziba'],['佛图关','Fotuguan'],['大坪','Daping'],['袁家岗','Yuanjiagang'],['谢家湾','Xiejiawan'],['杨家坪','Yangjiaping'],['动物园','Chongqing Zoo']])
   };
   /* Station wall colours differ station by station; only ones confirmed from a photo are
      listed here — everything else falls back to the line colour. */
@@ -173,9 +176,9 @@
     NP:  { en: 'Ngong Ping 360', zh: '昂坪360', c: '#2f8f5b', mode: 'Cable car' },
     TJ:  { en: 'TurboJET', zh: '噴射飛航', c: '#c8102e', mode: 'Ferry' },
     SH:  { en: 'Free casino shuttle', zh: '免費穿梭巴士', c: '#d8b24a', mode: 'Bus' },
-    CQ1: { en: 'Line 1', zh: '1号线', c: '#e4002b', mode: 'Metro' },
-    CQ2: { en: 'Line 2', zh: '2号线', c: '#00a651', mode: 'Metro' },
-    CQ10:{ en: 'Line 10', zh: '10号线', c: '#8a6fb0', mode: 'Metro' }
+    CQ1: { en: 'Line 1', zh: '1号线', c: '#d4001a', mode: 'Metro', all: ST.CQ1 },
+    CQ2: { en: 'Line 2', zh: '2号线', c: '#0a8f45', mode: 'Metro', all: ST.CQ2 },
+    CQ10:{ en: 'Line 10', zh: '10号线', c: '#6a3a8f', mode: 'Metro' }
   };
   var ROUTES = {
     '1:0': [
@@ -239,8 +242,12 @@
         note: 'Follow the 高鐵 Express Rail Link signs to West Kowloon Station. With nine people and luggage, two taxis from the Airbnb (~15–20 min) skip both changes.' }
     ],
     '7:0': [
-      { line: T.CQ2, dir: { en: 'Yudong', zh: '鱼洞' }, ride: 'Heading away from Jiaochangkou 较场口 (the downtown end)',
-        alight: { en: 'Liziba', zh: '李子坝' }, note: 'The train runs through the apartment block — stand on the right side for the cliff view.' }
+      { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
+        seg: ['Chaotianmen', 'Jiaochangkou'], min: '~5 min', alight: { en: 'Jiaochangkou', zh: '较场口' },
+        note: 'Change here to Line 2. Chaotianmen station is right at Raffles City.' },
+      { line: T.CQ2, board: { en: 'Jiaochangkou', zh: '较场口' }, dir: { en: 'Yudong', zh: '鱼洞' },
+        seg: ['Jiaochangkou', 'Liziba'], min: '~12 min', alight: { en: 'Liziba', zh: '李子坝' },
+        note: 'The train runs through the apartment block — stand on the right side for the cliff view.' }
     ],
     '7:3': [
       { line: T.CQ1, dir: { en: 'Bishan', zh: '璧山' }, ride: 'Heading away from Chaotianmen 朝天门 (the downtown end)',
@@ -248,23 +255,37 @@
     ],
     '8:0': [
       { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
-        ride: 'Direct, no change — Chaotianmen station is right at Raffles City.', alight: { en: 'Ciqikou', zh: '磁器口' } }
+        seg: ['Chaotianmen', 'Ciqikou'], min: '~35 min', alight: { en: 'Ciqikou', zh: '磁器口' },
+        note: 'Direct, no change — Chaotianmen station is right at Raffles City. Older maps show Jiandingpo 尖顶坡 as the west end; either way it is the train heading away from downtown.' }
     ],
     '8:1': [
-      { line: T.CQ2, alight: { en: 'Linjiangmen', zh: '临江门' }, ride: 'Direction depends on where you board',
+      { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
+        seg: ['Chaotianmen', 'Jiaochangkou'], min: '~5 min', alight: { en: 'Jiaochangkou', zh: '较场口' },
+        note: 'Change here to Line 2. (Or skip the metro and walk ~25 min from Raffles City.)' },
+      { line: T.CQ2, board: { en: 'Jiaochangkou', zh: '较场口' }, dir: { en: 'Yudong', zh: '鱼洞' },
+        seg: ['Jiaochangkou', 'Linjiangmen'], min: '~3 min', alight: { en: 'Linjiangmen', zh: '临江门' },
         exit: { code: '2', zh: '洪崖洞', en: 'Hongyadong' } }
     ],
     '9:0': [
-      { line: T.CQ2, dir: { en: 'Yudong', zh: '鱼洞' }, ride: 'Heading away from Jiaochangkou 较场口 (the downtown end)',
-        alight: { en: 'Chongqing Zoo', zh: '动物园' }, exit: { code: '1', zh: '重庆动物园', en: 'Chongqing Zoo' } }
+      { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
+        seg: ['Chaotianmen', 'Daping'], min: '~15 min', alight: { en: 'Daping', zh: '大坪' },
+        note: 'Change here to Line 2 (follow the 2号线 signs).' },
+      { line: T.CQ2, board: { en: 'Daping', zh: '大坪' }, dir: { en: 'Yudong', zh: '鱼洞' },
+        seg: ['Daping', 'Chongqing Zoo'], min: '~10 min', alight: { en: 'Chongqing Zoo', zh: '动物园' },
+        exit: { code: '1', zh: '重庆动物园', en: 'Chongqing Zoo' } }
     ],
     '9:1': [
-      { line: T.CQ1, board: { en: 'Lianglukou', zh: '两路口' }, dir: { en: 'Bishan', zh: '璧山' },
-        alight: { en: 'Eling', zh: '鹅岭' } }
+      { line: T.CQ2, board: { en: 'Chongqing Zoo', zh: '动物园' }, dir: { en: 'Jiaochangkou', zh: '较场口' },
+        seg: ['Chongqing Zoo', 'Daping'], min: '~10 min', alight: { en: 'Daping', zh: '大坪' },
+        note: 'Change here to Line 1 (follow the 1号线 signs).' },
+      { line: T.CQ1, board: { en: 'Daping', zh: '大坪' }, dir: { en: 'Chaotianmen', zh: '朝天门' },
+        seg: ['Daping', 'Eling'], min: '~3 min', alight: { en: 'Eling', zh: '鹅岭' },
+        note: 'Older maps show Xiaoshizi 小什字 as the east end — same direction, toward downtown.' }
     ],
     '10:1': [
       { line: T.CQ10, alight: { en: 'Grand Hall', zh: '大礼堂' }, exit: { code: '1', zh: '三峡博物馆 / 人民大礼堂', en: 'Three Gorges Museum · Great Hall' },
-        ride: 'Direction depends on where you board' }
+        ride: 'Direction depends on where you board',
+        note: 'Please double-check this station in Amap: the Trip.com map has Line 10 running far to the north, and Line 2’s Daxigou 大溪沟 may be the closer stop to the Great Hall.' }
     ]
   };
 
