@@ -19,6 +19,10 @@
   var HOME = { n: 'Airbnb — Causeway Bay', tag: 'Electric Rd', ll: [22.2820, 114.1900], mode: 'metro',
     how: 'Your base Dec 24–28. Nearest MTR is Tin Hau or Causeway Bay (both Island Line, same direction). Pin is approximate.' };
 
+  /* Sheraton Guilin Hotel, on the Li River downtown (check in Dec 28, out Dec 30). Pin approximate. */
+  var GL_HOTEL = { n: 'Sheraton Guilin Hotel', tag: 'Downtown · Li River', ll: [25.2695, 110.2985], mode: 'didi',
+    how: 'Your base Dec 28–30, on Binjiang Road by the river. Guilin has no metro — walk the riverfront or use DiDi. Pin is approximate; confirm in Amap.' };
+
   var DAYS = {
     1: { color: HK, home: HOME, stops: [
       { n: 'Victoria Peak', ll: [22.2759, 114.1505], mode: 'tram',
@@ -58,28 +62,29 @@
       { n: 'Taipa Village', tag: 'Dinner + drinks', ll: [22.1537, 113.5568], mode: 'didi',
         how: 'Taxi or bus across the bridge to Taipa (~15 min). Plan to be back at the ferry by ~21:00; last sailings ~22:00–23:00.' }
     ] },
-    4: { color: GL, home: { n: 'Airbnb check-out', tag: 'Off-map · Dec 28', ll: null, mode: 'metro',
-      how: 'Check out of the Causeway Bay Airbnb, bags with you. Plan to reach West Kowloon about 90 min before the train.' }, stops: [
+    4: { color: GL, home: [{ n: 'Airbnb check-out', tag: 'Off-map · Dec 28', ll: null, mode: 'metro',
+      how: 'Check out of the Causeway Bay Airbnb, bags with you. Plan to reach West Kowloon about 90 min before the train.' }, GL_HOTEL], stops: [
       { n: 'Hong Kong West Kowloon → Guilin West', tag: 'Off-map', ll: null, mode: 'train',
         how: 'MTR to Austin (Tuen Ma Line) or Kowloon Station — both connect on foot to West Kowloon Station. Arrive 90 min early for mainland immigration. ~10:00 train, ~3–3.5 hrs.' },
-      { n: 'Guilin West Station → hotel', tag: 'Off-map', ll: null, mode: 'didi',
-        how: 'The station is ~15 km / 25 min from the centre and Guilin has no metro. Two DiDis or taxis for the group.' },
+      { n: 'Guilin West Station → Sheraton', tag: 'Off-map', ll: null, mode: 'didi',
+        how: 'The station is ~15 km / 25 min from downtown and Guilin has no metro. Two DiDis or taxis for the group to the Sheraton.' },
       { n: 'Binjiang Road riverside walk', tag: 'Near Elephant Trunk Hill', ll: [25.2680, 110.2990], mode: 'walk',
-        how: 'Easy evening stroll along the Li River from the hotel; rice noodles (mǐfěn) nearby.' }
+        how: 'Easy evening stroll along the Li River from the Sheraton; rice noodles (mǐfěn) nearby.' }
     ] },
-    5: { color: GL, note: 'Guilin pins are approximate. This day may move to a Yangshuo base — see the calendar notes.', stops: [
+    5: { color: GL, home: GL_HOTEL, note: 'Guilin pins are approximate. This day may move to a Yangshuo base — see the calendar notes.', stops: [
       { n: 'Solitary Beauty Peak & Princes\' City', ll: [25.2810, 110.2975], mode: 'didi',
-        how: 'DiDi from the hotel (~10 min). Guilin has no metro.' },
+        how: 'DiDi from the Sheraton (~5–10 min). Guilin has no metro.' },
       { n: 'Elephant Trunk Hill', ll: [25.2663, 110.2985], mode: 'walk',
-        how: 'Walk ~25 min south along the Li River (Binjiang Road), or a short DiDi.' },
+        how: 'Back along the Li River on Binjiang Road — a short walk from the Sheraton, or a quick DiDi.' },
       { n: 'Xianggong Hill (Xingping)', tag: '~1.5 hrs away', ll: [24.9250, 110.5100], mode: 'didi',
         how: 'Two DiDis out, two back — about 1.5 hrs each way, no metro or ferry option. Best in late-afternoon light.' },
       { n: 'Two Rivers & Four Lakes night cruise', tag: 'Sun & Moon Pagodas', ll: [25.2755, 110.2895], mode: 'didi',
         how: 'DiDi back to the lakes (~1.5 hrs). The cruise leaves from the docks near the Sun & Moon Pagodas — confirm the pier when you book for nine.' }
     ] },
-    6: { color: CQ, stops: [
+    6: { color: CQ, home: { n: 'Sheraton Guilin check-out', tag: 'Off-map · Dec 30', ll: null, mode: 'didi',
+      how: 'Check out, bags with you, and DiDi ~25 min to Guilin West. Pick a morning departure.' }, stops: [
       { n: 'Guilin West → Chongqing West', tag: 'Off-map', ll: null, mode: 'train',
-        how: 'DiDi ~25 min from the centre to Guilin West, then the ~4 hr high-speed train.' },
+        how: 'DiDi ~25 min from the Sheraton to Guilin West, then the ~4 hr high-speed train.' },
       { n: 'Chongqing West Station → hotel', tag: 'Off-map', ll: null, mode: 'metro',
         how: 'Metro Line 5 and the Loop line connect here; the hotel is likely 30–45 min out. Two DiDis with luggage is simplest.' },
       { n: 'Jiefangbei', ll: [29.5580, 106.5770], mode: 'metro',
@@ -358,21 +363,20 @@
     var markers = [];
     var pinned = 0;
 
-    var homeLi = null;
-    if (day.home) {
-      var h = day.home;
-      homeLi = el('li', 'dm-stop home' + (h.ll ? '' : ' nomap'));
+    var homes = day.home ? [].concat(day.home) : [];
+    homes.forEach(function (h, k) {
+      h.li = el('li', 'dm-stop home' + (h.ll ? '' : ' nomap'));
       var hn = el('div', 'dm-n');
       hn.innerHTML = HOUSE_SVG;
-      homeLi.appendChild(hn);
+      h.li.appendChild(hn);
       var hb = el('div');
       var hname = el('div', 'dm-name', h.n);
       if (h.tag) hname.appendChild(el('small', null, h.tag));
       hb.appendChild(hname);
       hb.appendChild(el('div', 'dm-how', h.how));
-      homeLi.appendChild(hb);
-      list.appendChild(homeLi);
-    }
+      h.li.appendChild(hb);
+      list.appendChild(h.li);
+    });
 
     day.stops.forEach(function (s, i) {
       var li = el('li', 'dm-stop' + (s.opt ? ' opt' : '') + (s.ll ? '' : ' nomap'));
@@ -407,29 +411,31 @@
     }).addTo(map);
 
     var pts = [];
-    var homeMarker = null;
     function select(i, fly) {
       items.forEach(function (li, j) { li.classList.toggle('on', j === i); });
-      if (homeLi) homeLi.classList.toggle('on', i === 'home');
+      homes.forEach(function (h, k) {
+        h.li.classList.toggle('on', i === 'home' + k);
+        if (h.marker) h.marker.getElement().firstChild.classList.toggle('on', i === 'home' + k);
+      });
       markers.forEach(function (m, j) {
         if (m) m.getElement() && m.getElement().firstChild.classList.toggle('on', j === i);
       });
-      if (homeMarker) homeMarker.getElement().firstChild.classList.toggle('on', i === 'home');
-      var m = i === 'home' ? homeMarker : markers[i];
+      var m = (typeof i === 'string') ? homes[+i.slice(4)].marker : markers[i];
       if (fly && m) map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 15), { duration: .6 });
     }
 
-    if (day.home && day.home.ll) {
-      homeMarker = L.marker(day.home.ll, {
+    homes.forEach(function (h, k) {
+      if (!h.ll) return;
+      h.marker = L.marker(h.ll, {
         icon: L.divIcon({ className: '', html: '<div class="dm-pin dm-home">' + HOUSE_SVG + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }),
-        title: day.home.n, keyboard: true, zIndexOffset: 500
+        title: h.n, keyboard: true, zIndexOffset: 500
       }).addTo(map);
-      homeMarker.on('click', function () {
-        select('home', false);
-        homeLi.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      h.marker.on('click', function () {
+        select('home' + k, false);
+        h.li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       });
-      pts.push(day.home.ll);
-    }
+      pts.push(h.ll);
+    });
 
     day.stops.forEach(function (s, i) {
       if (!s.ll) { markers.push(null); return; }
@@ -450,7 +456,8 @@
     // travel lines: one segment per hop (home → stop 1 → stop 2 …), coloured by line/mode.
     // Straight-line sketches between pins, not the exact track. Solid = metro/ferry/tram/cable,
     // dashed = walk / taxi / bus.
-    var prev = (day.home && day.home.ll) ? day.home.ll : null;
+    var mappedHomes = homes.filter(function (h) { return h.ll; });
+    var prev = mappedHomes.length ? mappedHomes[0].ll : null;
     var SEG = { metro: '#8f8fa3', ferry: '#1d6fb8', train: '#8f8fa3', tram: '#b04a2e', cable: '#2f8f5b', walk: '#b8b4c4', didi: '#e0a030', bus: '#d8b24a' };
     day.stops.forEach(function (s, i) {
       if (!s.ll) return;
@@ -470,12 +477,13 @@
     if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [34, 34], maxZoom: 16 });
     else if (pts.length === 1) map.setView(pts[0], 15);
 
-    if (homeLi && day.home.ll) {
-      homeLi.addEventListener('click', function () {
-        select('home', true);
+    homes.forEach(function (h, k) {
+      if (!h.ll) return;
+      h.li.addEventListener('click', function () {
+        select('home' + k, true);
         mapDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
-    }
+    });
     items.forEach(function (li, i) {
       if (!day.stops[i].ll) return;
       li.addEventListener('click', function () {
