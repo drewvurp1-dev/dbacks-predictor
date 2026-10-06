@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hk-trip-v30';
+const CACHE_NAME = 'hk-trip-v31';
 const ASSETS = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const ASSETS = [
   './day-9.html',
   './day-10.html',
   './day-11.html',
+  './calendar.html',
   './full-guide.html',
   './assets/shell.css?v=29',
   './assets/scrolly.css?v=29',
