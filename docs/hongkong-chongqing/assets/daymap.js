@@ -23,6 +23,10 @@
   var GL_HOTEL = { n: 'Sheraton Guilin Hotel', tag: 'Downtown · Li River', ll: [25.2695, 110.2985], mode: 'didi',
     how: 'Your base Dec 28–30, on Binjiang Road by the river. Guilin has no metro — walk the riverfront or use DiDi. Pin is approximate; confirm in Amap.' };
 
+  /* Raffles City Chongqing, at Chaotianmen where the Yangtze and Jialing meet (Dec 30 – Jan 4). Pin approximate. */
+  var CQ_HOTEL = { n: 'Raffles City Chongqing', tag: 'Chaotianmen', ll: [29.5693, 106.5857], mode: 'metro',
+    how: 'Your base for the Chongqing days. Chaotianmen station (Line 1) is right here, and the Yangtze–Jialing confluence is outside. The pin is approximate — confirm in Amap.' };
+
   var DAYS = {
     1: { color: HK, home: HOME, stops: [
       { n: 'Victoria Peak', ll: [22.2759, 114.1505], mode: 'tram',
@@ -81,20 +85,20 @@
       { n: 'Two Rivers & Four Lakes night cruise', tag: 'Sun & Moon Pagodas', ll: [25.2755, 110.2895], mode: 'didi',
         how: 'DiDi back to the lakes (~1.5 hrs). The cruise leaves from the docks near the Sun & Moon Pagodas — confirm the pier when you book for nine.' }
     ] },
-    6: { color: CQ, home: { n: 'Sheraton Guilin check-out', tag: 'Off-map · Dec 30', ll: null, mode: 'didi',
-      how: 'Check out, bags with you, and DiDi ~25 min to Guilin West. Pick a morning departure.' }, stops: [
+    6: { color: CQ, home: [{ n: 'Sheraton Guilin check-out', tag: 'Off-map · Dec 30', ll: null, mode: 'didi',
+      how: 'Check out, bags with you, and DiDi ~25 min to Guilin West. Pick a morning departure.' }, CQ_HOTEL], stops: [
       { n: 'Guilin West → Chongqing West', tag: 'Off-map', ll: null, mode: 'train',
         how: 'DiDi ~25 min from the Sheraton to Guilin West, then the ~4 hr high-speed train.' },
-      { n: 'Chongqing West Station → hotel', tag: 'Off-map', ll: null, mode: 'metro',
-        how: 'Metro Line 5 and the Loop line connect here; the hotel is likely 30–45 min out. Two DiDis with luggage is simplest.' },
-      { n: 'Jiefangbei', ll: [29.5580, 106.5770], mode: 'metro',
-        how: 'Metro to Linjiangmen (Line 2) and walk ~10 min, or walk from the hotel if it is near.' },
+      { n: 'Chongqing West Station → Raffles City', tag: 'Off-map', ll: null, mode: 'didi',
+        how: 'Metro Line 5 and the Loop line connect here, but with luggage two DiDis is simplest. Raffles City is at Chaotianmen, roughly 30–45 min away.' },
+      { n: 'Jiefangbei', ll: [29.5580, 106.5770], mode: 'walk',
+        how: 'From Raffles City it is an uphill walk of ~25 min, or a quick DiDi (~5–10 min).' },
       { n: 'Hongyadong, from across the water', ll: [29.5622, 106.5779], mode: 'walk',
         how: 'Walk ~10 min from Jiefangbei. For the full gold-lit view, use Qiansimen Bridge or the opposite bank rather than the crowd inside.' }
     ] },
-    7: { color: CQ, stops: [
+    7: { color: CQ, home: CQ_HOTEL, stops: [
       { n: 'Liziba Station', tag: 'Line 2 through the building', ll: [29.5521, 106.5317], mode: 'metro',
-        how: 'Metro Line 2 — the station is inside a 19-storey apartment block. Viewing platform across the street.' },
+        how: 'From Raffles City take a DiDi, or the metro from Chaotianmen (Line 1) with a change to Line 2 — confirm the transfer in Amap. The station is inside a 19-storey apartment block; viewing platform across the street.' },
       { n: 'Yangtze River Cableway', ll: [29.5565, 106.5825], mode: 'didi',
         how: 'DiDi ~15 min (no clean metro link). Go early or buy a timed ticket.' },
       { n: 'Shibati (Eighteen Steps)', ll: [29.5543, 106.5667], mode: 'didi',
@@ -104,23 +108,23 @@
       { n: 'Jiangtan Park', tag: 'Drone show', ll: [29.5724, 106.5791], mode: 'metro',
         how: 'Metro or DiDi to the riverside lawns. Pin is approximate — confirm the show location and time locally. Go early; the metro will be jammed afterward.' }
     ] },
-    8: { color: CQ, stops: [
+    8: { color: CQ, home: CQ_HOTEL, stops: [
       { n: 'Ciqikou Ancient Town', ll: [29.5800, 106.4495], mode: 'metro',
-        how: 'Line 1 to Ciqikou Station (磁器口站).' },
+        how: 'Line 1 from Chaotianmen (at Raffles City) straight to Ciqikou Station (磁器口站) — no change.' },
       { n: 'Hongyadong', tag: 'On foot this time', ll: [29.5622, 106.5779], mode: 'metro',
-        how: 'Line 2 to Linjiangmen (临江门站), Exit 2. Walk it top to bottom, then stay for the lights at dusk.' }
+        how: 'Line 2 to Linjiangmen (临江门站), Exit 2 — or walk from Raffles City (~25 min). Walk it top to bottom, then stay for the lights at dusk.' }
     ] },
-    9: { color: CQ, stops: [
+    9: { color: CQ, home: CQ_HOTEL, stops: [
       { n: 'Chongqing Zoo', ll: [29.5060, 106.5160], mode: 'metro',
-        how: 'Line 2 to Zoo Station (动物园站), Exit 1 — it lets out right at the gate.' },
+        how: 'Line 2 to Zoo Station (动物园站), Exit 1 — it lets out right at the gate. From Raffles City, a DiDi works too; confirm the metro transfer in Amap.' },
       { n: 'Eling Park', tag: '瞰胜楼 viewing building', ll: [29.5512, 106.5267], mode: 'metro',
         how: 'From the Zoo, change at Lianglukou (Lines 1/2/3) onto Line 1 to Eling Station (鹅岭站).' },
       { n: 'Erchang Creative Park', ll: [29.5462, 106.5290], mode: 'walk',
         how: 'Right next to Eling Park — a short walk.' }
     ] },
-    10: { color: CQ, stops: [
+    10: { color: CQ, home: CQ_HOTEL, stops: [
       { n: 'Jiefangbei', tag: 'Suits', ll: [29.5580, 106.5770], mode: 'walk',
-        how: 'Walk from the hotel if it is near Chaotianmen; otherwise metro to Linjiangmen (Line 2) and walk.' },
+        how: 'From Raffles City, an uphill walk of ~25 min or a quick DiDi.' },
       { n: 'Three Gorges Museum', ll: [29.5617, 106.5467], mode: 'metro',
         how: 'Line 10 to Grand Hall Station (大礼堂站), Exit 1.' },
       { n: 'Great Hall of the People', ll: [29.5637, 106.5455], mode: 'walk',
@@ -219,10 +223,6 @@
         ride: '2 stops · ~5 min', alight: { en: 'Austin', zh: '柯士甸' }, exit: { code: '→', zh: '高鐵', en: 'Express Rail Link' },
         note: 'Follow the 高鐵 Express Rail Link signs to West Kowloon Station. With nine people and luggage, two taxis from the Airbnb (~15–20 min) skip both changes.' }
     ],
-    '6:2': [
-      { line: T.CQ2, alight: { en: 'Linjiangmen', zh: '临江门' }, ride: 'Direction depends on where you board',
-        exit: { code: '2', zh: '洪崖洞', en: 'Hongyadong' }, note: 'Jiefangbei is then ~10 min on foot.' }
-    ],
     '7:0': [
       { line: T.CQ2, dir: { en: 'Yudong', zh: '鱼洞' }, ride: 'Heading away from Jiaochangkou 较场口 (the downtown end)',
         alight: { en: 'Liziba', zh: '李子坝' }, note: 'The train runs through the apartment block — stand on the right side for the cliff view.' }
@@ -232,8 +232,8 @@
         alight: { en: 'Ciqikou', zh: '磁器口' } }
     ],
     '8:0': [
-      { line: T.CQ1, dir: { en: 'Bishan', zh: '璧山' }, ride: 'Heading away from Chaotianmen 朝天门 (the downtown end)',
-        alight: { en: 'Ciqikou', zh: '磁器口' } }
+      { line: T.CQ1, board: { en: 'Chaotianmen (at Raffles City)', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
+        ride: 'Direct, no change', alight: { en: 'Ciqikou', zh: '磁器口' } }
     ],
     '8:1': [
       { line: T.CQ2, alight: { en: 'Linjiangmen', zh: '临江门' }, ride: 'Direction depends on where you board',
