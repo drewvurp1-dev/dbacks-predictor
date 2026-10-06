@@ -66,7 +66,7 @@
       { n: 'Taipa Village', tag: 'Dinner + drinks', ll: [22.1537, 113.5568], mode: 'didi',
         how: 'Taxi or bus across the bridge to Taipa (~15 min). Plan to be back at the ferry by ~21:00; last sailings ~22:00–23:00.' }
     ] },
-    4: { color: GL, home: [{ n: 'Airbnb check-out', tag: 'Off-map · Dec 28', ll: null, mode: 'metro',
+    4: { color: GL, noMetro: true, home: [{ n: 'Airbnb check-out', tag: 'Off-map · Dec 28', ll: null, mode: 'metro',
       how: 'Check out of the Causeway Bay Airbnb, bags with you. Plan to reach West Kowloon about 90 min before the train.' }, GL_HOTEL], stops: [
       { n: 'Hong Kong West Kowloon → Guilin West', tag: 'Off-map', ll: null, mode: 'train',
         how: 'MTR to Austin (Tuen Ma Line) or Kowloon Station — both connect on foot to West Kowloon Station. Arrive 90 min early for mainland immigration. ~10:00 train, ~3–3.5 hrs.' },
@@ -75,7 +75,7 @@
       { n: 'Binjiang Road riverside walk', tag: 'Near Elephant Trunk Hill', ll: [25.2680, 110.2990], mode: 'walk',
         how: 'Easy evening stroll along the Li River from the Sheraton; rice noodles (mǐfěn) nearby.' }
     ] },
-    5: { color: GL, home: GL_HOTEL, note: 'Guilin pins are approximate. This day may move to a Yangshuo base — see the calendar notes.', stops: [
+    5: { color: GL, noMetro: true, home: GL_HOTEL, note: 'Guilin pins are approximate. This day may move to a Yangshuo base — see the calendar notes.', stops: [
       { n: 'Solitary Beauty Peak & Princes\' City', ll: [25.2810, 110.2975], mode: 'didi',
         how: 'DiDi from the Sheraton (~5–10 min). Guilin has no metro.' },
       { n: 'Elephant Trunk Hill', ll: [25.2663, 110.2985], mode: 'walk',
@@ -492,8 +492,148 @@
       });
     });
 
+    addMetro(map, mapDiv, wrap, wrap.getAttribute('data-day'), day);
+
     // the map may be built while hidden / before layout settles
     setTimeout(function () { map.invalidateSize(); }, 250);
+  }
+
+
+  /* ── Metro network overlay ───────────────────────────────────────────────
+     Real line geometry + stations from OpenStreetMap (Overpass), fetched by the
+     visitor's browser the first time a map is opened and then kept in localStorage,
+     so it keeps working offline. Nothing here is hand-drawn: if OSM has no data for
+     an area (or the visitor is offline on first open) the overlay simply doesn't show. */
+  var OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+  var METRO_TTL = 30 * 24 * 3600 * 1000;
+
+  function cacheGet(key) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      return (o && Date.now() - o.t < METRO_TTL) ? o.d : null;
+    } catch (e) { return null; }
+  }
+  function cachePut(key, data) {
+    try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: data })); } catch (e) { /* quota / private mode */ }
+  }
+
+  function fetchOverpass(query, i) {
+    i = i || 0;
+    var ctl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, 30000) : null;
+    return fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(query),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('overpass ' + r.status); return r.json(); })
+      .catch(function (err) {
+        if (timer) clearTimeout(timer);
+        if (i + 1 < OVERPASS.length) return fetchOverpass(query, i + 1);
+        throw err;
+      });
+  }
+
+  /* Reduce the Overpass answer to what we draw: [{name, colour, ref, paths:[[[lat,lng]…]]}] + stations. */
+  function parseMetro(json) {
+    var lines = [], stations = [], seen = {};
+    (json.elements || []).forEach(function (e) {
+      if (e.type === 'relation' && e.tags) {
+        var paths = [];
+        (e.members || []).forEach(function (m) {
+          if (m.type === 'way' && m.geometry && m.geometry.length > 1) {
+            paths.push(m.geometry.map(function (g) { return [g.lat, g.lon]; }));
+          }
+        });
+        if (!paths.length) return;
+        var name = e.tags['name:en'] || e.tags.name || e.tags.ref || 'Metro';
+        name = name.split(':')[0].replace(/\s*[(（].*$/, '').trim();
+        lines.push({ name: name, colour: e.tags.colour || e.tags.color || '', ref: e.tags.ref || '', paths: paths });
+      } else if (e.type === 'node' && e.tags && e.tags.name) {
+        var key = e.tags.name + '|' + e.lat.toFixed(4) + '|' + e.lon.toFixed(4);
+        if (seen[key]) return;
+        seen[key] = 1;
+        stations.push({ ll: [e.lat, e.lon], name: e.tags['name:en'] ? e.tags.name + ' · ' + e.tags['name:en'] : e.tags.name });
+      }
+    });
+    return { lines: lines, stations: stations };
+  }
+
+  function cssColour(c) {
+    return (/^#[0-9a-f]{3,8}$/i.test(c) || /^[a-z]{3,20}$/i.test(c)) ? c : '#8f8fa3';
+  }
+
+  function addMetro(map, mapDiv, wrap, dayNum, day) {
+    var legend = el('div', 'dm-legend');
+    wrap.insertBefore(legend, mapDiv.nextSibling);
+    if (day.noMetro) {
+      legend.appendChild(el('span', 'dm-leg-note', 'Guilin has no metro — this day is on foot, DiDi and taxis.'));
+      return;
+    }
+    if (!map.getPane('metro')) { map.createPane('metro'); map.getPane('metro').style.zIndex = 380; }
+    var group = L.layerGroup().addTo(map);
+    var stationGroup = L.layerGroup();
+    var on = true;
+    var btn = el('button', 'dm-toggle on', 'Metro lines');
+    btn.type = 'button';
+    btn.setAttribute('aria-pressed', 'true');
+    btn.addEventListener('click', function () {
+      on = !on;
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', String(on));
+      legend.classList.toggle('off', !on);
+      if (on) { group.addTo(map); syncStations(); } else { map.removeLayer(group); map.removeLayer(stationGroup); }
+    });
+    legend.appendChild(btn);
+    var list = el('span', 'dm-leg-list', 'Loading metro lines…');
+    legend.appendChild(list);
+
+    function syncStations() {
+      if (!on) return;
+      if (map.getZoom() >= 14) stationGroup.addTo(map); else map.removeLayer(stationGroup);
+    }
+    map.on('zoomend', syncStations);
+
+    function draw(data) {
+      var uniq = {};
+      data.lines.forEach(function (ln) {
+        var col = cssColour(ln.colour);
+        ln.paths.forEach(function (p) {
+          L.polyline(p, { color: col, weight: 4, opacity: .85, pane: 'metro', interactive: false }).addTo(group);
+        });
+        if (!uniq[ln.name]) uniq[ln.name] = col;
+      });
+      data.stations.forEach(function (st) {
+        L.circleMarker(st.ll, { radius: 4, color: '#222', weight: 1.5, fillColor: '#fff', fillOpacity: 1, pane: 'metro' })
+          .bindTooltip(st.name, { direction: 'top' }).addTo(stationGroup);
+      });
+      list.textContent = '';
+      var names = Object.keys(uniq).sort();
+      if (!names.length) { list.textContent = 'No metro data for this area.'; return; }
+      names.forEach(function (n) {
+        var chip = el('span', 'dm-leg-chip');
+        var sw = el('i'); sw.style.background = uniq[n];
+        chip.appendChild(sw); chip.appendChild(document.createTextNode(n));
+        list.appendChild(chip);
+      });
+      syncStations();
+    }
+
+    // bbox of what the map is showing, padded a little
+    var b = map.getBounds().pad(0.15);
+    var bbox = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (n) { return n.toFixed(4); }).join(',');
+    var key = 'dm-metro-v1:' + dayNum + ':' + bbox;
+    var cached = cacheGet(key);
+    if (cached) { draw(cached); return; }
+
+    var q = '[out:json][timeout:25];(relation["route"~"^(subway|light_rail|monorail)$"](' + bbox + ');' +
+            'node["railway"="station"]["station"~"^(subway|light_rail|monorail)$"](' + bbox + '););out geom(' + bbox + ');';
+    fetchOverpass(q).then(function (json) {
+      var data = parseMetro(json);
+      cachePut(key, data);
+      draw(data);
+    }).catch(function () {
+      list.textContent = 'Metro lines unavailable — they load the first time you open this map with a connection.';
+    });
   }
 
   function init() {
