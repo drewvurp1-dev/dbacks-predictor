@@ -14,8 +14,13 @@
 
   var HK = '#59d6d0', MO = '#d8b24a', GL = '#6fbf94', CQ = '#ff5fb0';
 
+  /* The Hong Kong Airbnb (Causeway Bay, Electric Rd area; check in Dec 24, out Dec 28).
+     Street-level only — this site is public, so no unit number. Pin is approximate. */
+  var HOME = { n: 'Airbnb — Causeway Bay', tag: 'Electric Rd', ll: [22.2820, 114.1900], mode: 'metro',
+    how: 'Your base Dec 24–28. Nearest MTR is Tin Hau or Causeway Bay (both Island Line, same direction). Pin is approximate.' };
+
   var DAYS = {
-    1: { color: HK, stops: [
+    1: { color: HK, home: HOME, stops: [
       { n: 'Victoria Peak', ll: [22.2759, 114.1505], mode: 'tram',
         how: 'MTR to Central (Exit J2), then walk ~10–15 min to the Peak Tram terminus on Garden Road. Tram ~8 min to the top.' },
       { n: 'Star Ferry — Central Pier', ll: [22.2866, 114.1600], mode: 'walk',
@@ -27,7 +32,7 @@
       { n: 'Sha Tin Racecourse', tag: 'Optional', opt: true, ll: [22.4009, 114.2037], mode: 'metro',
         how: 'East Rail Line direct to Racecourse Station (20–30 min from Central). Only open on race days.' }
     ] },
-    2: { color: HK, stops: [
+    2: { color: HK, home: HOME, stops: [
       { n: 'Hong Kong Disneyland', ll: [22.3131, 114.0413], mode: 'metro',
         how: 'MTR Tung Chung Line to Sunny Bay, change to the Disneyland Resort Line (one stop). ~35–45 min from Central.' },
       { n: 'Tian Tan Buddha / Ngong Ping', tag: 'Optional', opt: true, ll: [22.2540, 113.9043], mode: 'cable',
@@ -53,7 +58,8 @@
       { n: 'Taipa Village', tag: 'Dinner + drinks', ll: [22.1537, 113.5568], mode: 'didi',
         how: 'Taxi or bus across the bridge to Taipa (~15 min). Plan to be back at the ferry by ~21:00; last sailings ~22:00–23:00.' }
     ] },
-    4: { color: GL, stops: [
+    4: { color: GL, home: { n: 'Airbnb check-out', tag: 'Off-map · Dec 28', ll: null, mode: 'metro',
+      how: 'Check out of the Causeway Bay Airbnb, bags with you. Plan to reach West Kowloon about 90 min before the train.' }, stops: [
       { n: 'Hong Kong West Kowloon → Guilin West', tag: 'Off-map', ll: null, mode: 'train',
         how: 'MTR to Austin (Tuen Ma Line) or Kowloon Station — both connect on foot to West Kowloon Station. Arrive 90 min early for mainland immigration. ~10:00 train, ~3–3.5 hrs.' },
       { n: 'Guilin West Station → hotel', tag: 'Off-map', ll: null, mode: 'didi',
@@ -149,7 +155,8 @@
   };
   var ROUTES = {
     '1:0': [
-      { line: T.ANY, alight: { en: 'Central', zh: '中環' }, ride: 'Direction depends on your hotel — any line that stops at Central',
+      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        ride: '4 stops from Tin Hau (3 from Causeway Bay) · ~10 min', alight: { en: 'Central', zh: '中環' },
         exit: { code: 'J2', zh: '堅尼地道 / 花園道', en: 'Peak Tram · Garden Road' }, note: 'Then ~10–15 min on foot to the tram terminus.' },
       { line: T.PT, board: { en: 'Garden Road Terminus', zh: '花園道總站' }, dir: { en: 'The Peak', zh: '山頂' },
         ride: '~8 min', alight: { en: 'Peak Tower', zh: '凌霄閣' } }
@@ -168,6 +175,9 @@
         ride: '~30 min', alight: { en: 'Racecourse', zh: '馬場' }, note: 'Racecourse Station only runs on race days — check the fixture list.' }
     ],
     '2:0': [
+      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        ride: '4 stops from Tin Hau (3 from Causeway Bay) · ~10 min', alight: { en: 'Central', zh: '中環' },
+        note: 'At Central follow the 香港站 Hong Kong Station / Tung Chung Line signs (~5–10 min walk through the connection).' },
       { line: T.TC, board: { en: 'Hong Kong (linked to Central)', zh: '香港' }, dir: { en: 'Tung Chung', zh: '東涌' },
         ride: '~20 min', alight: { en: 'Sunny Bay', zh: '欣澳' } },
       { line: T.DRL, board: { en: 'Sunny Bay', zh: '欣澳' }, dir: { en: 'Disneyland Resort', zh: '迪士尼' },
@@ -182,8 +192,8 @@
         ride: '~25 min', alight: { en: 'Ngong Ping Village', zh: '昂坪市集' } }
     ],
     '3:0': [
-      { line: T.IL, board: { en: 'Central', zh: '中環' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
-        ride: '1 stop · ~2 min', alight: { en: 'Sheung Wan', zh: '上環' },
+      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        ride: '5 stops from Tin Hau (4 from Causeway Bay) · ~12 min', alight: { en: 'Sheung Wan', zh: '上環' },
         exit: { code: 'D', zh: '信德中心 / 港澳碼頭', en: 'Shun Tak Centre · Macau Ferry' } },
       { line: T.TJ, board: { en: 'HK–Macau Ferry Terminal', zh: '港澳碼頭' }, dir: { en: 'Macau', zh: '澳門' },
         ride: '~60–70 min', alight: { en: 'Macau Outer Harbour', zh: '外港客運碼頭' },
@@ -194,10 +204,15 @@
         alight: { en: 'The Venetian', zh: '威尼斯人' }, note: 'Look for the shuttle with the Venetian name. Free, no ticket.' }
     ],
     '4:0': [
-      { line: T.TM, board: { en: 'Your nearest station', zh: '' }, dir: { en: 'Tuen Mun', zh: '屯門' },
-        ride: 'From the Tsim Sha Tsui / Hung Hom side. Coming from the other direction, look for Wu Kai Sha 烏溪沙.',
-        alight: { en: 'Austin', zh: '柯士甸' }, exit: { code: '→', zh: '高鐵', en: 'Express Rail Link' },
-        note: 'Follow the 高鐵 Express Rail Link signs to West Kowloon Station.' }
+      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        ride: '3 stops from Tin Hau (2 from Causeway Bay)', alight: { en: 'Admiralty', zh: '金鐘' },
+        note: 'Change here to the East Rail Line (follow the 東鐵綫 signs).' },
+      { line: T.ER, board: { en: 'Admiralty', zh: '金鐘' }, dir: { en: 'Lo Wu / Lok Ma Chau', zh: '羅湖 / 落馬洲' },
+        ride: '2 stops · ~6 min', alight: { en: 'Hung Hom', zh: '紅磡' },
+        note: 'Change here to the Tuen Ma Line.' },
+      { line: T.TM, board: { en: 'Hung Hom', zh: '紅磡' }, dir: { en: 'Tuen Mun', zh: '屯門' },
+        ride: '2 stops · ~5 min', alight: { en: 'Austin', zh: '柯士甸' }, exit: { code: '→', zh: '高鐵', en: 'Express Rail Link' },
+        note: 'Follow the 高鐵 Express Rail Link signs to West Kowloon Station. With nine people and luggage, two taxis from the Airbnb (~15–20 min) skip both changes.' }
     ],
     '6:2': [
       { line: T.CQ2, alight: { en: 'Linjiangmen', zh: '临江门' }, ride: 'Direction depends on where you board',
@@ -232,6 +247,8 @@
         ride: 'Direction depends on where you board' }
     ]
   };
+
+  var HOUSE_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg>';
 
   function bi(en, zh, cls) {
     var d = el('div', cls || 'rt-st');
@@ -333,12 +350,29 @@
     mapDiv.setAttribute('aria-label', 'Map of today\'s stops');
     wrap.appendChild(mapDiv);
     wrap.appendChild(el('p', 'dm-hint', 'Tap a stop to find it on the map. Pins are approximate — confirm the entrance in Amap or Apple Maps. In the stations, match the exit letter and the end-of-line name on the platform sign; wording on real signs can differ slightly.'));
+    wrap.appendChild(el('p', 'dm-hint', 'Colored lines show each hop (solid = metro / ferry / tram, dashed = walk or taxi). They are straight-line sketches between pins, not the exact track.'));
     if (day.note) wrap.appendChild(el('p', 'dm-hint dm-warn', day.note));
 
     var list = el('ol', 'dm-list');
     var items = [];
     var markers = [];
     var pinned = 0;
+
+    var homeLi = null;
+    if (day.home) {
+      var h = day.home;
+      homeLi = el('li', 'dm-stop home' + (h.ll ? '' : ' nomap'));
+      var hn = el('div', 'dm-n');
+      hn.innerHTML = HOUSE_SVG;
+      homeLi.appendChild(hn);
+      var hb = el('div');
+      var hname = el('div', 'dm-name', h.n);
+      if (h.tag) hname.appendChild(el('small', null, h.tag));
+      hb.appendChild(hname);
+      hb.appendChild(el('div', 'dm-how', h.how));
+      homeLi.appendChild(hb);
+      list.appendChild(homeLi);
+    }
 
     day.stops.forEach(function (s, i) {
       var li = el('li', 'dm-stop' + (s.opt ? ' opt' : '') + (s.ll ? '' : ' nomap'));
@@ -373,12 +407,28 @@
     }).addTo(map);
 
     var pts = [];
+    var homeMarker = null;
     function select(i, fly) {
       items.forEach(function (li, j) { li.classList.toggle('on', j === i); });
+      if (homeLi) homeLi.classList.toggle('on', i === 'home');
       markers.forEach(function (m, j) {
         if (m) m.getElement() && m.getElement().firstChild.classList.toggle('on', j === i);
       });
-      if (fly && markers[i]) map.flyTo(markers[i].getLatLng(), Math.max(map.getZoom(), 15), { duration: .6 });
+      if (homeMarker) homeMarker.getElement().firstChild.classList.toggle('on', i === 'home');
+      var m = i === 'home' ? homeMarker : markers[i];
+      if (fly && m) map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 15), { duration: .6 });
+    }
+
+    if (day.home && day.home.ll) {
+      homeMarker = L.marker(day.home.ll, {
+        icon: L.divIcon({ className: '', html: '<div class="dm-pin dm-home">' + HOUSE_SVG + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }),
+        title: day.home.n, keyboard: true, zIndexOffset: 500
+      }).addTo(map);
+      homeMarker.on('click', function () {
+        select('home', false);
+        homeLi.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      pts.push(day.home.ll);
     }
 
     day.stops.forEach(function (s, i) {
@@ -397,13 +447,35 @@
       pts.push(s.ll);
     });
 
-    // dotted line shows visiting order
-    var order = day.stops.filter(function (s) { return s.ll && !s.opt; }).map(function (s) { return s.ll; });
-    if (order.length > 1) L.polyline(order, { color: day.color, weight: 3, opacity: .8, dashArray: '2 8', lineCap: 'round' }).addTo(map);
+    // travel lines: one segment per hop (home → stop 1 → stop 2 …), coloured by line/mode.
+    // Straight-line sketches between pins, not the exact track. Solid = metro/ferry/tram/cable,
+    // dashed = walk / taxi / bus.
+    var prev = (day.home && day.home.ll) ? day.home.ll : null;
+    var SEG = { metro: '#8f8fa3', ferry: '#1d6fb8', train: '#8f8fa3', tram: '#b04a2e', cable: '#2f8f5b', walk: '#b8b4c4', didi: '#e0a030', bus: '#d8b24a' };
+    day.stops.forEach(function (s, i) {
+      if (!s.ll) return;
+      if (prev) {
+        var legs = ROUTES[wrap.getAttribute('data-day') + ':' + i];
+        var solid = s.mode === 'metro' || s.mode === 'ferry' || s.mode === 'train' || s.mode === 'tram' || s.mode === 'cable';
+        var color = (legs && legs[0].line.c) || SEG[s.mode] || day.color;
+        var label = (legs ? legs.map(function (l) { return l.line.en; }).join(' → ') : (MODE_LABEL[s.mode] || s.mode));
+        L.polyline([prev, s.ll], {
+          color: color, weight: solid ? 5 : 3, opacity: s.opt ? .55 : .9,
+          dashArray: solid ? null : '3 8', lineCap: 'round'
+        }).bindTooltip((i + 1) + '. ' + label, { sticky: true }).addTo(map);
+      }
+      if (!s.opt) prev = s.ll;
+    });
 
     if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [34, 34], maxZoom: 16 });
     else if (pts.length === 1) map.setView(pts[0], 15);
 
+    if (homeLi && day.home.ll) {
+      homeLi.addEventListener('click', function () {
+        select('home', true);
+        mapDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
     items.forEach(function (li, i) {
       if (!day.stops[i].ll) return;
       li.addEventListener('click', function () {
