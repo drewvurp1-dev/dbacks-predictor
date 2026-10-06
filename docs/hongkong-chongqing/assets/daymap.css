@@ -49,3 +49,47 @@
 }
 .dm-mode.metro, .dm-mode.ferry, .dm-mode.train { background: var(--dm); color: #0d0c12; }
 .dm-noscript, .dm-offline { font-size: 12.5px; color: var(--dm-dim); padding: 24px 14px; text-align: center; }
+
+/* ── route cards: stepper rail + sign replicas ───────────────────────── */
+.dm-stop > div:last-child { min-width: 0; }
+.rt { margin-top: 10px; }
+.rt-leg { --lc: #888; border-left: 4px solid var(--lc); padding: 2px 0 6px 11px; margin-bottom: 8px; }
+.rt-leg:last-child { margin-bottom: 0; }
+.rt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.rt-chip { background: var(--lc); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+.rt-line { font-size: 13px; font-weight: 700; }
+.rt-row { display: grid; grid-template-columns: 58px 1fr; gap: 8px; align-items: center; margin-top: 6px; }
+.rt-rowfull { align-items: start; }
+.rt-lbl { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--dm-dim); }
+.rt-st { display: flex; flex-direction: column; line-height: 1.25; }
+.rt-zh { font-size: 15px; font-weight: 700; }
+.rt-en { font-size: 12.5px; color: var(--dm-dim); }
+.rt-ride { font-size: 12.5px; line-height: 1.45; color: var(--dm-dim); }
+.rt-note { margin: 7px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--dm-warn); }
+
+/* sign replicas — dark panel, white type, like the MTR way-finding signs */
+.sign, .dirboard {
+  display: flex; align-items: stretch; min-width: 0;
+  background: #0d1520; border-radius: 4px; overflow: hidden;
+  font-family: "PingFang HK", "Noto Sans CJK TC", "Microsoft JhengHei", "PingFang SC", "Noto Sans CJK SC", "Heiti TC", sans-serif;
+  color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.sign-exit {
+  background: #1f9d38; width: 50px; flex: none; padding: 5px 2px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+}
+.sign-chu { font-size: 26px; font-weight: 800; }
+.sign-exit-en { font-size: 9px; font-weight: 800; letter-spacing: .1em; margin-top: 2px; }
+.sign-code {
+  background: #3d7f93; flex: none; min-width: 42px; padding: 0 8px; margin: 7px 0 7px 8px;
+  display: flex; align-items: center; justify-content: center;
+  font: 700 28px/1 "Inter", system-ui, sans-serif;
+}
+.sign-text, .dirboard-text { display: flex; flex-direction: column; justify-content: center; padding: 6px 10px; min-width: 0; line-height: 1.15; }
+.sign-zh { font-size: 17px; font-weight: 700; letter-spacing: .02em; }
+.sign-en { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; opacity: .92; margin-top: 3px; }
+.dirboard-tab {
+  background: var(--lc); flex: none; width: 42px; padding: 4px 2px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font-size: 11px; font-weight: 800; line-height: 1.1; text-shadow: 0 1px 1px rgba(0,0,0,.4);
+}
