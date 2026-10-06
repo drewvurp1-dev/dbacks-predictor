@@ -581,7 +581,9 @@
     });
     items.forEach(function (li, i) {
       if (!day.stops[i].ll) return;
-      li.addEventListener('click', function () {
+      li.addEventListener('click', function (e) {
+        // taps inside the directions card (Show/Hide steps, signs) must not jump to the map
+        if (e.target.closest && e.target.closest('.rt-fold')) return;
         select(i, true);
         mapDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
