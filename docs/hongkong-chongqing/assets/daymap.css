@@ -177,3 +177,6 @@
 .st.start .st-dot, .st.end .st-dot { background: var(--lc); }
 .st-tag { font: 800 10px/1 "Inter", system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #14233a; background: #fff; border: 2px solid #14233a; padding: 5px 8px; border-radius: 999px; }
 .st-tag.soft { border-style: dashed; font-weight: 700; opacity: .8; }
+
+.dm-sub { font-size: 15px; font-weight: 700; margin: 20px 0 10px; }
+.dm-sub:first-of-type { margin-top: 6px; }

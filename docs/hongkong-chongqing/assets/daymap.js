@@ -66,10 +66,19 @@
       { n: 'Taipa Village', tag: 'Dinner + drinks', ll: [22.1537, 113.5568], mode: 'didi',
         how: 'Taxi or bus across the bridge to Taipa (~15 min). Plan to be back at the ferry by ~21:00; last sailings ~22:00–23:00.' }
     ] },
-    4: { color: GL, noMetro: true, home: [{ n: 'Airbnb check-out', tag: 'Off-map · Dec 28', ll: null, mode: 'metro',
-      how: 'Check out of the Causeway Bay Airbnb, bags with you. Plan to reach West Kowloon about 90 min before the train.' }, GL_HOTEL], stops: [
-      { n: 'Hong Kong West Kowloon → Guilin West', tag: 'Off-map', ll: null, mode: 'train',
-        how: 'MTR to Austin (Tuen Ma Line) or Kowloon Station — both connect on foot to West Kowloon Station. Arrive 90 min early for mainland immigration. ~10:00 train, ~3–3.5 hrs.' },
+    /* Day 4 has two maps: the Hong Kong morning ('4') and the Guilin evening ('4b'). */
+    4: { color: HK, home: { n: 'Airbnb check-out', tag: 'Causeway Bay · Dec 28', ll: HOME.ll, mode: 'metro',
+      how: 'Check out with all bags. Aim to reach West Kowloon Station about 90 min before the train (arrive early for mainland immigration).' }, stops: [
+      { n: 'Admiralty', tag: 'Change to East Rail', ll: [22.2788, 114.1655], mode: 'metro',
+        how: 'Island Line from Tin Hau or Causeway Bay toward Kennedy Town. Then follow the 東鐵綫 East Rail Line signs.' },
+      { n: 'Hung Hom', tag: 'Change to Tuen Ma', ll: [22.3029, 114.1820], mode: 'metro',
+        how: 'East Rail Line under the harbour, 2 stops. Then follow the 屯馬綫 Tuen Ma Line signs.' },
+      { n: 'West Kowloon Station', tag: 'High-speed train', ll: [22.3045, 114.1657], mode: 'metro',
+        how: 'Tuen Ma Line to Austin, then follow the 高鐵 Express Rail Link signs. With nine people and luggage, two taxis from the Airbnb (~15–20 min) skip both changes.' },
+      { n: 'High-speed train → Guilin West', tag: 'Off-map', ll: null, mode: 'train',
+        how: '~10:00 departure, ~3–3.5 hrs, direct. You clear mainland immigration at the station, so arrive 90 min early.' }
+    ] },
+    '4b': { color: GL, noMetro: true, home: GL_HOTEL, stops: [
       { n: 'Guilin West Station → Sheraton', tag: 'Off-map', ll: null, mode: 'didi',
         how: 'The station is ~15 km / 25 min from downtown and Guilin has no metro. Two DiDis or taxis for the group to the Sheraton.' },
       { n: 'Binjiang Road riverside walk', tag: 'Near Elephant Trunk Hill', ll: [25.2680, 110.2990], mode: 'walk',
@@ -234,13 +243,17 @@
     '4:0': [
       { line: T.IL, board: { en: 'Tin Hau', zh: '天后' }, alt: { en: 'Causeway Bay', zh: '銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
         seg: ['Tin Hau', 'Admiralty'], min: '~8 min', alight: { en: 'Admiralty', zh: '金鐘' },
-        note: 'Change here to the East Rail Line (follow the 東鐵綫 signs).' },
+        note: 'Change here to the East Rail Line (follow the 東鐵綫 signs).' }
+    ],
+    '4:1': [
       { line: T.ER, board: { en: 'Admiralty', zh: '金鐘' }, dir: { en: 'Lo Wu / Lok Ma Chau', zh: '羅湖 / 落馬洲' },
         seg: ['Admiralty', 'Hung Hom'], min: '~6 min', alight: { en: 'Hung Hom', zh: '紅磡' },
-        note: 'Change here to the Tuen Ma Line.' },
+        note: 'Change here to the Tuen Ma Line.' }
+    ],
+    '4:2': [
       { line: T.TM, board: { en: 'Hung Hom', zh: '紅磡' }, dir: { en: 'Tuen Mun', zh: '屯門' },
         seg: ['Hung Hom', 'Austin'], min: '~5 min', alight: { en: 'Austin', zh: '柯士甸' }, exit: { code: '→', zh: '高鐵', en: 'Express Rail Link' },
-        note: 'Follow the 高鐵 Express Rail Link signs to West Kowloon Station. With nine people and luggage, two taxis from the Airbnb (~15–20 min) skip both changes.' }
+        note: 'Follow the 高鐵 Express Rail Link signs to West Kowloon Station.' }
     ],
     '7:0': [
       { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
