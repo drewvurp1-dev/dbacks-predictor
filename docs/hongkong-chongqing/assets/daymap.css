@@ -50,25 +50,12 @@
 .dm-mode.metro, .dm-mode.ferry, .dm-mode.train { background: var(--dm); color: #0d0c12; }
 .dm-noscript, .dm-offline { font-size: 12.5px; color: var(--dm-dim); padding: 24px 14px; text-align: center; }
 
-/* ── route cards: stepper rail + sign replicas ───────────────────────── */
+/* ── route cards ─────────────────────────────────────────────────────── */
 .dm-stop > div:last-child { min-width: 0; }
-.rt { margin-top: 10px; }
-.rt-leg { --lc: #888; border-left: 4px solid var(--lc); padding: 2px 0 6px 11px; margin-bottom: 8px; }
-.rt-leg:last-child { margin-bottom: 0; }
-.rt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-.rt-chip { background: var(--lc); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
-.rt-line { font-size: 13px; font-weight: 700; }
-.rt-row { display: grid; grid-template-columns: 58px 1fr; gap: 8px; align-items: center; margin-top: 6px; }
-.rt-rowfull { align-items: start; }
-.rt-lbl { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--dm-dim); }
-.rt-st { display: flex; flex-direction: column; line-height: 1.25; }
-.rt-zh { font-size: 15px; font-weight: 700; }
-.rt-en { font-size: 12.5px; color: var(--dm-dim); }
-.rt-ride { font-size: 12.5px; line-height: 1.45; color: var(--dm-dim); }
-.rt-note { margin: 7px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--dm-warn); }
-
+.dm-how { margin-top: 7px; }
+.dm-stop { padding: 14px 14px; margin-bottom: 12px; }
 /* sign replicas — dark panel, white type, like the MTR way-finding signs */
-.sign, .dirboard {
+.sign {
   display: flex; align-items: stretch; min-width: 0;
   background: #0d1520; border-radius: 4px; overflow: hidden;
   font-family: "PingFang HK", "Noto Sans CJK TC", "Microsoft JhengHei", "PingFang SC", "Noto Sans CJK SC", "Heiti TC", sans-serif;
@@ -85,15 +72,9 @@
   display: flex; align-items: center; justify-content: center;
   font: 700 28px/1 "Inter", system-ui, sans-serif;
 }
-.sign-text, .dirboard-text { display: flex; flex-direction: column; justify-content: center; padding: 6px 10px; min-width: 0; line-height: 1.15; }
+.sign-text { display: flex; flex-direction: column; justify-content: center; padding: 6px 10px; min-width: 0; line-height: 1.15; }
 .sign-zh { font-size: 17px; font-weight: 700; letter-spacing: .02em; }
 .sign-en { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; opacity: .92; margin-top: 3px; }
-.dirboard-tab {
-  background: var(--lc); flex: none; width: 42px; padding: 4px 2px;
-  display: flex; align-items: center; justify-content: center; text-align: center;
-  font-size: 11px; font-weight: 800; line-height: 1.1; text-shadow: 0 1px 1px rgba(0,0,0,.4);
-}
-
 /* home (Airbnb) pin + list row */
 .dm-pin.dm-home { width: 30px; height: 30px; background: #fff; color: #c2410c; border: 3px solid #c2410c; border-radius: 9px; }
 .dm-pin.dm-home svg { width: 17px; height: 17px; }
@@ -113,3 +94,86 @@
 .dm-leg-chip { display: inline-flex; align-items: center; gap: 5px; }
 .dm-leg-chip i { display: inline-block; width: 16px; height: 5px; border-radius: 3px; }
 .dm-leg-note { opacity: .75; }
+
+/* ── collapsible directions ──────────────────────────────────────────── */
+.rt-fold { margin-top: 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
+.rt-fold[open] { background: rgba(255,255,255,.03); }
+.rt-sum {
+  list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  padding: 11px 12px;
+}
+.rt-sum::-webkit-details-marker { display: none; }
+.rt-sum-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.rt-sum-pill { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; line-height: 1.3; }
+.rt-sum-info { flex: 1 1 140px; display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.rt-sum-route { font-size: 13px; font-weight: 700; }
+.rt-sum-meta { font-size: 11.5px; color: var(--dm-dim); }
+.rt-sum-act { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--dm-ink); background: rgba(255,255,255,.12); padding: 6px 10px; border-radius: 999px; }
+.rt-sum-act .act-open { display: none; }
+.rt-fold[open] .rt-sum-act .act-open { display: inline; }
+.rt-fold[open] .rt-sum-act .act-closed { display: none; }
+.rt-fold[open] .rt-sum { border-bottom: 1px solid rgba(255,255,255,.1); }
+.rt { padding: 6px 12px 16px; }
+
+.rt-leg { --lc: #888; --li: #fff; padding: 16px 0 6px; }
+.rt-leg + .rt-leg { margin-top: 10px; border-top: 2px dashed rgba(255,255,255,.18); }
+.rt-lbl { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--dm-dim); margin-bottom: 7px; }
+.rt-blk { margin-top: 18px; }
+.rt-take { }
+.rt-banner {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px;
+  background: var(--lc); color: var(--li); border-radius: 10px; padding: 12px 16px;
+  box-shadow: 0 3px 0 rgba(0,0,0,.35);
+}
+.rt-bn-zh { font: 800 26px/1.1 "PingFang HK", "Noto Sans CJK TC", "Microsoft JhengHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+.rt-bn-en { font-size: 19px; font-weight: 800; letter-spacing: .01em; }
+.rt-alt { margin-top: 8px; font-size: 12px; color: var(--dm-dim); }
+.rt-ride { font-size: 13px; line-height: 1.5; color: var(--dm-dim); }
+.rt-ride-inline { margin-top: 10px; }
+.rt-note { margin: 16px 0 0; font-size: 12px; line-height: 1.5; color: var(--dm-warn); }
+
+/* station-name wall: tiled mosaic, white raised lettering (cf. 中環 / Central) */
+.wall {
+  --tile: #888; --wt: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  padding: 18px 12px 16px; border-radius: 6px; color: var(--wt);
+  background-color: var(--tile);
+  background-image:
+    linear-gradient(rgba(0,0,0,.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,.22) 1px, transparent 1px),
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.14), transparent 55%),
+    radial-gradient(circle at 80% 90%, rgba(0,0,0,.2), transparent 50%);
+  background-size: 7px 7px, 7px 7px, 100% 100%, 100% 100%;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.35);
+}
+.wall-zh { font: 700 38px/1.1 "PingFang HK", "Noto Sans CJK TC", "Microsoft JhengHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; letter-spacing: .06em; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.wall-en { font: 800 22px/1.2 "Inter", system-ui, sans-serif; margin-top: 8px; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+
+/* platform sign: terminus header + stop strip (cf. the Island Line panel) */
+.plat { --lc: #888; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.plat-head {
+  background: #14233a; color: #fff; padding: 12px 14px; border-bottom: 5px solid var(--lc);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.plat-zh { font: 700 26px/1.15 "PingFang HK", "Noto Sans CJK TC", "Microsoft JhengHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+.plat-en { font: 700 17px/1.2 "Inter", system-ui, sans-serif; }
+.plat-body { background: #f3f4f6; color: #14233a; padding: 14px 14px 18px; }
+.plat-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.plat-line { display: flex; flex-direction: column; line-height: 1.2; }
+.plat-line-zh { font: 800 20px/1.2 "PingFang HK", "Noto Sans CJK TC", "Microsoft JhengHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+.plat-line-en { font: 600 13px/1.3 "Inter", system-ui, sans-serif; }
+.plat-meta { font: 800 12px/1.2 "Inter", system-ui, sans-serif; background: #14233a; color: #fff; padding: 5px 10px; border-radius: 999px; }
+.strip { list-style: none; position: relative; padding-left: 38px; margin: 0; }
+.strip::before { content: ""; position: absolute; left: 11px; top: 12px; bottom: 12px; width: 8px; background: var(--lc); border-radius: 4px; }
+.st { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 9px 0; min-height: 44px; }
+.st-dot { position: absolute; left: -38px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; background: #fff; border: 4px solid #14233a; box-sizing: border-box; }
+.st-t { display: flex; flex-direction: column; line-height: 1.2; }
+.st-zh { font: 700 17px/1.2 "PingFang HK", "Noto Sans CJK TC", "Microsoft JhengHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+.st-en { font: 600 12px/1.3 "Inter", system-ui, sans-serif; color: #3a4a63; }
+.st.mid .st-zh { font-weight: 600; }
+.st.mid .st-t { opacity: .88; }
+.st.start .st-t, .st.end .st-t { background: #14233a; color: #fff; padding: 7px 12px; border-radius: 3px; }
+.st.start .st-en, .st.end .st-en { color: #dfe6f1; }
+.st.start .st-dot, .st.end .st-dot { background: var(--lc); }
+.st-tag { font: 800 10px/1 "Inter", system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #14233a; background: #fff; border: 2px solid #14233a; padding: 5px 8px; border-radius: 999px; }
+.st-tag.soft { border-style: dashed; font-weight: 700; opacity: .8; }

@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="assets/shell.css?v=29">
 <link rel="stylesheet" href="assets/scrolly.css?v=29">
 <link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
-<link rel="stylesheet" href="assets/daymap.css?v=6">
+<link rel="stylesheet" href="assets/daymap.css?v=7">
 <link rel="stylesheet" href="assets/day-art.css?v=29">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -104,10 +104,6 @@
       <p class="lead" style="border:0;padding:0;margin:0">Suits in the morning, culture in the afternoon, nothing in the evening — this is the last full day before a standby flight, and it's built light on purpose.</p>
     </div>
 
-    <div class="block reveal">
-      <h2>Today on the map</h2>
-      <div class="daymap-wrap" data-day="10"><noscript><p class="dm-noscript">The map needs JavaScript.</p></noscript></div>
-    </div>
 
     <div class="block reveal">
       <h2>The shape of the day</h2>
@@ -152,6 +148,11 @@
       <p class="lead" style="border:0;margin-top:8px;padding:0">Keep the evening open — pack, eat something easy, and don't plan around a departure time that standby hasn't given you yet.</p>
     </div>
 
+    <div class="block reveal">
+      <h2>Getting around today</h2>
+      <div class="daymap-wrap" data-day="10"><noscript><p class="dm-noscript">The map needs JavaScript.</p></noscript></div>
+    </div>
+
   </main>
 
   <nav class="daynav">
@@ -163,7 +164,7 @@
 </div>
 <script src="assets/shell.js?v=29"></script>
 <script src="assets/leaflet/leaflet.js?v=1"></script>
-<script src="assets/daymap.js?v=6"></script>
+<script src="assets/daymap.js?v=7"></script>
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((err) => {

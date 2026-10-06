@@ -145,13 +145,28 @@
      Station / terminus names are the official bilingual ones. The signs list
      nearby streets and buildings — wording on the real sign can differ; the
      exit letter/number and the terminus name are what to match. */
+  function SL(pairs) { return pairs.map(function (p) { return { zh: p[0], en: p[1] }; }); }
+  /* Station order along each MTR line (official bilingual names). Used to draw the
+     stop-by-stop strip between where you board and where you get off. */
+  var ST = {
+    IL: SL([['堅尼地城','Kennedy Town'],['香港大學','HKU'],['西營盤','Sai Ying Pun'],['上環','Sheung Wan'],['中環','Central'],['金鐘','Admiralty'],['灣仔','Wan Chai'],['銅鑼灣','Causeway Bay'],['天后','Tin Hau'],['炮台山','Fortress Hill'],['北角','North Point'],['鰂魚涌','Quarry Bay'],['太古','Tai Koo'],['西灣河','Sai Wan Ho'],['筲箕灣','Shau Kei Wan'],['杏花邨','Heng Fa Chuen'],['柴灣','Chai Wan']]),
+    TW: SL([['中環','Central'],['金鐘','Admiralty'],['尖沙咀','Tsim Sha Tsui'],['佐敦','Jordan'],['油麻地','Yau Ma Tei'],['旺角','Mong Kok'],['太子','Prince Edward'],['深水埗','Sham Shui Po'],['長沙灣','Cheung Sha Wan'],['荔枝角','Lai Chi Kok'],['美孚','Mei Foo'],['荔景','Lai King'],['葵芳','Kwai Fong'],['葵興','Kwai Hing'],['大窩口','Tai Wo Hau'],['荃灣','Tsuen Wan']]),
+    TC: SL([['香港','Hong Kong'],['九龍','Kowloon'],['奧運','Olympic'],['南昌','Nam Cheong'],['荔景','Lai King'],['青衣','Tsing Yi'],['欣澳','Sunny Bay'],['東涌','Tung Chung']]),
+    DRL: SL([['欣澳','Sunny Bay'],['迪士尼','Disneyland Resort']]),
+    ER: SL([['金鐘','Admiralty'],['會展','Exhibition Centre'],['紅磡','Hung Hom'],['旺角東','Mong Kok East'],['九龍塘','Kowloon Tong'],['大圍','Tai Wai'],['沙田','Sha Tin'],['火炭','Fo Tan'],['馬場','Racecourse']]),
+    TM: SL([['紅磡','Hung Hom'],['尖東','East Tsim Sha Tsui'],['柯士甸','Austin']])
+  };
+  /* Station wall colours differ station by station; only ones confirmed from a photo are
+     listed here — everything else falls back to the line colour. */
+  var TILE = { 'Central': '#b3191b' };
+
   var T = {
-    TW:  { en: 'Tsuen Wan Line', zh: '荃灣綫', c: '#e2231a', mode: 'MTR' },
-    TC:  { en: 'Tung Chung Line', zh: '東涌綫', c: '#f7943e', mode: 'MTR' },
-    DRL: { en: 'Disneyland Resort Line', zh: '迪士尼綫', c: '#f173ac', mode: 'MTR' },
-    IL:  { en: 'Island Line', zh: '港島綫', c: '#007dc5', mode: 'MTR' },
-    ER:  { en: 'East Rail Line', zh: '東鐵綫', c: '#5eb6e4', mode: 'MTR' },
-    TM:  { en: 'Tuen Ma Line', zh: '屯馬綫', c: '#923011', mode: 'MTR' },
+    TW:  { en: 'Tsuen Wan Line', zh: '荃灣綫', c: '#e2231a', mode: 'MTR', all: ST.TW },
+    TC:  { en: 'Tung Chung Line', zh: '東涌綫', c: '#f7943e', mode: 'MTR', all: ST.TC },
+    DRL: { en: 'Disneyland Resort Line', zh: '迪士尼綫', c: '#f173ac', mode: 'MTR', all: ST.DRL },
+    IL:  { en: 'Island Line', zh: '港島綫', c: '#007dc5', mode: 'MTR', all: ST.IL },
+    ER:  { en: 'East Rail Line', zh: '東鐵綫', c: '#5eb6e4', mode: 'MTR', all: ST.ER },
+    TM:  { en: 'Tuen Ma Line', zh: '屯馬綫', c: '#923011', mode: 'MTR', all: ST.TM },
     ANY: { en: 'Any MTR line to Central', zh: '', c: '#8a8a99', mode: 'MTR' },
     SF:  { en: 'Star Ferry', zh: '天星小輪', c: '#1d6fb8', mode: 'Ferry' },
     PT:  { en: 'Peak Tram', zh: '山頂纜車', c: '#b04a2e', mode: 'Tram' },
@@ -164,8 +179,8 @@
   };
   var ROUTES = {
     '1:0': [
-      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
-        ride: '4 stops from Tin Hau (3 from Causeway Bay) · ~10 min', alight: { en: 'Central', zh: '中環' },
+      { line: T.IL, board: { en: 'Tin Hau', zh: '天后' }, alt: { en: 'Causeway Bay', zh: '銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        seg: ['Tin Hau', 'Central'], min: '~10 min', alight: { en: 'Central', zh: '中環' },
         exit: { code: 'J2', zh: '堅尼地道 / 花園道', en: 'Peak Tram · Garden Road' }, note: 'Then ~10–15 min on foot to the tram terminus.' },
       { line: T.PT, board: { en: 'Garden Road Terminus', zh: '花園道總站' }, dir: { en: 'The Peak', zh: '山頂' },
         ride: '~8 min', alight: { en: 'Peak Tower', zh: '凌霄閣' } }
@@ -176,33 +191,33 @@
     ],
     '1:3': [
       { line: T.TW, board: { en: 'Tsim Sha Tsui', zh: '尖沙咀' }, dir: { en: 'Tsuen Wan', zh: '荃灣' },
-        ride: '1 stop · ~2 min', alight: { en: 'Jordan', zh: '佐敦' },
+        seg: ['Tsim Sha Tsui', 'Jordan'], min: '~2 min', alight: { en: 'Jordan', zh: '佐敦' },
         exit: { code: 'A', zh: '廟街', en: 'Temple Street' } }
     ],
     '1:4': [
       { line: T.ER, board: { en: 'Admiralty', zh: '金鐘' }, dir: { en: 'Lo Wu / Lok Ma Chau', zh: '羅湖 / 落馬洲' },
-        ride: '~30 min', alight: { en: 'Racecourse', zh: '馬場' }, note: 'Racecourse Station only runs on race days — check the fixture list.' }
+        seg: ['Admiralty', 'Racecourse'], min: '~30 min', alight: { en: 'Racecourse', zh: '馬場' }, note: 'Racecourse Station only runs on race days — check the fixture list.' }
     ],
     '2:0': [
-      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
-        ride: '4 stops from Tin Hau (3 from Causeway Bay) · ~10 min', alight: { en: 'Central', zh: '中環' },
+      { line: T.IL, board: { en: 'Tin Hau', zh: '天后' }, alt: { en: 'Causeway Bay', zh: '銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        seg: ['Tin Hau', 'Central'], min: '~10 min', alight: { en: 'Central', zh: '中環' },
         note: 'At Central follow the 香港站 Hong Kong Station / Tung Chung Line signs (~5–10 min walk through the connection).' },
-      { line: T.TC, board: { en: 'Hong Kong (linked to Central)', zh: '香港' }, dir: { en: 'Tung Chung', zh: '東涌' },
-        ride: '~20 min', alight: { en: 'Sunny Bay', zh: '欣澳' } },
+      { line: T.TC, board: { en: 'Hong Kong', zh: '香港' }, dir: { en: 'Tung Chung', zh: '東涌' },
+        seg: ['Hong Kong', 'Sunny Bay'], min: '~20 min', alight: { en: 'Sunny Bay', zh: '欣澳' } },
       { line: T.DRL, board: { en: 'Sunny Bay', zh: '欣澳' }, dir: { en: 'Disneyland Resort', zh: '迪士尼' },
-        ride: '1 stop · ~4 min', alight: { en: 'Disneyland Resort', zh: '迪士尼' }, note: 'Windows and handrails on this train are Mickey-shaped.' }
+        seg: ['Sunny Bay', 'Disneyland Resort'], min: '~4 min', alight: { en: 'Disneyland Resort', zh: '迪士尼' }, note: 'Windows and handrails on this train are Mickey-shaped.' }
     ],
     '2:1': [
       { line: T.DRL, board: { en: 'Disneyland Resort', zh: '迪士尼' }, dir: { en: 'Sunny Bay', zh: '欣澳' },
-        ride: '1 stop', alight: { en: 'Sunny Bay', zh: '欣澳' } },
+        seg: ['Disneyland Resort', 'Sunny Bay'], alight: { en: 'Sunny Bay', zh: '欣澳' } },
       { line: T.TC, board: { en: 'Sunny Bay', zh: '欣澳' }, dir: { en: 'Tung Chung', zh: '東涌' },
-        ride: '1 stop', alight: { en: 'Tung Chung', zh: '東涌' }, exit: { code: 'B', zh: '昂坪360', en: 'Ngong Ping 360' } },
+        seg: ['Sunny Bay', 'Tung Chung'], alight: { en: 'Tung Chung', zh: '東涌' }, exit: { code: 'B', zh: '昂坪360', en: 'Ngong Ping 360' } },
       { line: T.NP, board: { en: 'Tung Chung Terminal', zh: '東涌纜車站' }, dir: { en: 'Ngong Ping', zh: '昂坪' },
         ride: '~25 min', alight: { en: 'Ngong Ping Village', zh: '昂坪市集' } }
     ],
     '3:0': [
-      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
-        ride: '5 stops from Tin Hau (4 from Causeway Bay) · ~12 min', alight: { en: 'Sheung Wan', zh: '上環' },
+      { line: T.IL, board: { en: 'Tin Hau', zh: '天后' }, alt: { en: 'Causeway Bay', zh: '銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        seg: ['Tin Hau', 'Sheung Wan'], min: '~12 min', alight: { en: 'Sheung Wan', zh: '上環' },
         exit: { code: 'D', zh: '信德中心 / 港澳碼頭', en: 'Shun Tak Centre · Macau Ferry' } },
       { line: T.TJ, board: { en: 'HK–Macau Ferry Terminal', zh: '港澳碼頭' }, dir: { en: 'Macau', zh: '澳門' },
         ride: '~60–70 min', alight: { en: 'Macau Outer Harbour', zh: '外港客運碼頭' },
@@ -213,14 +228,14 @@
         alight: { en: 'The Venetian', zh: '威尼斯人' }, note: 'Look for the shuttle with the Venetian name. Free, no ticket.' }
     ],
     '4:0': [
-      { line: T.IL, board: { en: 'Tin Hau (or Causeway Bay)', zh: '天后 / 銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
-        ride: '3 stops from Tin Hau (2 from Causeway Bay)', alight: { en: 'Admiralty', zh: '金鐘' },
+      { line: T.IL, board: { en: 'Tin Hau', zh: '天后' }, alt: { en: 'Causeway Bay', zh: '銅鑼灣' }, dir: { en: 'Kennedy Town', zh: '堅尼地城' },
+        seg: ['Tin Hau', 'Admiralty'], min: '~8 min', alight: { en: 'Admiralty', zh: '金鐘' },
         note: 'Change here to the East Rail Line (follow the 東鐵綫 signs).' },
       { line: T.ER, board: { en: 'Admiralty', zh: '金鐘' }, dir: { en: 'Lo Wu / Lok Ma Chau', zh: '羅湖 / 落馬洲' },
-        ride: '2 stops · ~6 min', alight: { en: 'Hung Hom', zh: '紅磡' },
+        seg: ['Admiralty', 'Hung Hom'], min: '~6 min', alight: { en: 'Hung Hom', zh: '紅磡' },
         note: 'Change here to the Tuen Ma Line.' },
       { line: T.TM, board: { en: 'Hung Hom', zh: '紅磡' }, dir: { en: 'Tuen Mun', zh: '屯門' },
-        ride: '2 stops · ~5 min', alight: { en: 'Austin', zh: '柯士甸' }, exit: { code: '→', zh: '高鐵', en: 'Express Rail Link' },
+        seg: ['Hung Hom', 'Austin'], min: '~5 min', alight: { en: 'Austin', zh: '柯士甸' }, exit: { code: '→', zh: '高鐵', en: 'Express Rail Link' },
         note: 'Follow the 高鐵 Express Rail Link signs to West Kowloon Station. With nine people and luggage, two taxis from the Airbnb (~15–20 min) skip both changes.' }
     ],
     '7:0': [
@@ -232,8 +247,8 @@
         alight: { en: 'Ciqikou', zh: '磁器口' } }
     ],
     '8:0': [
-      { line: T.CQ1, board: { en: 'Chaotianmen (at Raffles City)', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
-        ride: 'Direct, no change', alight: { en: 'Ciqikou', zh: '磁器口' } }
+      { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
+        ride: 'Direct, no change — Chaotianmen station is right at Raffles City.', alight: { en: 'Ciqikou', zh: '磁器口' } }
     ],
     '8:1': [
       { line: T.CQ2, alight: { en: 'Linjiangmen', zh: '临江门' }, ride: 'Direction depends on where you board',
@@ -244,7 +259,7 @@
         alight: { en: 'Chongqing Zoo', zh: '动物园' }, exit: { code: '1', zh: '重庆动物园', en: 'Chongqing Zoo' } }
     ],
     '9:1': [
-      { line: T.CQ1, board: { en: 'Lianglukou (change here)', zh: '两路口' }, dir: { en: 'Bishan', zh: '璧山' },
+      { line: T.CQ1, board: { en: 'Lianglukou', zh: '两路口' }, dir: { en: 'Bishan', zh: '璧山' },
         alight: { en: 'Eling', zh: '鹅岭' } }
     ],
     '10:1': [
@@ -255,15 +270,15 @@
 
   var HOUSE_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg>';
 
-  function bi(en, zh, cls) {
-    var d = el('div', cls || 'rt-st');
-    if (zh) d.appendChild(el('span', 'rt-zh', zh));
-    d.appendChild(el('span', 'rt-en', en));
-    return d;
+  function ink(c) {
+    var m = /^#([0-9a-f]{6})$/i.exec(c || '');
+    if (!m) return '#fff';
+    var n = parseInt(m[1], 16);
+    return (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) > 150 ? '#14131c' : '#fff';
   }
 
-  /* The sign to look for — green EXIT block, exit letter/number tile, place name
-     (laid out like the MTR exit signs: 出 / EXIT | A | Chinese over English). */
+  /* The sign to look for at the exit — green EXIT block, exit letter/number tile,
+     place name (laid out like the MTR exit signs: 出 / EXIT | A | Chinese over English). */
   function exitSign(x) {
     var sign = el('div', 'sign');
     var ex = el('div', 'sign-exit');
@@ -277,62 +292,142 @@
     return sign;
   }
 
-  /* Platform / ferry destination board: line-colour tab + 往 terminus */
-  function dirBoard(leg) {
-    var b = el('div', 'dirboard');
-    b.style.setProperty('--lc', leg.line.c);
-    var tab = el('div', 'dirboard-tab', leg.line.zh || leg.line.en);
-    var t = el('div', 'dirboard-text');
-    t.appendChild(el('span', 'sign-zh', '往 ' + leg.dir.zh));
-    t.appendChild(el('span', 'sign-en', 'To ' + leg.dir.en));
-    b.appendChild(tab); b.appendChild(t);
+  /* Station-name wall — tiled mosaic, big white Chinese over bold English, like the
+     station walls (e.g. 中環 / Central). */
+  function wallSign(st, line) {
+    var w = el('div', 'wall');
+    var tile = TILE[st.en] || line.c;
+    w.style.setProperty('--tile', tile);
+    w.style.setProperty('--wt', ink(tile));
+    if (st.zh) w.appendChild(el('span', 'wall-zh', st.zh));
+    w.appendChild(el('span', 'wall-en', st.en));
+    return w;
+  }
+
+  /* Stops between board and get-off (inclusive), in travel order. */
+  function legStops(leg) {
+    if (!leg.seg || !leg.line.all) return null;
+    var all = leg.line.all, a = -1, b = -1;
+    all.forEach(function (st, i) { if (st.en === leg.seg[0]) a = i; if (st.en === leg.seg[1]) b = i; });
+    if (a < 0 || b < 0 || a === b) return null;
+    return a < b ? all.slice(a, b + 1) : all.slice(b, a + 1).reverse();
+  }
+
+  /* Platform-sign panel (after the signs above the platform): terminus header + stop strip. */
+  function platformSign(leg, stops) {
+    var p = el('div', 'plat');
+    p.style.setProperty('--lc', leg.line.c);
+    if (leg.dir) {
+      var head = el('div', 'plat-head');
+      head.appendChild(el('span', 'plat-zh', '往 ' + leg.dir.zh));
+      head.appendChild(el('span', 'plat-en', 'to ' + leg.dir.en));
+      p.appendChild(head);
+    }
+    if (stops) {
+      var body = el('div', 'plat-body');
+      var top = el('div', 'plat-top');
+      var nm = el('div', 'plat-line');
+      if (leg.line.zh) nm.appendChild(el('span', 'plat-line-zh', leg.line.zh));
+      nm.appendChild(el('span', 'plat-line-en', leg.line.en));
+      top.appendChild(nm);
+      top.appendChild(el('span', 'plat-meta', (stops.length - 1) + ' stop' + (stops.length === 2 ? '' : 's') + (leg.min ? ' · ' + leg.min : '')));
+      body.appendChild(top);
+      var ol = el('ol', 'strip');
+      stops.forEach(function (st, i) {
+        var role = i === 0 ? 'start' : (i === stops.length - 1 ? 'end' : 'mid');
+        var isAlt = leg.alt && st.en === leg.alt.en && role === 'mid';
+        var li = el('li', 'st ' + role + (isAlt ? ' alt' : ''));
+        li.appendChild(el('span', 'st-dot'));
+        var t = el('div', 'st-t');
+        t.appendChild(el('b', 'st-zh', st.zh));
+        t.appendChild(el('span', 'st-en', st.en));
+        li.appendChild(t);
+        if (role === 'start') li.appendChild(el('span', 'st-tag', 'Board here'));
+        else if (role === 'end') li.appendChild(el('span', 'st-tag', 'Get off here'));
+        else if (isAlt) li.appendChild(el('span', 'st-tag soft', 'Or board here'));
+        ol.appendChild(li);
+      });
+      body.appendChild(ol);
+      p.appendChild(body);
+    }
+    return p;
+  }
+
+  var TAKE = { 'MTR': 'Take this train', 'Metro': 'Take this train', 'Ferry': 'Take this ferry', 'Tram': 'Take this tram', 'Cable car': 'Take this cable car', 'Bus': 'Take this shuttle' };
+
+  function block(label, node) {
+    var b = el('div', 'rt-blk');
+    b.appendChild(el('div', 'rt-lbl', label));
+    b.appendChild(node);
     return b;
   }
 
-  function routeCard(legs) {
-    var card = el('div', 'rt');
-    legs.forEach(function (leg) {
-      var d = el('div', 'rt-leg');
-      d.style.setProperty('--lc', leg.line.c);
-      var head = el('div', 'rt-head');
-      head.appendChild(el('span', 'rt-chip', leg.line.mode));
-      head.appendChild(el('span', 'rt-line', leg.line.en + (leg.line.zh ? '  ' + leg.line.zh : '')));
-      d.appendChild(head);
+  function routeLeg(leg) {
+    var d = el('div', 'rt-leg');
+    d.style.setProperty('--lc', leg.line.c);
+    d.style.setProperty('--li', ink(leg.line.c));
 
-      if (leg.board && leg.board.en) {
-        var r1 = el('div', 'rt-row');
-        r1.appendChild(el('span', 'rt-lbl', 'Board'));
-        r1.appendChild(bi(leg.board.en, leg.board.zh));
-        d.appendChild(r1);
-      }
-      if (leg.dir) {
-        var r2 = el('div', 'rt-row rt-rowfull');
-        r2.appendChild(el('span', 'rt-lbl', 'Toward'));
-        r2.appendChild(dirBoard(leg));
-        d.appendChild(r2);
-      }
-      if (leg.ride) {
-        var r3 = el('div', 'rt-row');
-        r3.appendChild(el('span', 'rt-lbl', 'Ride'));
-        r3.appendChild(el('div', 'rt-ride', leg.ride));
-        d.appendChild(r3);
-      }
-      if (leg.alight) {
-        var r4 = el('div', 'rt-row');
-        r4.appendChild(el('span', 'rt-lbl', 'Get off'));
-        r4.appendChild(bi(leg.alight.en, leg.alight.zh));
-        d.appendChild(r4);
-      }
-      if (leg.exit) {
-        var r5 = el('div', 'rt-row rt-rowfull');
-        r5.appendChild(el('span', 'rt-lbl', 'Look for'));
-        r5.appendChild(exitSign(leg.exit));
-        d.appendChild(r5);
-      }
-      if (leg.note) d.appendChild(el('div', 'rt-note', leg.note));
-      card.appendChild(d);
+    // the line / vehicle to look for — big
+    var take = el('div', 'rt-take');
+    take.appendChild(el('div', 'rt-lbl', TAKE[leg.line.mode] || 'Take'));
+    var ban = el('div', 'rt-banner');
+    if (leg.line.zh) ban.appendChild(el('span', 'rt-bn-zh', leg.line.zh));
+    ban.appendChild(el('span', 'rt-bn-en', leg.line.en));
+    take.appendChild(ban);
+    d.appendChild(take);
+
+    if (leg.board && leg.board.en) {
+      var bb = el('div');
+      bb.appendChild(wallSign(leg.board, leg.line));
+      if (leg.alt) bb.appendChild(el('div', 'rt-alt', 'Or board at ' + leg.alt.en + (leg.alt.zh ? ' ' + leg.alt.zh : '') + ' — one stop later.'));
+      d.appendChild(block('Board at', bb));
+    }
+
+    var stops = legStops(leg);
+    if (leg.dir || stops) d.appendChild(block('Head toward', platformSign(leg, stops)));
+    else if (leg.ride) d.appendChild(block('Ride', el('div', 'rt-ride', leg.ride)));
+    if (stops === null && leg.dir && leg.ride) d.appendChild(el('div', 'rt-ride rt-ride-inline', leg.ride));
+
+    if (leg.alight) d.appendChild(block('Get off at', wallSign(leg.alight, leg.line)));
+    if (leg.exit) d.appendChild(block('Look for this exit sign', exitSign(leg.exit)));
+    if (leg.note) d.appendChild(el('div', 'rt-note', leg.note));
+    return d;
+  }
+
+  /* Collapsible: the summary row says which lines, from where to where; open for the steps. */
+  function routeCard(legs) {
+    var fold = el('details', 'rt-fold');
+    var sum = el('summary', 'rt-sum');
+    var pills = el('span', 'rt-sum-pills');
+    legs.forEach(function (l) {
+      var pl = el('span', 'rt-sum-pill', l.line.en);
+      pl.style.background = l.line.c; pl.style.color = ink(l.line.c);
+      pills.appendChild(pl);
     });
-    return card;
+    sum.appendChild(pills);
+    var first = legs[0], last = legs[legs.length - 1];
+    var route = (first.board ? first.board.en : '') + (first.board ? ' → ' : '→ ') + (last.alight ? last.alight.en : '');
+    var meta = '';
+    if (legs.length === 1) {
+      var st = legStops(first);
+      meta = st ? (st.length - 1) + ' stop' + (st.length === 2 ? '' : 's') + (first.min ? ' · ' + first.min : '') : (first.ride || '');
+    } else {
+      meta = legs.length + ' legs';
+    }
+    var info = el('span', 'rt-sum-info');
+    info.appendChild(el('span', 'rt-sum-route', route));
+    if (meta) info.appendChild(el('span', 'rt-sum-meta', meta));
+    sum.appendChild(info);
+    var act = el('span', 'rt-sum-act');
+    act.appendChild(el('span', 'act-closed', 'Show steps'));
+    act.appendChild(el('span', 'act-open', 'Hide steps'));
+    sum.appendChild(act);
+    fold.appendChild(sum);
+
+    var card = el('div', 'rt');
+    legs.forEach(function (leg) { card.appendChild(routeLeg(leg)); });
+    fold.appendChild(card);
+    return fold;
   }
 
   var MODE_LABEL = { metro: 'Metro', ferry: 'Ferry', train: 'Train', walk: 'Walk', didi: 'DiDi / taxi',
