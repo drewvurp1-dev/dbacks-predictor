@@ -126,7 +126,7 @@
       { n: 'Jiefangbei', tag: 'Suits', ll: [29.5580, 106.5770], mode: 'walk',
         how: 'From Raffles City, an uphill walk of ~25 min or a quick DiDi.' },
       { n: 'Three Gorges Museum', ll: [29.5617, 106.5467], mode: 'metro',
-        how: 'Line 10 to Grand Hall Station (大礼堂站), Exit 1.' },
+        how: 'From Raffles City: Line 1 three stops to Qixinggang, change to Line 10 for one stop to Grand Hall Station (大礼堂站), Exit 1.' },
       { n: 'Great Hall of the People', ll: [29.5637, 106.5455], mode: 'walk',
         how: 'Across the plaza from the museum — a couple of minutes on foot.' }
     ] }
@@ -155,8 +155,9 @@
     DRL: SL([['欣澳','Sunny Bay'],['迪士尼','Disneyland Resort']]),
     ER: SL([['金鐘','Admiralty'],['會展','Exhibition Centre'],['紅磡','Hung Hom'],['旺角東','Mong Kok East'],['九龍塘','Kowloon Tong'],['大圍','Tai Wai'],['沙田','Sha Tin'],['火炭','Fo Tan'],['馬場','Racecourse']]),
     TM: SL([['紅磡','Hung Hom'],['尖東','East Tsim Sha Tsui'],['柯士甸','Austin']]),
-    // Chongqing — order checked against a Trip.com subway map (older: it predates the Loop line and the Chaotianmen / Bishan ends of Line 1)
+    // Chongqing — station order checked against two Chongqing metro maps (the newer one also confirms Line 1 runs Chaotianmen ↔ Bishan)
     CQ1: SL([['朝天门','Chaotianmen'],['小什字','Xiaoshizi'],['较场口','Jiaochangkou'],['七星岗','Qixinggang'],['两路口','Lianglukou'],['鹅岭','Eling'],['大坪','Daping'],['石油路','Shiyou Road'],['歇台子','Xietaizi'],['石桥铺','Shiqiaopu'],['高庙村','Gaomiaocun'],['马家岩','Majiayan'],['小龙坎','Xiaolongkan'],['沙坪坝','Shapingba'],['杨公桥','Yanggongqiao'],['烈士墓','Martyrs Cemetery'],['磁器口','Ciqikou']]),
+    CQ10: SL([['七星岗','Qixinggang'],['大礼堂','Chongqing People\'s Auditorium'],['曾家岩','Zengjiayan']]),
     CQ2: SL([['较场口','Jiaochangkou'],['临江门','Linjiangmen'],['黄花园','Huanghuayuan'],['大溪沟','Daxigou'],['曾家岩','Zengjiayan'],['牛角沱','Niujiaotuo'],['李子坝','Liziba'],['佛图关','Fotuguan'],['大坪','Daping'],['袁家岗','Yuanjiagang'],['谢家湾','Xiejiawan'],['杨家坪','Yangjiaping'],['动物园','Chongqing Zoo']])
   };
   /* Station wall colours differ station by station; only ones confirmed from a photo are
@@ -178,7 +179,7 @@
     SH:  { en: 'Free casino shuttle', zh: '免費穿梭巴士', c: '#d8b24a', mode: 'Bus' },
     CQ1: { en: 'Line 1', zh: '1号线', c: '#d4001a', mode: 'Metro', all: ST.CQ1 },
     CQ2: { en: 'Line 2', zh: '2号线', c: '#0a8f45', mode: 'Metro', all: ST.CQ2 },
-    CQ10:{ en: 'Line 10', zh: '10号线', c: '#6a3a8f', mode: 'Metro' }
+    CQ10:{ en: 'Line 10', zh: '10号线', c: '#6a3a8f', mode: 'Metro', all: ST.CQ10 }
   };
   var ROUTES = {
     '1:0': [
@@ -283,9 +284,13 @@
         note: 'Older maps show Xiaoshizi 小什字 as the east end — same direction, toward downtown.' }
     ],
     '10:1': [
-      { line: T.CQ10, alight: { en: 'Grand Hall', zh: '大礼堂' }, exit: { code: '1', zh: '三峡博物馆 / 人民大礼堂', en: 'Three Gorges Museum · Great Hall' },
-        ride: 'Direction depends on where you board',
-        note: 'Please double-check this station in Amap: the Trip.com map has Line 10 running far to the north, and Line 2’s Daxigou 大溪沟 may be the closer stop to the Great Hall.' }
+      { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
+        seg: ['Chaotianmen', 'Qixinggang'], min: '~8 min', alight: { en: 'Qixinggang', zh: '七星岗' },
+        note: 'Change here to Line 10.' },
+      { line: T.CQ10, board: { en: 'Qixinggang', zh: '七星岗' }, dir: { en: 'Wangjiazhuang', zh: '王家庄' },
+        seg: ['Qixinggang', 'Chongqing People\'s Auditorium'], min: '~2 min', alight: { en: 'Chongqing People\'s Auditorium', zh: '大礼堂' },
+        exit: { code: '1', zh: '三峡博物馆 / 人民大礼堂', en: 'Three Gorges Museum · Great Hall' },
+        note: 'Take the northbound Line 10 train — it is the next stop after Qixinggang.' }
     ]
   };
 
