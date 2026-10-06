@@ -1,0 +1,51 @@
+/* Daily snapshot map — Leaflet map + numbered stop list with transit snippets.
+   Self-contained; relies only on the shell.css tokens (--surface, --ink, --ink-dim, --accent). */
+.daymap-wrap {
+  --dm: #c9a24a;
+  /* own palette — day pages theme --ink/--surface differently (some are light), so don't inherit them */
+  --dm-card: rgba(20,19,28,.92); --dm-ink: #f4f2ec; --dm-dim: #b9b5c6; --dm-warn: #e6c36a;
+}
+.daymap-wrap .dm-hint { color: inherit; opacity: .72; }
+.daymap {
+  height: 300px; border-radius: 14px; overflow: hidden;
+  background: #1c1b25; border: 1px solid rgba(255,255,255,.08);
+  position: relative; z-index: 0;
+}
+.daymap .leaflet-control-attribution { font-size: 9px; }
+.dm-pin {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--dm); color: #0d0c12;
+  border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+  font: 800 12px/1 var(--font-body, system-ui, sans-serif);
+}
+.dm-pin.opt { background: #fff; color: #0d0c12; border: 2px dashed var(--dm); }
+.dm-pin.on { transform: scale(1.25); z-index: 1000 !important; }
+.dm-hint { font-size: 11.5px; margin: 8px 2px 12px; }
+.daymap-wrap .dm-hint.dm-warn { color: inherit; opacity: 1; font-weight: 700; }
+
+.dm-list { list-style: none; }
+.dm-stop {
+  display: grid; grid-template-columns: 30px 1fr; gap: 10px;
+  background: var(--dm-card); color: var(--dm-ink); border-radius: 12px; padding: 11px 12px;
+  margin-bottom: 8px; cursor: pointer; border: 1px solid transparent;
+}
+.dm-stop.on { border-color: var(--dm); }
+.dm-stop.nomap { cursor: default; }
+.dm-n {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--dm); color: #0d0c12;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 12px; margin-top: 1px;
+}
+.dm-stop.opt .dm-n { background: transparent; color: var(--dm-ink); border: 2px dashed var(--dm); }
+.dm-stop.nomap .dm-n { background: transparent; color: var(--dm-dim); border: 2px solid rgba(255,255,255,.2); }
+.dm-name { font-weight: 700; font-size: 14px; line-height: 1.3; }
+.dm-name small { font-weight: 600; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dm-dim); margin-left: 6px; }
+.dm-how { margin-top: 5px; font-size: 12.5px; line-height: 1.5; color: var(--dm-dim); }
+.dm-mode {
+  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  padding: 1px 7px; border-radius: 999px; margin-right: 6px; vertical-align: 1px;
+  background: rgba(255,255,255,.1); color: var(--dm-ink);
+}
+.dm-mode.metro, .dm-mode.ferry, .dm-mode.train { background: var(--dm); color: #0d0c12; }
+.dm-noscript, .dm-offline { font-size: 12.5px; color: var(--dm-dim); padding: 24px 14px; text-align: center; }

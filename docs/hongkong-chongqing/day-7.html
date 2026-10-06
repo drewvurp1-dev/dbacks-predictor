@@ -14,6 +14,8 @@
 <title>Dec 31 &middot; Hot Pot and The Greatest Drone Show on Earth</title>
 <link rel="stylesheet" href="assets/shell.css?v=29">
 <link rel="stylesheet" href="assets/scrolly.css?v=29">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
+<link rel="stylesheet" href="assets/daymap.css?v=1">
 <link rel="stylesheet" href="assets/day-art.css?v=29">
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -103,6 +105,11 @@
     </div>
 
     <div class="block reveal">
+      <h2>Today on the map</h2>
+      <div class="daymap-wrap" data-day="7"><noscript><p class="dm-noscript">The map needs JavaScript.</p></noscript></div>
+    </div>
+
+    <div class="block reveal">
       <h2>Pace it for the night</h2>
       <p class="lead">Keep the daytime light — the evening is the whole point, and the crowds are real.</p>
 
@@ -177,6 +184,8 @@
 
 </div>
 <script src="assets/shell.js?v=29"></script>
+<script src="assets/leaflet/leaflet.js?v=1"></script>
+<script src="assets/daymap.js?v=1"></script>
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((err) => {

@@ -14,6 +14,8 @@
 <title>Dec 29 &middot; Ten Thousand Peaks</title>
 <link rel="stylesheet" href="assets/shell.css?v=29">
 <link rel="stylesheet" href="assets/scrolly.css?v=29">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
+<link rel="stylesheet" href="assets/daymap.css?v=1">
 <link rel="stylesheet" href="assets/day-art.css?v=29">
 <link rel="preload" href="assets/Yabatzoe.woff" as="font" type="font/woff" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -122,6 +124,11 @@
     </div>
 
     <div class="block reveal">
+      <h2>Today on the map</h2>
+      <div class="daymap-wrap" data-day="5"><noscript><p class="dm-noscript">The map needs JavaScript.</p></noscript></div>
+    </div>
+
+    <div class="block reveal">
       <h2>The shape of the day</h2>
       <p class="lead">No train, no border, no clock. Front-load the in-town stops, save the hike for the light it needs.</p>
 
@@ -196,6 +203,8 @@
 
 </div>
 <script src="assets/shell.js?v=29"></script>
+<script src="assets/leaflet/leaflet.js?v=1"></script>
+<script src="assets/daymap.js?v=1"></script>
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((err) => {

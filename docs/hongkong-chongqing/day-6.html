@@ -14,6 +14,8 @@
 <title>Dec 30 &middot; Silver Snake to THE CYBERPUNK CITY</title>
 <link rel="stylesheet" href="assets/shell.css?v=29">
 <link rel="stylesheet" href="assets/scrolly.css?v=29">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
+<link rel="stylesheet" href="assets/daymap.css?v=1">
 <link rel="stylesheet" href="assets/day-art.css?v=29">
 <link rel="preload" href="assets/Neon.woff" as="font" type="font/woff" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -151,6 +153,11 @@
     </div>
 
     <div class="block reveal">
+      <h2>Today on the map</h2>
+      <div class="daymap-wrap" data-day="6"><noscript><p class="dm-noscript">The map needs JavaScript.</p></noscript></div>
+    </div>
+
+    <div class="block reveal">
       <h2>Getting the rest of the way</h2>
       <p class="lead">Guilin's done its job — pick a morning departure and let the day belong to Chongqing.</p>
 
@@ -212,6 +219,8 @@
 
 </div>
 <script src="assets/shell.js?v=29"></script>
+<script src="assets/leaflet/leaflet.js?v=1"></script>
+<script src="assets/daymap.js?v=1"></script>
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch((err) => {
