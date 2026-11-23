@@ -81,12 +81,18 @@
   }
   /* edge colours of the photo, in case any sliver behind the art shows */
   html { background: linear-gradient(to bottom, #011530 0%, #011530 50%, #1d2743 50%, #1d2743 100%); }
-  /* Open sky for the title: the photo sits low (its own sky is only a sliver),
-     and the empty strip above it is the same deep navy as the photo's top
-     edge (html gradient below), so the join is invisible. The title block is
-     lifted into that sky like a drone formation over the skyline. */
-  .bg-art { display: block; margin-top: 280px; height: calc(100% - 280px); object-position: center bottom; }
-  .hero-mark { position: relative; top: -21vh; }
+  /* The title sits in the middle of the screen over the skyline, so it gets a
+     soft navy halo behind it (it travels with the title and fades with it) to
+     keep the dotted letters readable over the lit towers. */
+  .hero-mark { position: relative; isolation: isolate; }
+  .hero-mark::before {
+    content: "";
+    position: absolute;
+    inset: -90px -60px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(closest-side, rgba(1,21,48,0.93) 0%, rgba(1,21,48,0.86) 52%, rgba(1,21,48,0.5) 78%, rgba(1,21,48,0) 100%);
+  }
   body {
     background: transparent;
     --page-backdrop: #140a0b;
