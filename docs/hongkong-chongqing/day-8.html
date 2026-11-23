@@ -6,14 +6,14 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/app-icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#12101c">
+<meta name="theme-color" content="#859cab">  <!-- matches the top edge of the painting (tints the status bar on older iOS) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="HK → CQ">
 <title>Jan 1 &middot; New Year, Old Town</title>
 <link rel="stylesheet" href="assets/shell.css?v=29">
-<link rel="stylesheet" href="assets/scrolly.css?v=29">
+<link rel="stylesheet" href="assets/scrolly.css?v=31">
 <link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
 <link rel="stylesheet" href="assets/daymap.css?v=12">
 <link rel="stylesheet" href="assets/day-art.css?v=31">
@@ -41,7 +41,12 @@
     font-style: normal;
     font-display: swap;
   }
+  /* If any sliver of the page behind the art ever shows (overscroll bounce,
+     bars that don't let the art bleed under), it's the painting's own top
+     and bottom edge colours rather than a dark band. */
+  html { background: linear-gradient(to bottom, #859cab 0%, #859cab 50%, #342723 50%, #342723 100%); }
   body {
+    background: transparent;   /* let the html edge-colour gradient above show through */
     --page-backdrop: #241f28;
     --font-display: 'Lora', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;

@@ -145,10 +145,17 @@ body.glass-dark {
    either an <img> (object-fit) or a <div> (background) so a day can use
    a photograph or a gradient until its art lands. */
 .bg-stage {
+  /* Bleeds --sc-bleed past the top and bottom of the viewport so the art
+     also paints under mobile Safari's status bar / toolbar (otherwise the
+     page background shows as dark bands there). Anchored with top/bottom
+     rather than 100vh so it tracks the toolbars as they collapse. Needs
+     viewport-fit=cover, which every page sets. */
+  --sc-bleed: 90px;
   position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+  top: calc(-1 * var(--sc-bleed));
+  bottom: calc(-1 * var(--sc-bleed));
+  left: 0;
+  right: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
