@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hk-trip-v54';
+const CACHE_NAME = 'hk-trip-v55';
 const ASSETS = [
   './',
   './index.html',
@@ -72,23 +72,46 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (!event.request.url.startsWith('http')) return;
+  const req = event.request;
+  // Only GETs are cached. POSTs (e.g. the live metro-line lookups) go straight to the network.
+  if (!req.url.startsWith('http') || req.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) return response;
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type === 'error') {
-          return response;
+  // Pages: network first, so a new version shows up on the very next load instead of the
+  // old saved copy. If the network is slow (>3s, e.g. bad hotel Wi-Fi) or offline, fall back
+  // to the saved copy; the fetch keeps going in the background and refreshes the saved copy.
+  if (req.mode === 'navigate' || req.destination === 'document') {
+    event.respondWith((async () => {
+      const cached = await caches.match(req);
+      const net = fetch(req).then((res) => {
+        if (res && res.status === 200 && res.type !== 'error') {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
         }
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
-        return response;
-      }).catch(() => {
-        return caches.match(event.request) || new Response('Offline');
+        return res;
       });
+      if (!cached) return net.catch(() => new Response('Offline', { status: 503 }));
+      try {
+        return await Promise.race([
+          net,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('slow')), 3000)),
+        ]);
+      } catch (e) {
+        return cached;
+      }
+    })());
+    return;
+  }
+
+  // Everything else (CSS/JS carry ?v=N, images and fonts have fixed names): saved copy first.
+  event.respondWith(
+    caches.match(req).then((response) => {
+      if (response) return response;
+      return fetch(req).then((res) => {
+        if (!res || res.status !== 200 || res.type === 'error') return res;
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        return res;
+      }).catch(() => new Response('Offline', { status: 503 }));
     })
   );
 });
