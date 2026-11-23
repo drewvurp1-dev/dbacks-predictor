@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/app-icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#12101c">
+<meta name="theme-color" content="#3b2e4c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -16,12 +16,14 @@
 <link rel="stylesheet" href="assets/scrolly.css?v=31">
 <link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
 <link rel="stylesheet" href="assets/daymap.css?v=12">
-<link rel="stylesheet" href="assets/day-art.css?v=31">
+<link rel="stylesheet" href="assets/day-art.css?v=32">
 <link rel="preload" href="assets/Neon.woff" as="font" type="font/woff" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 6 — "Silver Snake to the Cyberpunk City" · Chongqing neon
-     Magenta and cyan bleeding through CRT scanlines.
+     Art is a photograph (a rain-slick neon street), so the stage uses
+     <img class="bg-art"> and --sc-art stays unset (see Day 1). The
+     palette stays magenta and cyan to match the signs.
 
      Neon is self-hosted from assets/ (WOFF, 6 KB, converted from the
      supplied TTF; the TTF is kept alongside as the source and as a
@@ -37,13 +39,15 @@
     font-style: normal;
     font-display: swap;
   }
+  /* edge colours of the photo, in case any sliver behind the art shows */
+  html { background: linear-gradient(to bottom, #3b2e4c 0%, #3b2e4c 50%, #6d4d8f 50%, #6d4d8f 100%); }
   body {
+    background: transparent;
     --page-backdrop: #050507;
     --font-display: 'Neon', system-ui, sans-serif;
     --font-body:    'Rajdhani', system-ui, sans-serif;
 
-    --sc-art:      var(--art-6);
-    --sc-art-size: var(--art-6-size);
+    --sc-art-pos:  center 50%;
 
     --sc-accent:   #17f0d6;   /* cyan */
     --sc-accent-2: #ff2fb9;   /* magenta */
@@ -94,7 +98,7 @@
 <body class="glass-dark">
 
 <div class="bg-stage" aria-hidden="true">
-  <div class="bg-art"></div>
+  <img class="bg-art" src="assets/CyberpunkCity.jpeg" alt="">
   <div class="bg-tint"></div>
 </div>
 
