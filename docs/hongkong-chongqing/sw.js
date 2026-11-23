@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hk-trip-v52';
+const CACHE_NAME = 'hk-trip-v54';
 const ASSETS = [
   './',
   './index.html',
@@ -17,7 +17,7 @@ const ASSETS = [
   './full-guide.html',
   './assets/shell.css?v=29',
   './assets/scrolly.css?v=31',
-  './assets/day-art.css?v=32',
+  './assets/day-art.css?v=33',
   './assets/shell.js?v=29',
   './assets/leaflet/leaflet.css?v=1',
   './assets/leaflet/leaflet.js?v=1',
@@ -38,6 +38,8 @@ const ASSETS = [
   './assets/OldTownPaint-thumb.jpg',
   './assets/CyberpunkCity.jpeg',
   './assets/CyberpunkCity-thumb.jpg',
+  './assets/ChongqingNight.jpeg',
+  './assets/ChongqingNight-thumb.jpg',
   './assets/app-icon-192.png',
   './assets/app-icon-512.png',
   './assets/app-icon-1024.png',

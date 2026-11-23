@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/app-icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#12101c">
+<meta name="theme-color" content="#011530">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -16,12 +16,14 @@
 <link rel="stylesheet" href="assets/scrolly.css?v=31">
 <link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
 <link rel="stylesheet" href="assets/daymap.css?v=12">
-<link rel="stylesheet" href="assets/day-art.css?v=32">
+<link rel="stylesheet" href="assets/day-art.css?v=33">
 <link rel="preload" href="assets/Codystar.woff2" as="font" type="font/woff2" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 7 — "Hot Pot and the Greatest Drone Show on Earth"
-     Chilli-oil heat at the top dissolving into a drone-lit night sky. ── */
+     Art is a night photograph of Chongqing (Raffles City towers over the
+     river), so the stage uses <img class="bg-art"> and --sc-art stays
+     unset (see Day 1). Chilli-oil accents, drone-lit night sky. ── */
   /* "the Greatest Drone Show on Earth" is set in Codystar — a dot-matrix face whose
      lettering is built from little lights, like the drone formations
      themselves. Self-hosted from assets/ (Latin subset from Fontsource,
@@ -77,13 +79,21 @@
     -webkit-text-stroke: 1px #fff;
     text-shadow: 0 0 6px #9fc0ff, 0 0 16px #5c8dff;
   }
+  /* edge colours of the photo, in case any sliver behind the art shows */
+  html { background: linear-gradient(to bottom, #011530 0%, #011530 50%, #1d2743 50%, #1d2743 100%); }
+  /* Open sky for the title: the photo sits low (its own sky is only a sliver),
+     and the empty strip above it is the same deep navy as the photo's top
+     edge (html gradient below), so the join is invisible. The title block is
+     lifted into that sky like a drone formation over the skyline. */
+  .bg-art { display: block; margin-top: 280px; height: calc(100% - 280px); object-position: center bottom; }
+  .hero-mark { position: relative; top: -21vh; }
   body {
+    background: transparent;
     --page-backdrop: #140a0b;
     --font-display: 'Zilla Slab', Georgia, serif;
     --font-body:    'Inter', system-ui, sans-serif;
 
-    --sc-art:      var(--art-7);
-    --sc-art-size: var(--art-7-size);
+    --sc-art-pos:  center 50%;
 
     --sc-accent:   #ff7a1a;   /* chilli oil */
     --sc-accent-2: #d7263d;   /* sichuan red */
@@ -102,7 +112,7 @@
 <body class="glass-dark">
 
 <div class="bg-stage" aria-hidden="true">
-  <div class="bg-art"></div>
+  <img class="bg-art" src="assets/ChongqingNight.jpeg" alt="">
   <div class="bg-tint"></div>
 </div>
 
