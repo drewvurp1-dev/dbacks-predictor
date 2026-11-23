@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hk-trip-v45';
+const CACHE_NAME = 'hk-trip-v46';
 const ASSETS = [
   './',
   './index.html',
@@ -17,7 +17,7 @@ const ASSETS = [
   './full-guide.html',
   './assets/shell.css?v=29',
   './assets/scrolly.css?v=29',
-  './assets/day-art.css?v=29',
+  './assets/day-art.css?v=31',
   './assets/shell.js?v=29',
   './assets/leaflet/leaflet.css?v=1',
   './assets/leaflet/leaflet.js?v=1',
@@ -30,6 +30,8 @@ const ASSETS = [
   './assets/HongKong-thumb.jpg',
   './assets/MacaoPaint.jpeg',
   './assets/GuilinPaint.jpeg',
+  './assets/OldTownPaint.jpeg',
+  './assets/OldTownPaint-thumb.jpg',
   './assets/app-icon-192.png',
   './assets/app-icon-512.png',
   './assets/app-icon-1024.png',
