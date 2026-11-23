@@ -82,8 +82,9 @@
   /* edge colours of the photo, in case any sliver behind the art shows */
   html { background: linear-gradient(to bottom, #011530 0%, #011530 50%, #1d2743 50%, #1d2743 100%); }
   /* The title sits in the middle of the screen over the skyline, so it gets a
-     soft white glow behind it (it travels with the title and fades with it),
-     like light bloom around a drone formation. Pure white, no dark core. */
+     soft halo behind it (it travels with the title and fades with it): a
+     faint navy core, just enough to keep the dotted letters readable over the
+     lit towers without hiding the photo, ringed by a light white bloom. */
   .hero-mark { position: relative; isolation: isolate; }
   .hero-mark::before {
     content: "";
@@ -91,9 +92,11 @@
     inset: -85px -50px;
     z-index: -1;
     pointer-events: none;
-    /* the ellipse stays inside the box (<= 50% vertically) so the glow fades to
-       nothing before the box edge instead of showing a rectangle */
-    background: radial-gradient(ellipse 54% 46% at 50% 50%, rgba(255,255,255,0.36) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%);
+    /* every ellipse radius stays inside the box (<= 50% vertically) so the
+       glow fades to nothing before the box edge instead of showing a rectangle */
+    background:
+      radial-gradient(ellipse 57% 42% at 50% 50%, rgba(1,21,48,0.52) 0%, rgba(1,21,48,0.36) 45%, rgba(1,21,48,0) 100%),
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 58%, rgba(255,255,255,0.20) 80%, rgba(255,255,255,0) 100%);
   }
   body {
     background: transparent;
