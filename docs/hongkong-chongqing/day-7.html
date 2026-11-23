@@ -37,7 +37,35 @@
     font-style: normal;
     font-display: swap;
   }
-  .hero-title .ln:nth-child(4) { animation-delay: 1.15s; }   /* the title runs to four lines here */
+  /* The Codystar lines skip the shared line-in fade: "Hot Pot and" settles
+     first, then each dotted letter powers on at its own moment (see the
+     script after the title) — a flash as it arrives, then a slow twinkle,
+     like a drone formation lighting up one light at a time. */
+  .hero-title .ln.cl { animation: none; opacity: 1; }
+  .hero-title .cody { white-space: nowrap; }
+  .hero-title .cch {
+    display: inline-block;
+    opacity: 0;
+    animation:
+      drone-on 1s ease-out var(--d, 1.5s) both,
+      drone-twinkle var(--p, 3.4s) ease-in-out calc(var(--d, 1.5s) + 1.1s) infinite;
+  }
+  @keyframes drone-on {
+    0%   { opacity: 0; filter: brightness(1); transform: scale(.6); }
+    30%  { opacity: 1; filter: brightness(3); transform: scale(1.18); }
+    48%  { opacity: .35; filter: brightness(1.4); transform: scale(1); }
+    68%  { opacity: 1; filter: brightness(2.2); }
+    100% { opacity: 1; filter: brightness(1); transform: scale(1); }
+  }
+  @keyframes drone-twinkle {
+    0%, 100% { opacity: 1; }
+    46%      { opacity: 1; }
+    52%      { opacity: .5; }
+    58%      { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-title .cch { animation: none; opacity: 1; }
+  }
   .hero-title .cody {
     font-family: 'Codystar', 'Zilla Slab', Georgia, serif;
     font-weight: 400;
@@ -120,7 +148,29 @@
 
   <section class="hero hero--full">
     <div class="hero-mark">
-      <span class="hero-title"><span class="ln">Hot Pot and</span><span class="ln"><span class="cody">the Greatest</span></span><span class="ln"><span class="cody">Drone Show</span></span><span class="ln"><span class="cody">on Earth</span></span></span>
+      <span class="hero-title"><span class="ln">Hot Pot and</span><span class="ln cl"><span class="cody">the Greatest</span></span><span class="ln cl"><span class="cody">Drone Show</span></span><span class="ln cl"><span class="cody">on Earth</span></span></span>
+      <script>
+/* Split the Codystar lines into letters so each "drone" can light up on its own. */
+(function () {
+  var lines = document.querySelectorAll('.hero-title .cody');
+  for (var i = 0; i < lines.length; i++) {
+    var el = lines[i], txt = el.textContent, base = 1.25 + i * 0.5;
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', txt);
+    el.textContent = '';
+    for (var j = 0; j < txt.length; j++) {
+      if (txt[j] === ' ') { el.appendChild(document.createTextNode(' ')); continue; }
+      var s = document.createElement('span');
+      s.className = 'cch';
+      s.setAttribute('aria-hidden', 'true');
+      s.style.setProperty('--d', (base + Math.random() * 0.9).toFixed(2) + 's');   // when this drone arrives
+      s.style.setProperty('--p', (2.4 + Math.random() * 2.6).toFixed(2) + 's');   // its twinkle period
+      s.textContent = txt[j];
+      el.appendChild(s);
+    }
+  }
+})();
+      </script>
     </div>
     <span class="scroll-cue">Scroll</span>
   </section>
