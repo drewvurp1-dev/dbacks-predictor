@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
 <link rel="stylesheet" href="assets/daymap.css?v=12">
 <link rel="stylesheet" href="assets/day-art.css?v=31">
+<link rel="preload" href="assets/MaShanZheng.woff" as="font" type="font/woff" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 8 — "New Year, Old Town" · a slow-start morning after NYE
@@ -24,6 +25,22 @@
      a golden dragon), so the stage uses <img class="bg-art"> and
      --sc-art stays unset (see Day 1). Warm dawn-gold palette, the quietest
      on the site, on purpose. Nothing here is time-critical. ── */
+  /* Title face: Ma Shan Zheng (马善政) — a brush-calligraphy face by
+     Ma Shanzheng Project Authors, SIL Open Font License 1.1
+     (github.com/googlefonts/mashanzheng). Self-hosted from assets/ and
+     subset to Latin + punctuation (the full CJK file is 5.8 MB; the WOFF
+     is ~15 KB, TTF kept as a fallback src). Single weight, no italic:
+     a synthetic bold/italic on a brush face just smears the strokes, so
+     the title sets weight 400 and no slant. Lora stays for everything
+     else on the page. */
+  @font-face {
+    font-family: 'Ma Shan Zheng';
+    src: url('assets/MaShanZheng.woff') format('woff'),
+         url('assets/MaShanZheng.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
   body {
     --page-backdrop: #241f28;
     --font-display: 'Lora', Georgia, serif;
@@ -35,13 +52,13 @@
     --sc-accent-2: #a1636a;   /* dusty rose */
     --sc-total-v:  #d9a65c;
 
-    --sc-title-weight:   600;
-    --sc-title-size:     clamp(2.3rem, 12.5vw, 4rem);
+    --sc-title-font:     'Ma Shan Zheng', 'Lora', Georgia, serif;
+    --sc-title-weight:   400;
+    --sc-title-size:     clamp(2.9rem, 15.5vw, 4.9rem);
     --sc-title-lh:       1.16;
     --sc-title-ink:      #fbf0e4;
     --sc-title-shadow:   drop-shadow(0 2px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 26px rgba(50,30,30,0.5));
   }
-  .hero-title { font-style: italic; }
 </style>
 </head>
 <body class="glass-dark">
