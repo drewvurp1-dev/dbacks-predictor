@@ -111,9 +111,7 @@
       { n: 'Yangtze River Cableway', ll: [29.5565, 106.5825], mode: 'didi',
         how: 'DiDi ~15 min (no clean metro link). Go early or buy a timed ticket.' },
       { n: 'Shibati (Eighteen Steps)', ll: [29.5543, 106.5667], mode: 'didi',
-        how: 'Short DiDi or ~25 min walk from the cableway.' },
-      { n: 'Ciqikou Ancient Town', tag: 'Optional', opt: true, ll: [29.5800, 106.4495], mode: 'metro',
-        how: 'Line 1 to Ciqikou Station. Go early, before it packs.' },
+        how: 'From Raffles City: Line 1 two stops to Jiaochangkou, then a short walk to the top of the steps. From the cableway: a short DiDi or ~25 min on foot.' },
       { n: 'Jiangtan Park', tag: 'Drone show', ll: [29.5724, 106.5791], mode: 'metro',
         how: 'Metro or DiDi to the riverside lawns. Pin is approximate — confirm the show location and time locally. Go early; the metro will be jammed afterward.' }
     ] },
@@ -263,9 +261,10 @@
         seg: ['Jiaochangkou', 'Liziba'], min: '~12 min', alight: { en: 'Liziba', zh: '李子坝' },
         note: 'The train runs through the apartment block — stand on the right side for the cliff view.' }
     ],
-    '7:3': [
-      { line: T.CQ1, dir: { en: 'Bishan', zh: '璧山' }, ride: 'Heading away from Chaotianmen 朝天门 (the downtown end)',
-        alight: { en: 'Ciqikou', zh: '磁器口' } }
+    '7:2': [
+      { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
+        seg: ['Chaotianmen', 'Jiaochangkou'], min: '~5 min', alight: { en: 'Jiaochangkou', zh: '较场口' },
+        note: 'Shibati’s north end is a short walk from Jiaochangkou — confirm the exit in Amap. Chaotianmen station is right at Raffles City.' }
     ],
     '8:0': [
       { line: T.CQ1, board: { en: 'Chaotianmen', zh: '朝天门' }, dir: { en: 'Bishan', zh: '璧山' },
