@@ -17,10 +17,38 @@
 <link rel="stylesheet" href="assets/leaflet/leaflet.css?v=1">
 <link rel="stylesheet" href="assets/daymap.css?v=12">
 <link rel="stylesheet" href="assets/day-art.css?v=32">
+<link rel="preload" href="assets/Codystar.woff2" as="font" type="font/woff2" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* ── DAY 7 — "Hot Pot and the Greatest Drone Show on Earth"
      Chilli-oil heat at the top dissolving into a drone-lit night sky. ── */
+  /* "Greatest Drone Show" is set in Codystar — a dot-matrix face whose
+     lettering is built from little lights, like the drone formations
+     themselves. Self-hosted from assets/ (Latin subset from Fontsource,
+     WOFF2 40 KB + WOFF fallback) instead of a Google Fonts embed, so it
+     also loads offline and in mainland China where Google's font servers
+     are blocked. Copyright (c) 2012 Font Diner, Inc DBA Neapolitan;
+     SIL Open Font License 1.1. */
+  @font-face {
+    font-family: 'Codystar';
+    src: url('assets/Codystar.woff2') format('woff2'),
+         url('assets/Codystar.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  .hero-title .ln:nth-child(4) { animation-delay: 1.15s; }   /* the title runs to four lines here */
+  .hero-title .cody {
+    font-family: 'Codystar', 'Zilla Slab', Georgia, serif;
+    font-weight: 400;
+    font-size: 0.92em;
+    letter-spacing: 0.01em;
+    color: #fff;
+    /* Codystar is a hairline dotted outline — a thin stroke fattens the dots
+       and the blue glow makes them read as lit drones against the dark sky */
+    -webkit-text-stroke: 1px #fff;
+    text-shadow: 0 0 6px #9fc0ff, 0 0 16px #5c8dff;
+  }
   body {
     --page-backdrop: #140a0b;
     --font-display: 'Zilla Slab', Georgia, serif;
@@ -92,7 +120,7 @@
 
   <section class="hero hero--full">
     <div class="hero-mark">
-      <span class="hero-title"><span class="ln">Hot Pot</span><span class="ln">and the Greatest</span><span class="ln">Drone Show on Earth</span></span>
+      <span class="hero-title"><span class="ln">Hot Pot</span><span class="ln">and the <span class="cody">Greatest</span></span><span class="ln"><span class="cody">Drone Show</span></span><span class="ln">on Earth</span></span>
     </div>
     <span class="scroll-cue">Scroll</span>
   </section>

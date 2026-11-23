@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hk-trip-v49';
+const CACHE_NAME = 'hk-trip-v50';
 const ASSETS = [
   './',
   './index.html',
@@ -28,6 +28,8 @@ const ASSETS = [
   './assets/Neon.ttf',
   './assets/MaShanZheng.woff',
   './assets/MaShanZheng.ttf',
+  './assets/Codystar.woff2',
+  './assets/Codystar.woff',
   './assets/HongKong.jpeg',
   './assets/HongKong-thumb.jpg',
   './assets/MacaoPaint.jpeg',
